@@ -1,4 +1,4 @@
-# Releasing Worklist OSS Crates
+# Releasing SealTask OSS Crates
 
 This workspace publishes to crates.io in dependency order:
 

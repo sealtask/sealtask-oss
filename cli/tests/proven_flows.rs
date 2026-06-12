@@ -807,7 +807,7 @@ async fn cli_reads_surface_attachment_projection_errors() {
 async fn cli_tasks_help_uses_explicit_verbs() {
     let output = run_cli(
         TempDir::new().expect("temp home").path(),
-        "https://worklist.app",
+        "https://sealtask.com",
         &["tasks", "--help"],
         None,
     );
@@ -1758,7 +1758,7 @@ async fn cli_status_reports_stored_session_daemon_state_when_api_url_differs() {
 
     let status_output = run_cli(
         home.path(),
-        "https://worklist.app",
+        "https://sealtask.com",
         &["--json", "auth", "status"],
         None,
     );
@@ -1771,7 +1771,7 @@ async fn cli_status_reports_stored_session_daemon_state_when_api_url_differs() {
     assert_eq!(status_json["unlockDaemon"]["active"], true);
     assert_eq!(
         status_json["apiUrlMismatch"]["currentApiUrl"],
-        "https://worklist.app"
+        "https://sealtask.com"
     );
     assert_eq!(
         status_json["apiUrlMismatch"]["storedApiUrl"],
@@ -1787,7 +1787,7 @@ async fn cli_json_login_requires_email_non_interactively() {
 
     let output = run_cli(
         home.path(),
-        "https://worklist.app",
+        "https://sealtask.com",
         &["--json", "auth", "login"],
         None,
     );
@@ -1831,7 +1831,7 @@ async fn cli_json_unknown_argument_errors_are_machine_readable() {
 
     let output = run_cli(
         home.path(),
-        "https://worklist.app",
+        "https://sealtask.com",
         &["--json", "--bogus"],
         None,
     );
@@ -1851,7 +1851,7 @@ async fn cli_json_invalid_value_errors_are_machine_readable() {
 
     let output = run_cli(
         home.path(),
-        "https://worklist.app",
+        "https://sealtask.com",
         &["--json", "auth", "unlock", "--ttl-seconds", "nope"],
         None,
     );
@@ -3380,7 +3380,7 @@ fn assert_json_warning_contains(stderr: &str, expected_code: &str, expected_frag
 
 fn assert_json_password_stdin_required(args: &[&str], expected_message: &str) {
     let home = TempDir::new().expect("temp home");
-    let output = run_cli(home.path(), "https://worklist.app", args, None);
+    let output = run_cli(home.path(), "https://sealtask.com", args, None);
 
     assert!(!output.status.success(), "command unexpectedly succeeded");
     assert!(
