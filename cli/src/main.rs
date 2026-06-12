@@ -193,13 +193,13 @@ fn print_pretty_json_stderr<T: Serialize + ?Sized>(value: &T, context: &str) -> 
 #[command(
     name = "worklist",
     version,
-    about = "CLI for working with SealTask tasks, comments, and decrypted workspace data"
+    about = "CLI for working with Worklist tasks, comments, and decrypted workspace data"
 )]
 struct Cli {
     #[arg(
         long,
         env = "WORKLIST_API_URL",
-        default_value = "https://sealtask.com",
+        default_value = "https://worklist.app",
         global = true
     )]
     api_url: String,
@@ -858,7 +858,7 @@ fn cmd_info(runtime: &RuntimeClient) -> CliResult<()> {
             CryptoCapability::PayloadProof.as_str(),
         ],
         "decryptedReadModel": true,
-        "note": "This CLI is intended for agent-friendly task and comment workflows against SealTask.",
+        "note": "This CLI is intended for agent-friendly task and comment workflows against Worklist.",
     });
     print_pretty_json(&payload, "serializing CLI metadata should succeed")
 }

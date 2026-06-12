@@ -1,13 +1,13 @@
-# SealTask OSS
+# Worklist OSS
 
 Open-source Rust workspace for the `worklist` CLI and shared client crates.
 
-This repository contains the early public client surface for SealTask:
+This repository contains the early public client surface for Worklist:
 
 - `worklist`: command-line client for authenticating, reading decrypted work lists/tasks/comments, and creating or updating tasks and comments
 - `worklist-client-core`: shared public types and error handling
 - `worklist-client-auth`: local credential storage and authentication helpers
-- `worklist-client-api`: typed HTTP client for the SealTask API
+- `worklist-client-api`: typed HTTP client for the Worklist API
 - `worklist-client-crypto`: client-side crypto helpers for sealed payloads and key derivation
 - `worklist-client-runtime`: unlock-aware runtime that projects raw API responses into agent-facing decrypted models
 
@@ -70,13 +70,13 @@ WORKLIST_API_URL=https://your-worklist.example cargo run -p worklist -- me
 - `tasks get` includes typed attachment metadata and lists attachment IDs in table output.
 - `tasks attachments read` prints readable attachments to stdout, including plain text passthrough and DOCX rendered as Markdown; with `--json` it emits the rendered content plus attachment metadata.
 - `tasks attachments download` decrypts binary attachments and saves them locally; if `--output` is omitted it writes `./<attachment-file-name>`.
-- The current workspace targets encrypted SealTask flows, so authenticated reads and writes still depend on credentials, local key unwrap, and workspace keys from a live SealTask deployment.
+- The current workspace targets encrypted Worklist flows, so authenticated reads and writes still depend on credentials, local key unwrap, and workspace keys from a live Worklist deployment.
 - CI for this repository runs from `.github/workflows/ci.yml`.
 - Crates.io release steps are documented in [`RELEASE.md`](./RELEASE.md), with a helper script at [`scripts/publish-crates.sh`](./scripts/publish-crates.sh).
 
 ## Repository Flow
 
-This public repository is mirrored automatically from SealTask's upstream development repository. The code here is intended to be consumable as a normal standalone Rust workspace, but some changes may land here after first being developed upstream.
+This public repository is mirrored automatically from Worklist's upstream development repository. The code here is intended to be consumable as a normal standalone Rust workspace, but some changes may land here after first being developed upstream.
 
 ## License
 
