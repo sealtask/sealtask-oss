@@ -1872,11 +1872,13 @@ async fn cli_decrypted_commands_fail_non_interactively_without_unlock_or_keychai
     let state = Arc::new(Mutex::new(TestState::new(fixture.clone())));
     let server = spawn_server(state).await;
     let home = TempDir::new().expect("temp home");
+    let keychain_dir = TempDir::new().expect("temp keychain");
     seed_credentials(home.path(), &fixture, &server.base_url);
 
-    let task_output = run_cli(
+    let task_output = run_cli_with_test_keychain(
         home.path(),
         &server.base_url,
+        keychain_dir.path(),
         &[
             "--json",
             "tasks",
