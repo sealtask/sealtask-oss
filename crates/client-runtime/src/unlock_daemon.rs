@@ -552,6 +552,15 @@ mod tests {
     }
 
     impl EnvVarGuard {
+        #[cfg(target_os = "linux")]
+        fn clear() -> Self {
+            let previous = std::env::var_os(DAEMON_EXECUTABLE_ENV);
+            unsafe {
+                std::env::remove_var(DAEMON_EXECUTABLE_ENV);
+            }
+            Self { previous }
+        }
+
         fn set(path: &Path) -> Self {
             let previous = std::env::var_os(DAEMON_EXECUTABLE_ENV);
             unsafe {
