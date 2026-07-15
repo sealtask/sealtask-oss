@@ -21,18 +21,21 @@ serde_json.workspace = true
 sha2.workspace = true
 tokio.workspace = true
 uuid.workspace = true
+zeroize.workspace = true
 
-worklist-client-api = { version = "0.1.0", path = "../crates/client-api" }
-worklist-client-auth = { version = "0.1.0", path = "../crates/client-auth" }
-worklist-client-core = { version = "0.1.0", path = "../crates/client-core" }
-worklist-client-crypto = { version = "0.1.0", path = "../crates/client-crypto" }
-worklist-client-runtime = { version = "0.1.0", path = "../crates/client-runtime" }
+worklist-client-api = { version = "0.2.0", path = "../crates/client-api" }
+worklist-client-auth = { version = "0.2.0", path = "../crates/client-auth" }
+worklist-client-core = { version = "0.2.0", path = "../crates/client-core" }
+worklist-client-crypto = { version = "0.2.0", path = "../crates/client-crypto" }
+worklist-client-runtime = { version = "0.2.0", path = "../crates/client-runtime" }
 
 [dev-dependencies]
 assert_cmd = "2.0"
 axum = "0.8.6"
 base64.workspace = true
 chrono.workspace = true
+opaque-ke.workspace = true
+rand_core.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 strong-box.workspace = true

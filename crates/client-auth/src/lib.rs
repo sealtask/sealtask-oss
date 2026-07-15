@@ -1,8 +1,10 @@
 #![cfg_attr(test, allow(clippy::unwrap_used))]
 
+use std::fmt;
 use std::fs::{self, File};
 use std::io::{BufReader, BufWriter};
 use std::path::{Path, PathBuf};
+use std::time::{Duration as StdDuration, Instant};
 
 use argon2::{Algorithm, Argon2, Params, Version};
 use base64::Engine as _;
@@ -18,12 +20,16 @@ use rand_core::OsRng;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256, Sha512};
 use uuid::Uuid;
+use zeroize::{Zeroize, ZeroizeOnDrop};
 
 use worklist_client_core::{PublicError, PublicResult};
 
 const OPAQUE_SERVER_ID: &[u8] = b"worklist.api";
 const DATA_KEY_KEYCHAIN_SERVICE: &str = "worklist.data-key";
 const TEST_KEYCHAIN_DIR_ENV: &str = "WORKLIST_TEST_KEYCHAIN_DIR";
+const MFA_CAPABILITIES_HEADER: &str = "X-Worklist-Auth-Capabilities";
+const MFA_CAPABILITIES_VALUE: &str = "mfa-totp-v1";
+const MFA_CHALLENGE_EXPIRED_MESSAGE: &str = "MFA challenge expired; restart sign-in";
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -135,6 +141,227 @@ pub struct RefreshResponse {
 pub struct ApiError {
     pub error: String,
     pub message: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum MfaMethod {
+    Totp,
+    BackupCode,
+}
+
+#[derive(Debug, Clone)]
+pub struct MfaChallenge {
+    pub methods: Vec<MfaMethod>,
+    pub expires_in: u64,
+    pub attempts_remaining: u8,
+    pub requires_legacy_password: bool,
+}
+
+pub enum LoginOutcome {
+    Authenticated(AuthResponse),
+    MfaRequired {
+        challenge: MfaChallenge,
+        pending: PendingMfaLogin,
+    },
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum CompleteMfaLoginError {
+    #[error("{message}")]
+    Retryable {
+        message: String,
+        pending: PendingMfaLogin,
+        attempts_remaining: Option<u8>,
+        expires_in: Option<u64>,
+        retry_after_seconds: Option<u64>,
+    },
+    #[error("{message}")]
+    TotpLocked {
+        message: String,
+        pending: PendingMfaLogin,
+    },
+    #[error("{0}")]
+    Terminal(String),
+}
+
+pub struct PendingMfaLogin {
+    base_url: String,
+    challenge_token: SecretString,
+    challenge: MfaChallenge,
+    expires_at: Instant,
+}
+
+impl PendingMfaLogin {
+    fn new(base_url: String, challenge_token: String, challenge: MfaChallenge) -> Self {
+        Self::new_at(base_url, challenge_token, challenge, Instant::now())
+    }
+
+    fn new_at(
+        base_url: String,
+        challenge_token: String,
+        challenge: MfaChallenge,
+        now: Instant,
+    ) -> Self {
+        let expires_at = initial_mfa_deadline(now, challenge.expires_in);
+        Self {
+            base_url,
+            challenge_token: SecretString::new(challenge_token),
+            challenge,
+            expires_at,
+        }
+    }
+
+    #[must_use]
+    pub fn challenge(&self) -> &MfaChallenge {
+        &self.challenge
+    }
+
+    #[must_use]
+    pub fn remaining_seconds(&self) -> u64 {
+        self.remaining_seconds_at(Instant::now())
+    }
+
+    #[must_use]
+    pub fn deadline(&self) -> Instant {
+        self.expires_at
+    }
+
+    fn base_url(&self) -> &str {
+        &self.base_url
+    }
+
+    fn remaining_seconds_at(&self, now: Instant) -> u64 {
+        remaining_mfa_seconds(self.expires_at, now)
+    }
+
+    fn remaining_duration_at(&self, now: Instant) -> StdDuration {
+        self.expires_at.saturating_duration_since(now)
+    }
+
+    fn refresh_remaining_at(&mut self, now: Instant) -> u64 {
+        let remaining = self.remaining_seconds_at(now);
+        self.challenge.expires_in = remaining;
+        remaining
+    }
+
+    fn apply_retry_metadata_at(
+        &mut self,
+        attempts_remaining: Option<u8>,
+        server_expires_in: Option<u64>,
+        now: Instant,
+    ) -> u64 {
+        if let Some(attempts_remaining) = attempts_remaining {
+            self.challenge.attempts_remaining = attempts_remaining;
+        }
+        if let Some(server_expires_in) = server_expires_in
+            && let Some(server_deadline) =
+                now.checked_add(StdDuration::from_secs(server_expires_in))
+            && server_deadline < self.expires_at
+        {
+            self.expires_at = server_deadline;
+        }
+        self.refresh_remaining_at(now)
+    }
+}
+
+fn initial_mfa_deadline(now: Instant, expires_in: u64) -> Instant {
+    now.checked_add(StdDuration::from_secs(expires_in))
+        .unwrap_or(now)
+}
+
+fn remaining_mfa_seconds(expires_at: Instant, now: Instant) -> u64 {
+    let remaining = expires_at.saturating_duration_since(now);
+    remaining
+        .as_secs()
+        .saturating_add(u64::from(remaining.subsec_nanos() != 0))
+}
+
+impl Drop for PendingMfaLogin {
+    fn drop(&mut self) {
+        self.challenge_token.zeroize();
+    }
+}
+
+impl fmt::Debug for PendingMfaLogin {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("PendingMfaLogin")
+            .field("base_url", &self.base_url)
+            .field("challenge_token", &"<redacted>")
+            .field("challenge", &self.challenge)
+            .finish()
+    }
+}
+
+#[derive(Zeroize, ZeroizeOnDrop)]
+struct SecretString(String);
+
+impl SecretString {
+    fn new(value: impl Into<String>) -> Self {
+        Self(value.into())
+    }
+
+    fn expose(&self) -> &str {
+        &self.0
+    }
+}
+
+impl fmt::Debug for SecretString {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("<redacted>")
+    }
+}
+
+#[derive(Zeroize, ZeroizeOnDrop)]
+pub struct SecretMfaCode(String);
+
+impl SecretMfaCode {
+    pub fn new(value: impl Into<String>) -> Self {
+        Self(value.into())
+    }
+
+    fn expose(&self) -> &str {
+        &self.0
+    }
+}
+
+impl fmt::Debug for SecretMfaCode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("<redacted>")
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct SecondFactorRequiredResponse {
+    status: MfaRequiredStatus,
+    challenge_token: String,
+    methods: Vec<MfaMethod>,
+    expires_in: u64,
+    attempts_remaining: u8,
+    requires_legacy_password: bool,
+}
+
+#[derive(Clone, Copy, Deserialize)]
+enum MfaRequiredStatus {
+    #[serde(rename = "second_factor_required")]
+    SecondFactorRequired,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct MfaVerificationErrorResponse {
+    error: String,
+    message: String,
+    attempts_remaining: Option<u8>,
+    expires_in: Option<u64>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct MfaLoginVerifyRequest<'a> {
+    challenge_token: &'a str,
+    code: &'a str,
 }
 
 #[derive(Serialize)]
@@ -352,13 +579,27 @@ pub async fn login(
     email: &str,
     password: &str,
 ) -> PublicResult<AuthResponse> {
+    match begin_login(client, base_url, email, password).await? {
+        LoginOutcome::Authenticated(response) => Ok(response),
+        LoginOutcome::MfaRequired { pending, .. } => {
+            drop(pending);
+            Err(PublicError::mfa_required_use_begin_login())
+        }
+    }
+}
+
+pub async fn begin_login(
+    client: &reqwest::Client,
+    base_url: &str,
+    email: &str,
+    password: &str,
+) -> PublicResult<LoginOutcome> {
+    let normalized_base = normalize_api_url(base_url);
     let (opaque_state, client_login_state) = opaque_login_start(password)?;
 
     let start_response = client
-        .post(format!(
-            "{}/auth/opaque/login/start",
-            base_url.trim_end_matches('/')
-        ))
+        .post(format!("{normalized_base}/auth/opaque/login/start"))
+        .header(MFA_CAPABILITIES_HEADER, MFA_CAPABILITIES_VALUE)
         .json(&LoginStartRequest {
             email: email.to_string(),
             client_login_state,
@@ -377,10 +618,8 @@ pub async fn login(
     )?;
 
     let finish_response = client
-        .post(format!(
-            "{}/auth/opaque/login/finish",
-            base_url.trim_end_matches('/')
-        ))
+        .post(format!("{normalized_base}/auth/opaque/login/finish"))
+        .header(MFA_CAPABILITIES_HEADER, MFA_CAPABILITIES_VALUE)
         .json(&LoginFinishRequest {
             session_token: start_result.session_token,
             client_finish_message,
@@ -389,7 +628,257 @@ pub async fn login(
         .await
         .map_err(|err| map_reqwest_error(err, "login finish"))?;
 
-    parse_json_response(finish_response, "auth response").await
+    parse_login_finish_response(finish_response, &normalized_base).await
+}
+
+pub async fn complete_mfa_login(
+    client: &reqwest::Client,
+    pending: PendingMfaLogin,
+    code: SecretMfaCode,
+) -> Result<AuthResponse, CompleteMfaLoginError> {
+    complete_mfa_login_with_clock(client, pending, code, Instant::now).await
+}
+
+async fn complete_mfa_login_with_clock<Now>(
+    client: &reqwest::Client,
+    mut pending: PendingMfaLogin,
+    code: SecretMfaCode,
+    now: Now,
+) -> Result<AuthResponse, CompleteMfaLoginError>
+where
+    Now: Fn() -> Instant,
+{
+    let request_started_at = now();
+    if pending.remaining_duration_at(request_started_at).is_zero() {
+        return Err(CompleteMfaLoginError::Terminal(
+            MFA_CHALLENGE_EXPIRED_MESSAGE.to_string(),
+        ));
+    }
+    pending.refresh_remaining_at(request_started_at);
+
+    let base_url = pending.base_url().to_string();
+    let request_deadline = tokio::time::Instant::from_std(pending.deadline());
+    let request = async {
+        let response = client
+            .post(format!("{base_url}/auth/mfa/login/verify"))
+            .header(MFA_CAPABILITIES_HEADER, MFA_CAPABILITIES_VALUE)
+            .json(&MfaLoginVerifyRequest {
+                challenge_token: pending.challenge_token.expose(),
+                code: code.expose(),
+            })
+            .send()
+            .await?;
+        let status = response.status();
+        let retry_after_seconds = response
+            .headers()
+            .get(reqwest::header::RETRY_AFTER)
+            .and_then(|value| value.to_str().ok())
+            .and_then(|value| value.parse::<u64>().ok());
+        let body = response.text().await;
+        Ok::<_, reqwest::Error>((status, retry_after_seconds, body))
+    };
+    let (status, retry_after_seconds, body) =
+        match tokio::time::timeout_at(request_deadline, request).await {
+            Err(_) => {
+                return Err(CompleteMfaLoginError::Terminal(
+                    MFA_CHALLENGE_EXPIRED_MESSAGE.to_string(),
+                ));
+            }
+            Ok(Err(err)) => {
+                let expires_in = pending.refresh_remaining_at(now());
+                if expires_in == 0 {
+                    return Err(CompleteMfaLoginError::Terminal(
+                        MFA_CHALLENGE_EXPIRED_MESSAGE.to_string(),
+                    ));
+                }
+                return Err(CompleteMfaLoginError::Retryable {
+                    message: map_reqwest_error(err, "MFA login verify").to_string(),
+                    pending,
+                    attempts_remaining: None,
+                    expires_in: Some(expires_in),
+                    retry_after_seconds: None,
+                });
+            }
+            Ok(Ok(response)) => response,
+        };
+
+    if status.is_success() {
+        return match body {
+            Ok(body) => serde_json::from_str::<AuthResponse>(&body).map_err(|err| {
+                CompleteMfaLoginError::Terminal(format!("failed to parse auth response: {err}"))
+            }),
+            Err(err) => Err(CompleteMfaLoginError::Terminal(format!(
+                "failed to parse auth response: {err}"
+            ))),
+        };
+    }
+
+    let error_text = body.unwrap_or_else(|_| "unknown error".to_string());
+
+    if status.as_u16() == 409 && response_has_error_code(&error_text, "mfa_client_upgrade_required")
+    {
+        return Err(CompleteMfaLoginError::Terminal(
+            "client upgrade required for MFA".to_string(),
+        ));
+    }
+
+    if let Ok(mfa_error) = serde_json::from_str::<MfaVerificationErrorResponse>(&error_text) {
+        return Err(map_mfa_verification_error(
+            status.as_u16(),
+            mfa_error,
+            pending,
+            &code,
+            retry_after_seconds,
+            now(),
+        ));
+    }
+
+    if status.as_u16() == 429 || status.as_u16() == 503 {
+        let expires_in = pending.refresh_remaining_at(now());
+        if expires_in == 0 {
+            return Err(CompleteMfaLoginError::Terminal(
+                MFA_CHALLENGE_EXPIRED_MESSAGE.to_string(),
+            ));
+        }
+        return Err(CompleteMfaLoginError::Retryable {
+            message: redact_mfa_secrets(&error_text, &pending, &code),
+            pending,
+            attempts_remaining: None,
+            expires_in: Some(expires_in),
+            retry_after_seconds,
+        });
+    }
+
+    Err(CompleteMfaLoginError::Terminal(redact_mfa_secrets(
+        &error_text,
+        &pending,
+        &code,
+    )))
+}
+
+async fn parse_login_finish_response(
+    response: reqwest::Response,
+    base_url: &str,
+) -> PublicResult<LoginOutcome> {
+    let status = response.status();
+    if !status.is_success() {
+        let error_text = response
+            .text()
+            .await
+            .unwrap_or_else(|_| "unknown error".to_string());
+        if status.as_u16() == 409
+            && response_has_error_code(&error_text, "mfa_client_upgrade_required")
+        {
+            return Err(PublicError::validation(
+                "this client must be upgraded before signing in to an MFA-enabled account",
+            ));
+        }
+        return Err(map_api_error(status.as_u16(), &error_text));
+    }
+
+    let body = response.text().await.map_err(|err| {
+        PublicError::unexpected(format!("failed to read login finish body: {err}"))
+    })?;
+
+    let value: serde_json::Value = serde_json::from_str(&body)
+        .map_err(|err| PublicError::unexpected(format!("invalid login finish JSON: {err}")))?;
+    if value.get("status").and_then(serde_json::Value::as_str) == Some("second_factor_required") {
+        let challenge: SecondFactorRequiredResponse =
+            serde_json::from_value(value).map_err(|err| {
+                PublicError::unexpected(format!("failed to parse MFA challenge response: {err}"))
+            })?;
+        let _validated_status = challenge.status;
+        if challenge.expires_in == 0
+            || challenge.attempts_remaining == 0
+            || challenge.methods.first() != Some(&MfaMethod::Totp)
+        {
+            return Err(PublicError::unexpected("invalid MFA challenge metadata"));
+        }
+        let public_challenge = MfaChallenge {
+            methods: challenge.methods.clone(),
+            expires_in: challenge.expires_in,
+            attempts_remaining: challenge.attempts_remaining,
+            requires_legacy_password: challenge.requires_legacy_password,
+        };
+        return Ok(LoginOutcome::MfaRequired {
+            challenge: public_challenge.clone(),
+            pending: PendingMfaLogin::new(
+                base_url.to_string(),
+                challenge.challenge_token,
+                public_challenge,
+            ),
+        });
+    }
+
+    let auth_response: AuthResponse = serde_json::from_value(value)
+        .map_err(|err| PublicError::unexpected(format!("failed to parse auth response: {err}")))?;
+    Ok(LoginOutcome::Authenticated(auth_response))
+}
+
+fn response_has_error_code(body: &str, expected: &str) -> bool {
+    serde_json::from_str::<serde_json::Value>(body)
+        .ok()
+        .and_then(|value| {
+            value
+                .get("error")
+                .and_then(serde_json::Value::as_str)
+                .map(|code| code == expected)
+        })
+        .unwrap_or(false)
+}
+
+fn map_mfa_verification_error(
+    status: u16,
+    mut error: MfaVerificationErrorResponse,
+    mut pending: PendingMfaLogin,
+    code: &SecretMfaCode,
+    retry_after_seconds: Option<u64>,
+    now: Instant,
+) -> CompleteMfaLoginError {
+    error.message = redact_mfa_secrets(&error.message, &pending, code);
+    let expires_in =
+        pending.apply_retry_metadata_at(error.attempts_remaining, error.expires_in, now);
+    match error.error.as_str() {
+        "mfa_challenge_invalid_or_expired" | "mfa_enrollment_invalid_or_expired" => {
+            CompleteMfaLoginError::Terminal(error.message)
+        }
+        "invalid_mfa_code" if expires_in > 0 => CompleteMfaLoginError::Retryable {
+            message: error.message,
+            pending,
+            attempts_remaining: error.attempts_remaining,
+            expires_in: Some(expires_in),
+            retry_after_seconds,
+        },
+        "mfa_totp_locked" if expires_in > 0 => CompleteMfaLoginError::TotpLocked {
+            message: error.message,
+            pending,
+        },
+        _ if (status == 429 || status == 503) && expires_in > 0 => {
+            CompleteMfaLoginError::Retryable {
+                message: error.message,
+                pending,
+                attempts_remaining: error.attempts_remaining,
+                expires_in: Some(expires_in),
+                retry_after_seconds,
+            }
+        }
+        "invalid_mfa_code" | "mfa_totp_locked" if expires_in == 0 => {
+            CompleteMfaLoginError::Terminal(MFA_CHALLENGE_EXPIRED_MESSAGE.to_string())
+        }
+        _ if (status == 429 || status == 503) && expires_in == 0 => {
+            CompleteMfaLoginError::Terminal(MFA_CHALLENGE_EXPIRED_MESSAGE.to_string())
+        }
+        _ => CompleteMfaLoginError::Terminal(error.message),
+    }
+}
+
+fn redact_mfa_secrets(message: &str, pending: &PendingMfaLogin, code: &SecretMfaCode) -> String {
+    [pending.challenge_token.expose(), code.expose()]
+        .into_iter()
+        .filter(|secret| !secret.is_empty())
+        .fold(message.to_string(), |redacted, secret| {
+            redacted.replace(secret, "<redacted>")
+        })
 }
 
 pub async fn refresh_access_token(
@@ -681,9 +1170,794 @@ fn set_secret_file_permissions(_path: &Path) -> PublicResult<()> {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
+
     use super::*;
+    use axum::Json;
+    use axum::Router;
+    use axum::http::{HeaderValue, StatusCode, header};
+    use axum::response::IntoResponse;
+    use axum::routing::post;
     use chrono::Duration;
+    use serde_json::json;
     use tempfile::TempDir;
+    use tokio::net::TcpListener;
+
+    async fn spawn_mfa_server(
+        status: StatusCode,
+        body: serde_json::Value,
+        retry_after: Option<&'static str>,
+    ) -> String {
+        let app = Router::new().route(
+            "/auth/mfa/login/verify",
+            post(move || {
+                let body = body.clone();
+                async move {
+                    let mut response = (status, axum::Json(body)).into_response();
+                    if let Some(value) = retry_after {
+                        response
+                            .headers_mut()
+                            .insert(header::RETRY_AFTER, HeaderValue::from_static(value));
+                    }
+                    response
+                }
+            }),
+        );
+        let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind");
+        let address = listener.local_addr().expect("address");
+        tokio::spawn(async move {
+            axum::serve(listener, app).await.expect("serve test API");
+        });
+        format!("http://{address}")
+    }
+
+    async fn spawn_hanging_mfa_server() -> String {
+        let app = Router::new().route(
+            "/auth/mfa/login/verify",
+            post(|| async { std::future::pending::<StatusCode>().await }),
+        );
+        let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind");
+        let address = listener.local_addr().expect("address");
+        tokio::spawn(async move {
+            axum::serve(listener, app).await.expect("serve test API");
+        });
+        format!("http://{address}")
+    }
+
+    async fn spawn_shortening_then_rate_limited_server(request_count: Arc<AtomicUsize>) -> String {
+        let app = Router::new().route(
+            "/auth/mfa/login/verify",
+            post(move || {
+                let request_count = Arc::clone(&request_count);
+                async move {
+                    let request_index = request_count.fetch_add(1, Ordering::SeqCst);
+                    if request_index == 0 {
+                        return (
+                            StatusCode::UNAUTHORIZED,
+                            Json(json!({
+                                "error": "invalid_mfa_code",
+                                "message": "invalid authenticator code",
+                                "attemptsRemaining": 7,
+                                "expiresIn": 5
+                            })),
+                        )
+                            .into_response();
+                    }
+
+                    let mut response = (
+                        StatusCode::TOO_MANY_REQUESTS,
+                        Json(json!({
+                            "error": "rate_limited",
+                            "message": "try later",
+                            "attemptsRemaining": 7,
+                            "expiresIn": 300
+                        })),
+                    )
+                        .into_response();
+                    response
+                        .headers_mut()
+                        .insert(header::RETRY_AFTER, HeaderValue::from_static("1"));
+                    response
+                }
+            }),
+        );
+        let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind");
+        let address = listener.local_addr().expect("address");
+        tokio::spawn(async move {
+            axum::serve(listener, app).await.expect("serve test API");
+        });
+        format!("http://{address}")
+    }
+
+    async fn spawn_code_sensitive_mfa_server(
+        expected_token: &'static str,
+        accepted_code: &'static str,
+    ) -> String {
+        let app = Router::new().route(
+            "/auth/mfa/login/verify",
+            post(move |Json(request): Json<serde_json::Value>| async move {
+                assert_eq!(request["challengeToken"], expected_token);
+                if request["code"] == accepted_code {
+                    (
+                        StatusCode::OK,
+                        Json(successful_auth_body("completed-access-token")),
+                    )
+                        .into_response()
+                } else {
+                    (
+                        StatusCode::UNAUTHORIZED,
+                        Json(json!({
+                            "error": "invalid_mfa_code",
+                            "message": "invalid authenticator or MFA backup code",
+                            "attemptsRemaining": 7,
+                            "expiresIn": 240
+                        })),
+                    )
+                        .into_response()
+                }
+            }),
+        );
+        let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind");
+        let address = listener.local_addr().expect("address");
+        tokio::spawn(async move {
+            axum::serve(listener, app).await.expect("serve test API");
+        });
+        format!("http://{address}")
+    }
+
+    async fn spawn_exact_mfa_request_server(expected_token: &str, expected_code: &str) -> String {
+        let expected_token = expected_token.to_string();
+        let expected_code = expected_code.to_string();
+        let app = Router::new().route(
+            "/auth/mfa/login/verify",
+            post(move |Json(request): Json<serde_json::Value>| {
+                let expected_token = expected_token.clone();
+                let expected_code = expected_code.clone();
+                async move {
+                    assert_eq!(
+                        request["challengeToken"].as_str(),
+                        Some(expected_token.as_str())
+                    );
+                    assert_eq!(request["code"].as_str(), Some(expected_code.as_str()));
+                    (
+                        StatusCode::OK,
+                        Json(successful_auth_body("raw-code-access-token")),
+                    )
+                }
+            }),
+        );
+        let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind");
+        let address = listener.local_addr().expect("address");
+        tokio::spawn(async move {
+            axum::serve(listener, app).await.expect("serve test API");
+        });
+        format!("http://{address}")
+    }
+
+    async fn spawn_login_finish_server(status: StatusCode, body: serde_json::Value) -> String {
+        let app = Router::new().route(
+            "/auth/opaque/login/finish",
+            post(move || {
+                let body = body.clone();
+                async move { (status, Json(body)) }
+            }),
+        );
+        let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind");
+        let address = listener.local_addr().expect("address");
+        tokio::spawn(async move {
+            axum::serve(listener, app).await.expect("serve test API");
+        });
+        format!("http://{address}")
+    }
+
+    fn successful_auth_body(access_token: &str) -> serde_json::Value {
+        json!({
+            "accessToken": access_token,
+            "refreshToken": "completed-refresh-token",
+            "expiresIn": 900,
+            "refreshExpiresIn": 2592000,
+            "tokenType": "Bearer",
+            "user": {
+                "id": "01900000-0000-7000-8000-000000000001",
+                "email": "mfa@example.test",
+                "name": "MFA Test",
+                "timezone": "UTC",
+                "avatarColor": "blue",
+                "themePreference": "system",
+                "emailVerified": true
+            },
+            "dataKeyCiphertext": "encrypted-data-key"
+        })
+    }
+
+    fn pending_for(base_url: String, token: &str) -> PendingMfaLogin {
+        pending_for_at(base_url, token, Instant::now())
+    }
+
+    fn pending_for_at(base_url: String, token: &str, now: Instant) -> PendingMfaLogin {
+        PendingMfaLogin::new_at(
+            base_url,
+            token.to_string(),
+            MfaChallenge {
+                methods: vec![MfaMethod::Totp, MfaMethod::BackupCode],
+                expires_in: 300,
+                attempts_remaining: 8,
+                requires_legacy_password: false,
+            },
+            now,
+        )
+    }
+
+    struct TestClock {
+        origin: Instant,
+        elapsed_seconds: AtomicU64,
+    }
+
+    impl TestClock {
+        fn new() -> Self {
+            Self {
+                origin: Instant::now(),
+                elapsed_seconds: AtomicU64::new(0),
+            }
+        }
+
+        fn now(&self) -> Instant {
+            self.origin + StdDuration::from_secs(self.elapsed_seconds.load(Ordering::SeqCst))
+        }
+
+        fn advance(&self, seconds: u64) {
+            self.elapsed_seconds.fetch_add(seconds, Ordering::SeqCst);
+        }
+    }
+
+    fn shorten_pending_at(pending: PendingMfaLogin, now: Instant) -> PendingMfaLogin {
+        match map_mfa_verification_error(
+            StatusCode::UNAUTHORIZED.as_u16(),
+            MfaVerificationErrorResponse {
+                error: "invalid_mfa_code".to_string(),
+                message: "invalid authenticator code".to_string(),
+                attempts_remaining: Some(7),
+                expires_in: Some(5),
+            },
+            pending,
+            &SecretMfaCode::new("000000"),
+            None,
+            now,
+        ) {
+            CompleteMfaLoginError::Retryable {
+                pending,
+                expires_in: Some(5),
+                ..
+            } => pending,
+            _ => panic!("invalid code should shorten the live continuation to five seconds"),
+        }
+    }
+
+    #[test]
+    fn login_wrapper_returns_mfa_required_use_begin_login() {
+        let err = PublicError::mfa_required_use_begin_login();
+        assert!(matches!(err, PublicError::MfaRequiredUseBeginLogin));
+    }
+
+    #[test]
+    fn response_error_code_matching_is_exact_and_top_level() {
+        assert!(response_has_error_code(
+            r#"{"error":"mfa_client_upgrade_required","message":"upgrade"}"#,
+            "mfa_client_upgrade_required"
+        ));
+        assert!(!response_has_error_code(
+            r#"{"error":"different","message":"mfa_client_upgrade_required"}"#,
+            "mfa_client_upgrade_required"
+        ));
+    }
+
+    #[test]
+    fn second_factor_required_response_decodes_public_challenge_fields() {
+        let body = r#"{"status":"second_factor_required","challengeToken":"challenge-token","methods":["totp","backup_code"],"expiresIn":300,"attemptsRemaining":8,"requiresLegacyPassword":false}"#;
+        let challenge: SecondFactorRequiredResponse =
+            serde_json::from_str(body).expect("decode challenge");
+        assert_eq!(challenge.attempts_remaining, 8);
+        assert!(challenge.methods.contains(&MfaMethod::Totp));
+    }
+
+    #[tokio::test]
+    async fn totp_and_backup_codes_complete_to_final_auth_responses() {
+        for code in ["012345", "ST2-00112233-44556677-8899AABB-CCDDEEFF"] {
+            let challenge_token = "completion-challenge-token";
+            let base_url = spawn_code_sensitive_mfa_server(challenge_token, code).await;
+            let response = complete_mfa_login(
+                &reqwest::Client::new(),
+                pending_for(base_url.clone(), challenge_token),
+                SecretMfaCode::new(code),
+            )
+            .await
+            .expect("valid second factor should complete login");
+
+            let credentials = auth_response_to_credentials(&base_url, response);
+            let stored = serde_json::to_string(&credentials).expect("serialize credentials");
+            assert!(stored.contains("completed-access-token"));
+            assert!(!stored.contains(challenge_token));
+            assert!(!stored.contains(code));
+            assert!(!stored.contains("challenge"));
+        }
+    }
+
+    #[tokio::test]
+    async fn mfa_verify_request_preserves_factor_code_byte_for_byte() {
+        for code in [
+            "",
+            " ",
+            "\t",
+            " 012345",
+            "012345 ",
+            "０１２３４５",
+            "012345",
+            "ST2-00112233-44556677-8899AABB-CCDDEEFF",
+            "ST2-not-a-canonical-backup-code",
+        ] {
+            let challenge_token = "oss-raw-code-challenge";
+            let base_url = spawn_exact_mfa_request_server(challenge_token, code).await;
+            complete_mfa_login(
+                &reqwest::Client::new(),
+                pending_for(base_url, challenge_token),
+                SecretMfaCode::new(code),
+            )
+            .await
+            .expect("server should observe the exact factor code");
+        }
+    }
+
+    #[tokio::test]
+    async fn wrong_totp_retains_continuation_for_backup_completion() {
+        let challenge_token = "wrong-then-backup-challenge";
+        let backup_code = "ST2-FFEEDDCC-BBAA9988-77665544-33221100";
+        let base_url = spawn_code_sensitive_mfa_server(challenge_token, backup_code).await;
+
+        let wrong = complete_mfa_login(
+            &reqwest::Client::new(),
+            pending_for(base_url, challenge_token),
+            SecretMfaCode::new("000000"),
+        )
+        .await;
+        let pending = match wrong {
+            Err(CompleteMfaLoginError::Retryable {
+                pending,
+                attempts_remaining: Some(7),
+                expires_in: Some(240),
+                ..
+            }) => pending,
+            _ => panic!("wrong TOTP should return a retryable continuation"),
+        };
+
+        let completed = complete_mfa_login(
+            &reqwest::Client::new(),
+            pending,
+            SecretMfaCode::new(backup_code),
+        )
+        .await
+        .expect("backup code should complete the retained challenge");
+        assert_eq!(completed.access_token, "completed-access-token");
+    }
+
+    #[tokio::test]
+    async fn shortened_deadline_cannot_be_extended_and_expires_locally() {
+        let clock = TestClock::new();
+        let request_count = Arc::new(AtomicUsize::new(0));
+        let base_url = spawn_shortening_then_rate_limited_server(Arc::clone(&request_count)).await;
+        let pending = pending_for_at(base_url, "deadline-challenge", clock.now());
+
+        let first = complete_mfa_login_with_clock(
+            &reqwest::Client::new(),
+            pending,
+            SecretMfaCode::new("000000"),
+            || clock.now(),
+        )
+        .await;
+        let pending = match first {
+            Err(CompleteMfaLoginError::Retryable {
+                pending,
+                expires_in: Some(5),
+                ..
+            }) => pending,
+            _ => panic!("invalid code should shorten the live continuation to five seconds"),
+        };
+        assert_eq!(pending.remaining_seconds_at(clock.now()), 5);
+
+        clock.advance(2);
+        let second = complete_mfa_login_with_clock(
+            &reqwest::Client::new(),
+            pending,
+            SecretMfaCode::new("000001"),
+            || clock.now(),
+        )
+        .await;
+        let pending = match second {
+            Err(CompleteMfaLoginError::Retryable {
+                pending,
+                expires_in: Some(3),
+                retry_after_seconds: Some(1),
+                ..
+            }) => pending,
+            _ => panic!("a later rate limit must retain the shortened deadline"),
+        };
+        assert_eq!(pending.challenge().expires_in, 3);
+
+        clock.advance(3);
+        let expired = complete_mfa_login_with_clock(
+            &reqwest::Client::new(),
+            pending,
+            SecretMfaCode::new("000002"),
+            || clock.now(),
+        )
+        .await;
+        assert!(matches!(
+            expired,
+            Err(CompleteMfaLoginError::Terminal(message))
+                if message == MFA_CHALLENGE_EXPIRED_MESSAGE
+        ));
+        assert_eq!(
+            request_count.load(Ordering::SeqCst),
+            2,
+            "local expiry must stop a third verification request"
+        );
+    }
+
+    #[test]
+    fn shortened_deadline_survives_service_outage_and_totp_lock() {
+        let clock = TestClock::new();
+        let pending = shorten_pending_at(
+            pending_for_at("http://unused.test".to_string(), "deadline", clock.now()),
+            clock.now(),
+        );
+
+        clock.advance(2);
+        let outage = map_mfa_verification_error(
+            StatusCode::SERVICE_UNAVAILABLE.as_u16(),
+            MfaVerificationErrorResponse {
+                error: "mfa_service_unavailable".to_string(),
+                message: "temporarily unavailable".to_string(),
+                attempts_remaining: Some(7),
+                expires_in: Some(300),
+            },
+            pending,
+            &SecretMfaCode::new("000001"),
+            None,
+            clock.now(),
+        );
+        let pending = match outage {
+            CompleteMfaLoginError::Retryable {
+                pending,
+                expires_in: Some(3),
+                ..
+            } => pending,
+            _ => panic!("a service outage must retain the shortened deadline"),
+        };
+
+        let locked = map_mfa_verification_error(
+            StatusCode::CONFLICT.as_u16(),
+            MfaVerificationErrorResponse {
+                error: "mfa_totp_locked".to_string(),
+                message: "use a backup code".to_string(),
+                attempts_remaining: Some(7),
+                expires_in: Some(300),
+            },
+            pending,
+            &SecretMfaCode::new("000002"),
+            None,
+            clock.now(),
+        );
+        assert!(matches!(
+            locked,
+            CompleteMfaLoginError::TotpLocked { pending, .. }
+                if pending.remaining_seconds_at(clock.now()) == 3
+                    && pending.challenge().expires_in == 3
+        ));
+    }
+
+    #[tokio::test]
+    async fn shortened_deadline_survives_transport_failure_and_stops_later_request() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind");
+        let unavailable_base_url = format!(
+            "http://{}",
+            listener.local_addr().expect("transport test address")
+        );
+        drop(listener);
+
+        let clock = TestClock::new();
+        let pending = shorten_pending_at(
+            pending_for_at(unavailable_base_url, "network-deadline", clock.now()),
+            clock.now(),
+        );
+        clock.advance(2);
+        let failed = complete_mfa_login_with_clock(
+            &reqwest::Client::new(),
+            pending,
+            SecretMfaCode::new("000001"),
+            || clock.now(),
+        )
+        .await;
+        let mut pending = match failed {
+            Err(CompleteMfaLoginError::Retryable {
+                pending,
+                expires_in: Some(3),
+                ..
+            }) => pending,
+            _ => panic!("a transport failure must retain the shortened deadline"),
+        };
+
+        let request_count = Arc::new(AtomicUsize::new(0));
+        pending.base_url =
+            spawn_shortening_then_rate_limited_server(Arc::clone(&request_count)).await;
+        clock.advance(3);
+        let expired = complete_mfa_login_with_clock(
+            &reqwest::Client::new(),
+            pending,
+            SecretMfaCode::new("000002"),
+            || clock.now(),
+        )
+        .await;
+        assert!(matches!(
+            expired,
+            Err(CompleteMfaLoginError::Terminal(message))
+                if message == MFA_CHALLENGE_EXPIRED_MESSAGE
+        ));
+        assert_eq!(
+            request_count.load(Ordering::SeqCst),
+            0,
+            "local expiry must stop the later verification request"
+        );
+    }
+
+    #[tokio::test]
+    async fn caller_http_timeout_remains_effective() {
+        let base_url = spawn_hanging_mfa_server().await;
+        let client = reqwest::Client::builder()
+            .timeout(StdDuration::from_millis(20))
+            .build()
+            .expect("client");
+        let result = tokio::time::timeout(
+            StdDuration::from_secs(1),
+            complete_mfa_login(
+                &client,
+                pending_for(base_url, "caller-timeout"),
+                SecretMfaCode::new("000001"),
+            ),
+        )
+        .await
+        .expect("the caller's shorter HTTP timeout must remain effective");
+        assert!(matches!(
+            result,
+            Err(CompleteMfaLoginError::Retryable { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn exact_client_upgrade_error_is_terminal_with_fixed_message() {
+        let base_url = spawn_mfa_server(
+            StatusCode::CONFLICT,
+            json!({
+                "error": "mfa_client_upgrade_required",
+                "message": "server-controlled text"
+            }),
+            None,
+        )
+        .await;
+        let result = complete_mfa_login(
+            &reqwest::Client::new(),
+            pending_for(base_url, "upgrade-challenge"),
+            SecretMfaCode::new("012345"),
+        )
+        .await;
+        assert!(matches!(
+            result,
+            Err(CompleteMfaLoginError::Terminal(message))
+                if message == "client upgrade required for MFA"
+        ));
+
+        let mismatched_url = spawn_mfa_server(
+            StatusCode::CONFLICT,
+            json!({
+                "error": "different_error",
+                "message": "ordinary conflict"
+            }),
+            None,
+        )
+        .await;
+        let mismatched = complete_mfa_login(
+            &reqwest::Client::new(),
+            pending_for(mismatched_url, "not-upgrade-challenge"),
+            SecretMfaCode::new("012345"),
+        )
+        .await;
+        assert!(matches!(
+            mismatched,
+            Err(CompleteMfaLoginError::Terminal(message)) if message == "ordinary conflict"
+        ));
+    }
+
+    #[tokio::test]
+    async fn login_finish_classifies_only_exact_upgrade_error_code() {
+        let base_url = spawn_login_finish_server(
+            StatusCode::CONFLICT,
+            json!({
+                "error": "mfa_client_upgrade_required",
+                "message": "server-controlled text"
+            }),
+        )
+        .await;
+        let response = reqwest::Client::new()
+            .post(format!("{base_url}/auth/opaque/login/finish"))
+            .send()
+            .await
+            .expect("request");
+        let error = match parse_login_finish_response(response, &base_url).await {
+            Err(error) => error,
+            Ok(_) => panic!("upgrade response must fail"),
+        };
+        assert_eq!(
+            error.to_string(),
+            "this client must be upgraded before signing in to an MFA-enabled account"
+        );
+
+        let mismatched_url = spawn_login_finish_server(
+            StatusCode::CONFLICT,
+            json!({
+                "error": "different_error",
+                "message": "mfa_client_upgrade_required"
+            }),
+        )
+        .await;
+        let response = reqwest::Client::new()
+            .post(format!("{mismatched_url}/auth/opaque/login/finish"))
+            .send()
+            .await
+            .expect("request");
+        let error = match parse_login_finish_response(response, &mismatched_url).await {
+            Err(error) => error,
+            Ok(_) => panic!("conflict response must fail"),
+        };
+        assert_ne!(
+            error.to_string(),
+            "this client must be upgraded before signing in to an MFA-enabled account"
+        );
+    }
+
+    #[tokio::test]
+    async fn no_mfa_login_finish_remains_authenticated() {
+        let base_url =
+            spawn_login_finish_server(StatusCode::OK, successful_auth_body("no-mfa-access")).await;
+        let response = reqwest::Client::new()
+            .post(format!("{base_url}/auth/opaque/login/finish"))
+            .send()
+            .await
+            .expect("request");
+        let outcome = parse_login_finish_response(response, &base_url)
+            .await
+            .expect("ordinary login response");
+        assert!(matches!(
+            outcome,
+            LoginOutcome::Authenticated(response) if response.access_token == "no-mfa-access"
+        ));
+    }
+
+    #[tokio::test]
+    async fn server_echoes_of_mfa_secrets_are_redacted_from_errors() {
+        let challenge_token = "never-log-this-challenge";
+        let code = "098765";
+        let base_url = spawn_mfa_server(
+            StatusCode::UNAUTHORIZED,
+            json!({
+                "error": "invalid_mfa_code",
+                "message": format!("bad {code} for {challenge_token}"),
+                "attemptsRemaining": 7,
+                "expiresIn": 240
+            }),
+            None,
+        )
+        .await;
+        let result = complete_mfa_login(
+            &reqwest::Client::new(),
+            pending_for(base_url, challenge_token),
+            SecretMfaCode::new(code),
+        )
+        .await;
+        let error = match result {
+            Err(error) => error,
+            Ok(_) => panic!("wrong code should fail"),
+        };
+        let rendered = format!("{error:?} {error}");
+        assert!(!rendered.contains(challenge_token));
+        assert!(!rendered.contains(code));
+        assert!(rendered.contains("<redacted>"));
+    }
+
+    #[tokio::test]
+    async fn rate_limit_returns_original_redacted_pending_continuation() {
+        let raw_token = "distinctive-pending-challenge-token";
+        let base_url = spawn_mfa_server(
+            StatusCode::TOO_MANY_REQUESTS,
+            json!({"error":"rate_limited","message":"try later"}),
+            Some("17"),
+        )
+        .await;
+
+        let result = complete_mfa_login(
+            &reqwest::Client::new(),
+            pending_for(base_url, raw_token),
+            SecretMfaCode::new("012345"),
+        )
+        .await;
+
+        match result {
+            Err(CompleteMfaLoginError::Retryable {
+                pending,
+                retry_after_seconds,
+                ..
+            }) => {
+                assert_eq!(retry_after_seconds, Some(17));
+                assert!(!format!("{pending:?}").contains(raw_token));
+            }
+            _ => panic!("expected retryable rate limit"),
+        }
+    }
+
+    #[tokio::test]
+    async fn verifier_outage_preserves_backup_capable_continuation() {
+        let base_url = spawn_mfa_server(
+            StatusCode::SERVICE_UNAVAILABLE,
+            json!({"error":"mfa_service_unavailable","message":"temporarily unavailable"}),
+            None,
+        )
+        .await;
+
+        let result = complete_mfa_login(
+            &reqwest::Client::new(),
+            pending_for(base_url, "outage-token"),
+            SecretMfaCode::new("012345"),
+        )
+        .await;
+
+        assert!(matches!(
+            result,
+            Err(CompleteMfaLoginError::Retryable { pending, .. })
+                if pending.challenge().methods.contains(&MfaMethod::BackupCode)
+        ));
+    }
+
+    #[tokio::test]
+    async fn totp_lock_retains_continuation_but_expiry_is_terminal() {
+        let locked_url = spawn_mfa_server(
+            StatusCode::CONFLICT,
+            json!({"error":"mfa_totp_locked","message":"use a backup code"}),
+            None,
+        )
+        .await;
+        let locked = complete_mfa_login(
+            &reqwest::Client::new(),
+            pending_for(locked_url, "locked-token"),
+            SecretMfaCode::new("012345"),
+        )
+        .await;
+        assert!(matches!(
+            locked,
+            Err(CompleteMfaLoginError::TotpLocked { .. })
+        ));
+
+        let expired_url = spawn_mfa_server(
+            StatusCode::UNAUTHORIZED,
+            json!({"error":"mfa_challenge_invalid_or_expired","message":"start again"}),
+            None,
+        )
+        .await;
+        let expired = complete_mfa_login(
+            &reqwest::Client::new(),
+            pending_for(expired_url, "expired-token"),
+            SecretMfaCode::new("012345"),
+        )
+        .await;
+        assert!(matches!(expired, Err(CompleteMfaLoginError::Terminal(_))));
+    }
 
     fn test_credentials() -> Credentials {
         Credentials {

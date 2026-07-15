@@ -22,4 +22,4 @@ sha2.workspace = true
 strong-box.workspace = true
 uuid.workspace = true
 
-worklist-client-core = { version = "0.1.0", path = "../client-core" }
+worklist-client-core = { version = "0.2.0", path = "../client-core" }

@@ -14,6 +14,7 @@ CRATES=(
   "worklist-client-auth"
   "worklist-client-crypto"
   "worklist-client-api"
+  "worklist-client-runtime"
   "worklist"
 )
 

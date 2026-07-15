@@ -13,6 +13,11 @@ use axum::{
 use base64::Engine as _;
 use base64::engine::general_purpose::STANDARD_NO_PAD;
 use chrono::{DateTime, Duration, Utc};
+use opaque_ke::{
+    ClientRegistration, ClientRegistrationFinishParameters, CredentialRequest, Identifiers,
+    RegistrationResponse, ServerLogin, ServerLoginParameters, ServerRegistration, ServerSetup,
+};
+use rand_core::OsRng;
 use serde::Deserialize;
 use serde_json::{Value, json};
 use strong_box::StrongBox;
@@ -20,7 +25,7 @@ use tempfile::TempDir;
 use tokio::net::TcpListener;
 use uuid::Uuid;
 use worklist_client_api::{AuditPatchFieldRequest, AuditPatchRequest};
-use worklist_client_auth::Credentials;
+use worklist_client_auth::{ClientCipherSuite, Credentials};
 use worklist_client_crypto::{
     ATTACHMENT_BLOB_CONTEXT, ATTACHMENT_BLOB_CONTEXT_LABEL, ATTACHMENT_BLOB_REF_VERSION,
     ATTACHMENT_REF_CONTEXT, AttachmentBlobRef, CommentPayloadBody, FlexibleValue, SealedPayload,
@@ -1810,6 +1815,304 @@ async fn cli_json_login_requires_password_stdin_non_interactively() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn cli_login_stdin_sends_whitespace_factor_to_the_mfa_endpoint_unchanged() {
+    const EMAIL: &str = "raw-mfa-cli@example.test";
+    const PASSWORD: &str = "process-password";
+    const RAW_FACTOR: &str = " \t ";
+    const CHALLENGE_TOKEN: &str = "process-level-mfa-challenge";
+
+    let observed_code = Arc::new(Mutex::new(None));
+    let server =
+        spawn_raw_mfa_login_server(EMAIL, PASSWORD, CHALLENGE_TOKEN, observed_code.clone()).await;
+    let home = TempDir::new().expect("temp home");
+    let stdin = format!("  {PASSWORD}  \r\n{RAW_FACTOR}\r\n");
+
+    let output = run_cli(
+        home.path(),
+        &server.base_url,
+        &[
+            "--json",
+            "auth",
+            "login",
+            "--email",
+            EMAIL,
+            "--password-stdin",
+        ],
+        Some(&stdin),
+    );
+
+    assert!(!output.status.success(), "denied MFA login must fail");
+    assert!(
+        output.stdout.is_empty(),
+        "unexpected stdout: {}",
+        output.stdout
+    );
+    let error = parse_stderr_json(&output.stderr);
+    assert_eq!(error["error"]["code"], "validation");
+    assert_eq!(
+        error["error"]["message"],
+        "mock endpoint rejected the supplied MFA factor"
+    );
+    assert_ne!(error["error"]["code"], "mfa_input_required");
+    assert!(!output.stderr.contains(PASSWORD));
+    assert!(!output.stderr.contains(CHALLENGE_TOKEN));
+    assert_eq!(
+        observed_code.lock().expect("observed code lock").as_deref(),
+        Some(RAW_FACTOR)
+    );
+    assert!(
+        !home.path().join(".worklist/credentials.json").exists(),
+        "a denied MFA attempt must not persist credentials"
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn cli_login_stdin_persists_only_final_no_mfa_credentials() {
+    const EMAIL: &str = "process-no-mfa@example.test";
+    const PASSWORD: &str = "process-no-mfa-password";
+    const CHALLENGE_TOKEN: &str = "unused-process-no-mfa-challenge";
+
+    let observed_code = Arc::new(Mutex::new(None));
+    let server = spawn_raw_login_server(
+        EMAIL,
+        PASSWORD,
+        CHALLENGE_TOKEN,
+        observed_code.clone(),
+        RawLoginFinishOutcome::Authenticated,
+        RawMfaVerifyOutcome::Reject,
+    )
+    .await;
+    let home = TempDir::new().expect("temp home");
+    let stdin = format!("{PASSWORD}\n");
+
+    let output = run_cli(
+        home.path(),
+        &server.base_url,
+        &[
+            "--json",
+            "auth",
+            "login",
+            "--email",
+            EMAIL,
+            "--password-stdin",
+        ],
+        Some(&stdin),
+    );
+
+    assert!(output.status.success(), "login failed: {}", output.stderr);
+    assert!(
+        output.stderr.is_empty(),
+        "unexpected stderr: {}",
+        output.stderr
+    );
+    assert!(observed_code.lock().expect("observed code lock").is_none());
+    assert_final_process_login_credentials(home.path(), PASSWORD, CHALLENGE_TOKEN, None);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn cli_login_stdin_completes_totp_and_backup_code_before_persisting() {
+    const EMAIL: &str = "process-mfa-success@example.test";
+    const PASSWORD: &str = "process-mfa-success-password";
+    const CHALLENGE_TOKEN: &str = "process-mfa-success-challenge";
+
+    for code in ["012345", "ST2-00112233-44556677-8899AABB-CCDDEEFF"] {
+        let observed_code = Arc::new(Mutex::new(None));
+        let server = spawn_raw_login_server(
+            EMAIL,
+            PASSWORD,
+            CHALLENGE_TOKEN,
+            observed_code.clone(),
+            RawLoginFinishOutcome::MfaRequired,
+            RawMfaVerifyOutcome::Authenticate {
+                expected_code: code.to_string(),
+            },
+        )
+        .await;
+        let home = TempDir::new().expect("temp home");
+        let stdin = format!("{PASSWORD}\n{code}\n");
+
+        let output = run_cli(
+            home.path(),
+            &server.base_url,
+            &[
+                "--json",
+                "auth",
+                "login",
+                "--email",
+                EMAIL,
+                "--password-stdin",
+            ],
+            Some(&stdin),
+        );
+
+        assert!(
+            output.status.success(),
+            "MFA login for {code} failed: {}",
+            output.stderr
+        );
+        assert!(
+            output.stderr.is_empty(),
+            "unexpected stderr: {}",
+            output.stderr
+        );
+        assert_eq!(
+            observed_code.lock().expect("observed code lock").as_deref(),
+            Some(code)
+        );
+        assert_final_process_login_credentials(home.path(), PASSWORD, CHALLENGE_TOKEN, Some(code));
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn cli_login_stdin_missing_factor_fails_without_prompting_or_persisting() {
+    const EMAIL: &str = "process-mfa-missing@example.test";
+    const PASSWORD: &str = "process-mfa-missing-password";
+    const CHALLENGE_TOKEN: &str = "process-mfa-missing-challenge";
+
+    let observed_code = Arc::new(Mutex::new(None));
+    let server = spawn_raw_login_server(
+        EMAIL,
+        PASSWORD,
+        CHALLENGE_TOKEN,
+        observed_code.clone(),
+        RawLoginFinishOutcome::MfaRequired,
+        RawMfaVerifyOutcome::Reject,
+    )
+    .await;
+    let home = TempDir::new().expect("temp home");
+    let output = run_cli(
+        home.path(),
+        &server.base_url,
+        &[
+            "--json",
+            "auth",
+            "login",
+            "--email",
+            EMAIL,
+            "--password-stdin",
+        ],
+        Some(&format!("{PASSWORD}\n")),
+    );
+
+    assert!(
+        !output.status.success(),
+        "missing MFA input unexpectedly succeeded"
+    );
+    assert!(
+        output.stdout.is_empty(),
+        "unexpected stdout: {}",
+        output.stdout
+    );
+    let error = parse_stderr_json(&output.stderr);
+    assert_eq!(error["error"]["code"], "mfa_input_required");
+    assert!(!output.stderr.contains(PASSWORD));
+    assert!(!output.stderr.contains(CHALLENGE_TOKEN));
+    assert!(observed_code.lock().expect("observed code lock").is_none());
+    assert!(
+        !home.path().join(".worklist/credentials.json").exists(),
+        "an incomplete MFA login must not persist credentials"
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn cli_login_process_maps_upgrade_and_terminal_or_retryable_mfa_without_secret_persistence() {
+    const EMAIL: &str = "process-mfa-errors@example.test";
+    const PASSWORD: &str = "process-mfa-errors-password";
+    const CODE: &str = "012345";
+    const CHALLENGE_TOKEN: &str = "process-mfa-errors-challenge";
+
+    let upgrade_server = spawn_raw_login_server(
+        EMAIL,
+        PASSWORD,
+        CHALLENGE_TOKEN,
+        Arc::new(Mutex::new(None)),
+        RawLoginFinishOutcome::UpgradeRequired,
+        RawMfaVerifyOutcome::Reject,
+    )
+    .await;
+    let upgrade_home = TempDir::new().expect("upgrade home");
+    let upgrade = run_cli(
+        upgrade_home.path(),
+        &upgrade_server.base_url,
+        &[
+            "--json",
+            "auth",
+            "login",
+            "--email",
+            EMAIL,
+            "--password-stdin",
+        ],
+        Some(&format!("{PASSWORD}\n")),
+    );
+    assert!(!upgrade.status.success());
+    assert_eq!(
+        parse_stderr_json(&upgrade.stderr)["error"]["code"],
+        "validation"
+    );
+    assert!(upgrade.stderr.contains("must be upgraded"));
+    assert!(!upgrade.stderr.contains(PASSWORD));
+    assert!(!upgrade.stderr.contains(CHALLENGE_TOKEN));
+    assert!(
+        !upgrade_home
+            .path()
+            .join(".worklist/credentials.json")
+            .exists()
+    );
+
+    for outcome in [
+        RawMfaVerifyOutcome::Expired,
+        RawMfaVerifyOutcome::RateLimited,
+        RawMfaVerifyOutcome::ServiceUnavailable,
+        RawMfaVerifyOutcome::TotpLocked,
+    ] {
+        let observed_code = Arc::new(Mutex::new(None));
+        let server = spawn_raw_login_server(
+            EMAIL,
+            PASSWORD,
+            CHALLENGE_TOKEN,
+            observed_code.clone(),
+            RawLoginFinishOutcome::MfaRequired,
+            outcome,
+        )
+        .await;
+        let home = TempDir::new().expect("MFA error home");
+        let output = run_cli(
+            home.path(),
+            &server.base_url,
+            &[
+                "--json",
+                "auth",
+                "login",
+                "--email",
+                EMAIL,
+                "--password-stdin",
+            ],
+            Some(&format!("{PASSWORD}\n{CODE}\n")),
+        );
+
+        assert!(!output.status.success(), "MFA error unexpectedly succeeded");
+        assert!(
+            output.stdout.is_empty(),
+            "unexpected stdout: {}",
+            output.stdout
+        );
+        let error = parse_stderr_json(&output.stderr);
+        assert_eq!(error["error"]["code"], "validation");
+        assert!(!output.stderr.contains(PASSWORD));
+        assert!(!output.stderr.contains(CODE));
+        assert!(!output.stderr.contains(CHALLENGE_TOKEN));
+        assert_eq!(
+            observed_code.lock().expect("observed code lock").as_deref(),
+            Some(CODE)
+        );
+        assert!(
+            !home.path().join(".worklist/credentials.json").exists(),
+            "a failed MFA result must not persist credentials"
+        );
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn cli_json_unlock_requires_password_stdin_non_interactively() {
     assert_json_password_stdin_required(
         &["--json", "auth", "unlock"],
@@ -1908,6 +2211,312 @@ async fn cli_decrypted_commands_fail_non_interactively_without_unlock_or_keychai
 struct TestServer {
     base_url: String,
     _task: tokio::task::JoinHandle<()>,
+}
+
+#[derive(Clone)]
+struct RawMfaLoginState {
+    email: String,
+    challenge_token: String,
+    setup: Vec<u8>,
+    password_file: Vec<u8>,
+    observed_code: Arc<Mutex<Option<String>>>,
+    login_finish: RawLoginFinishOutcome,
+    mfa_verify: RawMfaVerifyOutcome,
+}
+
+#[derive(Clone, Copy)]
+enum RawLoginFinishOutcome {
+    Authenticated,
+    MfaRequired,
+    UpgradeRequired,
+}
+
+#[derive(Clone)]
+enum RawMfaVerifyOutcome {
+    Authenticate { expected_code: String },
+    Expired,
+    Reject,
+    RateLimited,
+    ServiceUnavailable,
+    TotpLocked,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct RawMfaLoginStartRequest {
+    email: String,
+    client_login_state: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct RawMfaVerifyRequest {
+    challenge_token: String,
+    code: String,
+}
+
+async fn spawn_raw_mfa_login_server(
+    email: &str,
+    password: &str,
+    challenge_token: &str,
+    observed_code: Arc<Mutex<Option<String>>>,
+) -> TestServer {
+    spawn_raw_login_server(
+        email,
+        password,
+        challenge_token,
+        observed_code,
+        RawLoginFinishOutcome::MfaRequired,
+        RawMfaVerifyOutcome::Reject,
+    )
+    .await
+}
+
+async fn spawn_raw_login_server(
+    email: &str,
+    password: &str,
+    challenge_token: &str,
+    observed_code: Arc<Mutex<Option<String>>>,
+    login_finish: RawLoginFinishOutcome,
+    mfa_verify: RawMfaVerifyOutcome,
+) -> TestServer {
+    const SERVER_ID: &[u8] = b"worklist.api";
+
+    let mut rng = OsRng;
+    let setup = ServerSetup::<ClientCipherSuite>::new(&mut rng);
+    let registration =
+        ClientRegistration::<ClientCipherSuite>::start(&mut rng, password.as_bytes())
+            .expect("start mock OPAQUE registration");
+    let registration_response = ServerRegistration::<ClientCipherSuite>::start(
+        &setup,
+        registration.message,
+        email.as_bytes(),
+    )
+    .expect("start mock OPAQUE server registration");
+    let identifiers = Identifiers {
+        client: Some(email.as_bytes()),
+        server: Some(SERVER_ID),
+    };
+    let registration_upload = registration
+        .state
+        .finish(
+            &mut rng,
+            password.as_bytes(),
+            RegistrationResponse::<ClientCipherSuite>::deserialize(
+                &registration_response.message.serialize(),
+            )
+            .expect("deserialize mock OPAQUE registration response"),
+            ClientRegistrationFinishParameters::new(identifiers, None),
+        )
+        .expect("finish mock OPAQUE client registration");
+    let password_file =
+        ServerRegistration::<ClientCipherSuite>::finish(registration_upload.message);
+
+    let state = RawMfaLoginState {
+        email: email.to_string(),
+        challenge_token: challenge_token.to_string(),
+        setup: setup.serialize().to_vec(),
+        password_file: password_file.serialize().to_vec(),
+        observed_code,
+        login_finish,
+        mfa_verify,
+    };
+    let app = Router::new()
+        .route("/auth/opaque/login/start", post(raw_mfa_login_start))
+        .route("/auth/opaque/login/finish", post(raw_mfa_login_finish))
+        .route("/auth/mfa/login/verify", post(raw_mfa_verify))
+        .with_state(state);
+
+    let listener = TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("bind raw MFA login server");
+    let addr = listener.local_addr().expect("raw MFA login server address");
+    let task = tokio::spawn(async move {
+        axum::serve(listener, app)
+            .await
+            .expect("serve raw MFA login server");
+    });
+
+    TestServer {
+        base_url: format!("http://{addr}"),
+        _task: task,
+    }
+}
+
+async fn raw_mfa_login_finish(State(state): State<RawMfaLoginState>) -> (StatusCode, Json<Value>) {
+    match state.login_finish {
+        RawLoginFinishOutcome::Authenticated => (StatusCode::OK, Json(raw_successful_auth_body())),
+        RawLoginFinishOutcome::MfaRequired => (
+            StatusCode::OK,
+            Json(json!({
+                "status": "second_factor_required",
+                "challengeToken": state.challenge_token,
+                "methods": ["totp", "backup_code"],
+                "expiresIn": 300,
+                "attemptsRemaining": 8,
+                "requiresLegacyPassword": false
+            })),
+        ),
+        RawLoginFinishOutcome::UpgradeRequired => (
+            StatusCode::CONFLICT,
+            Json(json!({
+                "error": "mfa_client_upgrade_required",
+                "message": "upgrade the client"
+            })),
+        ),
+    }
+}
+
+async fn raw_mfa_login_start(
+    State(state): State<RawMfaLoginState>,
+    Json(request): Json<RawMfaLoginStartRequest>,
+) -> (StatusCode, Json<Value>) {
+    const SERVER_ID: &[u8] = b"worklist.api";
+
+    assert_eq!(request.email, state.email);
+    let client_message = STANDARD_NO_PAD
+        .decode(request.client_login_state)
+        .expect("decode mock OPAQUE client login state");
+    let credential_request = CredentialRequest::<ClientCipherSuite>::deserialize(&client_message)
+        .expect("deserialize mock OPAQUE client login state");
+    let setup = ServerSetup::<ClientCipherSuite>::deserialize(&state.setup)
+        .expect("deserialize mock OPAQUE setup");
+    let password_file = ServerRegistration::<ClientCipherSuite>::deserialize(&state.password_file)
+        .expect("deserialize mock OPAQUE password file");
+    let identifiers = Identifiers {
+        client: Some(state.email.as_bytes()),
+        server: Some(SERVER_ID),
+    };
+    let mut rng = OsRng;
+    let login = ServerLogin::<ClientCipherSuite>::start(
+        &mut rng,
+        &setup,
+        Some(password_file),
+        credential_request,
+        state.email.as_bytes(),
+        ServerLoginParameters {
+            context: None,
+            identifiers,
+        },
+    )
+    .expect("start mock OPAQUE login");
+
+    (
+        StatusCode::OK,
+        Json(json!({
+            "serverLoginState": STANDARD_NO_PAD.encode(login.message.serialize()),
+            "sessionToken": "mock-opaque-session",
+            "expiresIn": 300
+        })),
+    )
+}
+
+async fn raw_mfa_verify(
+    State(state): State<RawMfaLoginState>,
+    Json(request): Json<RawMfaVerifyRequest>,
+) -> (StatusCode, Json<Value>) {
+    assert_eq!(request.challenge_token, state.challenge_token);
+    state
+        .observed_code
+        .lock()
+        .expect("observed code lock")
+        .replace(request.code.clone());
+    match state.mfa_verify {
+        RawMfaVerifyOutcome::Authenticate { expected_code } if request.code == expected_code => {
+            (StatusCode::OK, Json(raw_successful_auth_body()))
+        }
+        RawMfaVerifyOutcome::Expired => (
+            StatusCode::UNAUTHORIZED,
+            Json(json!({
+                "error": "mfa_challenge_invalid_or_expired",
+                "message": format!(
+                    "expired {} for {}",
+                    request.code, state.challenge_token
+                )
+            })),
+        ),
+        RawMfaVerifyOutcome::RateLimited => (
+            StatusCode::TOO_MANY_REQUESTS,
+            Json(json!({
+                "error": "rate_limited",
+                "message": format!(
+                    "retry {} for {}",
+                    request.code, state.challenge_token
+                )
+            })),
+        ),
+        RawMfaVerifyOutcome::ServiceUnavailable => (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(json!({
+                "error": "mfa_service_unavailable",
+                "message": format!(
+                    "unavailable {} for {}",
+                    request.code, state.challenge_token
+                )
+            })),
+        ),
+        RawMfaVerifyOutcome::TotpLocked => (
+            StatusCode::CONFLICT,
+            Json(json!({
+                "error": "mfa_totp_locked",
+                "message": format!(
+                    "locked {} for {}",
+                    request.code, state.challenge_token
+                )
+            })),
+        ),
+        RawMfaVerifyOutcome::Authenticate { .. } | RawMfaVerifyOutcome::Reject => (
+            StatusCode::UNAUTHORIZED,
+            Json(json!({
+                "error": "invalid_mfa_code",
+                "message": "mock endpoint rejected the supplied MFA factor",
+                "attemptsRemaining": 7,
+                "expiresIn": 240
+            })),
+        ),
+    }
+}
+
+fn raw_successful_auth_body() -> Value {
+    json!({
+        "accessToken": "process-final-access-token",
+        "refreshToken": "process-final-refresh-token",
+        "expiresIn": 900,
+        "refreshExpiresIn": 2_592_000,
+        "tokenType": "Bearer",
+        "user": {
+            "id": "01900000-0000-7000-8000-000000000001",
+            "email": "process-login@example.test",
+            "name": "Process Login",
+            "timezone": "UTC",
+            "avatarColor": "blue",
+            "themePreference": "system",
+            "emailVerified": true
+        },
+        "dataKeyCiphertext": "process-encrypted-data-key"
+    })
+}
+
+fn assert_final_process_login_credentials(
+    home: &FsPath,
+    password: &str,
+    challenge_token: &str,
+    code: Option<&str>,
+) {
+    let bytes = std::fs::read(home.join(".worklist/credentials.json"))
+        .expect("read final process credentials");
+    let stored = String::from_utf8(bytes.clone()).expect("credentials UTF-8");
+    let credentials: Credentials =
+        serde_json::from_slice(&bytes).expect("parse final process credentials");
+
+    assert_eq!(credentials.access_token, "process-final-access-token");
+    assert_eq!(credentials.refresh_token, "process-final-refresh-token");
+    for secret in [Some(password), Some(challenge_token), code]
+        .into_iter()
+        .flatten()
+    {
+        assert!(!stored.contains(secret), "credentials leaked login input");
+    }
 }
 
 #[derive(Clone)]

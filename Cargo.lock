@@ -3989,13 +3989,15 @@ dependencies = [
 
 [[package]]
 name = "worklist"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "assert_cmd",
  "axum",
  "base64",
  "chrono",
  "clap",
+ "opaque-ke",
+ "rand_core 0.6.4",
  "reqwest",
  "rpassword",
  "serde",
@@ -4010,11 +4012,12 @@ dependencies = [
  "worklist-client-core",
  "worklist-client-crypto",
  "worklist-client-runtime",
+ "zeroize",
 ]
 
 [[package]]
 name = "worklist-client-api"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "chrono",
  "reqwest",
@@ -4027,9 +4030,10 @@ dependencies = [
 
 [[package]]
 name = "worklist-client-auth"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "argon2",
+ "axum",
  "base64",
  "chrono",
  "dirs",
@@ -4042,20 +4046,23 @@ dependencies = [
  "serde_json",
  "sha2",
  "tempfile",
+ "thiserror 2.0.18",
+ "tokio",
  "uuid",
  "worklist-client-core",
+ "zeroize",
 ]
 
 [[package]]
 name = "worklist-client-core"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "thiserror 2.0.18",
 ]
 
 [[package]]
 name = "worklist-client-crypto"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "argon2",
  "base64",
@@ -4071,7 +4078,7 @@ dependencies = [
 
 [[package]]
 name = "worklist-client-runtime"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "base64",
  "chrono",

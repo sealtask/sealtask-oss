@@ -19,6 +19,27 @@ This workspace is still in active development and is not yet positioned as a sta
 - several APIs may still evolve as the agent workflow surface expands
 - the current release target is the CLI first, with supporting crates published alongside it
 
+## 0.2.0 compatibility note (2026-07-12)
+
+Version 0.2.0 adds the MFA-aware `begin_login` / `complete_mfa_login` flow and
+the public `PublicError::MfaRequiredUseBeginLogin` and
+`PublicError::MfaInputRequired` variants. Downstream code that exhaustively
+matches `PublicError` must add arms for both variants. The existing `login`
+function remains available for accounts without MFA; for an enrolled account it
+wipes the pending challenge and returns the typed upgrade-to-begin error instead
+of exposing or persisting challenge state.
+
+For `worklist auth login --password-stdin`, line one is the password and an
+optional line two is the TOTP or backup code. The first line keeps its existing
+trimmed-password behavior. On line two, the physical LF or CRLF record delimiter
+is removed and every other byte is preserved: spaces, tabs, leading or trailing
+whitespace, Unicode, and a lone carriage return are sent to the server unchanged.
+A missing or exactly empty second line means no factor was supplied. Extra lines
+containing non-whitespace are rejected. An enrolled account given only line one
+returns `mfa_input_required` and never prints the raw challenge or falls back to
+a terminal prompt. Other `--password-stdin` commands keep their existing
+whole-input password contract.
+
 ## Layout
 
 ```text
@@ -49,6 +70,16 @@ cargo run -p worklist -- --json tasks get --work-list-id <list-id> --task-id <ta
 cargo run -p worklist -- --json tasks attachments read --work-list-id <list-id> --task-id <task-id> --attachment-id <attachment-id>
 cargo run -p worklist -- --json tasks attachments download --work-list-id <list-id> --task-id <task-id> --attachment-id <attachment-id>
 ```
+
+Example enrolled-account automation input:
+
+```bash
+printf '%s\n%s\n' "$SEALTASK_PASSWORD" "$SEALTASK_MFA_CODE" \
+  | cargo run -p worklist -- auth login --email user@example.com --password-stdin
+```
+
+Do not pass authenticator or backup codes as command-line arguments; arguments
+can be retained in shell history and process listings.
 
 Once the crate is published, install the CLI with:
 

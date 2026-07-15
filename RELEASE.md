@@ -6,7 +6,8 @@ This workspace publishes to crates.io in dependency order:
 2. `worklist-client-auth`
 3. `worklist-client-crypto`
 4. `worklist-client-api`
-5. `worklist`
+5. `worklist-client-runtime`
+6. `worklist`
 
 Downstream crates depend on earlier crates being visible on crates.io, so releasing them back-to-back without waiting will fail.
 
@@ -15,6 +16,12 @@ Downstream crates depend on earlier crates being visible on crates.io, so releas
 - a crates.io account with publish access
 - `cargo login` already configured locally, or `CARGO_REGISTRY_TOKEN` set in the environment
 - a clean git worktree unless you explicitly opt into `ALLOW_DIRTY=1`
+
+For the 0.2.0 MFA compatibility release, confirm that every workspace package
+and inter-crate dependency pin uses the same version. The new public
+`PublicError::MfaRequiredUseBeginLogin` and `PublicError::MfaInputRequired`
+variants can require additional arms in downstream exhaustive matches; keep the
+dated compatibility note in README.md.
 
 ## Dry Run
 
@@ -33,6 +40,19 @@ Dry-run mode fully runs `cargo publish --dry-run` for `worklist-client-core`, th
 ```
 
 The script publishes each crate, then polls crates.io for the exact version before continuing to the next one.
+
+After publishing, install `worklist` in a clean environment and record
+successful no-factor, interactive TOTP, one-time backup-code, one-line
+`mfa_input_required`, and two-line stdin login flows. A path dependency or the
+dry-run package result is not release evidence.
+
+For the two-line stdin check, confirm the first password line is still trimmed
+and the second factor line loses only its physical LF or CRLF delimiter. Record
+that whitespace-only, tabs, surrounding whitespace, Unicode digits, canonical
+TOTP, and formatted or malformed backup-looking values reach the server
+byte-for-byte; for an enrolled account, a missing or exactly empty line two must
+produce `mfa_input_required`. Also confirm a denied factor is absent from
+stderr/debug output and that no pending or final credential file is written.
 
 ## Useful Overrides
 

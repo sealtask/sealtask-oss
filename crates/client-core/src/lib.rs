@@ -12,6 +12,12 @@ pub enum PublicError {
     Crypto(String),
     #[error("{0}")]
     Unexpected(String),
+    #[error(
+        "MFA is required for this account; call begin_login and complete_mfa_login instead of login"
+    )]
+    MfaRequiredUseBeginLogin,
+    #[error("MFA code required on the second stdin line for enrolled accounts")]
+    MfaInputRequired,
 }
 
 impl PublicError {
@@ -25,5 +31,13 @@ impl PublicError {
 
     pub fn unexpected(message: impl Into<String>) -> Self {
         Self::Unexpected(message.into())
+    }
+
+    pub fn mfa_required_use_begin_login() -> Self {
+        Self::MfaRequiredUseBeginLogin
+    }
+
+    pub fn mfa_input_required() -> Self {
+        Self::MfaInputRequired
     }
 }
