@@ -76,11 +76,39 @@ impl PublicApiClient {
     }
 
     pub async fn list_work_lists(&mut self) -> PublicResult<Vec<WorkListResponse>> {
-        self.get("/work-lists").await
+        self.list_work_lists_with_archived(false).await
+    }
+
+    pub async fn list_work_lists_with_archived(
+        &mut self,
+        include_archived: bool,
+    ) -> PublicResult<Vec<WorkListResponse>> {
+        let path = if include_archived {
+            "/work-lists?includeArchived=true"
+        } else {
+            "/work-lists"
+        };
+        self.get(path).await
     }
 
     pub async fn get_work_list(&mut self, id: Uuid) -> PublicResult<WorkListDetailResponse> {
         self.get(&format!("/work-lists/{id}")).await
+    }
+
+    pub async fn archive_work_list(&mut self, id: Uuid) -> PublicResult<WorkListResponse> {
+        self.post(
+            &format!("/work-lists/{id}/archive"),
+            &ArchiveWorkListRequest::default(),
+        )
+        .await
+    }
+
+    pub async fn unarchive_work_list(&mut self, id: Uuid) -> PublicResult<WorkListResponse> {
+        self.post(
+            &format!("/work-lists/{id}/unarchive"),
+            &UnarchiveWorkListRequest::default(),
+        )
+        .await
     }
 
     pub async fn get_tasks(
@@ -369,6 +397,7 @@ pub struct WorkListResponse {
     pub section_snapshots: Vec<SectionSnapshotPayload>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    pub archived_at: Option<DateTime<Utc>>,
     pub membership: MembershipResponse,
 }
 
@@ -576,6 +605,14 @@ pub struct MoveTaskRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub insert_before_task_id: Option<Uuid>,
 }
+
+#[derive(Debug, Default, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ArchiveWorkListRequest {}
+
+#[derive(Debug, Default, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UnarchiveWorkListRequest {}
 
 #[derive(Debug, Default, Serialize)]
 #[serde(rename_all = "camelCase")]

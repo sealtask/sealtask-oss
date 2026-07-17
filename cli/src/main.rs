@@ -362,6 +362,8 @@ enum Command {
         #[arg(long)]
         verbose: bool,
         #[arg(long)]
+        include_archived: bool,
+        #[arg(long)]
         password_stdin: bool,
         #[arg(long, hide = true)]
         raw: bool,
@@ -388,6 +390,20 @@ enum Command {
 #[derive(Subcommand, Debug)]
 enum ListsCommand {
     Get {
+        work_list_id: Uuid,
+        #[arg(long)]
+        password_stdin: bool,
+        #[arg(long, hide = true)]
+        raw: bool,
+    },
+    Archive {
+        work_list_id: Uuid,
+        #[arg(long)]
+        password_stdin: bool,
+        #[arg(long, hide = true)]
+        raw: bool,
+    },
+    Unarchive {
         work_list_id: Uuid,
         #[arg(long)]
         password_stdin: bool,
@@ -719,6 +735,7 @@ async fn run(cli: Cli, format: OutputFormat) -> CliResult<()> {
         Command::Me => cmd_me(&runtime, format).await,
         Command::Lists {
             verbose,
+            include_archived,
             password_stdin,
             raw,
             command,
@@ -728,7 +745,32 @@ async fn run(cli: Cli, format: OutputFormat) -> CliResult<()> {
                 password_stdin,
                 raw,
             }) => cmd_lists_get(&runtime, format, work_list_id, password_stdin, raw).await,
-            None => cmd_lists(&runtime, format, verbose, password_stdin, raw).await,
+            Some(ListsCommand::Archive {
+                work_list_id,
+                password_stdin,
+                raw,
+            }) => {
+                cmd_lists_lifecycle(&runtime, format, work_list_id, password_stdin, raw, true).await
+            }
+            Some(ListsCommand::Unarchive {
+                work_list_id,
+                password_stdin,
+                raw,
+            }) => {
+                cmd_lists_lifecycle(&runtime, format, work_list_id, password_stdin, raw, false)
+                    .await
+            }
+            None => {
+                cmd_lists(
+                    &runtime,
+                    format,
+                    verbose,
+                    include_archived,
+                    password_stdin,
+                    raw,
+                )
+                .await
+            }
         },
         Command::Tasks { command } => cmd_tasks(&runtime, format, command).await,
         Command::Stats => cmd_stats(&runtime, format).await,
@@ -1511,12 +1553,15 @@ async fn cmd_lists(
     runtime: &RuntimeClient,
     format: OutputFormat,
     verbose: bool,
+    include_archived: bool,
     password_stdin: bool,
     raw: bool,
 ) -> CliResult<()> {
     if raw {
         let mut client = runtime.authenticated_api_client()?;
-        let lists = client.list_work_lists().await?;
+        let lists = client
+            .list_work_lists_with_archived(include_archived)
+            .await?;
         if lists.is_empty() {
             println!("No work lists found.");
             return Ok(());
@@ -1525,12 +1570,46 @@ async fn cmd_lists(
         return Ok(());
     }
 
-    let lists = runtime.list_work_lists(password_stdin).await?;
+    let lists = runtime
+        .list_work_lists_with_archived(password_stdin, include_archived)
+        .await?;
     if lists.is_empty() {
         println!("No work lists found.");
         return Ok(());
     }
     print_work_lists(&lists, format, verbose)?;
+    Ok(())
+}
+
+async fn cmd_lists_lifecycle(
+    runtime: &RuntimeClient,
+    format: OutputFormat,
+    work_list_id: Uuid,
+    password_stdin: bool,
+    raw: bool,
+    archive: bool,
+) -> CliResult<()> {
+    if raw {
+        let mut client = runtime.authenticated_api_client()?;
+        let work_list = if archive {
+            client.archive_work_list(work_list_id).await?
+        } else {
+            client.unarchive_work_list(work_list_id).await?
+        };
+        print_raw_work_lists(std::slice::from_ref(&work_list), format, true)?;
+        return Ok(());
+    }
+
+    let work_list = if archive {
+        runtime
+            .archive_work_list(work_list_id, password_stdin)
+            .await?
+    } else {
+        runtime
+            .unarchive_work_list(work_list_id, password_stdin)
+            .await?
+    };
+    print_work_lists(std::slice::from_ref(&work_list), format, true)?;
     Ok(())
 }
 
@@ -2248,6 +2327,10 @@ fn print_work_lists(
                     println!("  Owner:         {}", list.owner_user_id);
                     println!("  Timezone:      {}", list.timezone);
                     println!("  Sections:      {}", list.section_snapshots.len());
+                    println!(
+                        "  Lifecycle:     {}",
+                        lifecycle_label(list.archived_at.is_some())
+                    );
                     println!("  Your role:     {}", list.membership.role);
                     println!("  Your status:   {}", list.membership.status);
                     if let Some(read_error) = list.read_error.as_ref() {
@@ -2260,14 +2343,18 @@ fn print_work_lists(
                 }
                 println!("\nTotal: {} work list(s)", lists.len());
             } else {
-                println!("{:<36}  {:<24}  {:<10}  Updated", "ID", "Title", "Role");
-                println!("{}", "-".repeat(92));
+                println!(
+                    "{:<36}  {:<24}  {:<10}  {:<9}  Updated",
+                    "ID", "Title", "Role", "Lifecycle"
+                );
+                println!("{}", "-".repeat(104));
                 for list in lists {
                     println!(
-                        "{:<36}  {:<24}  {:<10}  {}",
+                        "{:<36}  {:<24}  {:<10}  {:<9}  {}",
                         list.id,
                         truncate(list.title.as_deref().unwrap_or("-"), 24),
                         list.membership.role,
+                        lifecycle_label(list.archived_at.is_some()),
                         list.updated_at.format("%Y-%m-%d %H:%M")
                     );
                 }
@@ -2294,6 +2381,10 @@ fn print_work_list_detail(detail: &AgentWorkListDetail, format: OutputFormat) ->
             println!("Workspace:   {}", detail.work_list.workspace_id);
             println!("Owner:       {}", detail.work_list.owner_user_id);
             println!("Timezone:    {}", detail.work_list.timezone);
+            println!(
+                "Lifecycle:   {}",
+                lifecycle_label(detail.work_list.archived_at.is_some())
+            );
             println!("Members:     {}", detail.members.len());
             println!("Your role:   {}", detail.work_list.membership.role);
             println!("Your status: {}", detail.work_list.membership.status);
@@ -2454,19 +2545,27 @@ fn print_raw_work_lists(
                     println!("  Owner:         {}", list.owner_user_id);
                     println!("  Timezone:      {}", list.timezone);
                     println!("  Sections:      {}", list.section_snapshots.len());
+                    println!(
+                        "  Lifecycle:     {}",
+                        lifecycle_label(list.archived_at.is_some())
+                    );
                     println!("  Your role:     {}", list.membership.role);
                     println!("  Your status:   {}", list.membership.status);
                 }
                 println!("\nTotal: {} work list(s)", lists.len());
             } else {
-                println!("{:<36}  {:<10}  {:<8}  Updated", "ID", "Role", "Sections");
-                println!("{}", "-".repeat(80));
+                println!(
+                    "{:<36}  {:<10}  {:<8}  {:<9}  Updated",
+                    "ID", "Role", "Sections", "Lifecycle"
+                );
+                println!("{}", "-".repeat(92));
                 for list in lists {
                     println!(
-                        "{:<36}  {:<10}  {:<8}  {}",
+                        "{:<36}  {:<10}  {:<8}  {:<9}  {}",
                         list.id,
                         list.membership.role,
                         list.section_snapshots.len(),
+                        lifecycle_label(list.archived_at.is_some()),
                         list.updated_at.format("%Y-%m-%d %H:%M")
                     );
                 }
@@ -2491,10 +2590,18 @@ fn print_raw_work_list_detail(
             println!("ID:          {}", detail.work_list.id);
             println!("Workspace:   {}", detail.work_list.workspace_id);
             println!("Owner:       {}", detail.work_list.owner_user_id);
+            println!(
+                "Lifecycle:   {}",
+                lifecycle_label(detail.work_list.archived_at.is_some())
+            );
             println!("Members:     {}", detail.members.len());
         }
     }
     Ok(())
+}
+
+fn lifecycle_label(is_archived: bool) -> &'static str {
+    if is_archived { "Archived" } else { "Active" }
 }
 
 fn print_raw_tasks(tasks: &[TaskResponse], format: OutputFormat) -> CliResult<()> {

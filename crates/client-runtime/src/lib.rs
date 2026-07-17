@@ -72,6 +72,7 @@ pub struct AgentWorkListSummary {
     pub section_snapshots: Vec<worklist_client_api::SectionSnapshotPayload>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    pub archived_at: Option<DateTime<Utc>>,
     pub membership: AgentMembership,
     pub title: Option<String>,
     pub description: Option<String>,
@@ -461,6 +462,15 @@ impl RuntimeClient {
         &self,
         password_stdin: bool,
     ) -> PublicResult<Vec<AgentWorkListSummary>> {
+        self.list_work_lists_with_archived(password_stdin, false)
+            .await
+    }
+
+    pub async fn list_work_lists_with_archived(
+        &self,
+        password_stdin: bool,
+        include_archived: bool,
+    ) -> PublicResult<Vec<AgentWorkListSummary>> {
         let credentials = self.require_logged_in_credentials()?;
         let data_key = self.load_data_key(
             &credentials,
@@ -468,11 +478,45 @@ impl RuntimeClient {
             "Password required to decrypt work lists.",
         )?;
         let mut client = PublicApiClient::with_credentials(&self.api_url, credentials);
-        let lists = client.list_work_lists().await?;
+        let lists = client
+            .list_work_lists_with_archived(include_archived)
+            .await?;
         Ok(lists
             .into_iter()
             .map(|list| self.project_work_list_summary(list, Some(&data_key)))
             .collect())
+    }
+
+    pub async fn archive_work_list(
+        &self,
+        work_list_id: Uuid,
+        password_stdin: bool,
+    ) -> PublicResult<AgentWorkListSummary> {
+        let credentials = self.require_logged_in_credentials()?;
+        let data_key = self.load_data_key(
+            &credentials,
+            password_stdin,
+            "Password required to decrypt archived work list data.",
+        )?;
+        let mut client = PublicApiClient::with_credentials(&self.api_url, credentials);
+        let work_list = client.archive_work_list(work_list_id).await?;
+        Ok(self.project_work_list_summary(work_list, Some(&data_key)))
+    }
+
+    pub async fn unarchive_work_list(
+        &self,
+        work_list_id: Uuid,
+        password_stdin: bool,
+    ) -> PublicResult<AgentWorkListSummary> {
+        let credentials = self.require_logged_in_credentials()?;
+        let data_key = self.load_data_key(
+            &credentials,
+            password_stdin,
+            "Password required to decrypt restored work list data.",
+        )?;
+        let mut client = PublicApiClient::with_credentials(&self.api_url, credentials);
+        let work_list = client.unarchive_work_list(work_list_id).await?;
+        Ok(self.project_work_list_summary(work_list, Some(&data_key)))
     }
 
     pub async fn get_work_list(
@@ -1115,6 +1159,7 @@ impl RuntimeClient {
                             section_snapshots: work_list.section_snapshots,
                             created_at: work_list.created_at,
                             updated_at: work_list.updated_at,
+                            archived_at: work_list.archived_at,
                             membership,
                             title: extract_work_list_title(&payload).or(fallback_title),
                             description: extract_work_list_description(&payload)
@@ -1130,6 +1175,7 @@ impl RuntimeClient {
                             section_snapshots: work_list.section_snapshots,
                             created_at: work_list.created_at,
                             updated_at: work_list.updated_at,
+                            archived_at: work_list.archived_at,
                             membership,
                             title: fallback_title,
                             description: fallback_description,
@@ -1146,6 +1192,7 @@ impl RuntimeClient {
                     section_snapshots: work_list.section_snapshots,
                     created_at: work_list.created_at,
                     updated_at: work_list.updated_at,
+                    archived_at: work_list.archived_at,
                     membership,
                     title: fallback_title,
                     description: fallback_description,
@@ -1161,6 +1208,7 @@ impl RuntimeClient {
                 section_snapshots: work_list.section_snapshots,
                 created_at: work_list.created_at,
                 updated_at: work_list.updated_at,
+                archived_at: work_list.archived_at,
                 membership,
                 title: fallback_title,
                 description: fallback_description,

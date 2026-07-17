@@ -450,6 +450,119 @@ async fn cli_proven_flows_round_trip_through_mock_api() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn cli_work_list_archive_lifecycle_preserves_active_only_defaults() {
+    let fixture = TestFixture::new();
+    let state = Arc::new(Mutex::new(TestState::new(fixture.clone())));
+    let server = spawn_server(state.clone()).await;
+    let home = TempDir::new().expect("temp home");
+    seed_credentials(home.path(), &fixture, &server.base_url);
+
+    let active_lists_output = run_cli(
+        home.path(),
+        &server.base_url,
+        &["--json", "lists", "--password-stdin"],
+        Some(&fixture.password),
+    );
+    assert!(
+        active_lists_output.status.success(),
+        "active lists failed: {}",
+        active_lists_output.stderr
+    );
+    let active_lists: Value = parse_stdout_json(&active_lists_output.stdout);
+    assert!(active_lists[0]["archivedAt"].is_null());
+
+    let archive_output = run_cli(
+        home.path(),
+        &server.base_url,
+        &[
+            "--json",
+            "lists",
+            "archive",
+            &fixture.work_list_id.to_string(),
+            "--password-stdin",
+        ],
+        Some(&fixture.password),
+    );
+    assert!(
+        archive_output.status.success(),
+        "list archive failed: {}",
+        archive_output.stderr
+    );
+    let archived: Value = parse_stdout_json(&archive_output.stdout);
+    assert!(archived[0]["archivedAt"].is_string());
+
+    let active_lists_output = run_cli(
+        home.path(),
+        &server.base_url,
+        &["--json", "lists", "--password-stdin"],
+        Some(&fixture.password),
+    );
+    assert!(
+        active_lists_output.status.success(),
+        "active-only archived list query failed: {}",
+        active_lists_output.stderr
+    );
+    assert_eq!(active_lists_output.stdout.trim(), "No work lists found.");
+
+    let archived_lists_output = run_cli(
+        home.path(),
+        &server.base_url,
+        &["--json", "lists", "--include-archived", "--password-stdin"],
+        Some(&fixture.password),
+    );
+    assert!(
+        archived_lists_output.status.success(),
+        "archived lists failed: {}",
+        archived_lists_output.stderr
+    );
+    let archived_lists: Value = parse_stdout_json(&archived_lists_output.stdout);
+    assert!(archived_lists[0]["archivedAt"].is_string());
+
+    let raw_archived_lists_output = run_cli(
+        home.path(),
+        &server.base_url,
+        &["--json", "lists", "--include-archived", "--raw"],
+        None,
+    );
+    assert!(
+        raw_archived_lists_output.status.success(),
+        "raw archived lists failed: {}",
+        raw_archived_lists_output.stderr
+    );
+    let raw_archived_lists: Value = parse_stdout_json(&raw_archived_lists_output.stdout);
+    assert!(raw_archived_lists[0]["archivedAt"].is_string());
+    assert!(raw_archived_lists[0]["titleCiphertext"].is_string());
+
+    let unarchive_output = run_cli(
+        home.path(),
+        &server.base_url,
+        &[
+            "--json",
+            "lists",
+            "unarchive",
+            &fixture.work_list_id.to_string(),
+            "--password-stdin",
+        ],
+        Some(&fixture.password),
+    );
+    assert!(
+        unarchive_output.status.success(),
+        "list unarchive failed: {}",
+        unarchive_output.stderr
+    );
+    let unarchived: Value = parse_stdout_json(&unarchive_output.stdout);
+    assert!(unarchived[0]["archivedAt"].is_null());
+
+    let state = state.lock().expect("state lock");
+    assert_eq!(state.archive_work_list_count, 1);
+    assert_eq!(state.unarchive_work_list_count, 1);
+    assert_eq!(
+        state.list_work_list_include_archived,
+        vec![false, false, true, true]
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn cli_task_reads_parse_current_api_shapes() {
     let fixture = TestFixture::new();
     let state = Arc::new(Mutex::new(TestState::new(fixture.clone())));
@@ -2566,6 +2679,10 @@ struct TestState {
     created_task_body: Option<TaskPayloadBody>,
     updated_task_body: Option<TaskPayloadBody>,
     moved_task_body: Option<MoveTaskRequestBody>,
+    work_list_archived_at: Option<DateTime<Utc>>,
+    archive_work_list_count: usize,
+    unarchive_work_list_count: usize,
+    list_work_list_include_archived: Vec<bool>,
     archive_task_count: usize,
     unarchive_task_count: usize,
     created_comment_body: Option<CommentPayloadBody>,
@@ -2596,6 +2713,10 @@ impl TestState {
             created_task_body: None,
             updated_task_body: None,
             moved_task_body: None,
+            work_list_archived_at: None,
+            archive_work_list_count: 0,
+            unarchive_work_list_count: 0,
+            list_work_list_include_archived: Vec::new(),
             archive_task_count: 0,
             unarchive_task_count: 0,
             created_comment_body: None,
@@ -2828,6 +2949,8 @@ async fn spawn_server(state: Arc<Mutex<TestState>>) -> TestServer {
         .route("/auth/logout", post(logout_session))
         .route("/work-lists", get(list_work_lists))
         .route("/work-lists/{id}", get(get_work_list))
+        .route("/work-lists/{id}/archive", post(archive_work_list))
+        .route("/work-lists/{id}/unarchive", post(unarchive_work_list))
         .route("/work-lists/{id}/tasks", get(list_tasks).post(create_task))
         .route(
             "/work-lists/{id}/attachments/{attachment_id}/download",
@@ -2918,15 +3041,20 @@ async fn logout_session(
 }
 
 async fn list_work_lists(
+    Query(query): Query<IncludeArchivedQuery>,
     State(state): State<Arc<Mutex<TestState>>>,
     headers: HeaderMap,
 ) -> (StatusCode, Json<serde_json::Value>) {
     authorize(&state, &headers);
-    let state = state.lock().expect("state lock");
-    (
-        StatusCode::OK,
-        Json(json!([work_list_summary_json(&state)])),
-    )
+    let mut state = state.lock().expect("state lock");
+    let include_archived = query.include_archived.unwrap_or(false);
+    state.list_work_list_include_archived.push(include_archived);
+    let payload = if state.work_list_archived_at.is_some() && !include_archived {
+        json!([])
+    } else {
+        json!([work_list_summary_json(&state)])
+    };
+    (StatusCode::OK, Json(payload))
 }
 
 async fn get_work_list(
@@ -2947,6 +3075,7 @@ async fn get_work_list(
         "payloadCiphertext": work_list_payload_ciphertext(&state),
         "timezone": "UTC",
         "sectionSnapshots": [],
+        "archivedAt": state.work_list_archived_at,
         "createdAt": Utc::now(),
         "updatedAt": Utc::now(),
         "membership": membership_json(&state),
@@ -2955,6 +3084,36 @@ async fn get_work_list(
         ]
     });
 
+    (StatusCode::OK, Json(payload))
+}
+
+async fn archive_work_list(
+    Path(work_list_id): Path<Uuid>,
+    State(state): State<Arc<Mutex<TestState>>>,
+    headers: HeaderMap,
+    _payload: Json<serde_json::Value>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    authorize(&state, &headers);
+    let mut state = state.lock().expect("state lock");
+    assert_eq!(work_list_id, state.fixture.work_list_id);
+    state.archive_work_list_count += 1;
+    state.work_list_archived_at = Some(Utc::now());
+    let payload = work_list_summary_json(&state);
+    (StatusCode::OK, Json(payload))
+}
+
+async fn unarchive_work_list(
+    Path(work_list_id): Path<Uuid>,
+    State(state): State<Arc<Mutex<TestState>>>,
+    headers: HeaderMap,
+    _payload: Json<serde_json::Value>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    authorize(&state, &headers);
+    let mut state = state.lock().expect("state lock");
+    assert_eq!(work_list_id, state.fixture.work_list_id);
+    state.unarchive_work_list_count += 1;
+    state.work_list_archived_at = None;
+    let payload = work_list_summary_json(&state);
     (StatusCode::OK, Json(payload))
 }
 
@@ -3769,6 +3928,7 @@ fn work_list_summary_json(state: &TestState) -> serde_json::Value {
         "payloadCiphertext": work_list_payload_ciphertext(state),
         "timezone": "UTC",
         "sectionSnapshots": [],
+        "archivedAt": state.work_list_archived_at,
         "createdAt": Utc::now(),
         "updatedAt": Utc::now(),
         "membership": membership_json(state)
