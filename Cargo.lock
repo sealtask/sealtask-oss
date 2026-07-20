@@ -3996,6 +3996,7 @@ dependencies = [
  "base64",
  "chrono",
  "clap",
+ "hkdf",
  "opaque-ke",
  "rand_core 0.6.4",
  "reqwest",
@@ -4074,6 +4075,7 @@ dependencies = [
  "strong-box",
  "uuid",
  "worklist-client-core",
+ "zeroize",
 ]
 
 [[package]]
@@ -4096,6 +4098,7 @@ dependencies = [
  "worklist-client-auth",
  "worklist-client-core",
  "worklist-client-crypto",
+ "zeroize",
 ]
 
 [[package]]

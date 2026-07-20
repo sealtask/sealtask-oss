@@ -13,6 +13,7 @@ use axum::{
 use base64::Engine as _;
 use base64::engine::general_purpose::STANDARD_NO_PAD;
 use chrono::{DateTime, Duration, Utc};
+use hkdf::Hkdf;
 use opaque_ke::{
     ClientRegistration, ClientRegistrationFinishParameters, CredentialRequest, Identifiers,
     RegistrationResponse, ServerLogin, ServerLoginParameters, ServerRegistration, ServerSetup,
@@ -20,6 +21,7 @@ use opaque_ke::{
 use rand_core::OsRng;
 use serde::Deserialize;
 use serde_json::{Value, json};
+use sha2::Sha256;
 use strong_box::StrongBox;
 use tempfile::TempDir;
 use tokio::net::TcpListener;
@@ -28,14 +30,16 @@ use worklist_client_api::{AuditPatchFieldRequest, AuditPatchRequest};
 use worklist_client_auth::{ClientCipherSuite, Credentials};
 use worklist_client_crypto::{
     ATTACHMENT_BLOB_CONTEXT, ATTACHMENT_BLOB_CONTEXT_LABEL, ATTACHMENT_BLOB_REF_VERSION,
-    ATTACHMENT_REF_CONTEXT, AttachmentBlobRef, CommentPayloadBody, FlexibleValue, SealedPayload,
-    StrongBoxKeyRing, SymmetricKey, TaskPayloadBody, USER_DATA_KEY_CONTEXT,
+    ATTACHMENT_REF_CONTEXT, AttachmentBlobRef, CommentPayloadBody, FlexibleValue,
+    OPAQUE_EXPORT_KEY_BYTES, SealedPayload, StrongBoxKeyRing, SymmetricKey, TaskPayloadBody,
+    USER_DATA_KEY_CONTEXT, USER_DATA_KEY_OPAQUE_CONTEXT, USER_DATA_KEY_OPAQUE_WRAP_INFO,
     WORK_LIST_MEMBERSHIP_CONTEXT, WORK_LIST_PAYLOAD_CONTEXT, build_comment_payload_envelope,
     build_task_payload_envelope, compute_payload_proof, decrypt_comment_payload,
     decrypt_task_payload, derive_payload_binding_key, encrypt_comment_payload,
     encrypt_task_payload, flexible_value_to_json, json_value_to_flexible, plaintext_rich_text,
     seal_text_value, serialize_to_cbor,
 };
+use zeroize::Zeroize;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn cli_proven_flows_round_trip_through_mock_api() {
@@ -1435,7 +1439,7 @@ async fn cli_rejects_input_stdin_with_password_stdin() {
 async fn cli_unlock_daemon_enables_later_decrypt_without_password_flag() {
     let fixture = TestFixture::new();
     let state = Arc::new(Mutex::new(TestState::new(fixture.clone())));
-    let server = spawn_server(state).await;
+    let server = spawn_server(state.clone()).await;
     let home = TempDir::new().expect("temp home");
     seed_credentials(home.path(), &fixture, &server.base_url);
 
@@ -1479,13 +1483,21 @@ async fn cli_unlock_daemon_enables_later_decrypt_without_password_flag() {
         "lock failed: {}",
         lock_output.stderr
     );
+    assert_eq!(
+        state
+            .lock()
+            .expect("state lock")
+            .opaque_export_key_start_count,
+        0,
+        "legacy v1 unlock must remain offline"
+    );
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn cli_keychain_store_bootstraps_later_decrypt_without_password_flag() {
     let fixture = TestFixture::new();
     let state = Arc::new(Mutex::new(TestState::new(fixture.clone())));
-    let server = spawn_server(state).await;
+    let server = spawn_server(state.clone()).await;
     let home = TempDir::new().expect("temp home");
     let keychain_dir = TempDir::new().expect("temp keychain");
     seed_credentials(home.path(), &fixture, &server.base_url);
@@ -1568,6 +1580,226 @@ async fn cli_keychain_store_bootstraps_later_decrypt_without_password_flag() {
     );
 
     let _ = run_cli(home.path(), &server.base_url, &["auth", "lock"], None);
+    assert_eq!(
+        state
+            .lock()
+            .expect("state lock")
+            .opaque_export_key_start_count,
+        0,
+        "legacy v1 keychain bootstrap must remain offline"
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn cli_v2_single_command_unlock_derives_the_opaque_export_key() {
+    let fixture = TestFixture::new_v2();
+    let state = Arc::new(Mutex::new(TestState::new(fixture.clone())));
+    let server = spawn_server(state.clone()).await;
+    let home = TempDir::new().expect("temp home");
+    seed_credentials(home.path(), &fixture, &server.base_url);
+
+    let output = run_cli(
+        home.path(),
+        &server.base_url,
+        &[
+            "--json",
+            "lists",
+            "get",
+            &fixture.work_list_id.to_string(),
+            "--password-stdin",
+        ],
+        Some(&fixture.password),
+    );
+    assert!(
+        output.status.success(),
+        "v2 single-command unlock failed: {}",
+        output.stderr
+    );
+    assert_eq!(
+        parse_stdout_json(&output.stdout)["title"],
+        "Fixture Work List"
+    );
+    assert_eq!(
+        state
+            .lock()
+            .expect("state lock")
+            .opaque_export_key_start_count,
+        1
+    );
+
+    let credentials = std::fs::read_to_string(home.path().join(".worklist/credentials.json"))
+        .expect("read credentials");
+    assert!(!credentials.contains(&STANDARD_NO_PAD.encode(fixture.opaque_export_key)));
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn cli_v2_unlock_daemon_enables_later_decrypt_without_password_flag() {
+    let fixture = TestFixture::new_v2();
+    let state = Arc::new(Mutex::new(TestState::new(fixture.clone())));
+    let server = spawn_server(state.clone()).await;
+    let home = TempDir::new().expect("temp home");
+    seed_credentials(home.path(), &fixture, &server.base_url);
+
+    let unlock_output = run_cli(
+        home.path(),
+        &server.base_url,
+        &["auth", "unlock", "--ttl-seconds", "300", "--password-stdin"],
+        Some(&fixture.password),
+    );
+    assert!(
+        unlock_output.status.success(),
+        "v2 daemon unlock failed: {}",
+        unlock_output.stderr
+    );
+
+    let task_output = run_cli(
+        home.path(),
+        &server.base_url,
+        &[
+            "--json",
+            "tasks",
+            "get",
+            "--work-list-id",
+            &fixture.work_list_id.to_string(),
+            "--task-id",
+            &fixture.task_id.to_string(),
+        ],
+        None,
+    );
+    assert!(
+        task_output.status.success(),
+        "v2 daemon-backed task get failed: {}",
+        task_output.stderr
+    );
+    assert_eq!(
+        parse_stdout_json(&task_output.stdout)["title"],
+        "Existing task"
+    );
+    assert_eq!(
+        state
+            .lock()
+            .expect("state lock")
+            .opaque_export_key_start_count,
+        1
+    );
+
+    let lock_output = run_cli(home.path(), &server.base_url, &["auth", "lock"], None);
+    assert!(lock_output.status.success(), "v2 daemon lock failed");
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn cli_v2_keychain_bootstrap_refreshes_credentials_without_persisting_the_export_key() {
+    let fixture = TestFixture::new_v2();
+    let state = Arc::new(Mutex::new(TestState::new(fixture.clone())));
+    let server = spawn_server(state.clone()).await;
+    let home = TempDir::new().expect("temp home");
+    let keychain_dir = TempDir::new().expect("temp keychain");
+    seed_credentials_with_expiry(
+        home.path(),
+        &fixture,
+        &server.base_url,
+        Utc::now() - Duration::minutes(1),
+        Utc::now() + Duration::days(1),
+    );
+
+    let store_output = run_cli_with_test_keychain(
+        home.path(),
+        &server.base_url,
+        keychain_dir.path(),
+        &["--json", "auth", "keychain", "store", "--password-stdin"],
+        Some(&fixture.password),
+    );
+    assert!(
+        store_output.status.success(),
+        "v2 keychain bootstrap failed: {}",
+        store_output.stderr
+    );
+    assert_eq!(
+        parse_stdout_json(&store_output.stdout)["persistedBootstrap"]["status"],
+        "available"
+    );
+
+    let task_output = run_cli_with_test_keychain(
+        home.path(),
+        &server.base_url,
+        keychain_dir.path(),
+        &[
+            "--json",
+            "tasks",
+            "get",
+            "--work-list-id",
+            &fixture.work_list_id.to_string(),
+            "--task-id",
+            &fixture.task_id.to_string(),
+        ],
+        None,
+    );
+    assert!(
+        task_output.status.success(),
+        "v2 keychain-backed task get failed: {}",
+        task_output.stderr
+    );
+    assert_eq!(
+        parse_stdout_json(&task_output.stdout)["title"],
+        "Existing task"
+    );
+
+    let state = state.lock().expect("state lock");
+    assert_eq!(state.refresh_request_count, 1);
+    assert_eq!(state.opaque_export_key_start_count, 1);
+    drop(state);
+
+    let encoded_export_key = STANDARD_NO_PAD.encode(fixture.opaque_export_key);
+    let credentials = std::fs::read_to_string(home.path().join(".worklist/credentials.json"))
+        .expect("read refreshed credentials");
+    let keychain_secret = read_stored_test_keychain_secret(keychain_dir.path());
+    assert!(!credentials.contains(&encoded_export_key));
+    assert_eq!(keychain_secret, vec![0x11; 32]);
+
+    let _ = run_cli(home.path(), &server.base_url, &["auth", "lock"], None);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn cli_v2_wrong_password_does_not_persist_a_partial_keychain_secret() {
+    let fixture = TestFixture::new_v2();
+    let state = Arc::new(Mutex::new(TestState::new(fixture.clone())));
+    let server = spawn_server(state.clone()).await;
+    let home = TempDir::new().expect("temp home");
+    let keychain_dir = TempDir::new().expect("temp keychain");
+    seed_credentials(home.path(), &fixture, &server.base_url);
+
+    let wrong_password = "definitely-not-the-account-password";
+    let output = run_cli_with_test_keychain(
+        home.path(),
+        &server.base_url,
+        keychain_dir.path(),
+        &["--json", "auth", "keychain", "store", "--password-stdin"],
+        Some(wrong_password),
+    );
+
+    assert!(
+        !output.status.success(),
+        "wrong password unexpectedly worked"
+    );
+    assert!(
+        output.stdout.is_empty(),
+        "unexpected stdout: {}",
+        output.stdout
+    );
+    assert!(!output.stderr.contains(wrong_password));
+    assert_eq!(
+        std::fs::read_dir(keychain_dir.path())
+            .expect("list keychain dir")
+            .count(),
+        0
+    );
+    assert_eq!(
+        state
+            .lock()
+            .expect("state lock")
+            .opaque_export_key_start_count,
+        1
+    );
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -2642,6 +2874,20 @@ struct TestAttachmentFixture {
     blob_key: Vec<u8>,
 }
 
+const FIXTURE_EMAIL: &str = "fixture@example.test";
+
+#[derive(Clone, Copy)]
+enum DataKeyWrapperFixture {
+    LegacyPasswordV1,
+    OpaqueExportKeyV2,
+}
+
+struct OpaqueAccountFixture {
+    setup: Vec<u8>,
+    password_file: Vec<u8>,
+    export_key: [u8; OPAQUE_EXPORT_KEY_BYTES],
+}
+
 #[derive(Clone)]
 struct TestFixture {
     password: String,
@@ -2656,6 +2902,9 @@ struct TestFixture {
     mentioned_user_id: Uuid,
     list_key: SymmetricKey,
     binding_key: SymmetricKey,
+    opaque_setup: Vec<u8>,
+    opaque_password_file: Vec<u8>,
+    opaque_export_key: [u8; OPAQUE_EXPORT_KEY_BYTES],
     data_key_ciphertext: String,
     work_list_key_ciphertext: String,
     work_list_payload_ciphertext: String,
@@ -2676,6 +2925,7 @@ struct TestState {
     current_refresh_token: String,
     logout_status: StatusCode,
     refresh_request_count: usize,
+    opaque_export_key_start_count: usize,
     created_task_body: Option<TaskPayloadBody>,
     updated_task_body: Option<TaskPayloadBody>,
     moved_task_body: Option<MoveTaskRequestBody>,
@@ -2709,6 +2959,7 @@ impl TestState {
             current_refresh_token: fixture.refresh_token.clone(),
             logout_status: StatusCode::OK,
             refresh_request_count: 0,
+            opaque_export_key_start_count: 0,
             fixture,
             created_task_body: None,
             updated_task_body: None,
@@ -2740,7 +2991,16 @@ impl TestState {
 
 impl TestFixture {
     fn new() -> Self {
+        Self::new_with_data_key_wrapper(DataKeyWrapperFixture::LegacyPasswordV1)
+    }
+
+    fn new_v2() -> Self {
+        Self::new_with_data_key_wrapper(DataKeyWrapperFixture::OpaqueExportKeyV2)
+    }
+
+    fn new_with_data_key_wrapper(wrapper: DataKeyWrapperFixture) -> Self {
         let password = "correct horse battery staple".to_string();
+        let opaque_account = make_opaque_account_fixture(FIXTURE_EMAIL, &password);
         let data_key = SymmetricKey::new([0x11; 32]);
         let list_key = SymmetricKey::new([0x22; 32]);
         let binding_key = derive_payload_binding_key(&list_key).expect("binding key");
@@ -2754,8 +3014,16 @@ impl TestFixture {
         let workspace_id = Uuid::now_v7();
         let mentioned_user_id = Uuid::now_v7();
 
-        let data_key_ciphertext =
-            encode_data_key_ciphertext(&password, &salt, &data_key).expect("data key ciphertext");
+        let data_key_ciphertext = match wrapper {
+            DataKeyWrapperFixture::LegacyPasswordV1 => {
+                encode_data_key_ciphertext(&password, &salt, &data_key)
+                    .expect("legacy data key ciphertext")
+            }
+            DataKeyWrapperFixture::OpaqueExportKeyV2 => {
+                encode_opaque_data_key_ciphertext(&opaque_account.export_key, &data_key)
+                    .expect("OPAQUE data key ciphertext")
+            }
+        };
         let work_list_key_ciphertext =
             encode_membership_key_ciphertext(&data_key, &list_key).expect("membership key");
         let work_list_payload_ciphertext =
@@ -2870,6 +3138,9 @@ impl TestFixture {
             mentioned_user_id,
             list_key,
             binding_key,
+            opaque_setup: opaque_account.setup,
+            opaque_password_file: opaque_account.password_file,
+            opaque_export_key: opaque_account.export_key,
             data_key_ciphertext,
             work_list_key_ciphertext,
             work_list_payload_ciphertext,
@@ -2938,6 +3209,12 @@ struct RefreshRequestBody {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct OpaqueExportKeyStartRequestBody {
+    client_login_state: String,
+}
+
+#[derive(Deserialize)]
 struct IncludeArchivedQuery {
     #[serde(rename = "includeArchived")]
     include_archived: Option<bool>,
@@ -2946,6 +3223,10 @@ struct IncludeArchivedQuery {
 async fn spawn_server(state: Arc<Mutex<TestState>>) -> TestServer {
     let app = Router::new()
         .route("/auth/refresh", post(refresh_session))
+        .route(
+            "/auth/opaque/export-key/start",
+            post(start_opaque_export_key),
+        )
         .route("/auth/logout", post(logout_session))
         .route("/work-lists", get(list_work_lists))
         .route("/work-lists/{id}", get(get_work_list))
@@ -2997,6 +3278,51 @@ async fn spawn_server(state: Arc<Mutex<TestState>>) -> TestServer {
         base_url: format!("http://{}", addr),
         _task: task,
     }
+}
+
+async fn start_opaque_export_key(
+    State(state): State<Arc<Mutex<TestState>>>,
+    headers: HeaderMap,
+    Json(payload): Json<OpaqueExportKeyStartRequestBody>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    const SERVER_ID: &[u8] = b"worklist.api";
+
+    authorize(&state, &headers);
+    let mut state = state.lock().expect("state lock");
+    state.opaque_export_key_start_count += 1;
+    let credential_request = CredentialRequest::<ClientCipherSuite>::deserialize(&decode_b64(
+        &payload.client_login_state,
+    ))
+    .expect("deserialize OPAQUE export-key request");
+    let setup = ServerSetup::<ClientCipherSuite>::deserialize(&state.fixture.opaque_setup)
+        .expect("deserialize OPAQUE setup");
+    let password_file =
+        ServerRegistration::<ClientCipherSuite>::deserialize(&state.fixture.opaque_password_file)
+            .expect("deserialize OPAQUE password file");
+    let identifiers = Identifiers {
+        client: Some(FIXTURE_EMAIL.as_bytes()),
+        server: Some(SERVER_ID),
+    };
+    let mut rng = OsRng;
+    let login = ServerLogin::<ClientCipherSuite>::start(
+        &mut rng,
+        &setup,
+        Some(password_file),
+        credential_request,
+        FIXTURE_EMAIL.as_bytes(),
+        ServerLoginParameters {
+            context: None,
+            identifiers,
+        },
+    )
+    .expect("start OPAQUE export-key login");
+
+    (
+        StatusCode::OK,
+        Json(json!({
+            "serverLoginState": STANDARD_NO_PAD.encode(login.message.serialize())
+        })),
+    )
 }
 
 async fn refresh_session(
@@ -3796,7 +4122,7 @@ fn seed_credentials_with_expiry(
         access_expires_at,
         refresh_expires_at,
         user_id: fixture.owner_user_id,
-        email: "fixture@example.test".to_string(),
+        email: FIXTURE_EMAIL.to_string(),
         data_key_ciphertext: fixture.data_key_ciphertext.clone(),
     };
 
@@ -3827,6 +4153,79 @@ fn decode_b64(value: &str) -> Vec<u8> {
         .decode(value)
         .or_else(|_| base64::engine::general_purpose::STANDARD.decode(value))
         .expect("decode base64")
+}
+
+fn make_opaque_account_fixture(email: &str, password: &str) -> OpaqueAccountFixture {
+    const SERVER_ID: &[u8] = b"worklist.api";
+
+    let mut rng = OsRng;
+    let setup = ServerSetup::<ClientCipherSuite>::new(&mut rng);
+    let registration =
+        ClientRegistration::<ClientCipherSuite>::start(&mut rng, password.as_bytes())
+            .expect("start fixture OPAQUE registration");
+    let registration_response = ServerRegistration::<ClientCipherSuite>::start(
+        &setup,
+        registration.message,
+        email.as_bytes(),
+    )
+    .expect("start fixture OPAQUE server registration");
+    let identifiers = Identifiers {
+        client: Some(email.as_bytes()),
+        server: Some(SERVER_ID),
+    };
+    let mut registration_finish = registration
+        .state
+        .finish(
+            &mut rng,
+            password.as_bytes(),
+            RegistrationResponse::<ClientCipherSuite>::deserialize(
+                &registration_response.message.serialize(),
+            )
+            .expect("deserialize fixture OPAQUE registration response"),
+            ClientRegistrationFinishParameters::new(identifiers, None),
+        )
+        .expect("finish fixture OPAQUE client registration");
+    let mut export_key = [0u8; OPAQUE_EXPORT_KEY_BYTES];
+    export_key.copy_from_slice(registration_finish.export_key.as_slice());
+    registration_finish.export_key.as_mut_slice().zeroize();
+    let password_file =
+        ServerRegistration::<ClientCipherSuite>::finish(registration_finish.message);
+
+    OpaqueAccountFixture {
+        setup: setup.serialize().to_vec(),
+        password_file: password_file.serialize().to_vec(),
+        export_key,
+    }
+}
+
+fn encode_opaque_data_key_ciphertext(
+    export_key: &[u8; OPAQUE_EXPORT_KEY_BYTES],
+    data_key: &SymmetricKey,
+) -> worklist_client_core::PublicResult<String> {
+    let mut wrapping_key_bytes = [0u8; 32];
+    Hkdf::<Sha256>::new(None, export_key)
+        .expand(USER_DATA_KEY_OPAQUE_WRAP_INFO, &mut wrapping_key_bytes)
+        .map_err(|err| {
+            worklist_client_core::PublicError::crypto(format!(
+                "fixture OPAQUE export-key HKDF failed: {err}"
+            ))
+        })?;
+    let wrapping_key = SymmetricKey::new(wrapping_key_bytes);
+    wrapping_key_bytes.zeroize();
+    let ciphertext = StrongBoxKeyRing::new(wrapping_key)
+        .strong_box()
+        .encrypt(data_key.as_bytes(), USER_DATA_KEY_OPAQUE_CONTEXT)
+        .map_err(|err| {
+            worklist_client_core::PublicError::crypto(format!(
+                "failed to encrypt fixture OPAQUE data key: {err}"
+            ))
+        })?;
+    let payload = SealedPayload {
+        version: 2,
+        ciphertext,
+    }
+    .to_bytes()?;
+    Ok(STANDARD_NO_PAD.encode(payload))
 }
 
 fn encode_data_key_ciphertext(
@@ -4196,6 +4595,15 @@ fn replace_stored_test_keychain_secret_with_directory(keychain_dir: &FsPath) {
         .expect("stored secret path");
     std::fs::remove_file(&secret_path).expect("remove stored secret");
     std::fs::create_dir(&secret_path).expect("replace stored secret with directory");
+}
+
+fn read_stored_test_keychain_secret(keychain_dir: &FsPath) -> Vec<u8> {
+    let secret_path = std::fs::read_dir(keychain_dir)
+        .expect("list keychain dir")
+        .map(|entry| entry.expect("dir entry").path())
+        .next()
+        .expect("stored secret path");
+    std::fs::read(secret_path).expect("read test keychain secret")
 }
 
 struct CliOutput {

@@ -23,6 +23,7 @@ sha2.workspace = true
 tokio.workspace = true
 undocx.workspace = true
 uuid.workspace = true
+zeroize.workspace = true
 
 worklist-client-api = { version = "0.2.0", path = "../client-api" }
 worklist-client-auth = { version = "0.2.0", path = "../client-auth" }

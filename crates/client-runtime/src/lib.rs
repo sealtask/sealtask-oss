@@ -21,18 +21,22 @@ use worklist_client_auth::{
     Credentials, PersistedDataKeyStatus,
     clear_persisted_data_key as clear_persisted_data_key_secret, load_credentials,
     load_credentials_for_url, load_persisted_data_key, normalize_api_url,
-    persisted_data_key_status, save_persisted_data_key,
+    opaque_login_finish_with_export_key, opaque_login_start, persisted_data_key_status,
+    save_persisted_data_key,
 };
 use worklist_client_core::{PublicError, PublicResult};
 use worklist_client_crypto::{
-    AttachmentBlobRef, ChecklistItemPayload, CommentPayloadBody, FlexibleValue, SymmetricKey,
-    TaskPayloadBody, TaskPayloadRichText, build_comment_payload_envelope,
-    build_task_payload_envelope, compute_payload_proof, decode_attachment_blob_key,
-    decode_sealed_blob, decrypt_attachment_bytes, decrypt_comment_payload, decrypt_task_payload,
-    decrypt_text_value, decrypt_user_data_key, decrypt_work_list_key, decrypt_work_list_payload,
-    derive_payload_binding_key, derive_work_list_key, encrypt_comment_payload,
-    encrypt_task_payload, flexible_value_to_json, plaintext_rich_text, seal_text_value,
+    AttachmentBlobRef, ChecklistItemPayload, CommentPayloadBody, DataKeyCiphertextVersion,
+    FlexibleValue, SymmetricKey, TaskPayloadBody, TaskPayloadRichText,
+    build_comment_payload_envelope, build_task_payload_envelope, compute_payload_proof,
+    data_key_ciphertext_version, decode_attachment_blob_key, decode_sealed_blob,
+    decrypt_attachment_bytes, decrypt_comment_payload, decrypt_task_payload, decrypt_text_value,
+    decrypt_user_data_key, decrypt_user_data_key_with_opaque_export_key, decrypt_work_list_key,
+    decrypt_work_list_payload, derive_payload_binding_key, derive_work_list_key,
+    encrypt_comment_payload, encrypt_task_payload, flexible_value_to_json, plaintext_rich_text,
+    seal_text_value,
 };
+use zeroize::Zeroizing;
 
 pub use unlock_daemon::{
     SessionKey, UnlockStatus, clear_session, fetch_data_key, lock, serve, session_key, socket_path,
@@ -400,24 +404,28 @@ impl RuntimeClient {
         client.get_dashboard_stats().await
     }
 
-    pub fn unlock_daemon(&self, ttl_seconds: u64, password_stdin: bool) -> PublicResult<()> {
-        let credentials = self.require_logged_in_credentials()?;
-        let password = read_required_password(
+    pub async fn unlock_daemon(&self, ttl_seconds: u64, password_stdin: bool) -> PublicResult<()> {
+        let mut credentials = self.require_logged_in_credentials()?;
+        let password = Zeroizing::new(read_required_password(
             password_stdin,
             Some("Password required to unlock the local daemon."),
-        )?;
-        let data_key = decrypt_user_data_key(&password, &credentials.data_key_ciphertext)?;
+        )?);
+        let data_key = self
+            .decrypt_data_key_with_password(&mut credentials, &password)
+            .await?;
         let session_key = self.current_session_key(&credentials)?;
         unlock(&session_key, &data_key, ttl_seconds)
     }
 
-    pub fn store_persisted_data_key(&self, password_stdin: bool) -> PublicResult<()> {
-        let credentials = self.require_logged_in_credentials()?;
-        let password = read_required_password(
+    pub async fn store_persisted_data_key(&self, password_stdin: bool) -> PublicResult<()> {
+        let mut credentials = self.require_logged_in_credentials()?;
+        let password = Zeroizing::new(read_required_password(
             password_stdin,
             Some("Password required to store a local bootstrap secret."),
-        )?;
-        let data_key = decrypt_user_data_key(&password, &credentials.data_key_ciphertext)?;
+        )?);
+        let data_key = self
+            .decrypt_data_key_with_password(&mut credentials, &password)
+            .await?;
         save_persisted_data_key(&credentials, data_key.as_bytes())?;
         Ok(())
     }
@@ -471,12 +479,14 @@ impl RuntimeClient {
         password_stdin: bool,
         include_archived: bool,
     ) -> PublicResult<Vec<AgentWorkListSummary>> {
-        let credentials = self.require_logged_in_credentials()?;
-        let data_key = self.load_data_key(
-            &credentials,
-            password_stdin,
-            "Password required to decrypt work lists.",
-        )?;
+        let mut credentials = self.require_logged_in_credentials()?;
+        let data_key = self
+            .load_data_key(
+                &mut credentials,
+                password_stdin,
+                "Password required to decrypt work lists.",
+            )
+            .await?;
         let mut client = PublicApiClient::with_credentials(&self.api_url, credentials);
         let lists = client
             .list_work_lists_with_archived(include_archived)
@@ -492,12 +502,14 @@ impl RuntimeClient {
         work_list_id: Uuid,
         password_stdin: bool,
     ) -> PublicResult<AgentWorkListSummary> {
-        let credentials = self.require_logged_in_credentials()?;
-        let data_key = self.load_data_key(
-            &credentials,
-            password_stdin,
-            "Password required to decrypt archived work list data.",
-        )?;
+        let mut credentials = self.require_logged_in_credentials()?;
+        let data_key = self
+            .load_data_key(
+                &mut credentials,
+                password_stdin,
+                "Password required to decrypt archived work list data.",
+            )
+            .await?;
         let mut client = PublicApiClient::with_credentials(&self.api_url, credentials);
         let work_list = client.archive_work_list(work_list_id).await?;
         Ok(self.project_work_list_summary(work_list, Some(&data_key)))
@@ -508,12 +520,14 @@ impl RuntimeClient {
         work_list_id: Uuid,
         password_stdin: bool,
     ) -> PublicResult<AgentWorkListSummary> {
-        let credentials = self.require_logged_in_credentials()?;
-        let data_key = self.load_data_key(
-            &credentials,
-            password_stdin,
-            "Password required to decrypt restored work list data.",
-        )?;
+        let mut credentials = self.require_logged_in_credentials()?;
+        let data_key = self
+            .load_data_key(
+                &mut credentials,
+                password_stdin,
+                "Password required to decrypt restored work list data.",
+            )
+            .await?;
         let mut client = PublicApiClient::with_credentials(&self.api_url, credentials);
         let work_list = client.unarchive_work_list(work_list_id).await?;
         Ok(self.project_work_list_summary(work_list, Some(&data_key)))
@@ -524,12 +538,14 @@ impl RuntimeClient {
         work_list_id: Uuid,
         password_stdin: bool,
     ) -> PublicResult<AgentWorkListDetail> {
-        let credentials = self.require_logged_in_credentials()?;
-        let data_key = self.load_data_key(
-            &credentials,
-            password_stdin,
-            "Password required to decrypt work list data.",
-        )?;
+        let mut credentials = self.require_logged_in_credentials()?;
+        let data_key = self
+            .load_data_key(
+                &mut credentials,
+                password_stdin,
+                "Password required to decrypt work list data.",
+            )
+            .await?;
         let mut client = PublicApiClient::with_credentials(&self.api_url, credentials);
         let detail = client.get_work_list(work_list_id).await?;
         Ok(self.project_work_list_detail(detail, Some(&data_key)))
@@ -542,12 +558,14 @@ impl RuntimeClient {
         all: bool,
         password_stdin: bool,
     ) -> PublicResult<Vec<AgentTaskSummary>> {
-        let credentials = self.require_logged_in_credentials()?;
-        let data_key = self.load_data_key(
-            &credentials,
-            password_stdin,
-            "Password required to decrypt task data.",
-        )?;
+        let mut credentials = self.require_logged_in_credentials()?;
+        let data_key = self
+            .load_data_key(
+                &mut credentials,
+                password_stdin,
+                "Password required to decrypt task data.",
+            )
+            .await?;
         let mut client = PublicApiClient::with_credentials(&self.api_url, credentials);
 
         if all || work_list_id.is_none() {
@@ -1006,8 +1024,10 @@ impl RuntimeClient {
         password_stdin: bool,
         prompt_message: &str,
     ) -> PublicResult<(PublicApiClient, WorkListContext)> {
-        let credentials = self.require_logged_in_credentials()?;
-        let data_key = self.load_data_key(&credentials, password_stdin, prompt_message)?;
+        let mut credentials = self.require_logged_in_credentials()?;
+        let data_key = self
+            .load_data_key(&mut credentials, password_stdin, prompt_message)
+            .await?;
         let mut client = PublicApiClient::with_credentials(&self.api_url, credentials);
         let work_list = client.get_work_list(work_list_id).await?;
         let context = self.context_from_work_list_detail(&work_list, Some(&data_key));
@@ -1026,16 +1046,21 @@ impl RuntimeClient {
         })
     }
 
-    fn load_data_key(
+    async fn load_data_key(
         &self,
-        credentials: &Credentials,
+        credentials: &mut Credentials,
         password_stdin: bool,
         prompt_message: &str,
     ) -> PublicResult<SymmetricKey> {
         let session_key = self.current_session_key(credentials)?;
         if password_stdin {
-            let password = read_required_password(password_stdin, Some(prompt_message))?;
-            return decrypt_user_data_key(&password, &credentials.data_key_ciphertext);
+            let password = Zeroizing::new(read_required_password(
+                password_stdin,
+                Some(prompt_message),
+            )?);
+            return self
+                .decrypt_data_key_with_password(credentials, &password)
+                .await;
         }
 
         if let Some(data_key) = fetch_data_key(&session_key)? {
@@ -1046,6 +1071,39 @@ impl RuntimeClient {
             Ok(Some(data_key)) => Ok(data_key),
             Ok(None) => Err(missing_unlock_error(prompt_message)),
             Err(err) => Err(persisted_unlock_error(prompt_message, err)),
+        }
+    }
+
+    async fn decrypt_data_key_with_password(
+        &self,
+        credentials: &mut Credentials,
+        password: &str,
+    ) -> PublicResult<SymmetricKey> {
+        match data_key_ciphertext_version(&credentials.data_key_ciphertext)? {
+            DataKeyCiphertextVersion::LegacyPasswordV1 => {
+                decrypt_user_data_key(password, &credentials.data_key_ciphertext)
+            }
+            DataKeyCiphertextVersion::OpaqueExportKeyV2 => {
+                let (opaque_state, client_login_state) = opaque_login_start(password)?;
+                let mut client =
+                    PublicApiClient::with_credentials(&self.api_url, credentials.clone());
+                let challenge = client.start_opaque_export_key(&client_login_state).await?;
+                *credentials = client.into_credentials().ok_or_else(|| {
+                    PublicError::unexpected(
+                        "authenticated OPAQUE export-key client lost its credentials",
+                    )
+                })?;
+                let finish = opaque_login_finish_with_export_key(
+                    opaque_state,
+                    &credentials.email,
+                    password,
+                    &challenge.server_login_state,
+                )?;
+                decrypt_user_data_key_with_opaque_export_key(
+                    finish.export_key.as_bytes(),
+                    &credentials.data_key_ciphertext,
+                )
+            }
         }
     }
 

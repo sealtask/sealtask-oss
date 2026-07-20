@@ -43,6 +43,10 @@ impl PublicApiClient {
         self.credentials.is_some()
     }
 
+    pub fn into_credentials(self) -> Option<Credentials> {
+        self.credentials
+    }
+
     async fn get_access_token(&mut self) -> PublicResult<String> {
         let credentials = self
             .credentials
@@ -148,6 +152,17 @@ impl PublicApiClient {
 
     pub async fn get_dashboard_stats(&mut self) -> PublicResult<DashboardStatsResponse> {
         self.get("/me/dashboard-stats").await
+    }
+
+    pub async fn start_opaque_export_key(
+        &mut self,
+        client_login_state: &str,
+    ) -> PublicResult<OpaqueExportKeyStartResponse> {
+        self.post(
+            "/auth/opaque/export-key/start",
+            &OpaqueExportKeyStartRequest { client_login_state },
+        )
+        .await
     }
 
     pub async fn get_task(
@@ -382,6 +397,18 @@ pub struct CurrentUserResponse {
     pub theme_preference: String,
     pub email_verified: bool,
     pub last_accessed_work_list_id: Option<Uuid>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct OpaqueExportKeyStartRequest<'a> {
+    client_login_state: &'a str,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OpaqueExportKeyStartResponse {
+    pub server_login_state: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

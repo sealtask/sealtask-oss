@@ -30,6 +30,7 @@ const TEST_KEYCHAIN_DIR_ENV: &str = "WORKLIST_TEST_KEYCHAIN_DIR";
 const MFA_CAPABILITIES_HEADER: &str = "X-Worklist-Auth-Capabilities";
 const MFA_CAPABILITIES_VALUE: &str = "mfa-totp-v1";
 const MFA_CHALLENGE_EXPIRED_MESSAGE: &str = "MFA challenge expired; restart sign-in";
+const OPAQUE_EXPORT_KEY_BYTES: usize = 64;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -190,6 +191,27 @@ pub struct PendingMfaLogin {
     challenge_token: SecretString,
     challenge: MfaChallenge,
     expires_at: Instant,
+}
+
+#[derive(Zeroize, ZeroizeOnDrop)]
+pub struct OpaqueExportKey([u8; OPAQUE_EXPORT_KEY_BYTES]);
+
+impl OpaqueExportKey {
+    #[must_use]
+    pub fn as_bytes(&self) -> &[u8; OPAQUE_EXPORT_KEY_BYTES] {
+        &self.0
+    }
+}
+
+impl fmt::Debug for OpaqueExportKey {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("<redacted>")
+    }
+}
+
+pub struct OpaqueLoginFinish {
+    pub client_finish_message: String,
+    pub export_key: OpaqueExportKey,
 }
 
 impl PendingMfaLogin {
@@ -552,6 +574,19 @@ pub fn opaque_login_finish(
     password: &str,
     server_response_b64: &str,
 ) -> PublicResult<String> {
+    let OpaqueLoginFinish {
+        client_finish_message,
+        export_key: _,
+    } = opaque_login_finish_with_export_key(state, email, password, server_response_b64)?;
+    Ok(client_finish_message)
+}
+
+pub fn opaque_login_finish_with_export_key(
+    state: ClientLogin<ClientCipherSuite>,
+    email: &str,
+    password: &str,
+    server_response_b64: &str,
+) -> PublicResult<OpaqueLoginFinish> {
     let mut rng = OsRng;
     let server_bytes = decode_bytes(server_response_b64)?;
     let credential_response = CredentialResponse::<ClientCipherSuite>::deserialize(&server_bytes)
@@ -566,11 +601,19 @@ pub fn opaque_login_finish(
     };
     let params = ClientLoginFinishParameters::new(None, identifiers, None);
 
-    let finish_result = state
+    let mut finish_result = state
         .finish(&mut rng, password.as_bytes(), credential_response, params)
         .map_err(|err| PublicError::crypto(format!("OPAQUE login finish failed: {err}")))?;
 
-    Ok(encode_bytes(finish_result.message.serialize().as_slice()))
+    let client_finish_message = encode_bytes(finish_result.message.serialize().as_slice());
+    let mut export_key = [0u8; OPAQUE_EXPORT_KEY_BYTES];
+    export_key.copy_from_slice(finish_result.export_key.as_slice());
+    finish_result.export_key.as_mut_slice().zeroize();
+
+    Ok(OpaqueLoginFinish {
+        client_finish_message,
+        export_key: OpaqueExportKey(export_key),
+    })
 }
 
 pub async fn login(
@@ -1180,6 +1223,10 @@ mod tests {
     use axum::response::IntoResponse;
     use axum::routing::post;
     use chrono::Duration;
+    use opaque_ke::{
+        ClientRegistration, ClientRegistrationFinishParameters, CredentialRequest,
+        RegistrationResponse, ServerLogin, ServerLoginParameters, ServerRegistration, ServerSetup,
+    };
     use serde_json::json;
     use tempfile::TempDir;
     use tokio::net::TcpListener;
@@ -1210,6 +1257,142 @@ mod tests {
             axum::serve(listener, app).await.expect("serve test API");
         });
         format!("http://{address}")
+    }
+
+    #[test]
+    fn opaque_login_finish_returns_the_registration_export_key_and_redacts_debug() {
+        const EMAIL: &str = "opaque-export@example.test";
+        const PASSWORD: &str = "correct horse battery staple";
+
+        let mut rng = OsRng;
+        let setup = ServerSetup::<ClientCipherSuite>::new(&mut rng);
+        let registration =
+            ClientRegistration::<ClientCipherSuite>::start(&mut rng, PASSWORD.as_bytes())
+                .expect("start registration");
+        let registration_response = ServerRegistration::<ClientCipherSuite>::start(
+            &setup,
+            registration.message,
+            EMAIL.as_bytes(),
+        )
+        .expect("start server registration");
+        let identifiers = Identifiers {
+            client: Some(EMAIL.as_bytes()),
+            server: Some(OPAQUE_SERVER_ID),
+        };
+        let mut registration_finish = registration
+            .state
+            .finish(
+                &mut rng,
+                PASSWORD.as_bytes(),
+                RegistrationResponse::<ClientCipherSuite>::deserialize(
+                    &registration_response.message.serialize(),
+                )
+                .expect("deserialize registration response"),
+                ClientRegistrationFinishParameters::new(identifiers, None),
+            )
+            .expect("finish registration");
+        let expected_export_key = registration_finish.export_key.to_vec();
+        registration_finish.export_key.as_mut_slice().zeroize();
+        let password_file =
+            ServerRegistration::<ClientCipherSuite>::finish(registration_finish.message);
+
+        let (client_state, client_request) = opaque_login_start(PASSWORD).expect("start login");
+        let credential_request = CredentialRequest::<ClientCipherSuite>::deserialize(
+            &decode_bytes(&client_request).expect("decode client request"),
+        )
+        .expect("deserialize credential request");
+        let login = ServerLogin::<ClientCipherSuite>::start(
+            &mut rng,
+            &setup,
+            Some(password_file),
+            credential_request,
+            EMAIL.as_bytes(),
+            ServerLoginParameters {
+                context: None,
+                identifiers,
+            },
+        )
+        .expect("start server login");
+
+        let finish = opaque_login_finish_with_export_key(
+            client_state,
+            EMAIL,
+            PASSWORD,
+            &encode_bytes(login.message.serialize().as_slice()),
+        )
+        .expect("finish login");
+
+        assert!(!finish.client_finish_message.is_empty());
+        assert_eq!(finish.export_key.as_bytes(), expected_export_key.as_slice());
+        assert_eq!(format!("{:?}", finish.export_key), "<redacted>");
+    }
+
+    #[test]
+    fn opaque_login_finish_matches_browser_registered_account_export_key() {
+        // Generated with @serenity-kit/opaque 1.1.0 using the production
+        // identifiers. This guards the browser-registration/CLI-unlock boundary.
+        const EMAIL: &str = "oss-v2-browser-fixture@example.test";
+        const PASSWORD: &str = "correct horse battery staple";
+        const BROWSER_SERVER_SETUP: &str = concat!(
+            "1oW8taI-3dYld7y5SN7_wH01dUZJx-04mcqsHz8bKs-X6gv3eSf-iDQZStvtITsz",
+            "3vfDcBlAQDYj9eSUSuQQrN5LIjgbER1vXHKqfabynBdsUUxrga7xowyedxDafMsF",
+            "KtcXWFJfQlHGVFf90oH0GEk8R8lMn2GvEa_NShqqhAw"
+        );
+        const BROWSER_PASSWORD_FILE: &str = concat!(
+            "BAmBVNTcXHA9d0dVdffsepyIvyjl-d2e1U3DS4R173-yWM10EUdoTERIXYMujwzT",
+            "HcNw-kRMrfpODV1GAXNR5oWmNe7IZ_qgMKgkA0mdLEAJSigpz-478fLdzi_H7tt0",
+            "xpVN9a5KULYyfqEEZygHjLDZ0porWN1mtTchBqRN08YfQZKuqCVaq5GC2En7CPM",
+            "Eq3Rhewr5Ogv8WTiixEXl3TCUCAD5RSwgZRjwiWiEH6NbGw5YBjbyc2bEzoP9xv",
+            "rl"
+        );
+        const BROWSER_EXPORT_KEY: &str = concat!(
+            "18Ifrzr4ncv62u1k2dSsRL1ZsD64msuxmSs_B91bwponDN7Vo7H3z9inGeUi0eqJ",
+            "FMQQyyiZvPJ4FhZKZg1AEg"
+        );
+
+        let setup = ServerSetup::<ClientCipherSuite>::deserialize(
+            &decode_bytes(BROWSER_SERVER_SETUP).expect("decode browser server setup"),
+        )
+        .expect("deserialize browser server setup");
+        let password_file = ServerRegistration::<ClientCipherSuite>::deserialize(
+            &decode_bytes(BROWSER_PASSWORD_FILE).expect("decode browser password file"),
+        )
+        .expect("deserialize browser password file");
+        let (client_state, client_request) = opaque_login_start(PASSWORD).expect("start login");
+        let credential_request = CredentialRequest::<ClientCipherSuite>::deserialize(
+            &decode_bytes(&client_request).expect("decode client request"),
+        )
+        .expect("deserialize credential request");
+        let login = ServerLogin::<ClientCipherSuite>::start(
+            &mut OsRng,
+            &setup,
+            Some(password_file),
+            credential_request,
+            EMAIL.as_bytes(),
+            ServerLoginParameters {
+                context: None,
+                identifiers: Identifiers {
+                    client: Some(EMAIL.as_bytes()),
+                    server: Some(OPAQUE_SERVER_ID),
+                },
+            },
+        )
+        .expect("start server login");
+
+        let finish = opaque_login_finish_with_export_key(
+            client_state,
+            EMAIL,
+            PASSWORD,
+            &encode_bytes(login.message.serialize().as_slice()),
+        )
+        .expect("finish browser-account login");
+
+        assert_eq!(
+            finish.export_key.as_bytes().as_slice(),
+            decode_bytes(BROWSER_EXPORT_KEY)
+                .expect("decode browser export key")
+                .as_slice()
+        );
     }
 
     async fn spawn_hanging_mfa_server() -> String {

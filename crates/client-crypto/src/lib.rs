@@ -4,16 +4,19 @@ use std::{fmt::Debug, io::Cursor};
 
 use argon2::{Algorithm, Argon2, Params, Version};
 use base64::Engine as _;
-use base64::engine::general_purpose::{STANDARD, STANDARD_NO_PAD};
+use base64::engine::general_purpose::{STANDARD, STANDARD_NO_PAD, URL_SAFE, URL_SAFE_NO_PAD};
 use hkdf::Hkdf;
 use hmac::{Hmac, Mac};
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use sha2::Sha256;
 use strong_box::{Key as StrongBoxKey, StaticStrongBox, StrongBox};
+use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
 
 use worklist_client_core::{PublicError, PublicResult};
 
 pub const USER_DATA_KEY_CONTEXT: &[u8] = b"worklist.user.data_key";
+pub const USER_DATA_KEY_OPAQUE_CONTEXT: &[u8] = b"worklist.user.data_key.v2.opaque_export";
+pub const USER_DATA_KEY_OPAQUE_WRAP_INFO: &[u8] = b"worklist.user.data_key.wrap.v2";
 pub const WORK_LIST_PAYLOAD_CONTEXT: &[u8] = b"worklist.work_list.v1";
 pub const WORK_LIST_MEMBERSHIP_CONTEXT: &[u8] = b"worklist.membership";
 pub const TASK_PAYLOAD_CONTEXT: &[u8] = b"worklist.task.v1";
@@ -24,6 +27,15 @@ pub const ATTACHMENT_BLOB_CONTEXT_LABEL: &str = "worklist.attachment.blob.v1";
 pub const ATTACHMENT_BLOB_REF_VERSION: u8 = 1;
 pub const DATA_KEY_SALT_BYTES: usize = 32;
 pub const KEY_SIZE: usize = 32;
+pub const OPAQUE_EXPORT_KEY_BYTES: usize = 64;
+const LEGACY_DATA_KEY_PAYLOAD_VERSION: u8 = 1;
+const OPAQUE_DATA_KEY_PAYLOAD_VERSION: u8 = 2;
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+pub enum DataKeyCiphertextVersion {
+    LegacyPasswordV1,
+    OpaqueExportKeyV2,
+}
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -45,7 +57,7 @@ impl CryptoCapability {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Zeroize, ZeroizeOnDrop)]
 pub struct SymmetricKey([u8; KEY_SIZE]);
 
 impl SymmetricKey {
@@ -258,9 +270,20 @@ pub fn decrypt_user_data_key(
     password: &str,
     data_key_ciphertext_b64: &str,
 ) -> PublicResult<SymmetricKey> {
-    let bytes = decode_base64(data_key_ciphertext_b64)?;
-    let payload = SealedPayload::from_bytes(&bytes)?;
-    ensure_payload_version(payload.version)?;
+    let payload = decode_data_key_payload(data_key_ciphertext_b64)?;
+    match payload.version {
+        LEGACY_DATA_KEY_PAYLOAD_VERSION => {}
+        OPAQUE_DATA_KEY_PAYLOAD_VERSION => {
+            return Err(PublicError::validation(
+                "data key ciphertext version 2 requires an OPAQUE export key",
+            ));
+        }
+        version => {
+            return Err(PublicError::validation(format!(
+                "unsupported data key ciphertext version {version}"
+            )));
+        }
+    }
 
     if payload.ciphertext.len() <= DATA_KEY_SALT_BYTES {
         return Err(PublicError::validation("data key payload is truncated"));
@@ -271,9 +294,56 @@ pub fn decrypt_user_data_key(
     let wrapping_key = key_derivation.derive_master_key(password.as_bytes(), salt)?;
 
     let strong_box = StrongBoxKeyRing::new(wrapping_key).strong_box();
-    let data_key = strong_box
-        .decrypt(sealed, USER_DATA_KEY_CONTEXT)
-        .map_err(|err| PublicError::crypto(format!("failed to decrypt data key: {err}")))?;
+    let data_key = Zeroizing::new(
+        strong_box
+            .decrypt(sealed, USER_DATA_KEY_CONTEXT)
+            .map_err(|err| PublicError::crypto(format!("failed to decrypt data key: {err}")))?,
+    );
+
+    symmetric_key_from_bytes(&data_key)
+}
+
+pub fn data_key_ciphertext_version(
+    data_key_ciphertext_b64: &str,
+) -> PublicResult<DataKeyCiphertextVersion> {
+    match decode_data_key_payload(data_key_ciphertext_b64)?.version {
+        LEGACY_DATA_KEY_PAYLOAD_VERSION => Ok(DataKeyCiphertextVersion::LegacyPasswordV1),
+        OPAQUE_DATA_KEY_PAYLOAD_VERSION => Ok(DataKeyCiphertextVersion::OpaqueExportKeyV2),
+        version => Err(PublicError::validation(format!(
+            "unsupported data key ciphertext version {version}"
+        ))),
+    }
+}
+
+pub fn decrypt_user_data_key_with_opaque_export_key(
+    export_key: &[u8],
+    data_key_ciphertext_b64: &str,
+) -> PublicResult<SymmetricKey> {
+    let payload = decode_data_key_payload(data_key_ciphertext_b64)?;
+    match payload.version {
+        OPAQUE_DATA_KEY_PAYLOAD_VERSION => {}
+        LEGACY_DATA_KEY_PAYLOAD_VERSION => {
+            return Err(PublicError::validation(
+                "data key ciphertext version 1 requires legacy password migration",
+            ));
+        }
+        version => {
+            return Err(PublicError::validation(format!(
+                "unsupported data key ciphertext version {version}"
+            )));
+        }
+    }
+    if payload.ciphertext.is_empty() {
+        return Err(PublicError::validation("data key payload is empty"));
+    }
+
+    let wrapping_key = derive_opaque_data_key_wrapping_key(export_key)?;
+    let strong_box = StrongBoxKeyRing::new(wrapping_key).strong_box();
+    let data_key = Zeroizing::new(
+        strong_box
+            .decrypt(&payload.ciphertext, USER_DATA_KEY_OPAQUE_CONTEXT)
+            .map_err(|err| PublicError::crypto(format!("failed to decrypt data key: {err}")))?,
+    );
 
     symmetric_key_from_bytes(&data_key)
 }
@@ -763,6 +833,8 @@ fn decode_base64(value: &str) -> PublicResult<Vec<u8>> {
     STANDARD_NO_PAD
         .decode(trimmed.as_bytes())
         .or_else(|_| STANDARD.decode(trimmed.as_bytes()))
+        .or_else(|_| URL_SAFE_NO_PAD.decode(trimmed.as_bytes()))
+        .or_else(|_| URL_SAFE.decode(trimmed.as_bytes()))
         .map_err(|err| PublicError::validation(format!("ciphertext must be base64: {err}")))
 }
 
@@ -827,6 +899,27 @@ fn symmetric_key_from_bytes(bytes: &[u8]) -> PublicResult<SymmetricKey> {
     let mut array = [0u8; KEY_SIZE];
     array.copy_from_slice(bytes);
     Ok(SymmetricKey::new(array))
+}
+
+fn decode_data_key_payload(data_key_ciphertext_b64: &str) -> PublicResult<SealedPayload> {
+    let bytes = decode_base64(data_key_ciphertext_b64)?;
+    SealedPayload::from_bytes(&bytes)
+}
+
+fn derive_opaque_data_key_wrapping_key(export_key: &[u8]) -> PublicResult<SymmetricKey> {
+    if export_key.len() != OPAQUE_EXPORT_KEY_BYTES {
+        return Err(PublicError::validation(format!(
+            "OPAQUE export key must be {OPAQUE_EXPORT_KEY_BYTES} bytes"
+        )));
+    }
+
+    let mut output = [0u8; KEY_SIZE];
+    Hkdf::<Sha256>::new(None, export_key)
+        .expand(USER_DATA_KEY_OPAQUE_WRAP_INFO, &mut output)
+        .map_err(|err| PublicError::crypto(format!("OPAQUE export-key HKDF failed: {err}")))?;
+    let wrapping_key = SymmetricKey::new(output);
+    output.zeroize();
+    Ok(wrapping_key)
 }
 
 fn ensure_payload_version(version: u8) -> PublicResult<()> {
@@ -908,6 +1001,21 @@ enum WorkListKeyField {
 mod tests {
     use super::*;
 
+    fn encode_opaque_data_key_ciphertext(export_key: &[u8], data_key: &SymmetricKey) -> String {
+        let wrapping_key = derive_opaque_data_key_wrapping_key(export_key).expect("wrapping key");
+        let ciphertext = StrongBoxKeyRing::new(wrapping_key)
+            .strong_box()
+            .encrypt(data_key.as_bytes(), USER_DATA_KEY_OPAQUE_CONTEXT)
+            .expect("encrypt data key");
+        let payload = SealedPayload {
+            version: OPAQUE_DATA_KEY_PAYLOAD_VERSION,
+            ciphertext,
+        }
+        .to_bytes()
+        .expect("serialize data-key payload");
+        STANDARD_NO_PAD.encode(payload)
+    }
+
     #[test]
     fn test_decode_base64_standard() {
         let encoded = STANDARD.encode(b"hello");
@@ -920,6 +1028,108 @@ mod tests {
         let encoded = STANDARD_NO_PAD.encode(b"hello");
         let decoded = decode_base64(&encoded).expect("decode");
         assert_eq!(decoded, b"hello");
+    }
+
+    #[test]
+    fn opaque_data_key_hkdf_matches_webcrypto_vector() {
+        let export_key = (0u8..OPAQUE_EXPORT_KEY_BYTES as u8).collect::<Vec<_>>();
+        let wrapping_key =
+            derive_opaque_data_key_wrapping_key(&export_key).expect("derive wrapping key");
+        assert_eq!(
+            wrapping_key.as_bytes(),
+            &[
+                0x48, 0x55, 0xbd, 0x65, 0x03, 0x54, 0x3d, 0x19, 0x3f, 0xbf, 0x07, 0x53, 0x22, 0xc8,
+                0xbf, 0xcf, 0xd5, 0x23, 0x27, 0x8f, 0x51, 0x15, 0xe0, 0x72, 0xef, 0x00, 0x74, 0xac,
+                0xc5, 0x96, 0xda, 0x14,
+            ]
+        );
+    }
+
+    #[test]
+    fn opaque_data_key_ciphertext_round_trips_with_v2_context() {
+        let export_key = [0x42; OPAQUE_EXPORT_KEY_BYTES];
+        let data_key = SymmetricKey::new([0x24; KEY_SIZE]);
+        let ciphertext = encode_opaque_data_key_ciphertext(&export_key, &data_key);
+
+        assert_eq!(
+            data_key_ciphertext_version(&ciphertext).expect("ciphertext version"),
+            DataKeyCiphertextVersion::OpaqueExportKeyV2
+        );
+        assert_eq!(
+            decrypt_user_data_key_with_opaque_export_key(&export_key, &ciphertext)
+                .expect("decrypt v2 data key"),
+            data_key
+        );
+
+        let url_safe = ciphertext
+            .replace('+', "-")
+            .replace('/', "_")
+            .trim_end_matches('=')
+            .to_string();
+        assert_eq!(
+            decrypt_user_data_key_with_opaque_export_key(&export_key, &url_safe)
+                .expect("decrypt URL-safe v2 data key"),
+            data_key
+        );
+    }
+
+    #[test]
+    fn opaque_data_key_ciphertext_decrypts_browser_wasm_fixture() {
+        // Generated by frontend/src/crypto/data-key.ts using the production
+        // StrongBox WASM bridge, export-key bytes 0..63, and a 0x07 data key.
+        const BROWSER_CIPHERTEXT: &str = concat!(
+            "uQACZ3ZlcnNpb24CamNpcGhlcnRleHTYQFhUsbj1g1Aue4S+jeDO0MxxVGnAhLyn",
+            "TL/tx0msz1eNjbFex1gwawxU+h2qiJmX5bwbxErU6vKrC/EroaWmtmuapj6IN9Ia",
+            "9wlfTF8w35B0wX9bKSG+"
+        );
+        let export_key = (0u8..OPAQUE_EXPORT_KEY_BYTES as u8).collect::<Vec<_>>();
+
+        assert_eq!(
+            decrypt_user_data_key_with_opaque_export_key(&export_key, BROWSER_CIPHERTEXT)
+                .expect("decrypt browser v2 fixture"),
+            SymmetricKey::new([0x07; KEY_SIZE])
+        );
+    }
+
+    #[test]
+    fn opaque_data_key_ciphertext_rejects_wrong_key_version_and_length() {
+        let export_key = [0x31; OPAQUE_EXPORT_KEY_BYTES];
+        let data_key = SymmetricKey::new([0x13; KEY_SIZE]);
+        let ciphertext = encode_opaque_data_key_ciphertext(&export_key, &data_key);
+
+        let wrong_key_error = decrypt_user_data_key_with_opaque_export_key(
+            &[0x32; OPAQUE_EXPORT_KEY_BYTES],
+            &ciphertext,
+        )
+        .expect_err("wrong export key must fail");
+        assert!(
+            wrong_key_error
+                .to_string()
+                .contains("failed to decrypt data key")
+        );
+
+        let short_key_error = decrypt_user_data_key_with_opaque_export_key(
+            &[0x31; OPAQUE_EXPORT_KEY_BYTES - 1],
+            &ciphertext,
+        )
+        .expect_err("short export key must fail");
+        assert_eq!(
+            short_key_error.to_string(),
+            "OPAQUE export key must be 64 bytes"
+        );
+
+        let legacy_payload = SealedPayload::new(vec![0; DATA_KEY_SALT_BYTES + 1])
+            .to_bytes()
+            .expect("legacy payload");
+        let legacy_ciphertext = STANDARD_NO_PAD.encode(legacy_payload);
+        let version_error =
+            decrypt_user_data_key_with_opaque_export_key(&export_key, &legacy_ciphertext)
+                .expect_err("legacy wrapper must use legacy path");
+        assert!(
+            version_error
+                .to_string()
+                .contains("legacy password migration")
+        );
     }
 
     #[test]

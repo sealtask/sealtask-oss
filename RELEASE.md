@@ -46,6 +46,13 @@ successful no-factor, interactive TOTP, one-time backup-code, one-line
 `mfa_input_required`, and two-line stdin login flows. A path dependency or the
 dry-run package result is not release evidence.
 
+Exercise data-key unlock against both a legacy version 1 account and an OPAQUE
+export-key version 2 account. For version 2, record successful single-command,
+unlock-daemon, and platform-keychain flows against the hosted API, including an
+expired-access-token refresh. Confirm a wrong password leaves no bootstrap
+secret and that credentials and local unlock storage contain no OPAQUE export
+key. Version 1 password unwrap must remain offline.
+
 For the two-line stdin check, confirm the first password line is still trimmed
 and the second factor line loses only its physical LF or CRLF delimiter. Record
 that whitespace-only, tabs, surrounding whitespace, Unicode digits, canonical

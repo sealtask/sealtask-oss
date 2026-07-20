@@ -726,9 +726,9 @@ async fn run(cli: Cli, format: OutputFormat) -> CliResult<()> {
             AuthCommand::Unlock {
                 ttl_seconds,
                 password_stdin,
-            } => cmd_unlock(format, &runtime, ttl_seconds, password_stdin),
+            } => cmd_unlock(format, &runtime, ttl_seconds, password_stdin).await,
             AuthCommand::Lock => cmd_lock(format),
-            AuthCommand::Keychain { command } => cmd_keychain(format, &runtime, command),
+            AuthCommand::Keychain { command } => cmd_keychain(format, &runtime, command).await,
             AuthCommand::Logout => cmd_logout(format, &runtime).await,
             AuthCommand::Status => cmd_status(format, runtime.api_url()),
         },
@@ -1150,14 +1150,14 @@ fn prompt_mfa_code(challenge: &worklist_client_auth::MfaChallenge) -> CliResult<
     Ok(code)
 }
 
-fn cmd_unlock(
+async fn cmd_unlock(
     format: OutputFormat,
     runtime: &RuntimeClient,
     ttl_seconds: u64,
     password_stdin: bool,
 ) -> CliResult<()> {
     require_password_stdin_for_json_command(format, password_stdin, "auth unlock")?;
-    runtime.unlock_daemon(ttl_seconds, password_stdin)?;
+    runtime.unlock_daemon(ttl_seconds, password_stdin).await?;
     print_unlock_result(
         format,
         true,
@@ -1171,7 +1171,7 @@ fn cmd_lock(format: OutputFormat) -> CliResult<()> {
     print_unlock_result(format, false, None, "Locked local daemon.")
 }
 
-fn cmd_keychain(
+async fn cmd_keychain(
     format: OutputFormat,
     runtime: &RuntimeClient,
     command: KeychainCommand,
@@ -1179,7 +1179,7 @@ fn cmd_keychain(
     let (status, table_message) = match command {
         KeychainCommand::Store { password_stdin } => {
             require_password_stdin_for_json_command(format, password_stdin, "auth keychain store")?;
-            runtime.store_persisted_data_key(password_stdin)?;
+            runtime.store_persisted_data_key(password_stdin).await?;
             (
                 "available",
                 "Stored a local bootstrap secret in the platform keychain.",
