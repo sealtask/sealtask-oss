@@ -4,13 +4,13 @@ use crate::output::{
     CliResult, OutputFormat, WarningResult, finish_with_warnings, print_simple_result,
     public_result_with_warnings, require_password_stdin_for_json_command, warning_result,
 };
-use serde::Serialize;
-use worklist_client_auth::{
+use sealtask_client_auth::{
     clear_credentials_if_current, clear_persisted_data_key, load_credentials_for_url,
     logout as revoke_session,
 };
-use worklist_client_core::{PublicError, PublicResult};
-use worklist_client_runtime::{RuntimeClient, clear_session, lock as daemon_lock, session_key};
+use sealtask_client_core::{PublicError, PublicResult};
+use sealtask_client_runtime::{RuntimeClient, clear_session, lock as daemon_lock, session_key};
+use serde::Serialize;
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]

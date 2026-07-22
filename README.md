@@ -1,15 +1,15 @@
 # SealTask OSS
 
-Open-source Rust workspace for the `worklist` CLI and shared client crates.
+Open-source Rust workspace for the `sealtask` CLI and shared client crates.
 
 This repository contains the early public client surface for SealTask:
 
-- `worklist`: command-line client for authenticating, reading decrypted work lists/tasks/comments, and creating or updating tasks and comments
-- `worklist-client-core`: shared public types and error handling
-- `worklist-client-auth`: local credential storage and authentication helpers
-- `worklist-client-api`: typed HTTP client for the SealTask API
-- `worklist-client-crypto`: client-side crypto helpers for sealed payloads and key derivation
-- `worklist-client-runtime`: unlock-aware runtime that projects raw API responses into agent-facing decrypted models
+- `sealtask`: command-line client for authenticating, reading decrypted work lists/tasks/comments, and creating or updating tasks and comments
+- `sealtask-client-core`: shared public types and error handling
+- `sealtask-client-auth`: local credential storage and authentication helpers
+- `sealtask-client-api`: typed HTTP client for the SealTask API
+- `sealtask-client-crypto`: client-side crypto helpers for sealed payloads and key derivation
+- `sealtask-client-runtime`: unlock-aware runtime that projects raw API responses into agent-facing decrypted models
 
 ## Status
 
@@ -29,7 +29,7 @@ function remains available for accounts without MFA; for an enrolled account it
 wipes the pending challenge and returns the typed upgrade-to-begin error instead
 of exposing or persisting challenge state.
 
-For `worklist auth login --password-stdin`, line one is the password and an
+For `sealtask auth login --password-stdin`, line one is the password and an
 optional line two is the TOTP or backup code. The first line keeps its existing
 trimmed-password behavior. On line two, the physical LF or CRLF record delimiter
 is removed and every other byte is preserved: spaces, tabs, leading or trailing
@@ -77,12 +77,12 @@ Common commands:
 ```bash
 cargo check
 cargo test
-cargo run -p worklist -- --help
-cargo run -p worklist -- auth unlock --password-stdin
-cargo run -p worklist -- auth keychain store --password-stdin
-cargo run -p worklist -- --json tasks get --work-list-id <list-id> --task-id <task-id>
-cargo run -p worklist -- --json tasks attachments read --work-list-id <list-id> --task-id <task-id> --attachment-id <attachment-id>
-cargo run -p worklist -- --json tasks attachments download --work-list-id <list-id> --task-id <task-id> --attachment-id <attachment-id>
+cargo run -p sealtask -- --help
+cargo run -p sealtask -- auth unlock --password-stdin
+cargo run -p sealtask -- auth keychain store --password-stdin
+cargo run -p sealtask -- --json tasks get --work-list-id <list-id> --task-id <task-id>
+cargo run -p sealtask -- --json tasks attachments read --work-list-id <list-id> --task-id <task-id> --attachment-id <attachment-id>
+cargo run -p sealtask -- --json tasks attachments download --work-list-id <list-id> --task-id <task-id> --attachment-id <attachment-id>
 ```
 
 ## Agent task automation
@@ -93,18 +93,18 @@ decrypted data-key bootstrap in the platform keychain:
 
 ```bash
 printf '%s\n' "$SEALTASK_PASSWORD" \
-  | cargo run -p worklist -- --json auth login \
+  | cargo run -p sealtask -- --json auth login \
       --email agent-user@example.com --password-stdin
 
 printf '%s\n' "$SEALTASK_PASSWORD" \
-  | cargo run -p worklist -- --json auth unlock \
+  | cargo run -p sealtask -- --json auth unlock \
       --ttl-seconds 28800 --password-stdin
 ```
 
 Create a task with the native lifecycle fields and a retry key:
 
 ```bash
-cargo run -p worklist -- --json tasks create \
+cargo run -p sealtask -- --json tasks create \
   --work-list-id <list-id> \
   --title 'Prepare release notes' \
   --priority 5 \
@@ -157,9 +157,9 @@ the CLI; a concurrent change returns a conflict so the agent can re-read,
 reconcile, and retry instead of silently overwriting newer state.
 
 ```bash
-cargo run -p worklist -- --json tasks complete \
+cargo run -p sealtask -- --json tasks complete \
   --work-list-id <list-id> --task-id <task-id>
-cargo run -p worklist -- --json tasks reopen \
+cargo run -p sealtask -- --json tasks reopen \
   --work-list-id <list-id> --task-id <task-id>
 ```
 
@@ -170,7 +170,7 @@ already has the requested state.
 
 ### JSON process contract
 
-`worklist info` reports `"jsonContractVersion": 1`. For ordinary commands run
+`sealtask info` reports `"jsonContractVersion": 1`. For ordinary commands run
 with `--json`, version 1 guarantees:
 
 - success writes exactly one JSON document to stdout; stderr is empty unless a
@@ -191,7 +191,7 @@ Example enrolled-account automation input:
 
 ```bash
 printf '%s\n%s\n' "$SEALTASK_PASSWORD" "$SEALTASK_MFA_CODE" \
-  | cargo run -p worklist -- auth login --email user@example.com --password-stdin
+  | cargo run -p sealtask -- auth login --email user@example.com --password-stdin
 ```
 
 Do not pass authenticator or backup codes as command-line arguments; arguments
@@ -200,14 +200,17 @@ can be retained in shell history and process listings.
 Once the crate is published, install the CLI with:
 
 ```bash
-cargo install worklist
+cargo install sealtask
 ```
 
-Set a custom API URL with `WORKLIST_API_URL` if you are not targeting the default hosted endpoint:
+Set a custom API URL with `SEALTASK_API_URL` if you are not targeting the default hosted endpoint:
 
 ```bash
-WORKLIST_API_URL=https://your-worklist.example cargo run -p worklist -- me
+SEALTASK_API_URL=https://your-sealtask.example cargo run -p sealtask -- me
 ```
+
+The CLI stores credentials and local unlock state in the `.sealtask`
+configuration directory.
 
 ## Development Notes
 

@@ -10,12 +10,12 @@ WAIT_SECONDS="${WAIT_SECONDS:-10}"
 MAX_ATTEMPTS="${MAX_ATTEMPTS:-30}"
 
 CRATES=(
-  "worklist-client-core"
-  "worklist-client-auth"
-  "worklist-client-crypto"
-  "worklist-client-api"
-  "worklist-client-runtime"
-  "worklist"
+  "sealtask-client-core"
+  "sealtask-client-auth"
+  "sealtask-client-crypto"
+  "sealtask-client-api"
+  "sealtask-client-runtime"
+  "sealtask"
 )
 
 cargo_publish_args=(publish --manifest-path Cargo.toml)
@@ -62,7 +62,7 @@ for crate in "${CRATES[@]}"; do
   version="$(crate_version "${crate}")"
 
   if [[ "${DRY_RUN}" == "1" ]]; then
-    if [[ "${crate}" == "worklist-client-core" ]]; then
+    if [[ "${crate}" == "sealtask-client-core" ]]; then
       printf '\n==> Dry-run publishing %s %s\n' "${crate}" "${version}"
       cargo "${cargo_publish_args[@]}" --dry-run -p "${crate}"
     else

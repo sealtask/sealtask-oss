@@ -12,7 +12,7 @@ use sha2::Sha256;
 use strong_box::{Key as StrongBoxKey, StaticStrongBox, StrongBox};
 use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
 
-use worklist_client_core::{PublicError, PublicResult};
+use sealtask_client_core::{PublicError, PublicResult};
 
 pub const USER_DATA_KEY_CONTEXT: &[u8] = b"worklist.user.data_key";
 pub const USER_DATA_KEY_OPAQUE_CONTEXT: &[u8] = b"worklist.user.data_key.v2.opaque_export";
@@ -837,13 +837,13 @@ pub fn compute_task_create_semantic_commitment(
     type SemanticMac = Hmac<Sha256>;
 
     let commitment_key =
-        derive_child_key(list_key, "worklist.task-create.semantic-commitment.key.v1")?;
+        derive_child_key(list_key, "sealtask.task-create.semantic-commitment.key.v1")?;
     let mut mac = SemanticMac::new_from_slice(commitment_key.as_bytes()).map_err(|err| {
         PublicError::crypto(format!(
             "failed to create task idempotency commitment HMAC: {err}"
         ))
     })?;
-    mac.update(b"worklist.task-create.semantic-commitment.payload.v1\0");
+    mac.update(b"sealtask.task-create.semantic-commitment.payload.v1\0");
     mac.update(canonical_semantics);
     Ok(STANDARD_NO_PAD.encode(mac.finalize().into_bytes()))
 }
@@ -1237,8 +1237,8 @@ mod tests {
         let master = key_derivation
             .derive_master_key("secret", b"salty-salt")
             .expect("master key");
-        let child_a = derive_child_key(&master, "worklist:test").expect("child");
-        let child_b = derive_child_key(&master, "worklist:test").expect("child");
+        let child_a = derive_child_key(&master, "sealtask:test").expect("child");
+        let child_b = derive_child_key(&master, "sealtask:test").expect("child");
         assert_eq!(child_a, child_b);
     }
 

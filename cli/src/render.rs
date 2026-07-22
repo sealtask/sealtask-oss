@@ -1,16 +1,16 @@
 use crate::output::{
     CliResult, OutputFormat, print_pretty_json, print_simple_result, terminal_block, terminal_line,
 };
-use serde_json::json;
-use std::path::Path;
-use worklist_client_api::{
+use sealtask_client_api::{
     CurrentUserResponse, DashboardStatsResponse, TaskDetailResponse, TaskResponse,
     WorkListDetailResponse, WorkListResponse,
 };
-use worklist_client_runtime::{
+use sealtask_client_runtime::{
     AgentComment, AgentTaskDetail, AgentTaskSummary, AgentWorkListDetail, AgentWorkListSummary,
     ReadableAttachment,
 };
+use serde_json::json;
+use std::path::Path;
 
 pub(crate) fn print_download_result(
     format: OutputFormat,
@@ -493,7 +493,7 @@ pub(crate) fn print_raw_tasks(tasks: &[TaskResponse], format: OutputFormat) -> C
 }
 
 pub(crate) fn print_raw_my_tasks(
-    tasks: &[worklist_client_api::MyTaskResponse],
+    tasks: &[sealtask_client_api::MyTaskResponse],
     format: OutputFormat,
 ) -> CliResult<()> {
     match format {

@@ -1,8 +1,8 @@
+use sealtask_client_core::{PublicError, PublicResult};
 use serde::Serialize;
 use std::ffi::{OsStr, OsString};
 use std::fmt;
 use std::io::{self, Write};
-use worklist_client_core::{PublicError, PublicResult};
 
 pub(crate) type CliResult<T> = Result<T, CliError>;
 

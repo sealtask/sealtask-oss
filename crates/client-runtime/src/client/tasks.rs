@@ -6,18 +6,18 @@ use crate::inputs::{
 };
 use crate::models::{AgentTaskDetail, AgentTaskSummary};
 use chrono::{DateTime, Utc};
-use serde::Serialize;
-use uuid::Uuid;
-use worklist_client_api::{
+use sealtask_client_api::{
     ArchiveTaskRequest, CreateTaskRequest, MoveTaskRequest, TaskSectionBoundary,
     UnarchiveTaskRequest, UpdateTaskRequest,
 };
-use worklist_client_core::{PublicError, PublicResult};
-use worklist_client_crypto::{
+use sealtask_client_core::{PublicError, PublicResult};
+use sealtask_client_crypto::{
     ChecklistItemPayload, TaskPayloadBody, build_task_payload_envelope, compute_payload_proof,
     compute_task_create_semantic_commitment, decode_sealed_blob, decrypt_task_payload,
     derive_payload_binding_key, encrypt_task_payload, plaintext_rich_text, seal_text_value,
 };
+use serde::Serialize;
+use uuid::Uuid;
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -48,7 +48,7 @@ impl RuntimeClient {
             )
             .await?;
         let mut client =
-            worklist_client_api::PublicApiClient::with_credentials(&self.api_url, credentials);
+            sealtask_client_api::PublicApiClient::with_credentials(&self.api_url, credentials);
 
         if all || work_list_id.is_none() {
             let work_lists = client.list_work_lists().await?;

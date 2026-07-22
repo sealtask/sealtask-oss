@@ -1,11 +1,11 @@
 use crate::output::{CliResult, OutputFormat, print_pretty_json, terminal_line};
-use serde::Serialize;
-use uuid::Uuid;
-use worklist_client_auth::{
+use sealtask_client_auth::{
     Credentials, PersistedDataKeyStatus, credentials_path, load_credentials, normalize_api_url,
     persisted_data_key_status,
 };
-use worklist_client_runtime::{RuntimeClient, UnlockStatus};
+use sealtask_client_runtime::{RuntimeClient, UnlockStatus};
+use serde::Serialize;
+use uuid::Uuid;
 
 #[derive(Debug, Clone, Copy, Serialize)]
 #[serde(rename_all = "snake_case")]

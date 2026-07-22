@@ -4,17 +4,17 @@ use crate::output::{
     CliResult, OutputFormat, WarningResult, finish_with_warnings, print_pretty_json,
     require_password_stdin_for_json_command, terminal_line, warning_result,
 };
-use serde::Serialize;
-use std::io::{self, Read};
-use std::time::Duration;
-use worklist_client_auth::{
+use sealtask_client_auth::{
     AuthResponse, CompleteMfaLoginError, Credentials, LoginOutcome, SecretMfaCode,
     auth_response_to_credentials, begin_login, clear_persisted_data_key, complete_mfa_login,
     credentials_path, load_credentials, logout as revoke_session, normalize_api_url,
     replace_credentials_atomically,
 };
-use worklist_client_core::{PublicError, PublicResult};
-use worklist_client_runtime::{clear_session, session_key};
+use sealtask_client_core::{PublicError, PublicResult};
+use sealtask_client_runtime::{clear_session, session_key};
+use serde::Serialize;
+use std::io::{self, Read};
+use std::time::Duration;
 use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
 
 const MFA_CHALLENGE_EXPIRED_MESSAGE: &str = "MFA challenge expired; restart sign-in";
@@ -137,14 +137,14 @@ pub(super) async fn run(
                             || !retry_pending
                                 .challenge()
                                 .methods
-                                .contains(&worklist_client_auth::MfaMethod::BackupCode)
+                                .contains(&sealtask_client_auth::MfaMethod::BackupCode)
                         {
                             drop(retry_pending);
                             return Err(PublicError::validation(message).into());
                         }
                         eprintln!("{}", terminal_line(&message));
                         challenge = retry_pending.challenge().clone();
-                        challenge.methods = vec![worklist_client_auth::MfaMethod::BackupCode];
+                        challenge.methods = vec![sealtask_client_auth::MfaMethod::BackupCode];
                         pending = retry_pending;
                     }
                     Err(CompleteMfaLoginError::Terminal(message)) => {
@@ -227,7 +227,7 @@ fn mfa_challenge_is_terminal(expires_in: u64, attempts_remaining: u8) -> bool {
 }
 
 async fn wait_for_mfa_retry(
-    pending: &worklist_client_auth::PendingMfaLogin,
+    pending: &sealtask_client_auth::PendingMfaLogin,
     wait_seconds: u64,
 ) -> bool {
     let deadline = pending.deadline();
@@ -306,10 +306,10 @@ fn read_login_stdin_lines_from(mut reader: impl Read) -> CliResult<LoginStdinLin
     })
 }
 
-fn prompt_mfa_code(challenge: &worklist_client_auth::MfaChallenge) -> CliResult<String> {
+fn prompt_mfa_code(challenge: &sealtask_client_auth::MfaChallenge) -> CliResult<String> {
     if challenge
         .methods
-        .contains(&worklist_client_auth::MfaMethod::Totp)
+        .contains(&sealtask_client_auth::MfaMethod::Totp)
     {
         println!(
             "Enter the 6-digit code from your authenticator app ({} attempts remaining).",
@@ -425,7 +425,7 @@ mod tests {
             expires_in: 900,
             refresh_expires_in: 2_592_000,
             token_type: "Bearer".to_string(),
-            user: worklist_client_auth::UserResponse {
+            user: sealtask_client_auth::UserResponse {
                 id: Uuid::now_v7(),
                 email: "mfa@example.test".to_string(),
                 name: "MFA Test".to_string(),

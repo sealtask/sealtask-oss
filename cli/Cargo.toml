@@ -1,5 +1,5 @@
 [package]
-name = "worklist"
+name = "sealtask"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -7,7 +7,7 @@ description = "CLI for working with SealTask tasks, comments, and encrypted work
 repository = "https://github.com/worklistapp/worklist-oss"
 homepage = "https://sealtask.com"
 readme = "../README.md"
-keywords = ["worklist", "cli", "tasks", "productivity", "agents"]
+keywords = ["sealtask", "cli", "tasks", "productivity", "agents"]
 categories = ["command-line-utilities", "api-bindings"]
 publish = ["crates-io"]
 
@@ -24,11 +24,11 @@ tokio.workspace = true
 uuid.workspace = true
 zeroize.workspace = true
 
-worklist-client-api = { version = "0.2.0", path = "../crates/client-api" }
-worklist-client-auth = { version = "0.2.0", path = "../crates/client-auth" }
-worklist-client-core = { version = "0.2.0", path = "../crates/client-core" }
-worklist-client-crypto = { version = "0.2.0", path = "../crates/client-crypto" }
-worklist-client-runtime = { version = "0.2.0", path = "../crates/client-runtime" }
+sealtask-client-api = { version = "0.2.0", path = "../crates/client-api" }
+sealtask-client-auth = { version = "0.2.0", path = "../crates/client-auth" }
+sealtask-client-core = { version = "0.2.0", path = "../crates/client-core" }
+sealtask-client-crypto = { version = "0.2.0", path = "../crates/client-crypto" }
+sealtask-client-runtime = { version = "0.2.0", path = "../crates/client-runtime" }
 
 [dev-dependencies]
 assert_cmd = "2.0"

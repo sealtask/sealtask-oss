@@ -4,8 +4,8 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use worklist_client_auth::{Credentials, refresh_credentials_if_needed};
-use worklist_client_core::{PublicError, PublicResult};
+use sealtask_client_auth::{Credentials, refresh_credentials_if_needed};
+use sealtask_client_core::{PublicError, PublicResult};
 
 pub type SealedBlob = String;
 

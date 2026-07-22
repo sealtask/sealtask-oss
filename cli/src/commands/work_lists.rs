@@ -4,8 +4,8 @@ use crate::render::{
     print_empty_collection, print_raw_work_list_detail, print_raw_work_lists, print_stats,
     print_user, print_work_list_detail, print_work_lists,
 };
+use sealtask_client_runtime::RuntimeClient;
 use uuid::Uuid;
-use worklist_client_runtime::RuntimeClient;
 
 pub(crate) async fn run_me(runtime: &RuntimeClient, format: OutputFormat) -> CliResult<()> {
     let user = runtime.get_me().await?;

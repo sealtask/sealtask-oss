@@ -9,17 +9,17 @@ use crate::password::{
 };
 use crate::projections::read_error_to_public_error;
 use crate::unlock_daemon::{SessionKey, fetch_data_key, session_key, unlock};
-use uuid::Uuid;
-use worklist_client_api::PublicApiClient;
-use worklist_client_auth::{
+use sealtask_client_api::PublicApiClient;
+use sealtask_client_auth::{
     Credentials, load_credentials_for_url, load_persisted_data_key, normalize_api_url,
     opaque_login_finish_with_export_key, opaque_login_start, with_current_credentials,
 };
-use worklist_client_core::{PublicError, PublicResult};
-use worklist_client_crypto::{
+use sealtask_client_core::{PublicError, PublicResult};
+use sealtask_client_crypto::{
     DataKeyCiphertextVersion, SymmetricKey, data_key_ciphertext_version, decrypt_user_data_key,
     decrypt_user_data_key_with_opaque_export_key,
 };
+use uuid::Uuid;
 use zeroize::Zeroizing;
 
 #[derive(Debug, Clone)]
@@ -63,7 +63,7 @@ impl RuntimeClient {
 
     pub fn require_logged_in_credentials(&self) -> PublicResult<Credentials> {
         load_credentials_for_url(&self.api_url)?.ok_or_else(|| {
-            PublicError::validation("not logged in - run 'worklist auth login' first")
+            PublicError::validation("not logged in - run 'sealtask auth login' first")
         })
     }
 
@@ -71,7 +71,7 @@ impl RuntimeClient {
         let credentials = self.require_logged_in_credentials()?;
         if credentials.is_refresh_expired() {
             return Err(PublicError::validation(
-                "session expired - run 'worklist auth login' to authenticate",
+                "session expired - run 'sealtask auth login' to authenticate",
             ));
         }
         Ok(PublicApiClient::with_credentials(

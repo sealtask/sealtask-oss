@@ -2,12 +2,12 @@
 
 This workspace publishes to crates.io in dependency order:
 
-1. `worklist-client-core`
-2. `worklist-client-auth`
-3. `worklist-client-crypto`
-4. `worklist-client-api`
-5. `worklist-client-runtime`
-6. `worklist`
+1. `sealtask-client-core`
+2. `sealtask-client-auth`
+3. `sealtask-client-crypto`
+4. `sealtask-client-api`
+5. `sealtask-client-runtime`
+6. `sealtask`
 
 Downstream crates depend on earlier crates being visible on crates.io, so releasing them back-to-back without waiting will fail.
 
@@ -31,7 +31,7 @@ From the repository root:
 DRY_RUN=1 ./scripts/publish-crates.sh
 ```
 
-Dry-run mode fully runs `cargo publish --dry-run` for `worklist-client-core`, then packages downstream crates with `cargo package --no-verify --list`. That avoids crates.io index failures before the earlier internal crates are published.
+Dry-run mode fully runs `cargo publish --dry-run` for `sealtask-client-core`, then packages downstream crates with `cargo package --no-verify --list`. That avoids crates.io index failures before the earlier internal crates are published.
 
 ## Publish
 
@@ -41,7 +41,7 @@ Dry-run mode fully runs `cargo publish --dry-run` for `worklist-client-core`, th
 
 The script publishes each crate, then polls crates.io for the exact version before continuing to the next one.
 
-After publishing, install `worklist` in a clean environment and record
+After publishing, install `sealtask` in a clean environment and record
 successful no-factor, interactive TOTP, one-time backup-code, one-line
 `mfa_input_required`, and two-line stdin login flows. A path dependency or the
 dry-run package result is not release evidence.

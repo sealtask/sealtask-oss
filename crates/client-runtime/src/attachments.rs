@@ -4,14 +4,14 @@ use crate::models::{
     ReadableAttachmentContentFormat, ReadableAttachmentSourceKind,
 };
 use crate::projections::read_error_to_public_error;
+use sealtask_client_api::DownloadAttachmentResponse;
+use sealtask_client_core::{PublicError, PublicResult};
+use sealtask_client_crypto::{
+    AttachmentBlobRef, decode_attachment_blob_key, decrypt_attachment_bytes,
+};
 use std::io::{self, Cursor, Read};
 use std::path::Path;
 use uuid::Uuid;
-use worklist_client_api::DownloadAttachmentResponse;
-use worklist_client_core::{PublicError, PublicResult};
-use worklist_client_crypto::{
-    AttachmentBlobRef, decode_attachment_blob_key, decrypt_attachment_bytes,
-};
 
 const DOCX_CONTENT_TYPE: &str =
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document";

@@ -11,11 +11,11 @@ use socket2::{Domain, SockAddr, Socket, Type};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use uuid::Uuid;
 
-use worklist_client_auth::{config_dir, normalize_api_url};
-use worklist_client_core::{PublicError, PublicResult};
-use worklist_client_crypto::SymmetricKey;
+use sealtask_client_auth::{config_dir, normalize_api_url};
+use sealtask_client_core::{PublicError, PublicResult};
+use sealtask_client_crypto::SymmetricKey;
 
-const DAEMON_EXECUTABLE_ENV: &str = "WORKLIST_UNLOCK_DAEMON_EXECUTABLE";
+const DAEMON_EXECUTABLE_ENV: &str = "SEALTASK_UNLOCK_DAEMON_EXECUTABLE";
 const DAEMON_IO_POLL_INTERVAL: Duration = Duration::from_millis(5);
 const DAEMON_IO_TIMEOUT: Duration = Duration::from_secs(1);
 const DAEMON_MAX_REQUEST_BYTES: u64 = 64 * 1024;
@@ -740,7 +740,7 @@ mod tests {
     fn daemon_spawn_command_uses_stable_working_directory() {
         let command = daemon_spawn_command(
             Path::new("/proc/self/exe"),
-            Path::new("/tmp/worklist-unlock.sock"),
+            Path::new("/tmp/sealtask-unlock.sock"),
         );
 
         let args = command.get_args().collect::<Vec<_>>();
@@ -751,7 +751,7 @@ mod tests {
         );
         assert_eq!(args.len(), 2);
         assert_eq!(args[0], "--serve-unlock-daemon");
-        assert_eq!(args[1], "/tmp/worklist-unlock.sock");
+        assert_eq!(args[1], "/tmp/sealtask-unlock.sock");
     }
 
     #[test]

@@ -1,14 +1,14 @@
 use super::RuntimeClient;
 use crate::inputs::{CreateCommentArgs, DeleteCommentArgs, UpdateCommentArgs};
 use crate::models::AgentComment;
-use uuid::Uuid;
-use worklist_client_api::{CreateCommentRequest, UpdateCommentRequest};
-use worklist_client_core::{PublicError, PublicResult};
-use worklist_client_crypto::{
+use sealtask_client_api::{CreateCommentRequest, UpdateCommentRequest};
+use sealtask_client_core::{PublicError, PublicResult};
+use sealtask_client_crypto::{
     CommentPayloadBody, build_comment_payload_envelope, compute_payload_proof, decode_sealed_blob,
     decrypt_comment_payload, derive_payload_binding_key, encrypt_comment_payload,
     plaintext_rich_text,
 };
+use uuid::Uuid;
 
 impl RuntimeClient {
     pub async fn list_comments(

@@ -14,9 +14,9 @@ use commands::{
     run_auth, run_comments, run_info, run_lists, run_lists_get, run_me, run_stats, run_tasks,
 };
 use output::{CliError, CliResult, OutputFormat, print_clap_error, print_cli_error};
+use sealtask_client_core::PublicError;
+use sealtask_client_runtime::{RuntimeClient, serve};
 use std::ffi::OsString;
-use worklist_client_core::PublicError;
-use worklist_client_runtime::{RuntimeClient, serve};
 
 #[tokio::main]
 async fn main() {

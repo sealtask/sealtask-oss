@@ -1,13 +1,13 @@
 use crate::output::{CliResult, print_pretty_json};
+use sealtask_client_auth::UnlockMode;
+use sealtask_client_crypto::CryptoCapability;
+use sealtask_client_runtime::RuntimeClient;
 use serde_json::json;
-use worklist_client_auth::UnlockMode;
-use worklist_client_crypto::CryptoCapability;
-use worklist_client_runtime::RuntimeClient;
 
 pub(crate) fn run_info(runtime: &RuntimeClient) -> CliResult<()> {
     let payload = json!({
         "apiBaseUrl": runtime.api_url(),
-        "commandName": "worklist",
+        "commandName": "sealtask",
         "automationProfile": "agent_task_management",
         "jsonContractVersion": 1,
         "authUnlockModes": [

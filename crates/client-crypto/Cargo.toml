@@ -1,5 +1,5 @@
 [package]
-name = "worklist-client-crypto"
+name = "sealtask-client-crypto"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -7,7 +7,7 @@ description = "Client-side crypto helpers for SealTask sealed payloads and key d
 repository = "https://github.com/worklistapp/worklist-oss"
 homepage = "https://sealtask.com"
 readme = "../../README.md"
-keywords = ["worklist", "crypto", "client", "encryption"]
+keywords = ["sealtask", "crypto", "client", "encryption"]
 categories = ["cryptography", "api-bindings"]
 publish = ["crates-io"]
 
@@ -23,4 +23,4 @@ strong-box.workspace = true
 uuid.workspace = true
 zeroize.workspace = true
 
-worklist-client-core = { version = "0.2.0", path = "../client-core" }
+sealtask-client-core = { version = "0.2.0", path = "../client-core" }

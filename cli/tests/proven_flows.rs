@@ -19,17 +19,9 @@ use opaque_ke::{
     RegistrationResponse, ServerLogin, ServerLoginParameters, ServerRegistration, ServerSetup,
 };
 use rand_core::OsRng;
-use serde::Deserialize;
-use serde_json::{Value, json};
-use sha2::Sha256;
-use strong_box::StrongBox;
-use tempfile::TempDir;
-use tokio::net::TcpListener;
-use tokio::sync::Notify;
-use uuid::Uuid;
-use worklist_client_api::{AuditPatchFieldRequest, AuditPatchRequest};
-use worklist_client_auth::{ClientCipherSuite, Credentials};
-use worklist_client_crypto::{
+use sealtask_client_api::{AuditPatchFieldRequest, AuditPatchRequest};
+use sealtask_client_auth::{ClientCipherSuite, Credentials};
+use sealtask_client_crypto::{
     ATTACHMENT_BLOB_CONTEXT, ATTACHMENT_BLOB_CONTEXT_LABEL, ATTACHMENT_BLOB_REF_VERSION,
     ATTACHMENT_REF_CONTEXT, AttachmentBlobRef, CommentPayloadBody, FlexibleValue,
     OPAQUE_EXPORT_KEY_BYTES, SealedPayload, StrongBoxKeyRing, SymmetricKey, TaskPayloadBody,
@@ -40,6 +32,14 @@ use worklist_client_crypto::{
     encrypt_task_payload, flexible_value_to_json, json_value_to_flexible, plaintext_rich_text,
     seal_text_value, serialize_to_cbor,
 };
+use serde::Deserialize;
+use serde_json::{Value, json};
+use sha2::Sha256;
+use strong_box::StrongBox;
+use tempfile::TempDir;
+use tokio::net::TcpListener;
+use tokio::sync::Notify;
+use uuid::Uuid;
 use zeroize::Zeroize;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -1156,7 +1156,7 @@ async fn cli_persists_rotated_refresh_tokens_after_automatic_refresh() {
         first_output.stderr
     );
 
-    let credentials_path = home.path().join(".worklist").join("credentials.json");
+    let credentials_path = home.path().join(".sealtask").join("credentials.json");
     let mut saved_credentials: Credentials = serde_json::from_slice(
         &std::fs::read(&credentials_path).expect("read credentials after first task get"),
     )
@@ -1369,6 +1369,22 @@ async fn cli_tasks_help_uses_explicit_verbs() {
     assert!(output.stdout.contains("get"));
     assert!(output.stdout.contains("create"));
     assert!(output.stdout.contains("update"));
+}
+
+#[test]
+fn cli_public_name_is_sealtask() {
+    let home = TempDir::new().expect("temp home");
+    let help = run_cli(home.path(), "https://sealtask.com", &["--help"], None);
+    assert!(help.status.success(), "help failed: {}", help.stderr);
+    assert!(
+        help.stdout.contains("Usage: sealtask"),
+        "unexpected help output: {}",
+        help.stdout
+    );
+
+    let info = run_cli(home.path(), "https://sealtask.com", &["info"], None);
+    assert!(info.status.success(), "info failed: {}", info.stderr);
+    assert_eq!(parse_stdout_json(&info.stdout)["commandName"], "sealtask");
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -2054,7 +2070,7 @@ async fn cli_v2_single_command_unlock_derives_the_opaque_export_key() {
         1
     );
 
-    let credentials = std::fs::read_to_string(home.path().join(".worklist/credentials.json"))
+    let credentials = std::fs::read_to_string(home.path().join(".sealtask/credentials.json"))
         .expect("read credentials");
     assert!(!credentials.contains(&STANDARD_NO_PAD.encode(fixture.opaque_export_key)));
 }
@@ -2177,7 +2193,7 @@ async fn cli_v2_keychain_bootstrap_refreshes_credentials_without_persisting_the_
     drop(state);
 
     let encoded_export_key = STANDARD_NO_PAD.encode(fixture.opaque_export_key);
-    let credentials = std::fs::read_to_string(home.path().join(".worklist/credentials.json"))
+    let credentials = std::fs::read_to_string(home.path().join(".sealtask/credentials.json"))
         .expect("read refreshed credentials");
     let keychain_secret = read_stored_test_keychain_secret(keychain_dir.path());
     assert!(!credentials.contains(&encoded_export_key));
@@ -2344,7 +2360,7 @@ async fn cli_logout_does_not_revoke_a_concurrently_refreshed_session() {
     assert!(!state.revoked);
     drop(state);
 
-    let credentials_path = home.path().join(".worklist").join("credentials.json");
+    let credentials_path = home.path().join(".sealtask").join("credentials.json");
     let persisted: Credentials =
         serde_json::from_slice(&std::fs::read(credentials_path).expect("read rotated credentials"))
             .expect("parse rotated credentials");
@@ -2490,7 +2506,7 @@ async fn cli_json_logout_warning_and_cleanup_error_share_one_stderr_document() {
     let home = TempDir::new().expect("temp home");
     seed_credentials(home.path(), &fixture, &server.base_url);
 
-    let socket_path = home.path().join(".worklist").join("unlock.sock");
+    let socket_path = home.path().join(".sealtask").join("unlock.sock");
     let (release_fake_daemon, fake_daemon) = spawn_hanging_unlock_daemon(&socket_path);
 
     let started_at = std::time::Instant::now();
@@ -2573,7 +2589,7 @@ async fn cli_unlock_creates_user_only_socket_permissions() {
         unlock_output.stderr
     );
 
-    let socket_path = home.path().join(".worklist").join("unlock.sock");
+    let socket_path = home.path().join(".sealtask").join("unlock.sock");
     let mode = std::fs::metadata(&socket_path)
         .expect("socket metadata")
         .permissions()
@@ -2665,7 +2681,7 @@ async fn test_should_query_unlock_daemon_status_when_credentials_are_missing() {
         unlock_output.stderr
     );
 
-    std::fs::remove_file(home.path().join(".worklist/credentials.json"))
+    std::fs::remove_file(home.path().join(".sealtask/credentials.json"))
         .expect("remove credentials without clearing daemon session");
     let status_output = run_cli(
         home.path(),
@@ -2760,7 +2776,7 @@ async fn cli_login_stdin_sends_whitespace_factor_to_the_mfa_endpoint_unchanged()
         Some(RAW_FACTOR)
     );
     assert!(
-        !home.path().join(".worklist/credentials.json").exists(),
+        !home.path().join(".sealtask/credentials.json").exists(),
         "a denied MFA attempt must not persist credentials"
     );
 }
@@ -2900,7 +2916,7 @@ async fn test_should_replace_active_credentials_when_login_requests_another_acco
     );
 
     let credentials: Credentials = serde_json::from_slice(
-        &std::fs::read(home.path().join(".worklist/credentials.json"))
+        &std::fs::read(home.path().join(".sealtask/credentials.json"))
             .expect("read switched credentials"),
     )
     .expect("parse switched credentials");
@@ -2921,7 +2937,7 @@ async fn test_should_replace_active_credentials_when_login_requests_another_acco
         "account switch should clear the old account keychain entry"
     );
 
-    std::fs::remove_file(home.path().join(".worklist/credentials.json"))
+    std::fs::remove_file(home.path().join(".sealtask/credentials.json"))
         .expect("remove switched credentials before checking daemon state");
     let status_output = run_cli_with_test_keychain(
         home.path(),
@@ -3053,7 +3069,7 @@ async fn cli_login_stdin_missing_factor_fails_without_prompting_or_persisting() 
     assert!(!output.stderr.contains(CHALLENGE_TOKEN));
     assert!(observed_code.lock().expect("observed code lock").is_none());
     assert!(
-        !home.path().join(".worklist/credentials.json").exists(),
+        !home.path().join(".sealtask/credentials.json").exists(),
         "an incomplete MFA login must not persist credentials"
     );
 }
@@ -3099,7 +3115,7 @@ async fn cli_login_process_maps_upgrade_and_terminal_or_retryable_mfa_without_se
     assert!(
         !upgrade_home
             .path()
-            .join(".worklist/credentials.json")
+            .join(".sealtask/credentials.json")
             .exists()
     );
 
@@ -3150,7 +3166,7 @@ async fn cli_login_process_maps_upgrade_and_terminal_or_retryable_mfa_without_se
             Some(CODE)
         );
         assert!(
-            !home.path().join(".worklist/credentials.json").exists(),
+            !home.path().join(".sealtask/credentials.json").exists(),
             "a failed MFA result must not persist credentials"
         );
     }
@@ -3645,7 +3661,7 @@ fn assert_final_process_login_credentials(
     challenge_token: &str,
     code: Option<&str>,
 ) {
-    let bytes = std::fs::read(home.join(".worklist/credentials.json"))
+    let bytes = std::fs::read(home.join(".sealtask/credentials.json"))
         .expect("read final process credentials");
     let stored = String::from_utf8(bytes.clone()).expect("credentials UTF-8");
     let credentials: Credentials =
@@ -3887,7 +3903,7 @@ impl TestFixture {
         let existing_task_body = TaskPayloadBody {
             title: "Existing task".to_string(),
             rich_text: plaintext_rich_text("Existing task body"),
-            checklist: Some(vec![worklist_client_crypto::ChecklistItemPayload {
+            checklist: Some(vec![sealtask_client_crypto::ChecklistItemPayload {
                 id: Uuid::now_v7().to_string(),
                 title: "Keep checklist".to_string(),
                 is_done: false,
@@ -5022,7 +5038,7 @@ fn run_cli(home: &std::path::Path, api_url: &str, args: &[&str], stdin: Option<&
 }
 
 fn spawn_cli_process(home: &std::path::Path, api_url: &str, args: &[&str]) -> Child {
-    let binary = assert_cmd::cargo::cargo_bin("worklist");
+    let binary = assert_cmd::cargo::cargo_bin("sealtask");
     let mut command = std::process::Command::new(binary);
     command.env("HOME", home);
     command.current_dir(home);
@@ -5055,7 +5071,7 @@ fn run_cli_with_closed_stdout(
     args: &[&str],
     stdin: Option<&str>,
 ) -> CliOutput {
-    let binary = assert_cmd::cargo::cargo_bin("worklist");
+    let binary = assert_cmd::cargo::cargo_bin("sealtask");
     let mut command = std::process::Command::new(binary);
     command.env("HOME", home);
     command.current_dir(home);
@@ -5090,9 +5106,9 @@ fn run_cli_with_test_keychain(
     args: &[&str],
     stdin: Option<&str>,
 ) -> CliOutput {
-    let mut command = Command::cargo_bin("worklist").expect("binary");
+    let mut command = Command::cargo_bin("sealtask").expect("binary");
     command.env("HOME", home);
-    command.env("WORKLIST_TEST_KEYCHAIN_DIR", keychain_dir);
+    command.env("SEALTASK_TEST_KEYCHAIN_DIR", keychain_dir);
     command.current_dir(home);
     command.arg("--api-url").arg(api_url);
     command.args(args);
@@ -5115,7 +5131,7 @@ fn run_cli_in_dir(
     args: &[&str],
     stdin: Option<&str>,
 ) -> CliOutput {
-    let mut command = Command::cargo_bin("worklist").expect("binary");
+    let mut command = Command::cargo_bin("sealtask").expect("binary");
     command.env("HOME", home);
     command.current_dir(current_dir);
     command.arg("--api-url").arg(api_url);
@@ -5160,7 +5176,7 @@ fn seed_credentials_with_expiry(
         data_key_ciphertext: fixture.data_key_ciphertext.clone(),
     };
 
-    let config_dir = home.join(".worklist");
+    let config_dir = home.join(".sealtask");
     std::fs::create_dir_all(&config_dir).expect("create config dir");
     let path = config_dir.join("credentials.json");
     std::fs::write(
@@ -5235,12 +5251,12 @@ fn make_opaque_account_fixture(email: &str, password: &str) -> OpaqueAccountFixt
 fn encode_opaque_data_key_ciphertext(
     export_key: &[u8; OPAQUE_EXPORT_KEY_BYTES],
     data_key: &SymmetricKey,
-) -> worklist_client_core::PublicResult<String> {
+) -> sealtask_client_core::PublicResult<String> {
     let mut wrapping_key_bytes = [0u8; 32];
     Hkdf::<Sha256>::new(None, export_key)
         .expand(USER_DATA_KEY_OPAQUE_WRAP_INFO, &mut wrapping_key_bytes)
         .map_err(|err| {
-            worklist_client_core::PublicError::crypto(format!(
+            sealtask_client_core::PublicError::crypto(format!(
                 "fixture OPAQUE export-key HKDF failed: {err}"
             ))
         })?;
@@ -5250,7 +5266,7 @@ fn encode_opaque_data_key_ciphertext(
         .strong_box()
         .encrypt(data_key.as_bytes(), USER_DATA_KEY_OPAQUE_CONTEXT)
         .map_err(|err| {
-            worklist_client_core::PublicError::crypto(format!(
+            sealtask_client_core::PublicError::crypto(format!(
                 "failed to encrypt fixture OPAQUE data key: {err}"
             ))
         })?;
@@ -5266,8 +5282,8 @@ fn encode_data_key_ciphertext(
     password: &str,
     salt: &[u8; 32],
     data_key: &SymmetricKey,
-) -> worklist_client_core::PublicResult<String> {
-    let wrapping_key = worklist_client_crypto::KeyDerivationService::new()
+) -> sealtask_client_core::PublicResult<String> {
+    let wrapping_key = sealtask_client_crypto::KeyDerivationService::new()
         .derive_master_key(password.as_bytes(), salt)?;
     let strong_box = StrongBoxKeyRing::new(wrapping_key).strong_box();
     let sealed = strong_box
@@ -5280,7 +5296,7 @@ fn encode_data_key_ciphertext(
 fn encode_membership_key_ciphertext(
     data_key: &SymmetricKey,
     list_key: &SymmetricKey,
-) -> worklist_client_core::PublicResult<String> {
+) -> sealtask_client_core::PublicResult<String> {
     let strong_box = StrongBoxKeyRing::new(data_key.clone()).strong_box();
     let sealed = strong_box
         .encrypt(list_key.as_bytes(), WORK_LIST_MEMBERSHIP_CONTEXT)
@@ -5291,7 +5307,7 @@ fn encode_membership_key_ciphertext(
 
 fn encode_work_list_payload_ciphertext(
     list_key: &SymmetricKey,
-) -> worklist_client_core::PublicResult<String> {
+) -> sealtask_client_core::PublicResult<String> {
     let plaintext = serialize_to_cbor(&json!({
         "kind": "work_list",
         "version": 1,
@@ -5501,12 +5517,12 @@ fn docx_fixture_bytes() -> Vec<u8> {
 fn encrypt_attachment_ciphertext(
     file_key: &SymmetricKey,
     plaintext_bytes: &[u8],
-) -> worklist_client_core::PublicResult<Vec<u8>> {
+) -> sealtask_client_core::PublicResult<Vec<u8>> {
     StrongBoxKeyRing::new(file_key.clone())
         .strong_box()
         .encrypt(plaintext_bytes, ATTACHMENT_BLOB_CONTEXT)
         .map_err(|err| {
-            worklist_client_core::PublicError::crypto(format!(
+            sealtask_client_core::PublicError::crypto(format!(
                 "failed to seal attachment bytes: {err}"
             ))
         })
@@ -5517,7 +5533,7 @@ fn encode_attachment_blob_key(
     attachment_id: Uuid,
     file_key: &SymmetricKey,
     ciphertext_bytes: &[u8],
-) -> worklist_client_core::PublicResult<Vec<u8>> {
+) -> sealtask_client_core::PublicResult<Vec<u8>> {
     let blob_ref = AttachmentBlobRef {
         version: ATTACHMENT_BLOB_REF_VERSION,
         object_key: format!("workspaces/test/attachments/{attachment_id}"),

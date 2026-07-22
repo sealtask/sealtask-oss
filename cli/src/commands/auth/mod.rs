@@ -7,8 +7,8 @@ use std::time::Duration;
 
 use crate::args::AuthCommand;
 use crate::output::{CliResult, OutputFormat};
-use worklist_client_core::{PublicError, PublicResult};
-use worklist_client_runtime::RuntimeClient;
+use sealtask_client_core::{PublicError, PublicResult};
+use sealtask_client_runtime::RuntimeClient;
 
 const SESSION_REVOCATION_TIMEOUT: Duration = Duration::from_secs(5);
 

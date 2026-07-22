@@ -1,42 +1,42 @@
 use rpassword::prompt_password;
+use sealtask_client_core::{PublicError, PublicResult};
 use std::io::{self, Read};
-use worklist_client_core::{PublicError, PublicResult};
 use zeroize::Zeroizing;
 
 const DEFAULT_AUTO_UNLOCK_TTL_SECONDS: u64 = 8 * 60 * 60;
 
 pub(crate) fn auto_unlock_ttl_seconds() -> PublicResult<u64> {
-    match std::env::var("WORKLIST_UNLOCK_TTL_SECONDS") {
+    match std::env::var("SEALTASK_UNLOCK_TTL_SECONDS") {
         Ok(value) => {
             let trimmed = value.trim();
             let ttl_seconds = trimmed.parse::<u64>().map_err(|err| {
                 PublicError::validation(format!(
-                    "invalid WORKLIST_UNLOCK_TTL_SECONDS value '{trimmed}': {err}"
+                    "invalid SEALTASK_UNLOCK_TTL_SECONDS value '{trimmed}': {err}"
                 ))
             })?;
             if ttl_seconds == 0 {
                 return Err(PublicError::validation(
-                    "WORKLIST_UNLOCK_TTL_SECONDS must be greater than zero",
+                    "SEALTASK_UNLOCK_TTL_SECONDS must be greater than zero",
                 ));
             }
             Ok(ttl_seconds)
         }
         Err(std::env::VarError::NotPresent) => Ok(DEFAULT_AUTO_UNLOCK_TTL_SECONDS),
         Err(std::env::VarError::NotUnicode(_)) => Err(PublicError::validation(
-            "WORKLIST_UNLOCK_TTL_SECONDS must be valid UTF-8",
+            "SEALTASK_UNLOCK_TTL_SECONDS must be valid UTF-8",
         )),
     }
 }
 
 pub(crate) fn missing_unlock_error(prompt_message: &str) -> PublicError {
     PublicError::validation(format!(
-        "{prompt_message} No unlocked local session or persisted bootstrap secret is available. Run 'worklist auth unlock --password-stdin' for a temporary session or 'worklist auth keychain store --password-stdin' to persist a local bootstrap secret."
+        "{prompt_message} No unlocked local session or persisted bootstrap secret is available. Run 'sealtask auth unlock --password-stdin' for a temporary session or 'sealtask auth keychain store --password-stdin' to persist a local bootstrap secret."
     ))
 }
 
 pub(crate) fn persisted_unlock_error(prompt_message: &str, err: PublicError) -> PublicError {
     PublicError::validation(format!(
-        "{prompt_message} Failed to load the persisted bootstrap secret: {err}. Run 'worklist auth unlock --password-stdin' for a temporary session or 'worklist auth keychain store --password-stdin' to refresh the local bootstrap secret."
+        "{prompt_message} Failed to load the persisted bootstrap secret: {err}. Run 'sealtask auth unlock --password-stdin' for a temporary session or 'sealtask auth keychain store --password-stdin' to refresh the local bootstrap secret."
     ))
 }
 

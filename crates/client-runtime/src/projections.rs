@@ -4,19 +4,19 @@ use crate::models::{
     AgentWorkListDetail, AgentWorkListSummary, ReadError,
 };
 use chrono::{DateTime, Utc};
-use serde_json::Value;
-use std::collections::HashMap;
-use uuid::Uuid;
-use worklist_client_api::{
+use sealtask_client_api::{
     CommentResponse, MembershipResponse, MyTaskResponse, TaskResponse, WorkListDetailResponse,
     WorkListResponse,
 };
-use worklist_client_core::{PublicError, PublicResult};
-use worklist_client_crypto::{
+use sealtask_client_core::{PublicError, PublicResult};
+use sealtask_client_crypto::{
     CommentPayloadBody, FlexibleValue, SymmetricKey, TaskPayloadBody, TaskPayloadRichText,
     decode_sealed_blob, decrypt_comment_payload, decrypt_task_payload, decrypt_text_value,
     decrypt_work_list_key, decrypt_work_list_payload, derive_work_list_key, flexible_value_to_json,
 };
+use serde_json::Value;
+use std::collections::HashMap;
+use uuid::Uuid;
 
 #[derive(Debug)]
 struct TaskProjectionMetadata {
@@ -44,7 +44,7 @@ struct TaskProjectionMetadata {
 #[derive(Debug)]
 struct TaskProjectionInput<'a> {
     metadata: TaskProjectionMetadata,
-    delegations: Vec<worklist_client_api::DelegationResponse>,
+    delegations: Vec<sealtask_client_api::DelegationResponse>,
     title_ciphertext: &'a str,
     payload_ciphertext: &'a str,
     list_key: Option<&'a SymmetricKey>,
@@ -602,7 +602,7 @@ fn project_membership(membership: &MembershipResponse) -> AgentMembership {
     }
 }
 
-fn project_delegation(delegation: worklist_client_api::DelegationResponse) -> AgentDelegation {
+fn project_delegation(delegation: sealtask_client_api::DelegationResponse) -> AgentDelegation {
     AgentDelegation {
         id: delegation.id,
         task_id: delegation.task_id,
@@ -711,11 +711,11 @@ mod tests {
             format: "markdown".to_string(),
             version: 1,
             blocks: vec![
-                worklist_client_crypto::RichTextBlock {
+                sealtask_client_crypto::RichTextBlock {
                     block_type: "paragraph".to_string(),
                     text: "First".to_string(),
                 },
-                worklist_client_crypto::RichTextBlock {
+                sealtask_client_crypto::RichTextBlock {
                     block_type: "paragraph".to_string(),
                     text: "Second".to_string(),
                 },

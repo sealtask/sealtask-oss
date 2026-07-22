@@ -2641,6 +2641,123 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
 
 [[package]]
+name = "sealtask"
+version = "0.2.0"
+dependencies = [
+ "assert_cmd",
+ "axum",
+ "base64",
+ "chrono",
+ "clap",
+ "hkdf",
+ "opaque-ke",
+ "rand_core 0.6.4",
+ "reqwest",
+ "rpassword",
+ "sealtask-client-api",
+ "sealtask-client-auth",
+ "sealtask-client-core",
+ "sealtask-client-crypto",
+ "sealtask-client-runtime",
+ "serde",
+ "serde_json",
+ "sha2",
+ "strong-box",
+ "tempfile",
+ "tokio",
+ "uuid",
+ "zeroize",
+]
+
+[[package]]
+name = "sealtask-client-api"
+version = "0.2.0"
+dependencies = [
+ "chrono",
+ "reqwest",
+ "sealtask-client-auth",
+ "sealtask-client-core",
+ "serde",
+ "serde_json",
+ "uuid",
+]
+
+[[package]]
+name = "sealtask-client-auth"
+version = "0.2.0"
+dependencies = [
+ "argon2",
+ "axum",
+ "base64",
+ "chrono",
+ "dirs",
+ "fs2",
+ "generic-array",
+ "keyring",
+ "opaque-ke",
+ "rand_core 0.6.4",
+ "reqwest",
+ "sealtask-client-core",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
+ "thiserror 2.0.18",
+ "tokio",
+ "uuid",
+ "zeroize",
+]
+
+[[package]]
+name = "sealtask-client-core"
+version = "0.2.0"
+dependencies = [
+ "thiserror 2.0.18",
+]
+
+[[package]]
+name = "sealtask-client-crypto"
+version = "0.2.0"
+dependencies = [
+ "argon2",
+ "base64",
+ "hkdf",
+ "hmac",
+ "sealtask-client-core",
+ "serde",
+ "serde_json",
+ "sha2",
+ "strong-box",
+ "uuid",
+ "zeroize",
+]
+
+[[package]]
+name = "sealtask-client-runtime"
+version = "0.2.0"
+dependencies = [
+ "base64",
+ "chrono",
+ "html2md",
+ "reqwest",
+ "rpassword",
+ "sealtask-client-api",
+ "sealtask-client-auth",
+ "sealtask-client-core",
+ "sealtask-client-crypto",
+ "serde",
+ "serde_json",
+ "sha2",
+ "socket2 0.5.10",
+ "tempfile",
+ "tokio",
+ "undocx",
+ "uuid",
+ "zeroize",
+ "zip 2.4.2",
+]
+
+[[package]]
 name = "sec1"
 version = "0.7.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4027,123 +4144,6 @@ dependencies = [
  "serde_json",
  "unicode-xid",
  "wasmparser",
-]
-
-[[package]]
-name = "worklist"
-version = "0.2.0"
-dependencies = [
- "assert_cmd",
- "axum",
- "base64",
- "chrono",
- "clap",
- "hkdf",
- "opaque-ke",
- "rand_core 0.6.4",
- "reqwest",
- "rpassword",
- "serde",
- "serde_json",
- "sha2",
- "strong-box",
- "tempfile",
- "tokio",
- "uuid",
- "worklist-client-api",
- "worklist-client-auth",
- "worklist-client-core",
- "worklist-client-crypto",
- "worklist-client-runtime",
- "zeroize",
-]
-
-[[package]]
-name = "worklist-client-api"
-version = "0.2.0"
-dependencies = [
- "chrono",
- "reqwest",
- "serde",
- "serde_json",
- "uuid",
- "worklist-client-auth",
- "worklist-client-core",
-]
-
-[[package]]
-name = "worklist-client-auth"
-version = "0.2.0"
-dependencies = [
- "argon2",
- "axum",
- "base64",
- "chrono",
- "dirs",
- "fs2",
- "generic-array",
- "keyring",
- "opaque-ke",
- "rand_core 0.6.4",
- "reqwest",
- "serde",
- "serde_json",
- "sha2",
- "tempfile",
- "thiserror 2.0.18",
- "tokio",
- "uuid",
- "worklist-client-core",
- "zeroize",
-]
-
-[[package]]
-name = "worklist-client-core"
-version = "0.2.0"
-dependencies = [
- "thiserror 2.0.18",
-]
-
-[[package]]
-name = "worklist-client-crypto"
-version = "0.2.0"
-dependencies = [
- "argon2",
- "base64",
- "hkdf",
- "hmac",
- "serde",
- "serde_json",
- "sha2",
- "strong-box",
- "uuid",
- "worklist-client-core",
- "zeroize",
-]
-
-[[package]]
-name = "worklist-client-runtime"
-version = "0.2.0"
-dependencies = [
- "base64",
- "chrono",
- "html2md",
- "reqwest",
- "rpassword",
- "serde",
- "serde_json",
- "sha2",
- "socket2 0.5.10",
- "tempfile",
- "tokio",
- "undocx",
- "uuid",
- "worklist-client-api",
- "worklist-client-auth",
- "worklist-client-core",
- "worklist-client-crypto",
- "zeroize",
- "zip 2.4.2",
 ]
 
 [[package]]

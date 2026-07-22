@@ -12,12 +12,12 @@ use crate::render::{
     print_raw_task_detail, print_raw_tasks, print_readable_attachment, print_task_detail,
     print_tasks,
 };
-use serde_json::json;
-use worklist_client_api::DeleteTaskRequest;
-use worklist_client_runtime::{
+use sealtask_client_api::DeleteTaskRequest;
+use sealtask_client_runtime::{
     ArchiveTaskArgs, CreateTaskArgs, DeleteTaskArgs, MoveTaskArgs, MoveTaskInput, RuntimeClient,
     TaskCompletionArgs, UnarchiveTaskArgs, UpdateTaskArgs,
 };
+use serde_json::json;
 
 pub(crate) async fn run_tasks(
     runtime: &RuntimeClient,

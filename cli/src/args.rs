@@ -5,14 +5,14 @@ use uuid::Uuid;
 
 #[derive(Parser, Debug)]
 #[command(
-    name = "worklist",
+    name = "sealtask",
     version,
     about = "CLI for working with SealTask tasks, comments, and decrypted workspace data"
 )]
 pub(crate) struct Cli {
     #[arg(
         long,
-        env = "WORKLIST_API_URL",
+        env = "SEALTASK_API_URL",
         default_value = "https://sealtask.com",
         global = true
     )]

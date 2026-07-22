@@ -23,11 +23,11 @@ use tempfile::NamedTempFile;
 use uuid::Uuid;
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
-use worklist_client_core::{PublicError, PublicResult};
+use sealtask_client_core::{PublicError, PublicResult};
 
 const OPAQUE_SERVER_ID: &[u8] = b"worklist.api";
-const DATA_KEY_KEYCHAIN_SERVICE: &str = "worklist.data-key";
-const TEST_KEYCHAIN_DIR_ENV: &str = "WORKLIST_TEST_KEYCHAIN_DIR";
+const DATA_KEY_KEYCHAIN_SERVICE: &str = "sealtask.data-key";
+const TEST_KEYCHAIN_DIR_ENV: &str = "SEALTASK_TEST_KEYCHAIN_DIR";
 const MFA_CAPABILITIES_HEADER: &str = "X-Worklist-Auth-Capabilities";
 const MFA_CAPABILITIES_VALUE: &str = "mfa-totp-v1";
 const MFA_CHALLENGE_EXPIRED_MESSAGE: &str = "MFA challenge expired; restart sign-in";
@@ -504,7 +504,7 @@ impl CipherSuite for ClientCipherSuite {
 
 pub fn config_dir() -> PublicResult<PathBuf> {
     dirs::home_dir()
-        .map(|home| home.join(".worklist"))
+        .map(|home| home.join(".sealtask"))
         .ok_or_else(|| PublicError::unexpected("could not determine home directory"))
 }
 
@@ -1502,9 +1502,9 @@ mod tests {
     use tokio::net::TcpListener;
     use tokio::sync::Notify;
 
-    const REFRESH_RACE_BASE_URL_ENV: &str = "WORKLIST_REFRESH_RACE_BASE_URL";
-    const REFRESH_RACE_CREDENTIALS_DIR_ENV: &str = "WORKLIST_REFRESH_RACE_CREDENTIALS_DIR";
-    const REFRESH_RACE_READY_PATH_ENV: &str = "WORKLIST_REFRESH_RACE_READY_PATH";
+    const REFRESH_RACE_BASE_URL_ENV: &str = "SEALTASK_REFRESH_RACE_BASE_URL";
+    const REFRESH_RACE_CREDENTIALS_DIR_ENV: &str = "SEALTASK_REFRESH_RACE_CREDENTIALS_DIR";
+    const REFRESH_RACE_READY_PATH_ENV: &str = "SEALTASK_REFRESH_RACE_READY_PATH";
 
     async fn spawn_mfa_server(
         status: StatusCode,
@@ -2419,7 +2419,7 @@ mod tests {
 
     fn test_credentials() -> Credentials {
         Credentials {
-            api_url: "https://worklist.example.test".to_string(),
+            api_url: "https://sealtask.example.test".to_string(),
             access_token: "access".to_string(),
             refresh_token: "refresh".to_string(),
             access_expires_at: Utc::now() + Duration::hours(1),

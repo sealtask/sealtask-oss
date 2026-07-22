@@ -4,12 +4,12 @@ use crate::args::{
 use crate::input::{resolve_comment_input, resolve_delete_input};
 use crate::output::{CliResult, OutputFormat, print_pretty_json};
 use crate::render::{print_comment_json, print_comments, print_delete_result};
-use serde_json::json;
-use uuid::Uuid;
-use worklist_client_api::DeleteCommentRequest;
-use worklist_client_runtime::{
+use sealtask_client_api::DeleteCommentRequest;
+use sealtask_client_runtime::{
     CreateCommentArgs, DeleteCommentArgs, RuntimeClient, UpdateCommentArgs,
 };
+use serde_json::json;
+use uuid::Uuid;
 
 pub(crate) async fn run_comments(
     runtime: &RuntimeClient,

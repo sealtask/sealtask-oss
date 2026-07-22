@@ -1,5 +1,5 @@
 [package]
-name = "worklist-client-auth"
+name = "sealtask-client-auth"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -7,7 +7,7 @@ description = "Authentication, credential storage, and session helpers for SealT
 repository = "https://github.com/worklistapp/worklist-oss"
 homepage = "https://sealtask.com"
 readme = "../../README.md"
-keywords = ["worklist", "auth", "client"]
+keywords = ["sealtask", "auth", "client"]
 categories = ["api-bindings"]
 publish = ["crates-io"]
 
@@ -31,7 +31,7 @@ tokio.workspace = true
 uuid.workspace = true
 zeroize.workspace = true
 
-worklist-client-core = { version = "0.2.0", path = "../client-core" }
+sealtask-client-core = { version = "0.2.0", path = "../client-core" }
 
 [dev-dependencies]
 axum = "0.8.6"

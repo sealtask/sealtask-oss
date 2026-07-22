@@ -1,5 +1,5 @@
 [package]
-name = "worklist-client-api"
+name = "sealtask-client-api"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -7,7 +7,7 @@ description = "Typed HTTP client for the SealTask API"
 repository = "https://github.com/worklistapp/worklist-oss"
 homepage = "https://sealtask.com"
 readme = "../../README.md"
-keywords = ["worklist", "api", "client"]
+keywords = ["sealtask", "api", "client"]
 categories = ["api-bindings"]
 publish = ["crates-io"]
 
@@ -18,5 +18,5 @@ serde.workspace = true
 serde_json.workspace = true
 uuid.workspace = true
 
-worklist-client-auth = { version = "0.2.0", path = "../client-auth" }
-worklist-client-core = { version = "0.2.0", path = "../client-core" }
+sealtask-client-auth = { version = "0.2.0", path = "../client-auth" }
+sealtask-client-core = { version = "0.2.0", path = "../client-core" }

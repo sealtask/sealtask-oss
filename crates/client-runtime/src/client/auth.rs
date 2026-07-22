@@ -1,13 +1,13 @@
 use super::RuntimeClient;
 use crate::password::read_required_password;
 use crate::unlock_daemon;
-use worklist_client_api::{CurrentUserResponse, DashboardStatsResponse};
-use worklist_client_auth::{
+use sealtask_client_api::{CurrentUserResponse, DashboardStatsResponse};
+use sealtask_client_auth::{
     PersistedDataKeyStatus, clear_persisted_data_key as clear_persisted_data_key_secret,
     load_credentials, load_credentials_for_url, persisted_data_key_status, save_persisted_data_key,
     with_current_credentials,
 };
-use worklist_client_core::PublicResult;
+use sealtask_client_core::PublicResult;
 use zeroize::Zeroizing;
 
 impl RuntimeClient {

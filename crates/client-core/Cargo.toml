@@ -1,5 +1,5 @@
 [package]
-name = "worklist-client-core"
+name = "sealtask-client-core"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -7,7 +7,7 @@ description = "Shared public types and error handling for SealTask client toolin
 repository = "https://github.com/worklistapp/worklist-oss"
 homepage = "https://sealtask.com"
 readme = "../../README.md"
-keywords = ["worklist", "client", "types"]
+keywords = ["sealtask", "client", "types"]
 categories = ["api-bindings"]
 publish = ["crates-io"]
 

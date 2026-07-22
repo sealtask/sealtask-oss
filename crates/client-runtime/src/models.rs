@@ -1,8 +1,8 @@
 use chrono::{DateTime, Utc};
+use sealtask_client_crypto::{ChecklistItemPayload, TaskPayloadRichText};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
-use worklist_client_crypto::{ChecklistItemPayload, TaskPayloadRichText};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -32,7 +32,7 @@ pub struct AgentWorkListSummary {
     pub owner_user_id: Uuid,
     pub workspace_id: Uuid,
     pub timezone: String,
-    pub section_snapshots: Vec<worklist_client_api::SectionSnapshotPayload>,
+    pub section_snapshots: Vec<sealtask_client_api::SectionSnapshotPayload>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub archived_at: Option<DateTime<Utc>>,
