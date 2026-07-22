@@ -1,6 +1,6 @@
 #![cfg_attr(test, allow(clippy::unwrap_used))]
 
-use std::{fmt::Debug, io::Cursor};
+use std::{fmt, io::Cursor};
 
 use argon2::{Algorithm, Argon2, Params, Version};
 use base64::Engine as _;
@@ -37,6 +37,20 @@ pub enum DataKeyCiphertextVersion {
     OpaqueExportKeyV2,
 }
 
+impl TryFrom<u8> for DataKeyCiphertextVersion {
+    type Error = PublicError;
+
+    fn try_from(version: u8) -> Result<Self, Self::Error> {
+        match version {
+            LEGACY_DATA_KEY_PAYLOAD_VERSION => Ok(Self::LegacyPasswordV1),
+            OPAQUE_DATA_KEY_PAYLOAD_VERSION => Ok(Self::OpaqueExportKeyV2),
+            version => Err(PublicError::validation(format!(
+                "unsupported data key ciphertext version {version}"
+            ))),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum CryptoCapability {
@@ -57,7 +71,7 @@ impl CryptoCapability {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Zeroize, ZeroizeOnDrop)]
+#[derive(Clone, PartialEq, Eq, Zeroize, ZeroizeOnDrop)]
 pub struct SymmetricKey([u8; KEY_SIZE]);
 
 impl SymmetricKey {
@@ -75,6 +89,12 @@ impl SymmetricKey {
 
     fn to_strong_box_key(&self) -> StrongBoxKey {
         StrongBoxKey::from(Box::new(self.0))
+    }
+}
+
+impl fmt::Debug for SymmetricKey {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_tuple("SymmetricKey").field(&"<redacted>").finish()
     }
 }
 
@@ -163,7 +183,7 @@ pub struct SealedBlobPayload {
     pub base64: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct AttachmentBlobRef {
     pub version: u8,
     pub object_key: String,
@@ -171,6 +191,18 @@ pub struct AttachmentBlobRef {
     pub file_key: Vec<u8>,
     #[serde(default = "default_attachment_blob_context_label")]
     pub enc_context: String,
+}
+
+impl fmt::Debug for AttachmentBlobRef {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("AttachmentBlobRef")
+            .field("version", &self.version)
+            .field("object_key", &"<redacted>")
+            .field("ciphertext_bytes", &self.ciphertext_bytes)
+            .field("file_key", &"<redacted>")
+            .field("enc_context", &self.enc_context)
+            .finish()
+    }
 }
 
 pub type FlexibleValue = strong_box::ciborium::Value;
@@ -271,17 +303,12 @@ pub fn decrypt_user_data_key(
     data_key_ciphertext_b64: &str,
 ) -> PublicResult<SymmetricKey> {
     let payload = decode_data_key_payload(data_key_ciphertext_b64)?;
-    match payload.version {
-        LEGACY_DATA_KEY_PAYLOAD_VERSION => {}
-        OPAQUE_DATA_KEY_PAYLOAD_VERSION => {
+    match DataKeyCiphertextVersion::try_from(payload.version)? {
+        DataKeyCiphertextVersion::LegacyPasswordV1 => {}
+        DataKeyCiphertextVersion::OpaqueExportKeyV2 => {
             return Err(PublicError::validation(
                 "data key ciphertext version 2 requires an OPAQUE export key",
             ));
-        }
-        version => {
-            return Err(PublicError::validation(format!(
-                "unsupported data key ciphertext version {version}"
-            )));
         }
     }
 
@@ -306,13 +333,7 @@ pub fn decrypt_user_data_key(
 pub fn data_key_ciphertext_version(
     data_key_ciphertext_b64: &str,
 ) -> PublicResult<DataKeyCiphertextVersion> {
-    match decode_data_key_payload(data_key_ciphertext_b64)?.version {
-        LEGACY_DATA_KEY_PAYLOAD_VERSION => Ok(DataKeyCiphertextVersion::LegacyPasswordV1),
-        OPAQUE_DATA_KEY_PAYLOAD_VERSION => Ok(DataKeyCiphertextVersion::OpaqueExportKeyV2),
-        version => Err(PublicError::validation(format!(
-            "unsupported data key ciphertext version {version}"
-        ))),
-    }
+    DataKeyCiphertextVersion::try_from(decode_data_key_payload(data_key_ciphertext_b64)?.version)
 }
 
 pub fn decrypt_user_data_key_with_opaque_export_key(
@@ -320,17 +341,12 @@ pub fn decrypt_user_data_key_with_opaque_export_key(
     data_key_ciphertext_b64: &str,
 ) -> PublicResult<SymmetricKey> {
     let payload = decode_data_key_payload(data_key_ciphertext_b64)?;
-    match payload.version {
-        OPAQUE_DATA_KEY_PAYLOAD_VERSION => {}
-        LEGACY_DATA_KEY_PAYLOAD_VERSION => {
+    match DataKeyCiphertextVersion::try_from(payload.version)? {
+        DataKeyCiphertextVersion::OpaqueExportKeyV2 => {}
+        DataKeyCiphertextVersion::LegacyPasswordV1 => {
             return Err(PublicError::validation(
                 "data key ciphertext version 1 requires legacy password migration",
             ));
-        }
-        version => {
-            return Err(PublicError::validation(format!(
-                "unsupported data key ciphertext version {version}"
-            )));
         }
     }
     if payload.ciphertext.is_empty() {
@@ -807,6 +823,31 @@ pub fn compute_payload_proof(
     Ok(STANDARD_NO_PAD.encode(bytes))
 }
 
+/// Computes an opaque, stable commitment for a logical task-create request.
+///
+/// StrongBox ciphertext changes on every encryption, so an idempotent retry
+/// cannot fingerprint ciphertext bytes. Callers pass a canonical encoding of
+/// the readable task semantics instead. A domain-separated key derived from
+/// the project key keeps equal plaintext from becoming a cross-project
+/// equality or dictionary oracle for the API.
+pub fn compute_task_create_semantic_commitment(
+    canonical_semantics: &[u8],
+    list_key: &SymmetricKey,
+) -> PublicResult<String> {
+    type SemanticMac = Hmac<Sha256>;
+
+    let commitment_key =
+        derive_child_key(list_key, "worklist.task-create.semantic-commitment.key.v1")?;
+    let mut mac = SemanticMac::new_from_slice(commitment_key.as_bytes()).map_err(|err| {
+        PublicError::crypto(format!(
+            "failed to create task idempotency commitment HMAC: {err}"
+        ))
+    })?;
+    mac.update(b"worklist.task-create.semantic-commitment.payload.v1\0");
+    mac.update(canonical_semantics);
+    Ok(STANDARD_NO_PAD.encode(mac.finalize().into_bytes()))
+}
+
 pub fn decode_sealed_blob(b64: &str) -> PublicResult<Vec<u8>> {
     decode_base64(b64)
 }
@@ -1017,6 +1058,24 @@ mod tests {
     }
 
     #[test]
+    fn test_should_redact_symmetric_and_attachment_keys_from_debug_output() {
+        let symmetric_key = SymmetricKey::new([0xa5; KEY_SIZE]);
+        assert_eq!(format!("{symmetric_key:?}"), "SymmetricKey(\"<redacted>\")");
+
+        let blob_ref = AttachmentBlobRef {
+            version: 1,
+            object_key: "private/object/key".to_string(),
+            ciphertext_bytes: 42,
+            file_key: vec![0xf7; KEY_SIZE],
+            enc_context: ATTACHMENT_BLOB_CONTEXT_LABEL.to_string(),
+        };
+        let debug = format!("{blob_ref:?}");
+        assert!(debug.contains("<redacted>"));
+        assert!(!debug.contains("private/object/key"));
+        assert!(!debug.contains("247"));
+    }
+
+    #[test]
     fn test_decode_base64_standard() {
         let encoded = STANDARD.encode(b"hello");
         let decoded = decode_base64(&encoded).expect("decode");
@@ -1028,6 +1087,27 @@ mod tests {
         let encoded = STANDARD_NO_PAD.encode(b"hello");
         let decoded = decode_base64(&encoded).expect("decode");
         assert_eq!(decoded, b"hello");
+    }
+
+    #[test]
+    fn test_should_keep_task_create_semantic_commitment_stable_and_project_scoped() {
+        let semantics = br#"{"title":"same task"}"#;
+        let first_key = SymmetricKey::new([0x11; 32]);
+        let second_key = SymmetricKey::new([0x22; 32]);
+        let first = compute_task_create_semantic_commitment(semantics, &first_key)
+            .expect("first commitment");
+        let retry = compute_task_create_semantic_commitment(semantics, &first_key)
+            .expect("retry commitment");
+        let changed =
+            compute_task_create_semantic_commitment(br#"{"title":"different task"}"#, &first_key)
+                .expect("changed commitment");
+        let other_project = compute_task_create_semantic_commitment(semantics, &second_key)
+            .expect("other project commitment");
+
+        assert_eq!(first, retry);
+        assert_ne!(first, changed);
+        assert_ne!(first, other_project);
+        assert_eq!(STANDARD_NO_PAD.decode(first).expect("base64").len(), 32);
     }
 
     #[test]
@@ -1070,6 +1150,25 @@ mod tests {
             decrypt_user_data_key_with_opaque_export_key(&export_key, &url_safe)
                 .expect("decrypt URL-safe v2 data key"),
             data_key
+        );
+    }
+
+    #[test]
+    fn test_should_reject_unknown_data_key_ciphertext_versions() {
+        let payload = SealedPayload {
+            version: u8::MAX,
+            ciphertext: Vec::new(),
+        }
+        .to_bytes()
+        .expect("serialize unknown-version data-key payload");
+        let ciphertext = STANDARD_NO_PAD.encode(payload);
+
+        let error = data_key_ciphertext_version(&ciphertext)
+            .expect_err("unknown data-key ciphertext version must fail");
+
+        assert_eq!(
+            error.to_string(),
+            "unsupported data key ciphertext version 255"
         );
     }
 

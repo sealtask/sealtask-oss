@@ -9,6 +9,8 @@ pub enum PublicError {
     #[error("{0}")]
     Validation(String),
     #[error("{0}")]
+    Conflict(String),
+    #[error("{0}")]
     Crypto(String),
     #[error("{0}")]
     Unexpected(String),
@@ -23,6 +25,10 @@ pub enum PublicError {
 impl PublicError {
     pub fn validation(message: impl Into<String>) -> Self {
         Self::Validation(message.into())
+    }
+
+    pub fn conflict(message: impl Into<String>) -> Self {
+        Self::Conflict(message.into())
     }
 
     pub fn crypto(message: impl Into<String>) -> Self {

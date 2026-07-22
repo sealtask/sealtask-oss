@@ -20,6 +20,7 @@ base64 = "0.22.1"
 chrono = { version = "0.4.38", features = ["serde"] }
 clap = { version = "4.5", features = ["derive", "env"] }
 dirs = "5.0"
+fs2 = "0.4.3"
 generic-array = "0.14"
 hkdf = "0.12.4"
 hmac = "0.12.1"
@@ -32,9 +33,12 @@ rpassword = "7.4"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.145"
 sha2 = "0.10.8"
+socket2 = { version = "0.5.10", features = ["all"] }
 strong-box = "0.5.1"
 thiserror = "2.0.17"
+tempfile = "3.14"
 tokio = { version = "1.48.0", features = ["full"] }
 undocx = "0.5.2"
 uuid = { version = "1.18.1", features = ["serde", "v7"] }
 zeroize = { version = "1.8", features = ["zeroize_derive"] }
+zip = { version = "2.4.2", default-features = false, features = ["deflate"] }

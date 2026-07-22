@@ -85,6 +85,108 @@ cargo run -p worklist -- --json tasks attachments read --work-list-id <list-id> 
 cargo run -p worklist -- --json tasks attachments download --work-list-id <list-id> --task-id <task-id> --attachment-id <attachment-id>
 ```
 
+## Agent task automation
+
+The supported automation mode acts through an authenticated user session. Log
+in once, then either unlock the local daemon for a bounded session or store the
+decrypted data-key bootstrap in the platform keychain:
+
+```bash
+printf '%s\n' "$SEALTASK_PASSWORD" \
+  | cargo run -p worklist -- --json auth login \
+      --email agent-user@example.com --password-stdin
+
+printf '%s\n' "$SEALTASK_PASSWORD" \
+  | cargo run -p worklist -- --json auth unlock \
+      --ttl-seconds 28800 --password-stdin
+```
+
+Create a task with the native lifecycle fields and a retry key:
+
+```bash
+cargo run -p worklist -- --json tasks create \
+  --work-list-id <list-id> \
+  --title 'Prepare release notes' \
+  --priority 5 \
+  --start-at 2026-08-09T08:00:00Z \
+  --due-at 2026-08-10T09:30:00Z \
+  --section-id <section-id> \
+  --idempotency-key 'agent:run-42:release-notes'
+```
+
+Priorities are `1`, `3`, `5`, or `8`; date arguments are RFC 3339 timestamps.
+An idempotency key is scoped to the user and should remain stable for retries of
+one logical create. A retry with the same readable task semantics returns the
+original task even though encryption uses a fresh nonce. Reusing the key for
+different semantics, or retrying after the original task was deleted, returns a
+conflict instead of creating another task.
+
+Checklist create and update operations use structured JSON. Task-level fields
+are camelCase; checklist payload fields retain their encrypted payload schema's
+snake_case names:
+
+```json
+{
+  "title": "Prepare release notes",
+  "body": "Summarize user-visible changes.",
+  "checklist": [
+    {
+      "id": "019f0000-0000-7000-8000-000000000001",
+      "title": "Collect merged changes",
+      "is_done": false,
+      "assignee_user_ids": []
+    }
+  ],
+  "priority": 5,
+  "startAt": "2026-08-09T08:00:00Z",
+  "dueAt": "2026-08-10T09:30:00Z",
+  "sectionId": "019f0000-0000-7000-8000-000000000002",
+  "idempotencyKey": "agent:run-42:release-notes"
+}
+```
+
+Pass this document with `--input-file <path>`. `--input-stdin` is also
+supported, but cannot share stdin with `--password-stdin`; use an unlocked
+daemon/keychain or an input file when both task JSON and a password are needed.
+
+Structured updates use patch semantics: an omitted field is unchanged, `null`
+clears a nullable field, and a value sets it. The equivalent flag form provides
+`--clear-body`, `--clear-priority`, `--clear-due-at`, `--clear-start-at`, and
+`--clear-section`. Every update and move is sent with the revision just read by
+the CLI; a concurrent change returns a conflict so the agent can re-read,
+reconcile, and retry instead of silently overwriting newer state.
+
+```bash
+cargo run -p worklist -- --json tasks complete \
+  --work-list-id <list-id> --task-id <task-id>
+cargo run -p worklist -- --json tasks reopen \
+  --work-list-id <list-id> --task-id <task-id>
+```
+
+SealTask's board model defines completion by section: `complete` moves the task
+to the final section and `reopen` moves it to the first section. These commands
+require a work list with at least two sections and are idempotent when the task
+already has the requested state.
+
+### JSON process contract
+
+`worklist info` reports `"jsonContractVersion": 1`. For ordinary commands run
+with `--json`, version 1 guarantees:
+
+- success writes exactly one JSON document to stdout; stderr is empty unless a
+  structured warning is emitted
+- collection commands always write a JSON array, including `[]` for an empty
+  result
+- warnings and runtime errors are written to stderr as one JSON envelope, for
+  example `{"warnings":[...]}` or `{"error":{"code":"validation","message":"..."}}`
+- successful commands exit `0`, runtime/validation failures exit `1`, and Clap
+  argument-parsing failures retain Clap's exit code (`2` for usage errors)
+- a closed stdout pipe is treated as successful consumer termination and exits
+  `0`
+
+Help and version output retain Clap's human-readable text format, even when the
+raw argument list also contains `--json`.
+
 Example enrolled-account automation input:
 
 ```bash

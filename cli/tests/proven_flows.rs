@@ -1,6 +1,6 @@
 use std::io::{Read, Write};
 use std::path::Path as FsPath;
-use std::process::Stdio;
+use std::process::{Child, Stdio};
 use std::sync::{Arc, Mutex};
 
 use assert_cmd::Command;
@@ -25,6 +25,7 @@ use sha2::Sha256;
 use strong_box::StrongBox;
 use tempfile::TempDir;
 use tokio::net::TcpListener;
+use tokio::sync::Notify;
 use uuid::Uuid;
 use worklist_client_api::{AuditPatchFieldRequest, AuditPatchRequest};
 use worklist_client_auth::{ClientCipherSuite, Credentials};
@@ -397,6 +398,7 @@ async fn cli_proven_flows_round_trip_through_mock_api() {
         .as_ref()
         .expect("moved task request recorded");
     assert_eq!(moved_task.section_id, Some(move_section_id));
+    assert_eq!(moved_task.section_boundary, None);
     assert_eq!(
         moved_task.insert_before_task_id,
         Some(insert_before_task_id)
@@ -440,7 +442,7 @@ async fn cli_proven_flows_round_trip_through_mock_api() {
         )["source"],
         "fixture"
     );
-    assert_eq!(state.list_comments_count, 2);
+    assert_eq!(state.list_comments_count, 3);
     assert_eq!(state.deleted_comment_id, Some(fixture.comment_id));
     assert_eq!(state.deleted_task_id, Some(fixture.task_id));
     assert_eq!(
@@ -451,6 +453,430 @@ async fn cli_proven_flows_round_trip_through_mock_api() {
         state.deleted_task_audit_patch.as_ref(),
         Some(&expected_delete_task_audit_patch)
     );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn test_should_preserve_cli_task_lifecycle_fields_checklist_completion_and_revision_contract()
+{
+    let fixture = TestFixture::new();
+    let state = Arc::new(Mutex::new(TestState::new(fixture.clone())));
+    let server = spawn_server(state.clone()).await;
+    let home = TempDir::new().expect("temp home");
+    seed_credentials(home.path(), &fixture, &server.base_url);
+    let checklist_id = Uuid::now_v7();
+    let due_at = "2026-08-10T09:30:00Z";
+    let start_at = "2026-08-09T08:00:00Z";
+    let idempotency_key = format!("agent:{}", Uuid::now_v7());
+
+    let create_input = write_json_file(
+        home.path(),
+        "task-lifecycle-create.json",
+        &json!({
+            "title": "Lifecycle task",
+            "body": "Initial body",
+            "checklist": [{
+                "id": checklist_id,
+                "title": "First step",
+                "is_done": false
+            }],
+            "priority": 5,
+            "dueAt": due_at,
+            "startAt": start_at,
+            "sectionId": fixture.first_section_id,
+            "idempotencyKey": idempotency_key
+        }),
+    );
+    let create_output = run_cli(
+        home.path(),
+        &server.base_url,
+        &[
+            "--json",
+            "tasks",
+            "create",
+            "--work-list-id",
+            &fixture.work_list_id.to_string(),
+            "--input-file",
+            create_input.to_str().expect("utf8 path"),
+            "--password-stdin",
+        ],
+        Some(&fixture.password),
+    );
+    assert!(
+        create_output.status.success(),
+        "task lifecycle create failed: {}",
+        create_output.stderr
+    );
+    assert!(create_output.stderr.is_empty());
+    let created = parse_stdout_json(&create_output.stdout);
+    assert_eq!(created["priority"], 5);
+    assert_eq!(created["dueAt"], due_at);
+    assert_eq!(created["startAt"], start_at);
+    assert_eq!(created["sectionId"], fixture.first_section_id.to_string());
+
+    let first_commitment = {
+        let state = state.lock().expect("state lock");
+        let request = state
+            .created_task_request
+            .as_ref()
+            .expect("create request captured");
+        assert_eq!(request["idempotencyKey"], idempotency_key);
+        assert!(request["idempotencyCommitment"].is_string());
+        assert_eq!(
+            state
+                .created_task_body
+                .as_ref()
+                .and_then(|body| body.checklist.as_ref())
+                .map(Vec::len),
+            Some(1)
+        );
+        request["idempotencyCommitment"].clone()
+    };
+
+    let retry_output = run_cli(
+        home.path(),
+        &server.base_url,
+        &[
+            "--json",
+            "tasks",
+            "create",
+            "--work-list-id",
+            &fixture.work_list_id.to_string(),
+            "--input-file",
+            create_input.to_str().expect("utf8 path"),
+            "--password-stdin",
+        ],
+        Some(&fixture.password),
+    );
+    assert!(
+        retry_output.status.success(),
+        "retry failed: {}",
+        retry_output.stderr
+    );
+    let state_after_retry = state.lock().expect("state lock");
+    assert_eq!(
+        state_after_retry
+            .created_task_request
+            .as_ref()
+            .expect("retry request captured")["idempotencyCommitment"],
+        first_commitment,
+        "logical retries must keep a stable commitment despite fresh ciphertext"
+    );
+    drop(state_after_retry);
+
+    let update_input = write_json_file(
+        home.path(),
+        "task-lifecycle-update.json",
+        &json!({
+            "body": null,
+            "checklist": [{
+                "id": checklist_id,
+                "title": "First step complete",
+                "is_done": true,
+                "completed_at": 1786262400
+            }],
+            "priority": null,
+            "dueAt": null,
+            "startAt": null
+        }),
+    );
+    let update_output = run_cli(
+        home.path(),
+        &server.base_url,
+        &[
+            "--json",
+            "tasks",
+            "update",
+            "--work-list-id",
+            &fixture.work_list_id.to_string(),
+            "--task-id",
+            &fixture.task_id.to_string(),
+            "--input-file",
+            update_input.to_str().expect("utf8 path"),
+            "--password-stdin",
+        ],
+        Some(&fixture.password),
+    );
+    assert!(
+        update_output.status.success(),
+        "task lifecycle update failed: {}",
+        update_output.stderr
+    );
+    let updated = parse_stdout_json(&update_output.stdout);
+    assert!(updated["priority"].is_null());
+    assert!(updated["dueAt"].is_null());
+    assert!(updated["startAt"].is_null());
+    {
+        let state = state.lock().expect("state lock");
+        let request = state
+            .updated_task_request
+            .as_ref()
+            .expect("update request captured");
+        assert!(request["expectedUpdatedAt"].is_string());
+        assert!(request["priority"].is_null());
+        assert!(request["dueAt"].is_null());
+        assert!(request["startAt"].is_null());
+        let body = state.updated_task_body.as_ref().expect("payload updated");
+        assert!(body.rich_text.is_none());
+        let item = &body.checklist.as_ref().expect("checklist present")[0];
+        assert!(item.is_done);
+        assert!(item.completed_at.is_some());
+    }
+
+    let completed_output = run_cli(
+        home.path(),
+        &server.base_url,
+        &[
+            "--json",
+            "tasks",
+            "complete",
+            "--work-list-id",
+            &fixture.work_list_id.to_string(),
+            "--task-id",
+            &fixture.task_id.to_string(),
+            "--password-stdin",
+        ],
+        Some(&fixture.password),
+    );
+    assert!(
+        completed_output.status.success(),
+        "task complete failed: {}",
+        completed_output.stderr
+    );
+    let completed = parse_stdout_json(&completed_output.stdout);
+    assert_eq!(completed["isCompleted"], true);
+    assert_eq!(completed["sectionId"], fixture.done_section_id.to_string());
+    {
+        let state = state.lock().expect("state lock");
+        let request = state
+            .moved_task_body
+            .as_ref()
+            .expect("completion move request captured");
+        assert_eq!(request.section_id, None);
+        assert_eq!(request.section_boundary.as_deref(), Some("last"));
+    }
+
+    let reopened_output = run_cli(
+        home.path(),
+        &server.base_url,
+        &[
+            "--json",
+            "tasks",
+            "reopen",
+            "--work-list-id",
+            &fixture.work_list_id.to_string(),
+            "--task-id",
+            &fixture.task_id.to_string(),
+            "--password-stdin",
+        ],
+        Some(&fixture.password),
+    );
+    assert!(
+        reopened_output.status.success(),
+        "task reopen failed: {}",
+        reopened_output.stderr
+    );
+    let reopened = parse_stdout_json(&reopened_output.stdout);
+    assert_eq!(reopened["isCompleted"], false);
+    assert_eq!(reopened["sectionId"], fixture.first_section_id.to_string());
+    let state = state.lock().expect("state lock");
+    let request = state
+        .moved_task_body
+        .as_ref()
+        .expect("reopen move request captured");
+    assert_eq!(request.section_id, None);
+    assert_eq!(request.section_boundary.as_deref(), Some("first"));
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn test_should_treat_reopening_an_open_task_as_a_noop_with_one_section() {
+    let fixture = TestFixture::new();
+    let state = Arc::new(Mutex::new(TestState::new(fixture.clone())));
+    state.lock().expect("state lock").single_section = true;
+    let server = spawn_server(state.clone()).await;
+    let home = TempDir::new().expect("temp home");
+    seed_credentials(home.path(), &fixture, &server.base_url);
+
+    let output = run_cli(
+        home.path(),
+        &server.base_url,
+        &[
+            "--json",
+            "tasks",
+            "reopen",
+            "--work-list-id",
+            &fixture.work_list_id.to_string(),
+            "--task-id",
+            &fixture.task_id.to_string(),
+            "--password-stdin",
+        ],
+        Some(&fixture.password),
+    );
+
+    assert!(
+        output.status.success(),
+        "task reopen failed: {}",
+        output.stderr
+    );
+    assert_eq!(parse_stdout_json(&output.stdout)["isCompleted"], false);
+    let state = state.lock().expect("state lock");
+    let request = state
+        .moved_task_body
+        .as_ref()
+        .expect("atomic reopen request captured");
+    assert_eq!(request.section_boundary.as_deref(), Some("first"));
+    assert_eq!(state.task_section_id, None);
+    assert!(!state.task_is_completed);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn test_should_page_all_completed_tasks_for_raw_and_decrypted_lists() {
+    let fixture = TestFixture::new();
+    let state = Arc::new(Mutex::new(TestState::new(fixture.clone())));
+    {
+        let mut state = state.lock().expect("state lock");
+        state.my_tasks_count = 125;
+        state.task_is_completed = true;
+        state.task_completed_at = Some(Utc::now());
+    }
+    let server = spawn_server(state.clone()).await;
+    let home = TempDir::new().expect("temp home");
+    seed_credentials(home.path(), &fixture, &server.base_url);
+
+    let raw_output = run_cli(
+        home.path(),
+        &server.base_url,
+        &[
+            "--json",
+            "tasks",
+            "list",
+            "--all",
+            "--include-completed",
+            "--raw",
+        ],
+        None,
+    );
+    assert!(
+        raw_output.status.success(),
+        "raw paginated task list failed: {}",
+        raw_output.stderr
+    );
+    let raw_tasks = parse_stdout_json(&raw_output.stdout);
+    assert_eq!(raw_tasks.as_array().expect("raw task array").len(), 125);
+
+    let decrypted_output = run_cli(
+        home.path(),
+        &server.base_url,
+        &[
+            "--json",
+            "tasks",
+            "list",
+            "--all",
+            "--include-completed",
+            "--password-stdin",
+        ],
+        Some(&fixture.password),
+    );
+    assert!(
+        decrypted_output.status.success(),
+        "decrypted paginated task list failed: {}",
+        decrypted_output.stderr
+    );
+    let decrypted_tasks = parse_stdout_json(&decrypted_output.stdout);
+    assert_eq!(
+        decrypted_tasks
+            .as_array()
+            .expect("decrypted task array")
+            .len(),
+        125
+    );
+
+    assert_eq!(
+        state.lock().expect("state lock").my_tasks_queries,
+        vec![(0, true), (100, true), (0, true), (100, true)]
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn test_should_emit_strict_json_documents_for_empty_task_collections_and_conflicts() {
+    let fixture = TestFixture::new();
+    let state = Arc::new(Mutex::new(TestState::new(fixture.clone())));
+    let server = spawn_server(state.clone()).await;
+    let home = TempDir::new().expect("temp home");
+    seed_credentials(home.path(), &fixture, &server.base_url);
+    state.lock().expect("state lock").tasks_empty = true;
+    let work_list_id = fixture.work_list_id.to_string();
+
+    for args in [
+        vec![
+            "--json",
+            "tasks",
+            "list",
+            "--work-list-id",
+            work_list_id.as_str(),
+            "--password-stdin",
+        ],
+        vec!["--json", "tasks", "list", "--all", "--password-stdin"],
+        vec![
+            "--json",
+            "tasks",
+            "list",
+            "--work-list-id",
+            work_list_id.as_str(),
+            "--raw",
+        ],
+    ] {
+        let output = run_cli(
+            home.path(),
+            &server.base_url,
+            &args,
+            args.contains(&"--password-stdin")
+                .then_some(fixture.password.as_str()),
+        );
+        assert!(
+            output.status.success(),
+            "empty list failed: {}",
+            output.stderr
+        );
+        assert_eq!(parse_stdout_json(&output.stdout), json!([]));
+        assert!(output.stderr.is_empty());
+    }
+
+    {
+        let mut state = state.lock().expect("state lock");
+        state.tasks_empty = false;
+        state.reject_next_task_update_as_conflict = true;
+        state.updated_task_body = None;
+    }
+    let output = run_cli(
+        home.path(),
+        &server.base_url,
+        &[
+            "--json",
+            "tasks",
+            "update",
+            "--work-list-id",
+            &fixture.work_list_id.to_string(),
+            "--task-id",
+            &fixture.task_id.to_string(),
+            "--title",
+            "Must not overwrite",
+            "--password-stdin",
+        ],
+        Some(&fixture.password),
+    );
+    assert!(!output.status.success());
+    assert!(output.stdout.is_empty());
+    let error = parse_stderr_json(&output.stderr);
+    assert_eq!(error["error"]["code"], "conflict");
+    assert!(
+        error["error"]["message"]
+            .as_str()
+            .expect("error message")
+            .contains("task changed")
+    );
+    let state = state.lock().expect("state lock");
+    assert!(state.updated_task_body.is_none());
+    assert!(state.updated_task_request.as_ref().expect("request")["expectedUpdatedAt"].is_string());
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -506,7 +932,7 @@ async fn cli_work_list_archive_lifecycle_preserves_active_only_defaults() {
         "active-only archived list query failed: {}",
         active_lists_output.stderr
     );
-    assert_eq!(active_lists_output.stdout.trim(), "No work lists found.");
+    assert_eq!(parse_stdout_json(&active_lists_output.stdout), json!([]));
 
     let archived_lists_output = run_cli(
         home.path(),
@@ -1531,6 +1957,7 @@ async fn cli_keychain_store_bootstraps_later_decrypt_without_password_flag() {
     );
     let initial_status_json: Value = parse_stdout_json(&initial_status.stdout);
     assert_eq!(initial_status_json["loggedIn"], true);
+    assert_eq!(initial_status_json["sessionState"], "active");
     assert_eq!(initial_status_json["unlockDaemon"]["active"], false);
     assert_eq!(
         initial_status_json["persistedBootstrap"]["status"],
@@ -1863,6 +2290,69 @@ async fn cli_logout_locks_daemon() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn cli_logout_does_not_revoke_a_concurrently_refreshed_session() {
+    let fixture = TestFixture::new();
+    let server = spawn_refresh_logout_race_server(&fixture).await;
+    let home = TempDir::new().expect("temp home");
+    seed_credentials_with_expiry(
+        home.path(),
+        &fixture,
+        &server.base_url,
+        Utc::now() - Duration::minutes(5),
+        Utc::now() + Duration::days(1),
+    );
+
+    let refresh = spawn_cli_process(home.path(), &server.base_url, &["--json", "lists", "--raw"]);
+    tokio::time::timeout(
+        std::time::Duration::from_secs(5),
+        server.refresh_committed.notified(),
+    )
+    .await
+    .expect("refresh should commit while retaining the credential lock");
+
+    let logout = spawn_cli_process(home.path(), &server.base_url, &["--json", "auth", "logout"]);
+    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+    server.release_refresh_response.notify_one();
+
+    let (refresh_output, logout_output) =
+        tokio::join!(wait_for_cli_process(refresh), wait_for_cli_process(logout));
+    assert!(
+        refresh_output.status.success(),
+        "refreshing command failed: {}",
+        refresh_output.stderr
+    );
+    assert!(
+        !logout_output.status.success(),
+        "stale logout unexpectedly succeeded: {}",
+        logout_output.stdout
+    );
+    let logout_error = parse_stderr_json(&logout_output.stderr);
+    assert_eq!(logout_error["error"]["code"], "conflict");
+    assert!(
+        logout_error["error"]["message"]
+            .as_str()
+            .expect("logout conflict message")
+            .contains("credentials changed while the command was running"),
+        "unexpected logout error: {}",
+        logout_output.stderr
+    );
+
+    let state = server.state.lock().expect("race state lock");
+    assert_eq!(state.refresh_requests, 1);
+    assert_eq!(state.logout_requests, 0);
+    assert_eq!(state.work_list_requests, 1);
+    assert!(!state.revoked);
+    drop(state);
+
+    let credentials_path = home.path().join(".worklist").join("credentials.json");
+    let persisted: Credentials =
+        serde_json::from_slice(&std::fs::read(credentials_path).expect("read rotated credentials"))
+            .expect("parse rotated credentials");
+    assert_eq!(persisted.access_token, "race-access-token");
+    assert_eq!(persisted.refresh_token, "race-refresh-token");
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn cli_logout_clears_persisted_bootstrap() {
     let fixture = TestFixture::new();
     let state = Arc::new(Mutex::new(TestState::new(fixture.clone())));
@@ -2001,14 +2491,19 @@ async fn cli_json_logout_warning_and_cleanup_error_share_one_stderr_document() {
     seed_credentials(home.path(), &fixture, &server.base_url);
 
     let socket_path = home.path().join(".worklist").join("unlock.sock");
-    let fake_daemon = spawn_invalid_unlock_daemon(&socket_path);
+    let (release_fake_daemon, fake_daemon) = spawn_hanging_unlock_daemon(&socket_path);
 
+    let started_at = std::time::Instant::now();
     let output = run_cli(
         home.path(),
         &server.base_url,
         &["--json", "auth", "logout"],
         None,
     );
+    let elapsed = started_at.elapsed();
+    release_fake_daemon
+        .send(())
+        .expect("release hanging fake daemon");
     fake_daemon.join().expect("join fake daemon");
 
     assert!(
@@ -2040,6 +2535,18 @@ async fn cli_json_logout_warning_and_cleanup_error_share_one_stderr_document() {
             .contains("failed to clear unlock daemon session"),
         "unexpected stderr: {}",
         output.stderr
+    );
+    assert!(
+        stderr_json["error"]["message"]
+            .as_str()
+            .expect("error message")
+            .contains("failed to read unlock daemon response"),
+        "unexpected stderr: {}",
+        output.stderr
+    );
+    assert!(
+        elapsed < std::time::Duration::from_secs(3),
+        "logout remained blocked on the unlock daemon for {elapsed:?}"
     );
 }
 
@@ -2127,6 +2634,53 @@ async fn cli_status_reports_stored_session_daemon_state_when_api_url_differs() {
         status_json["apiUrlMismatch"]["storedApiUrl"],
         server.base_url
     );
+
+    let _ = run_cli(home.path(), &server.base_url, &["auth", "lock"], None);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn test_should_query_unlock_daemon_status_when_credentials_are_missing() {
+    let fixture = TestFixture::new();
+    let state = Arc::new(Mutex::new(TestState::new(fixture.clone())));
+    let server = spawn_server(state).await;
+    let home = TempDir::new().expect("temp home");
+    seed_credentials(home.path(), &fixture, &server.base_url);
+
+    let unlock_output = run_cli(
+        home.path(),
+        &server.base_url,
+        &[
+            "--json",
+            "auth",
+            "unlock",
+            "--ttl-seconds",
+            "300",
+            "--password-stdin",
+        ],
+        Some(&fixture.password),
+    );
+    assert!(
+        unlock_output.status.success(),
+        "unlock failed: {}",
+        unlock_output.stderr
+    );
+
+    std::fs::remove_file(home.path().join(".worklist/credentials.json"))
+        .expect("remove credentials without clearing daemon session");
+    let status_output = run_cli(
+        home.path(),
+        &server.base_url,
+        &["--json", "auth", "status"],
+        None,
+    );
+    assert!(
+        status_output.status.success(),
+        "status failed: {}",
+        status_output.stderr
+    );
+    let status_json: Value = parse_stdout_json(&status_output.stdout);
+    assert_eq!(status_json["loggedIn"], false);
+    assert_eq!(status_json["unlockDaemon"]["active"], true);
 
     let _ = run_cli(home.path(), &server.base_url, &["auth", "lock"], None);
 }
@@ -2252,6 +2806,151 @@ async fn cli_login_stdin_persists_only_final_no_mfa_credentials() {
     );
     assert!(observed_code.lock().expect("observed code lock").is_none());
     assert_final_process_login_credentials(home.path(), PASSWORD, CHALLENGE_TOKEN, None);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn test_should_replace_active_credentials_when_login_requests_another_account() {
+    const EMAIL: &str = "process-login@example.test";
+    const PASSWORD: &str = "process-account-switch-password";
+    const CHALLENGE_TOKEN: &str = "unused-account-switch-challenge";
+
+    let observed_logout_refresh_token = Arc::new(Mutex::new(None));
+    let server = spawn_raw_login_server_with_logout_observer(
+        EMAIL,
+        PASSWORD,
+        CHALLENGE_TOKEN,
+        Arc::new(Mutex::new(None)),
+        RawLoginFinishOutcome::Authenticated,
+        RawMfaVerifyOutcome::Reject,
+        observed_logout_refresh_token.clone(),
+    )
+    .await;
+    let fixture = TestFixture::new();
+    let home = TempDir::new().expect("temp home");
+    let keychain_dir = TempDir::new().expect("temp keychain");
+    seed_credentials(home.path(), &fixture, &server.base_url);
+
+    let store_output = run_cli_with_test_keychain(
+        home.path(),
+        &server.base_url,
+        keychain_dir.path(),
+        &["--json", "auth", "keychain", "store", "--password-stdin"],
+        Some(&fixture.password),
+    );
+    assert!(
+        store_output.status.success(),
+        "keychain store failed: {}",
+        store_output.stderr
+    );
+    assert_eq!(
+        std::fs::read_dir(keychain_dir.path())
+            .expect("read test keychain directory")
+            .count(),
+        1,
+        "old account should have one persisted bootstrap secret"
+    );
+
+    let unlock_output = run_cli_with_test_keychain(
+        home.path(),
+        &server.base_url,
+        keychain_dir.path(),
+        &[
+            "--json",
+            "auth",
+            "unlock",
+            "--ttl-seconds",
+            "300",
+            "--password-stdin",
+        ],
+        Some(&fixture.password),
+    );
+    assert!(
+        unlock_output.status.success(),
+        "unlock failed: {}",
+        unlock_output.stderr
+    );
+
+    let output = run_cli_with_test_keychain(
+        home.path(),
+        &server.base_url,
+        keychain_dir.path(),
+        &[
+            "--json",
+            "auth",
+            "login",
+            "--email",
+            EMAIL,
+            "--password-stdin",
+        ],
+        Some(&format!("{PASSWORD}\n")),
+    );
+
+    assert!(
+        output.status.success(),
+        "account-switch login failed: {}",
+        output.stderr
+    );
+    let result = parse_stdout_json(&output.stdout);
+    assert_eq!(result["alreadyLoggedIn"], false);
+    assert_eq!(result["email"], EMAIL);
+    assert!(
+        output.stderr.is_empty(),
+        "successful previous-session revocation should not warn: {}",
+        output.stderr
+    );
+
+    let credentials: Credentials = serde_json::from_slice(
+        &std::fs::read(home.path().join(".worklist/credentials.json"))
+            .expect("read switched credentials"),
+    )
+    .expect("parse switched credentials");
+    assert_eq!(credentials.email, EMAIL);
+    assert_eq!(credentials.access_token, "process-final-access-token");
+    assert_eq!(
+        observed_logout_refresh_token
+            .lock()
+            .expect("logout observer lock")
+            .as_deref(),
+        Some(fixture.refresh_token.as_str())
+    );
+    assert_eq!(
+        std::fs::read_dir(keychain_dir.path())
+            .expect("read cleared test keychain directory")
+            .count(),
+        0,
+        "account switch should clear the old account keychain entry"
+    );
+
+    std::fs::remove_file(home.path().join(".worklist/credentials.json"))
+        .expect("remove switched credentials before checking daemon state");
+    let status_output = run_cli_with_test_keychain(
+        home.path(),
+        &server.base_url,
+        keychain_dir.path(),
+        &["--json", "auth", "status"],
+        None,
+    );
+    assert!(
+        status_output.status.success(),
+        "status failed: {}",
+        status_output.stderr
+    );
+    let status = parse_stdout_json(&status_output.stdout);
+    assert_eq!(status["loggedIn"], false);
+    assert_eq!(status["unlockDaemon"]["active"], false);
+
+    let lock_output = run_cli_with_test_keychain(
+        home.path(),
+        &server.base_url,
+        keychain_dir.path(),
+        &["auth", "lock"],
+        None,
+    );
+    assert!(
+        lock_output.status.success(),
+        "daemon cleanup failed: {}",
+        lock_output.stderr
+    );
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -2515,6 +3214,45 @@ async fn cli_json_invalid_value_errors_are_machine_readable() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn test_should_reject_zero_and_overflowing_unlock_ttls_before_unlocking() {
+    for ttl in ["0", "18446744073709551615"] {
+        let home = TempDir::new().expect("temp home");
+        let output = run_cli(
+            home.path(),
+            "https://sealtask.com",
+            &[
+                "--json",
+                "auth",
+                "unlock",
+                "--ttl-seconds",
+                ttl,
+                "--password-stdin",
+            ],
+            Some("unused-password"),
+        );
+
+        assert!(
+            !output.status.success(),
+            "invalid TTL unexpectedly succeeded"
+        );
+        assert!(
+            output.stdout.is_empty(),
+            "unexpected stdout: {}",
+            output.stdout
+        );
+        let error = parse_stderr_json(&output.stderr);
+        assert_eq!(error["error"]["code"], "validation");
+        assert!(
+            error["error"]["message"]
+                .as_str()
+                .expect("TTL error message")
+                .contains("unlock TTL")
+        );
+        assert!(!output.stderr.contains("unused-password"));
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn cli_decrypted_commands_fail_non_interactively_without_unlock_or_keychain() {
     let fixture = TestFixture::new();
     let state = Arc::new(Mutex::new(TestState::new(fixture.clone())));
@@ -2558,6 +3296,29 @@ struct TestServer {
     _task: tokio::task::JoinHandle<()>,
 }
 
+struct RefreshLogoutRaceServer {
+    base_url: String,
+    state: Arc<Mutex<RefreshLogoutRaceInner>>,
+    refresh_committed: Arc<Notify>,
+    release_refresh_response: Arc<Notify>,
+    _task: tokio::task::JoinHandle<()>,
+}
+
+#[derive(Clone)]
+struct RefreshLogoutRaceAppState {
+    state: Arc<Mutex<RefreshLogoutRaceInner>>,
+    refresh_committed: Arc<Notify>,
+    release_refresh_response: Arc<Notify>,
+}
+
+struct RefreshLogoutRaceInner {
+    initial_refresh_token: String,
+    refresh_requests: usize,
+    logout_requests: usize,
+    work_list_requests: usize,
+    revoked: bool,
+}
+
 #[derive(Clone)]
 struct RawMfaLoginState {
     email: String,
@@ -2565,6 +3326,7 @@ struct RawMfaLoginState {
     setup: Vec<u8>,
     password_file: Vec<u8>,
     observed_code: Arc<Mutex<Option<String>>>,
+    observed_logout_refresh_token: Arc<Mutex<Option<String>>>,
     login_finish: RawLoginFinishOutcome,
     mfa_verify: RawMfaVerifyOutcome,
 }
@@ -2625,6 +3387,27 @@ async fn spawn_raw_login_server(
     login_finish: RawLoginFinishOutcome,
     mfa_verify: RawMfaVerifyOutcome,
 ) -> TestServer {
+    spawn_raw_login_server_with_logout_observer(
+        email,
+        password,
+        challenge_token,
+        observed_code,
+        login_finish,
+        mfa_verify,
+        Arc::new(Mutex::new(None)),
+    )
+    .await
+}
+
+async fn spawn_raw_login_server_with_logout_observer(
+    email: &str,
+    password: &str,
+    challenge_token: &str,
+    observed_code: Arc<Mutex<Option<String>>>,
+    login_finish: RawLoginFinishOutcome,
+    mfa_verify: RawMfaVerifyOutcome,
+    observed_logout_refresh_token: Arc<Mutex<Option<String>>>,
+) -> TestServer {
     const SERVER_ID: &[u8] = b"worklist.api";
 
     let mut rng = OsRng;
@@ -2663,6 +3446,7 @@ async fn spawn_raw_login_server(
         setup: setup.serialize().to_vec(),
         password_file: password_file.serialize().to_vec(),
         observed_code,
+        observed_logout_refresh_token,
         login_finish,
         mfa_verify,
     };
@@ -2670,6 +3454,7 @@ async fn spawn_raw_login_server(
         .route("/auth/opaque/login/start", post(raw_mfa_login_start))
         .route("/auth/opaque/login/finish", post(raw_mfa_login_finish))
         .route("/auth/mfa/login/verify", post(raw_mfa_verify))
+        .route("/auth/logout", post(raw_login_logout))
         .with_state(state);
 
     let listener = TcpListener::bind("127.0.0.1:0")
@@ -2686,6 +3471,18 @@ async fn spawn_raw_login_server(
         base_url: format!("http://{addr}"),
         _task: task,
     }
+}
+
+async fn raw_login_logout(
+    State(state): State<RawMfaLoginState>,
+    Json(request): Json<RefreshRequestBody>,
+) -> StatusCode {
+    state
+        .observed_logout_refresh_token
+        .lock()
+        .expect("logout observer lock")
+        .replace(request.refresh_token);
+    StatusCode::OK
 }
 
 async fn raw_mfa_login_finish(State(state): State<RawMfaLoginState>) -> (StatusCode, Json<Value>) {
@@ -2894,6 +3691,8 @@ struct TestFixture {
     access_token: String,
     refresh_token: String,
     work_list_id: Uuid,
+    first_section_id: Uuid,
+    done_section_id: Uuid,
     task_id: Uuid,
     comment_id: Uuid,
     membership_id: Uuid,
@@ -2927,8 +3726,19 @@ struct TestState {
     refresh_request_count: usize,
     opaque_export_key_start_count: usize,
     created_task_body: Option<TaskPayloadBody>,
+    created_task_request: Option<Value>,
     updated_task_body: Option<TaskPayloadBody>,
+    updated_task_request: Option<Value>,
     moved_task_body: Option<MoveTaskRequestBody>,
+    task_section_id: Option<Uuid>,
+    task_is_completed: bool,
+    task_completed_at: Option<DateTime<Utc>>,
+    task_updated_at: DateTime<Utc>,
+    reject_next_task_update_as_conflict: bool,
+    tasks_empty: bool,
+    my_tasks_count: usize,
+    my_tasks_queries: Vec<(i64, bool)>,
+    single_section: bool,
     work_list_archived_at: Option<DateTime<Utc>>,
     archive_work_list_count: usize,
     unarchive_work_list_count: usize,
@@ -2962,8 +3772,19 @@ impl TestState {
             opaque_export_key_start_count: 0,
             fixture,
             created_task_body: None,
+            created_task_request: None,
             updated_task_body: None,
+            updated_task_request: None,
             moved_task_body: None,
+            task_section_id: None,
+            task_is_completed: false,
+            task_completed_at: None,
+            task_updated_at: Utc::now(),
+            reject_next_task_update_as_conflict: false,
+            tasks_empty: false,
+            my_tasks_count: 1,
+            my_tasks_queries: Vec::new(),
+            single_section: false,
             work_list_archived_at: None,
             archive_work_list_count: 0,
             unarchive_work_list_count: 0,
@@ -3007,6 +3828,8 @@ impl TestFixture {
         let salt = [0x33; 32];
 
         let work_list_id = Uuid::now_v7();
+        let first_section_id = Uuid::now_v7();
+        let done_section_id = Uuid::now_v7();
         let task_id = Uuid::now_v7();
         let comment_id = Uuid::now_v7();
         let membership_id = Uuid::now_v7();
@@ -3130,6 +3953,8 @@ impl TestFixture {
             access_token: "test-access-token".to_string(),
             refresh_token: "refresh-token".to_string(),
             work_list_id,
+            first_section_id,
+            done_section_id,
             task_id,
             comment_id,
             membership_id,
@@ -3169,6 +3994,7 @@ struct CreateTaskRequestBody {
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct UpdateTaskRequestBody {
+    expected_updated_at: Option<DateTime<Utc>>,
     title_ciphertext: Option<String>,
     title_ciphertext_proof: Option<String>,
     payload_ciphertext: Option<String>,
@@ -3198,8 +4024,10 @@ struct DeleteRequestBody {
 #[derive(Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct MoveTaskRequestBody {
+    expected_updated_at: Option<DateTime<Utc>>,
     section_id: Option<Uuid>,
     insert_before_task_id: Option<Uuid>,
+    section_boundary: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -3218,6 +4046,14 @@ struct OpaqueExportKeyStartRequestBody {
 struct IncludeArchivedQuery {
     #[serde(rename = "includeArchived")]
     include_archived: Option<bool>,
+}
+
+#[derive(Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct MyTasksQuery {
+    limit: Option<i64>,
+    offset: Option<i64>,
+    include_completed: Option<bool>,
 }
 
 async fn spawn_server(state: Arc<Mutex<TestState>>) -> TestServer {
@@ -3277,6 +4113,112 @@ async fn spawn_server(state: Arc<Mutex<TestState>>) -> TestServer {
     TestServer {
         base_url: format!("http://{}", addr),
         _task: task,
+    }
+}
+
+async fn spawn_refresh_logout_race_server(fixture: &TestFixture) -> RefreshLogoutRaceServer {
+    let state = Arc::new(Mutex::new(RefreshLogoutRaceInner {
+        initial_refresh_token: fixture.refresh_token.clone(),
+        refresh_requests: 0,
+        logout_requests: 0,
+        work_list_requests: 0,
+        revoked: false,
+    }));
+    let refresh_committed = Arc::new(Notify::new());
+    let release_refresh_response = Arc::new(Notify::new());
+    let app_state = RefreshLogoutRaceAppState {
+        state: Arc::clone(&state),
+        refresh_committed: Arc::clone(&refresh_committed),
+        release_refresh_response: Arc::clone(&release_refresh_response),
+    };
+    let app = Router::new()
+        .route("/auth/refresh", post(refresh_logout_race_refresh))
+        .route("/auth/logout", post(refresh_logout_race_logout))
+        .route("/work-lists", get(refresh_logout_race_work_lists))
+        .with_state(app_state);
+    let listener = TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("bind refresh/logout race listener");
+    let address = listener.local_addr().expect("race listener address");
+    let task = tokio::spawn(async move {
+        axum::serve(listener, app)
+            .await
+            .expect("serve refresh/logout race API");
+    });
+
+    RefreshLogoutRaceServer {
+        base_url: format!("http://{address}"),
+        state,
+        refresh_committed,
+        release_refresh_response,
+        _task: task,
+    }
+}
+
+async fn refresh_logout_race_refresh(
+    State(state): State<RefreshLogoutRaceAppState>,
+    Json(payload): Json<RefreshRequestBody>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    {
+        let mut inner = state.state.lock().expect("race state lock");
+        assert_eq!(payload.refresh_token, inner.initial_refresh_token);
+        inner.refresh_requests += 1;
+    }
+    state.refresh_committed.notify_one();
+    state.release_refresh_response.notified().await;
+
+    (
+        StatusCode::OK,
+        Json(json!({
+            "accessToken": "race-access-token",
+            "refreshToken": "race-refresh-token",
+            "expiresIn": 3600,
+            "refreshExpiresIn": 3600,
+            "tokenType": "Bearer"
+        })),
+    )
+}
+
+async fn refresh_logout_race_logout(
+    State(state): State<RefreshLogoutRaceAppState>,
+    Json(payload): Json<RefreshRequestBody>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    let mut inner = state.state.lock().expect("race state lock");
+    inner.logout_requests += 1;
+    if payload.refresh_token == inner.initial_refresh_token
+        || payload.refresh_token == "race-refresh-token"
+    {
+        inner.revoked = true;
+    }
+    (
+        StatusCode::OK,
+        Json(json!({
+            "loggedOut": true
+        })),
+    )
+}
+
+async fn refresh_logout_race_work_lists(
+    State(state): State<RefreshLogoutRaceAppState>,
+    headers: HeaderMap,
+) -> (StatusCode, Json<serde_json::Value>) {
+    let mut inner = state.state.lock().expect("race state lock");
+    inner.work_list_requests += 1;
+    let authorized = headers
+        .get("authorization")
+        .and_then(|value| value.to_str().ok())
+        == Some("Bearer race-access-token")
+        && !inner.revoked;
+    if authorized {
+        (StatusCode::OK, Json(json!([])))
+    } else {
+        (
+            StatusCode::UNAUTHORIZED,
+            Json(json!({
+                "error": "unauthorized",
+                "message": "session revoked"
+            })),
+        )
     }
 }
 
@@ -3400,7 +4342,7 @@ async fn get_work_list(
         "descriptionCiphertext": null,
         "payloadCiphertext": work_list_payload_ciphertext(&state),
         "timezone": "UTC",
-        "sectionSnapshots": [],
+        "sectionSnapshots": section_snapshots_json(&state),
         "archivedAt": state.work_list_archived_at,
         "createdAt": Utc::now(),
         "updatedAt": Utc::now(),
@@ -3477,8 +4419,13 @@ async fn list_tasks(
     let state = state.lock().expect("state lock");
     assert_eq!(work_list_id, state.fixture.work_list_id);
 
+    let tasks = if state.tasks_empty {
+        Vec::new()
+    } else {
+        vec![task_response_json(&state)]
+    };
     let payload = json!({
-        "tasks": [task_response_json(&state)],
+        "tasks": tasks,
         "archivedCounts": [
             {
                 "sectionId": null,
@@ -3491,34 +4438,53 @@ async fn list_tasks(
 }
 
 async fn list_my_tasks(
+    Query(query): Query<MyTasksQuery>,
     State(state): State<Arc<Mutex<TestState>>>,
     headers: HeaderMap,
 ) -> (StatusCode, Json<serde_json::Value>) {
     authorize(&state, &headers);
-    let state = state.lock().expect("state lock");
+    let mut state = state.lock().expect("state lock");
+    let limit = query.limit.unwrap_or(100).clamp(1, 100);
+    let offset = query.offset.unwrap_or(0).max(0);
+    let include_completed = query.include_completed.unwrap_or(false);
+    state.my_tasks_queries.push((offset, include_completed));
 
-    let payload = json!({
-        "tasks": [
-            {
-                "id": state.fixture.task_id,
+    let total = if state.tasks_empty || (state.task_is_completed && !include_completed) {
+        0
+    } else {
+        state.my_tasks_count
+    };
+    let start = usize::try_from(offset).unwrap_or(usize::MAX).min(total);
+    let page_limit = usize::try_from(limit).unwrap_or(usize::MAX);
+    let end = start.saturating_add(page_limit).min(total);
+    let work_list_title_ciphertext = seal_text_value("Fixture Work List").expect("title").base64;
+    let task_payload_ciphertext = task_payload_ciphertext(&state);
+    let tasks = (start..end)
+        .map(|index| {
+            let task_id =
+                Uuid::from_u128(state.fixture.task_id.as_u128().wrapping_add(index as u128));
+            json!({
+                "id": task_id,
                 "workListId": state.fixture.work_list_id,
-                "workListTitleCiphertext": seal_text_value("Fixture Work List").expect("title").base64,
+                "workListTitleCiphertext": work_list_title_ciphertext,
                 "createdByMembershipId": state.fixture.membership_id,
                 "titleCiphertext": state.fixture.task_title_ciphertext,
-                "payloadCiphertext": task_payload_ciphertext(&state),
-                "sectionId": null,
+                "payloadCiphertext": task_payload_ciphertext,
+                "sectionId": state.task_section_id,
                 "priority": null,
                 "dueAt": null,
                 "startAt": null,
-                "completedAt": null,
-                "isCompleted": false,
+                "completedAt": state.task_completed_at,
+                "isCompleted": state.task_is_completed,
                 "createdAt": Utc::now(),
-                "updatedAt": Utc::now(),
+                "updatedAt": state.task_updated_at,
                 "commentCount": 1,
                 "delegations": [
                     {
-                        "id": Uuid::now_v7(),
-                        "taskId": state.fixture.task_id,
+                        "id": Uuid::from_u128(
+                            state.fixture.membership_id.as_u128().wrapping_add(index as u128)
+                        ),
+                        "taskId": task_id,
                         "membershipId": state.fixture.membership_id,
                         "role": "assigned",
                         "status": "pending",
@@ -3527,11 +4493,14 @@ async fn list_my_tasks(
                         "updatedAt": Utc::now()
                     }
                 ]
-            }
-        ],
-        "total": 1,
-        "limit": 100,
-        "offset": 0
+            })
+        })
+        .collect::<Vec<_>>();
+    let payload = json!({
+        "total": total,
+        "tasks": tasks,
+        "limit": limit,
+        "offset": offset
     });
 
     (StatusCode::OK, Json(payload))
@@ -3553,20 +4522,20 @@ async fn get_task(
         "createdByMembershipId": state.fixture.membership_id,
         "titleCiphertext": state.fixture.task_title_ciphertext,
         "payloadCiphertext": task_payload_ciphertext(&state),
-        "sectionId": null,
+        "sectionId": state.task_section_id,
         "priority": null,
         "position": "a",
         "dueAt": null,
         "startAt": null,
-        "completedAt": null,
+        "completedAt": state.task_completed_at,
         "archivedAt": null,
-        "isCompleted": false,
+        "isCompleted": state.task_is_completed,
         "recurrenceId": null,
         "recurrenceSchedule": null,
         "recurrenceIteration": null,
         "materializedAt": null,
         "createdAt": Utc::now(),
-        "updatedAt": Utc::now(),
+        "updatedAt": state.task_updated_at,
         "commentCount": 1,
         "delegations": [],
         "comments": [
@@ -3588,11 +4557,14 @@ async fn create_task(
     Path(work_list_id): Path<Uuid>,
     State(state): State<Arc<Mutex<TestState>>>,
     headers: HeaderMap,
-    Json(payload): Json<CreateTaskRequestBody>,
+    Json(payload_json): Json<Value>,
 ) -> (StatusCode, Json<serde_json::Value>) {
     authorize(&state, &headers);
     let mut state = state.lock().expect("state lock");
     assert_eq!(work_list_id, state.fixture.work_list_id);
+    let payload: CreateTaskRequestBody =
+        serde_json::from_value(payload_json.clone()).expect("task create request");
+    state.created_task_request = Some(payload_json.clone());
 
     let title_bytes = decode_b64(&payload.title_ciphertext);
     let title_proof =
@@ -3614,11 +4586,11 @@ async fn create_task(
         "createdByMembershipId": state.fixture.membership_id,
         "titleCiphertext": payload.title_ciphertext,
         "payloadCiphertext": payload.payload_ciphertext,
-        "sectionId": null,
-        "priority": null,
+        "sectionId": payload_json.get("sectionId").cloned().unwrap_or(Value::Null),
+        "priority": payload_json.get("priority").cloned().unwrap_or(Value::Null),
         "position": "b",
-        "dueAt": null,
-        "startAt": null,
+        "dueAt": payload_json.get("dueAt").cloned().unwrap_or(Value::Null),
+        "startAt": payload_json.get("startAt").cloned().unwrap_or(Value::Null),
         "completedAt": null,
         "archivedAt": null,
         "isCompleted": false,
@@ -3639,24 +4611,40 @@ async fn update_task(
     Path((work_list_id, task_id)): Path<(Uuid, Uuid)>,
     State(state): State<Arc<Mutex<TestState>>>,
     headers: HeaderMap,
-    Json(payload): Json<UpdateTaskRequestBody>,
+    Json(payload_json): Json<Value>,
 ) -> (StatusCode, Json<serde_json::Value>) {
     authorize(&state, &headers);
     let mut state = state.lock().expect("state lock");
     assert_eq!(work_list_id, state.fixture.work_list_id);
     assert_eq!(task_id, state.fixture.task_id);
+    let payload: UpdateTaskRequestBody =
+        serde_json::from_value(payload_json.clone()).expect("task update request");
+    assert_eq!(payload.expected_updated_at, Some(state.task_updated_at));
+    state.updated_task_request = Some(payload_json.clone());
+    if state.reject_next_task_update_as_conflict {
+        state.reject_next_task_update_as_conflict = false;
+        return (
+            StatusCode::CONFLICT,
+            Json(json!({
+                "error": "conflict",
+                "message": "task changed while it was being edited; reload and try again"
+            })),
+        );
+    }
 
-    let payload_ciphertext = payload
-        .payload_ciphertext
-        .as_ref()
-        .expect("payload ciphertext present");
-    let payload_bytes = decode_b64(payload_ciphertext);
-    let payload_proof =
-        compute_payload_proof(&payload_bytes, &state.fixture.binding_key).expect("payload proof");
-    assert_eq!(
-        payload.payload_ciphertext_proof.as_deref(),
-        Some(payload_proof.as_str())
-    );
+    if let Some(payload_ciphertext) = payload.payload_ciphertext.as_ref() {
+        let payload_bytes = decode_b64(payload_ciphertext);
+        let payload_proof = compute_payload_proof(&payload_bytes, &state.fixture.binding_key)
+            .expect("payload proof");
+        assert_eq!(
+            payload.payload_ciphertext_proof.as_deref(),
+            Some(payload_proof.as_str())
+        );
+
+        let decrypted = decrypt_task_payload(&state.fixture.list_key, &payload_bytes)
+            .expect("decrypt updated task");
+        state.updated_task_body = Some(decrypted.body.clone());
+    }
 
     if let Some(title_ciphertext) = payload.title_ciphertext.as_ref() {
         let title_bytes = decode_b64(title_ciphertext);
@@ -3668,9 +4656,7 @@ async fn update_task(
         );
     }
 
-    let decrypted = decrypt_task_payload(&state.fixture.list_key, &payload_bytes)
-        .expect("decrypt updated task");
-    state.updated_task_body = Some(decrypted.body.clone());
+    state.task_updated_at += Duration::milliseconds(1);
 
     let response = json!({
         "id": state.fixture.task_id,
@@ -3678,11 +4664,11 @@ async fn update_task(
         "createdByMembershipId": state.fixture.membership_id,
         "titleCiphertext": payload.title_ciphertext.unwrap_or_else(|| state.fixture.task_title_ciphertext.clone()),
         "payloadCiphertext": payload.payload_ciphertext.unwrap_or_else(|| state.fixture.task_payload_ciphertext.clone()),
-        "sectionId": null,
-        "priority": null,
+        "sectionId": payload_json.get("sectionId").cloned().unwrap_or_else(|| json!(state.task_section_id)),
+        "priority": payload_json.get("priority").cloned().unwrap_or(Value::Null),
         "position": "a",
-        "dueAt": null,
-        "startAt": null,
+        "dueAt": payload_json.get("dueAt").cloned().unwrap_or(Value::Null),
+        "startAt": payload_json.get("startAt").cloned().unwrap_or(Value::Null),
         "completedAt": null,
         "archivedAt": null,
         "isCompleted": false,
@@ -3691,7 +4677,7 @@ async fn update_task(
         "recurrenceIteration": null,
         "materializedAt": null,
         "createdAt": Utc::now(),
-        "updatedAt": Utc::now(),
+        "updatedAt": state.task_updated_at,
         "commentCount": 1,
         "delegations": []
     });
@@ -3709,7 +4695,27 @@ async fn move_task(
     let mut state = state.lock().expect("state lock");
     assert_eq!(work_list_id, state.fixture.work_list_id);
     assert_eq!(task_id, state.fixture.task_id);
+    assert_eq!(payload.expected_updated_at, Some(state.task_updated_at));
     state.moved_task_body = Some(payload.clone());
+    let desired_completion = match payload.section_boundary.as_deref() {
+        Some("first") => Some(false),
+        Some("last") => Some(true),
+        Some(boundary) => panic!("unexpected section boundary: {boundary}"),
+        None => None,
+    };
+    if desired_completion != Some(state.task_is_completed) {
+        state.task_section_id = match payload.section_boundary.as_deref() {
+            Some("first") => Some(state.fixture.first_section_id),
+            Some("last") => Some(state.fixture.done_section_id),
+            None => payload.section_id,
+            Some(_) => unreachable!("validated section boundary"),
+        };
+        state.task_is_completed = state.task_section_id == Some(state.fixture.done_section_id);
+        if state.task_is_completed {
+            state.task_completed_at = Some(Utc::now());
+        }
+        state.task_updated_at += Duration::milliseconds(1);
+    }
 
     let response = json!({
         "id": state.fixture.task_id,
@@ -3717,20 +4723,20 @@ async fn move_task(
         "createdByMembershipId": state.fixture.membership_id,
         "titleCiphertext": state.fixture.task_title_ciphertext,
         "payloadCiphertext": task_payload_ciphertext(&state),
-        "sectionId": payload.section_id,
+        "sectionId": state.task_section_id,
         "priority": null,
         "position": "moved",
         "dueAt": null,
         "startAt": null,
-        "completedAt": null,
+        "completedAt": state.task_completed_at,
         "archivedAt": null,
-        "isCompleted": false,
+        "isCompleted": state.task_is_completed,
         "recurrenceId": null,
         "recurrenceSchedule": null,
         "recurrenceIteration": null,
         "materializedAt": null,
         "createdAt": Utc::now(),
-        "updatedAt": Utc::now(),
+        "updatedAt": state.task_updated_at,
         "commentCount": 1,
         "delegations": []
     });
@@ -4015,6 +5021,34 @@ fn run_cli(home: &std::path::Path, api_url: &str, args: &[&str], stdin: Option<&
     run_cli_in_dir(home, home, api_url, args, stdin)
 }
 
+fn spawn_cli_process(home: &std::path::Path, api_url: &str, args: &[&str]) -> Child {
+    let binary = assert_cmd::cargo::cargo_bin("worklist");
+    let mut command = std::process::Command::new(binary);
+    command.env("HOME", home);
+    command.current_dir(home);
+    command.arg("--api-url").arg(api_url);
+    command.args(args);
+    command.stdout(Stdio::piped());
+    command.stderr(Stdio::piped());
+    command.spawn().expect("spawn concurrent CLI process")
+}
+
+async fn wait_for_cli_process(child: Child) -> CliOutput {
+    let output = tokio::time::timeout(
+        std::time::Duration::from_secs(10),
+        tokio::task::spawn_blocking(move || child.wait_with_output()),
+    )
+    .await
+    .expect("concurrent CLI process should finish")
+    .expect("join concurrent CLI wait")
+    .expect("wait for concurrent CLI process");
+    CliOutput {
+        status: output.status,
+        stdout: String::from_utf8(output.stdout).expect("stdout utf8"),
+        stderr: String::from_utf8(output.stderr).expect("stderr utf8"),
+    }
+}
+
 fn run_cli_with_closed_stdout(
     home: &std::path::Path,
     api_url: &str,
@@ -4287,20 +5321,20 @@ fn task_response_json(state: &TestState) -> serde_json::Value {
         "createdByMembershipId": state.fixture.membership_id,
         "titleCiphertext": state.fixture.task_title_ciphertext,
         "payloadCiphertext": task_payload_ciphertext(state),
-        "sectionId": null,
+        "sectionId": state.task_section_id,
         "priority": null,
         "position": "a",
         "dueAt": null,
         "startAt": null,
-        "completedAt": null,
+        "completedAt": state.task_completed_at,
         "archivedAt": null,
-        "isCompleted": false,
+        "isCompleted": state.task_is_completed,
         "recurrenceId": null,
         "recurrenceSchedule": null,
         "recurrenceIteration": null,
         "materializedAt": null,
         "createdAt": Utc::now(),
-        "updatedAt": Utc::now(),
+        "updatedAt": state.task_updated_at,
         "commentCount": 1,
         "delegations": [
             {
@@ -4326,12 +5360,30 @@ fn work_list_summary_json(state: &TestState) -> serde_json::Value {
         "descriptionCiphertext": null,
         "payloadCiphertext": work_list_payload_ciphertext(state),
         "timezone": "UTC",
-        "sectionSnapshots": [],
+        "sectionSnapshots": section_snapshots_json(state),
         "archivedAt": state.work_list_archived_at,
         "createdAt": Utc::now(),
         "updatedAt": Utc::now(),
         "membership": membership_json(state)
     })
+}
+
+fn section_snapshots_json(state: &TestState) -> Value {
+    let mut sections = vec![json!({
+        "id": state.fixture.first_section_id,
+        "position": 0,
+        "autoArchiveEnabled": false,
+        "autoArchiveAfterDays": null
+    })];
+    if !state.single_section {
+        sections.push(json!({
+            "id": state.fixture.done_section_id,
+            "position": 1,
+            "autoArchiveEnabled": false,
+            "autoArchiveAfterDays": null
+        }));
+    }
+    Value::Array(sections)
 }
 
 fn membership_json(state: &TestState) -> serde_json::Value {
@@ -4562,7 +5614,9 @@ fn assert_json_password_stdin_required(args: &[&str], expected_message: &str) {
 }
 
 #[cfg(unix)]
-fn spawn_invalid_unlock_daemon(socket_path: &FsPath) -> std::thread::JoinHandle<()> {
+fn spawn_hanging_unlock_daemon(
+    socket_path: &FsPath,
+) -> (std::sync::mpsc::Sender<()>, std::thread::JoinHandle<()>) {
     use std::os::unix::net::UnixListener;
 
     if socket_path.exists() {
@@ -4571,20 +5625,20 @@ fn spawn_invalid_unlock_daemon(socket_path: &FsPath) -> std::thread::JoinHandle<
 
     let listener = UnixListener::bind(socket_path).expect("bind fake daemon socket");
     let socket_path = socket_path.to_path_buf();
+    let (release_tx, release_rx) = std::sync::mpsc::channel();
 
-    std::thread::spawn(move || {
+    let thread = std::thread::spawn(move || {
         let (mut stream, _) = listener.accept().expect("accept fake daemon connection");
         let mut request = Vec::new();
         stream
             .read_to_end(&mut request)
             .expect("read fake daemon request");
-        stream
-            .write_all(b"{not valid json")
-            .expect("write fake daemon response");
+        release_rx.recv().expect("release fake daemon response");
         drop(stream);
         drop(listener);
         let _ = std::fs::remove_file(socket_path);
-    })
+    });
+    (release_tx, thread)
 }
 
 fn replace_stored_test_keychain_secret_with_directory(keychain_dir: &FsPath) {

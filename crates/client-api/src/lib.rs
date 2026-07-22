@@ -4,12 +4,13 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use worklist_client_auth::{
-    Credentials, refresh_access_token, save_credentials, update_credentials_with_refresh,
-};
+use worklist_client_auth::{Credentials, refresh_credentials_if_needed};
 use worklist_client_core::{PublicError, PublicResult};
 
 pub type SealedBlob = String;
+
+const ACCESS_TOKEN_REFRESH_WINDOW_SECONDS: i64 = 60;
+const MY_TASKS_PAGE_LIMIT: i64 = 100;
 
 #[derive(Debug, Clone)]
 pub struct PublicApiClient {
@@ -53,18 +54,14 @@ impl PublicApiClient {
             .as_mut()
             .ok_or_else(|| PublicError::validation("not logged in"))?;
 
-        if credentials.access_expires_within(60) {
-            if credentials.is_refresh_expired() {
-                return Err(PublicError::validation(
-                    "session expired, please login again",
-                ));
-            }
-
-            let refresh_response =
-                refresh_access_token(&self.client, &self.base_url, &credentials.refresh_token)
-                    .await?;
-            update_credentials_with_refresh(credentials, refresh_response);
-            save_credentials(credentials)?;
+        if credentials.access_expires_within(ACCESS_TOKEN_REFRESH_WINDOW_SECONDS) {
+            *credentials = refresh_credentials_if_needed(
+                &self.client,
+                &self.base_url,
+                credentials,
+                ACCESS_TOKEN_REFRESH_WINDOW_SECONDS,
+            )
+            .await?;
         }
 
         Ok(credentials.access_token.clone())
@@ -133,12 +130,69 @@ impl PublicApiClient {
         limit: Option<i64>,
         offset: Option<i64>,
     ) -> PublicResult<MyTasksResponse> {
+        self.get_my_tasks_page(limit, offset, false).await
+    }
+
+    pub async fn get_all_my_tasks(
+        &mut self,
+        include_completed: bool,
+    ) -> PublicResult<Vec<MyTaskResponse>> {
+        let mut tasks = Vec::new();
+        let mut offset = 0;
+        let mut target_total = None;
+
+        loop {
+            let page = self
+                .get_my_tasks_page(Some(MY_TASKS_PAGE_LIMIT), Some(offset), include_completed)
+                .await?;
+            if page.offset != offset {
+                return Err(PublicError::unexpected(format!(
+                    "invalid /me/tasks page offset: requested {offset}, received {}",
+                    page.offset
+                )));
+            }
+            if page.limit <= 0 || page.total < 0 {
+                return Err(PublicError::unexpected(
+                    "invalid /me/tasks pagination metadata",
+                ));
+            }
+
+            let fetched = i64::try_from(page.tasks.len()).map_err(|_| {
+                PublicError::unexpected("/me/tasks page length exceeds the supported range")
+            })?;
+            let target_total = *target_total.get_or_insert(page.total);
+            tasks.extend(page.tasks);
+
+            let collected = i64::try_from(tasks.len()).map_err(|_| {
+                PublicError::unexpected("/me/tasks result length exceeds the supported range")
+            })?;
+            if fetched == 0 || collected >= target_total {
+                break;
+            }
+
+            offset = offset
+                .checked_add(fetched)
+                .ok_or_else(|| PublicError::unexpected("/me/tasks pagination offset overflowed"))?;
+        }
+
+        Ok(tasks)
+    }
+
+    async fn get_my_tasks_page(
+        &mut self,
+        limit: Option<i64>,
+        offset: Option<i64>,
+        include_completed: bool,
+    ) -> PublicResult<MyTasksResponse> {
         let mut params = Vec::new();
         if let Some(limit) = limit {
             params.push(format!("limit={limit}"));
         }
         if let Some(offset) = offset {
             params.push(format!("offset={offset}"));
+        }
+        if include_completed {
+            params.push("includeCompleted=true".to_string());
         }
 
         let path = if params.is_empty() {
@@ -578,12 +632,22 @@ pub struct DashboardStatsResponse {
     pub completed: i64,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DownloadAttachmentResponse {
     pub download_url: String,
     pub download_headers: std::collections::HashMap<String, String>,
     pub expires_at: DateTime<Utc>,
+}
+
+impl std::fmt::Debug for DownloadAttachmentResponse {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DownloadAttachmentResponse")
+            .field("download_url", &"<redacted>")
+            .field("download_headers", &"<redacted>")
+            .field("expires_at", &self.expires_at)
+            .finish()
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -600,12 +664,20 @@ pub struct CreateTaskRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub due_at: Option<DateTime<Utc>>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub start_at: Option<DateTime<Utc>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub section_id: Option<Uuid>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub idempotency_key: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub idempotency_commitment: Option<String>,
 }
 
 #[derive(Debug, Default, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateTaskRequest {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub expected_updated_at: Option<DateTime<Utc>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub title_ciphertext: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -621,6 +693,8 @@ pub struct UpdateTaskRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub due_at: Option<Option<DateTime<Utc>>>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub start_at: Option<Option<DateTime<Utc>>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub section_id: Option<Option<Uuid>>,
 }
 
@@ -628,9 +702,20 @@ pub struct UpdateTaskRequest {
 #[serde(rename_all = "camelCase")]
 pub struct MoveTaskRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub expected_updated_at: Option<DateTime<Utc>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub section_id: Option<Uuid>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub insert_before_task_id: Option<Uuid>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub section_boundary: Option<TaskSectionBoundary>,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum TaskSectionBoundary {
+    First,
+    Last,
 }
 
 #[derive(Debug, Default, Serialize)]
@@ -762,6 +847,7 @@ fn map_api_error(status: u16, body: &str, path: &str) -> PublicError {
             401 => PublicError::validation(format!("authentication failed: {message}")),
             403 => PublicError::validation(format!("access denied: {message}")),
             404 => PublicError::validation(format!("not found: {message} ({path})")),
+            409 => PublicError::conflict(message),
             400 | 422 => PublicError::validation(message),
             _ => PublicError::unexpected(format!("API error ({status}) for {path}: {message}")),
         };
@@ -771,6 +857,52 @@ fn map_api_error(status: u16, body: &str, path: &str) -> PublicError {
         401 => PublicError::validation("authentication failed"),
         403 => PublicError::validation("access denied"),
         404 => PublicError::validation(format!("not found: {path}")),
+        409 => PublicError::conflict(format!("conflict for {path}: {body}")),
         _ => PublicError::unexpected(format!("API error ({status}) for {path}: {body}")),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_should_redact_attachment_download_credentials_from_debug_output() {
+        let response = DownloadAttachmentResponse {
+            download_url: "https://storage.example/object?signature=secret".to_string(),
+            download_headers: std::collections::HashMap::from([(
+                "authorization".to_string(),
+                "secret-header".to_string(),
+            )]),
+            expires_at: Utc::now(),
+        };
+
+        let debug = format!("{response:?}");
+
+        assert!(debug.contains("<redacted>"));
+        assert!(!debug.contains("signature=secret"));
+        assert!(!debug.contains("secret-header"));
+    }
+
+    #[test]
+    fn test_should_map_json_conflicts_to_stable_public_error() {
+        let error = map_api_error(
+            409,
+            r#"{"error":"conflict","message":"task changed"}"#,
+            "/tasks/1",
+        );
+
+        assert!(matches!(error, PublicError::Conflict(message) if message == "task changed"));
+    }
+
+    #[test]
+    fn test_should_map_non_json_conflicts_to_stable_public_error() {
+        let error = map_api_error(409, "revision mismatch", "/tasks/1");
+
+        assert!(matches!(
+            error,
+            PublicError::Conflict(message)
+                if message == "conflict for /tasks/1: revision mismatch"
+        ));
     }
 }

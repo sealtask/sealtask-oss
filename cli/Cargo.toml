@@ -13,6 +13,7 @@ publish = ["crates-io"]
 
 [dependencies]
 base64.workspace = true
+chrono.workspace = true
 clap.workspace = true
 reqwest.workspace = true
 rpassword.workspace = true
@@ -33,13 +34,12 @@ worklist-client-runtime = { version = "0.2.0", path = "../crates/client-runtime"
 assert_cmd = "2.0"
 axum = "0.8.6"
 base64.workspace = true
-chrono.workspace = true
 hkdf.workspace = true
 opaque-ke.workspace = true
 rand_core.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 strong-box.workspace = true
-tempfile = "3.14"
+tempfile.workspace = true
 tokio.workspace = true
 uuid.workspace = true
