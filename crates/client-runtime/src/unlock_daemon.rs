@@ -844,8 +844,13 @@ mod tests {
         for _ in 0..32 {
             match connect_to_daemon(&socket_path, Duration::from_millis(20)) {
                 Ok(stream) => queued_clients.push(stream),
+                // A bound listener with a full backlog refuses further connects, but the
+                // exact signal is platform dependent: some kernels report a connect
+                // timeout or connection refusal, while others surface a POLLHUP with no
+                // socket error (`no error set after POLLHUP`). Any connect failure here
+                // means the backlog saturated, so treat them uniformly.
                 Err(PublicError::Unexpected(message))
-                    if message.contains("timed out") || message.contains("(unavailable)") =>
+                    if message.contains("failed to connect to unlock daemon") =>
                 {
                     saturated = true;
                     break;
