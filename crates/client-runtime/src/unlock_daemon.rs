@@ -847,10 +847,12 @@ mod tests {
                 // A bound listener with a full backlog refuses further connects, but the
                 // exact signal is platform dependent: some kernels report a connect
                 // timeout or connection refusal, while others surface a POLLHUP with no
-                // socket error (`no error set after POLLHUP`). Any connect failure here
-                // means the backlog saturated, so treat them uniformly.
+                // socket error (`no error set after POLLHUP`). Once at least one client
+                // is queued, any connect failure here means the backlog saturated, so
+                // treat them uniformly.
                 Err(PublicError::Unexpected(message))
-                    if message.contains("failed to connect to unlock daemon") =>
+                    if !queued_clients.is_empty()
+                        && message.contains("failed to connect to unlock daemon") =>
                 {
                     saturated = true;
                     break;
