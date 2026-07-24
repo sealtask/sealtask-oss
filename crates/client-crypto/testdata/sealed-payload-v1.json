@@ -1,0 +1,5 @@
+{
+  "version": 1,
+  "ciphertext": [0, 1, 2, 127, 128, 255],
+  "cborBase64NoPad": "omd2ZXJzaW9uAWpjaXBoZXJ0ZXh0RgABAn+A/w"
+}

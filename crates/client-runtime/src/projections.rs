@@ -51,7 +51,7 @@ struct TaskProjectionInput<'a> {
     inherited_error: Option<ReadError>,
 }
 
-fn project_attachments(
+pub(crate) fn project_attachments(
     values: Option<Vec<FlexibleValue>>,
 ) -> PublicResult<Option<Vec<AgentAttachment>>> {
     values
@@ -673,7 +673,7 @@ fn decode_work_list_text_fallbacks(
     )
 }
 
-fn make_read_error(code: &str, err: PublicError) -> ReadError {
+pub(crate) fn make_read_error(code: &str, err: PublicError) -> ReadError {
     ReadError {
         code: code.to_string(),
         message: err.to_string(),

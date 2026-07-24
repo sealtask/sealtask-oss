@@ -4,7 +4,7 @@ Open-source Rust workspace for the `sealtask` CLI and shared client crates.
 
 This repository contains the early public client surface for SealTask:
 
-- `sealtask`: command-line client for authenticating, reading decrypted work lists/tasks/comments, and creating or updating tasks and comments
+- `sealtask`: command-line client for authenticating and working with decrypted work lists, tasks, comments, notes, and task attachments
 - `sealtask-client-core`: shared public types and error handling
 - `sealtask-client-auth`: local credential storage and authentication helpers
 - `sealtask-client-api`: typed HTTP client for the SealTask API
@@ -83,6 +83,7 @@ cargo run -p sealtask -- auth keychain store --password-stdin
 cargo run -p sealtask -- --json tasks get --work-list-id <list-id> --task-id <task-id>
 cargo run -p sealtask -- --json tasks attachments read --work-list-id <list-id> --task-id <task-id> --attachment-id <attachment-id>
 cargo run -p sealtask -- --json tasks attachments download --work-list-id <list-id> --task-id <task-id> --attachment-id <attachment-id>
+cargo run -p sealtask -- --json notes list --work-list-id <list-id>
 ```
 
 ## Agent task automation
@@ -168,6 +169,93 @@ to the final section and `reopen` moves it to the first section. These commands
 require a work list with at least two sections and are idempotent when the task
 already has the requested state.
 
+### Notes
+
+Notes support decrypted list/get plus encrypted create/update/delete. Shared notes
+use the work-list key; `--private` creates a per-note key that is wrapped with
+the current user's data key.
+
+```bash
+cargo run -p sealtask -- --json notes create \
+  --work-list-id <list-id> \
+  --title 'Release context' \
+  --body 'Keep this with the project.' \
+  --idempotency-key 'agent:run-42:release-context'
+
+cargo run -p sealtask -- --json notes create \
+  --work-list-id <list-id> \
+  --title 'Private scratchpad' \
+  --private \
+  --idempotency-key 'agent:run-42:private-scratchpad'
+
+cargo run -p sealtask -- --json notes update \
+  --work-list-id <list-id> --note-id <note-id> \
+  --title 'Revised title' --body 'Revised body'
+```
+
+Create and update also accept camelCase JSON through `--input-file` or
+`--input-stdin`. Updates preserve encrypted mentions, attachment references,
+and client metadata that are not exposed as editing flags.
+
+Note creation requires an `idempotencyKey` (or `--idempotency-key`) that stays
+stable for every retry of that logical note. SealTask commits the user-scoped
+key with an opaque work-list-keyed semantic commitment, so a retry returns the
+original note even though encryption uses a fresh nonce. Reusing a key for
+different note content, privacy, project, or creator returns a conflict. Keep
+the key in the automation state before invoking the CLI; this is what makes a
+retry safe after Ctrl-C, a lost response, or a process crash.
+
+SDK callers that use `sealtask-client-api` directly must use its documented
+`note_transport` module. Note HTTP methods accept and return sealed,
+model-specific `EncodedNoteRequest<T>` and `EncodedNoteResponse<T>` wrappers;
+their synchronous codecs are intended to run on a caller-owned bounded blocking
+executor. `sealtask-client-runtime` supplies that admission automatically and
+never performs maximum-size note JSON work on a Tokio worker.
+
+### Task attachment uploads and deletion
+
+```bash
+cargo run -p sealtask -- --json tasks attachments upload \
+  --work-list-id <list-id> --task-id <task-id> \
+  --file ./release-notes.md
+
+cargo run -p sealtask -- --json tasks attachments delete \
+  --work-list-id <list-id> --task-id <task-id> \
+  --attachment-id <attachment-id>
+```
+
+Upload encrypts file bytes locally with a fresh key, uploads only ciphertext,
+then stores the wrapped file reference inside the encrypted task payload. Files
+must be non-empty and fit within the API's 10 MiB ciphertext limit. `--file-name`
+and `--content-type` override the inferred metadata. Delete removes the
+encrypted task reference and attachment ID together; the API then removes the
+orphaned attachment and permanently seals its storage key against replay.
+
+Upload paths are resolved only beneath the CLI's already-open current working
+directory. They must be relative, must name regular files directly, and cannot
+contain parent traversal; absolute paths and symbolic links (including
+intermediate directory links) are rejected.
+Pressing Ctrl-C is observed before the upload and between its bounded
+side-effecting stages. A storage PUT that has already started is awaited to its
+bounded result before the CLI makes a bounded attempt to release the
+server-side reservation.
+
+Presigned upload and download capabilities are accepted only for explicitly
+trusted storage origins. The API origin is trusted automatically. If your
+deployment signs URLs on another origin, repeat `--storage-origin` or set a
+comma-separated `SEALTASK_STORAGE_ORIGINS` value:
+
+```bash
+SEALTASK_STORAGE_ORIGINS=https://objects.example \
+  cargo run -p sealtask -- tasks attachments upload \
+    --work-list-id <list-id> --task-id <task-id> --file ./release-notes.md
+```
+
+Storage transfers require HTTPS, reject redirects and unsafe network targets,
+and use deadlines capped by the signed URL's expiry. Loopback HTTP storage is
+enabled only when the configured API URL is itself loopback HTTP, for local
+development and tests.
+
 ### JSON process contract
 
 `sealtask info` reports `"jsonContractVersion": 1`. For ordinary commands run
@@ -209,6 +297,10 @@ Set a custom API URL with `SEALTASK_API_URL` if you are not targeting the defaul
 SEALTASK_API_URL=https://your-sealtask.example cargo run -p sealtask -- me
 ```
 
+Library callers construct the runtime with `RuntimeClient::new(api_url)?` for
+same-origin storage or `RuntimeClient::with_storage_origins(api_url, origins)?`
+for an explicit cross-origin storage allowlist.
+
 The CLI stores credentials and local unlock state in the `.sealtask`
 configuration directory.
 
@@ -220,7 +312,9 @@ configuration directory.
 - Password unlock supports legacy password-wrapped version 1 accounts and OPAQUE export-key version 2 accounts. Version 2 password unlock contacts the authenticated API; later daemon- or keychain-backed commands do not repeat that exchange.
 - `tasks get` includes typed attachment metadata and lists attachment IDs in table output.
 - `tasks attachments read` prints readable attachments to stdout, including plain text passthrough and DOCX rendered as Markdown; with `--json` it emits the rendered content plus attachment metadata.
-- `tasks attachments download` decrypts binary attachments and saves them locally; if `--output` is omitted it writes `./<attachment-file-name>`.
+- `tasks attachments download` decrypts binary attachments and saves them locally; if `--output` is omitted it writes `./<attachment-file-name>`. Output paths are current-working-directory-relative, reject absolute paths, parent traversal, and symbolic-link/reparse-point escapes, and do not overwrite an existing file unless `--force` is supplied.
+- `tasks attachments upload` and `delete` update both the encrypted task payload and the API attachment ID set with optimistic concurrency protection.
+- `notes` exposes decrypted list/get and encrypted create/update/delete for shared and private notes.
 - The current workspace targets encrypted SealTask flows, so authenticated reads and writes still depend on credentials, local key unwrap, and workspace keys from a live SealTask deployment.
 - CI for this repository runs from `.github/workflows/ci.yml`.
 - Crates.io release steps are documented in [`RELEASE.md`](./RELEASE.md), with a helper script at [`scripts/publish-crates.sh`](./scripts/publish-crates.sh).

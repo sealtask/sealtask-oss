@@ -1,3 +1,4 @@
+use std::collections::{HashMap, HashSet};
 use std::io::{Read, Write};
 use std::path::Path as FsPath;
 use std::process::{Child, Stdio};
@@ -6,9 +7,10 @@ use std::sync::{Arc, Mutex};
 use assert_cmd::Command;
 use axum::{
     Json, Router,
+    body::Bytes,
     extract::{Path, Query, State},
     http::{HeaderMap, StatusCode},
-    routing::{get, patch, post},
+    routing::{get, patch, post, put},
 };
 use base64::Engine as _;
 use base64::engine::general_purpose::STANDARD_NO_PAD;
@@ -23,12 +25,15 @@ use sealtask_client_api::{AuditPatchFieldRequest, AuditPatchRequest};
 use sealtask_client_auth::{ClientCipherSuite, Credentials};
 use sealtask_client_crypto::{
     ATTACHMENT_BLOB_CONTEXT, ATTACHMENT_BLOB_CONTEXT_LABEL, ATTACHMENT_BLOB_REF_VERSION,
-    ATTACHMENT_REF_CONTEXT, AttachmentBlobRef, CommentPayloadBody, FlexibleValue,
-    OPAQUE_EXPORT_KEY_BYTES, SealedPayload, StrongBoxKeyRing, SymmetricKey, TaskPayloadBody,
-    USER_DATA_KEY_CONTEXT, USER_DATA_KEY_OPAQUE_CONTEXT, USER_DATA_KEY_OPAQUE_WRAP_INFO,
-    WORK_LIST_MEMBERSHIP_CONTEXT, WORK_LIST_PAYLOAD_CONTEXT, build_comment_payload_envelope,
-    build_task_payload_envelope, compute_payload_proof, decrypt_comment_payload,
-    decrypt_task_payload, derive_payload_binding_key, encrypt_comment_payload,
+    AttachmentBlobRef, CommentPayloadBody, FlexibleValue, NOTE_TITLE_CONTEXT,
+    OPAQUE_EXPORT_KEY_BYTES, SealedPayload, StrongBoxKeyRing, SymmetricKey, TASK_TITLE_CONTEXT,
+    TaskPayloadBody, USER_DATA_KEY_CONTEXT, USER_DATA_KEY_OPAQUE_CONTEXT,
+    USER_DATA_KEY_OPAQUE_WRAP_INFO, WORK_LIST_MEMBERSHIP_CONTEXT, WORK_LIST_PAYLOAD_CONTEXT,
+    build_comment_payload_envelope, build_task_payload_envelope, compute_payload_proof,
+    decode_attachment_blob_key, decrypt_attachment_bytes, decrypt_comment_payload,
+    decrypt_encrypted_text_value, decrypt_note_key, decrypt_note_payload, decrypt_task_payload,
+    derive_payload_binding_key,
+    encode_attachment_blob_key as encode_production_attachment_blob_key, encrypt_comment_payload,
     encrypt_task_payload, flexible_value_to_json, json_value_to_flexible, plaintext_rich_text,
     seal_text_value, serialize_to_cbor,
 };
@@ -456,6 +461,279 @@ async fn cli_proven_flows_round_trip_through_mock_api() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn test_should_round_trip_shared_and_private_notes_through_encrypted_api_contract() {
+    let fixture = TestFixture::new();
+    let state = Arc::new(Mutex::new(TestState::new(fixture.clone())));
+    let server = spawn_server(state.clone()).await;
+    let home = TempDir::new().expect("temp home");
+    seed_credentials(home.path(), &fixture, &server.base_url);
+
+    let create = run_cli(
+        home.path(),
+        &server.base_url,
+        &[
+            "--json",
+            "notes",
+            "create",
+            "--work-list-id",
+            &fixture.work_list_id.to_string(),
+            "--title",
+            "Private launch notes",
+            "--body",
+            "First paragraph\n\nSecond paragraph",
+            "--private",
+            "--idempotency-key",
+            "agent:notes:private-launch",
+            "--password-stdin",
+        ],
+        Some(&fixture.password),
+    );
+    assert!(
+        create.status.success(),
+        "note create failed: {}",
+        create.stderr
+    );
+    let created = parse_stdout_json(&create.stdout);
+    let note_id = Uuid::parse_str(created["id"].as_str().expect("note id")).expect("note UUID");
+    assert_eq!(created["title"], "Private launch notes");
+    assert_eq!(
+        created["bodyMarkdown"],
+        "First paragraph\n\nSecond paragraph"
+    );
+    assert_eq!(created["isPrivate"], true);
+    assert!(created.get("titleCiphertext").is_none());
+    {
+        let state = state.lock().expect("state lock");
+        let (commitment, stored_note_id) = state
+            .note_create_operations
+            .get("agent:notes:private-launch")
+            .expect("explicit note idempotency key reached the API");
+        assert_eq!(*stored_note_id, note_id);
+        assert_eq!(commitment.len(), 43);
+    }
+
+    let list = run_cli(
+        home.path(),
+        &server.base_url,
+        &[
+            "--json",
+            "notes",
+            "list",
+            "--work-list-id",
+            &fixture.work_list_id.to_string(),
+            "--password-stdin",
+        ],
+        Some(&fixture.password),
+    );
+    assert!(list.status.success(), "note list failed: {}", list.stderr);
+    let listed = parse_stdout_json(&list.stdout);
+    assert_eq!(listed.as_array().expect("notes array").len(), 1);
+    assert_eq!(listed[0]["id"], note_id.to_string());
+
+    let update = run_cli(
+        home.path(),
+        &server.base_url,
+        &[
+            "--json",
+            "notes",
+            "update",
+            "--work-list-id",
+            &fixture.work_list_id.to_string(),
+            "--note-id",
+            &note_id.to_string(),
+            "--title",
+            "Updated private notes",
+            "--body",
+            "Updated body",
+            "--password-stdin",
+        ],
+        Some(&fixture.password),
+    );
+    assert!(
+        update.status.success(),
+        "note update failed: {}",
+        update.stderr
+    );
+    let updated = parse_stdout_json(&update.stdout);
+    assert_eq!(updated["title"], "Updated private notes");
+    assert_eq!(updated["bodyMarkdown"], "Updated body");
+
+    let get = run_cli(
+        home.path(),
+        &server.base_url,
+        &[
+            "--json",
+            "notes",
+            "get",
+            "--work-list-id",
+            &fixture.work_list_id.to_string(),
+            "--note-id",
+            &note_id.to_string(),
+            "--password-stdin",
+        ],
+        Some(&fixture.password),
+    );
+    assert!(get.status.success(), "note get failed: {}", get.stderr);
+    assert_eq!(
+        parse_stdout_json(&get.stdout)["title"],
+        "Updated private notes"
+    );
+
+    let delete = run_cli(
+        home.path(),
+        &server.base_url,
+        &[
+            "--json",
+            "notes",
+            "delete",
+            "--work-list-id",
+            &fixture.work_list_id.to_string(),
+            "--note-id",
+            &note_id.to_string(),
+        ],
+        None,
+    );
+    assert!(
+        delete.status.success(),
+        "note delete failed: {}",
+        delete.stderr
+    );
+    assert_eq!(parse_stdout_json(&delete.stdout)["deleted"], true);
+    assert!(state.lock().expect("state lock").notes.is_empty());
+
+    let shared = run_cli(
+        home.path(),
+        &server.base_url,
+        &[
+            "--json",
+            "notes",
+            "create",
+            "--work-list-id",
+            &fixture.work_list_id.to_string(),
+            "--title",
+            "Shared context",
+            "--idempotency-key",
+            "agent:notes:shared-context",
+            "--password-stdin",
+        ],
+        Some(&fixture.password),
+    );
+    assert!(
+        shared.status.success(),
+        "shared note create failed: {}",
+        shared.stderr
+    );
+    let shared = parse_stdout_json(&shared.stdout);
+    assert_eq!(shared["title"], "Shared context");
+    assert_eq!(shared["isPrivate"], false);
+    assert!(shared["bodyMarkdown"].is_null());
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn test_should_upload_encrypt_attach_and_delete_task_attachment() {
+    let fixture = TestFixture::new();
+    let state = Arc::new(Mutex::new(TestState::new(fixture.clone())));
+    let server = spawn_server(state.clone()).await;
+    let home = TempDir::new().expect("temp home");
+    seed_credentials(home.path(), &fixture, &server.base_url);
+    let plaintext = b"# Uploaded\n\nEncrypted attachment body\n";
+    let upload_path = home.path().join("agent-notes.md");
+    std::fs::write(&upload_path, plaintext).expect("write upload fixture");
+
+    let upload = run_cli(
+        home.path(),
+        &server.base_url,
+        &[
+            "--json",
+            "tasks",
+            "attachments",
+            "upload",
+            "--work-list-id",
+            &fixture.work_list_id.to_string(),
+            "--task-id",
+            &fixture.task_id.to_string(),
+            "--file",
+            "agent-notes.md",
+            "--password-stdin",
+        ],
+        Some(&fixture.password),
+    );
+    assert!(
+        upload.status.success(),
+        "attachment upload failed: {}",
+        upload.stderr
+    );
+    let uploaded = parse_stdout_json(&upload.stdout);
+    let attachment_id = Uuid::parse_str(uploaded["id"].as_str().expect("uploaded attachment id"))
+        .expect("attachment UUID");
+    assert_eq!(uploaded["fileName"], "agent-notes.md");
+    assert_eq!(uploaded["contentType"], "text/markdown");
+    assert!(uploaded.get("blobKey").is_none());
+
+    {
+        let state = state.lock().expect("state lock");
+        let value = state
+            .current_task_body
+            .attachments
+            .as_ref()
+            .expect("task attachments")
+            .iter()
+            .find(|value| {
+                flexible_value_to_json((*value).clone())["id"] == attachment_id.to_string()
+            })
+            .expect("uploaded attachment payload");
+        let json = flexible_value_to_json(value.clone());
+        let blob_key = json["blob_key"]
+            .as_array()
+            .expect("blob key bytes")
+            .iter()
+            .map(|value| value.as_u64().expect("blob byte") as u8)
+            .collect::<Vec<_>>();
+        let blob_ref = decode_attachment_blob_key(&fixture.list_key, &blob_key)
+            .expect("decode uploaded blob key");
+        let ciphertext = state
+            .attachment_uploads
+            .get(&attachment_id)
+            .expect("uploaded ciphertext");
+        assert_ne!(ciphertext.as_slice(), plaintext);
+        assert_eq!(
+            decrypt_attachment_bytes(ciphertext, &blob_ref.file_key, Some(&blob_ref.enc_context),)
+                .expect("decrypt uploaded ciphertext"),
+            plaintext
+        );
+    }
+
+    let delete = run_cli(
+        home.path(),
+        &server.base_url,
+        &[
+            "--json",
+            "tasks",
+            "attachments",
+            "delete",
+            "--work-list-id",
+            &fixture.work_list_id.to_string(),
+            "--task-id",
+            &fixture.task_id.to_string(),
+            "--attachment-id",
+            &attachment_id.to_string(),
+            "--password-stdin",
+        ],
+        Some(&fixture.password),
+    );
+    assert!(
+        delete.status.success(),
+        "attachment delete failed: {}",
+        delete.stderr
+    );
+    assert_eq!(parse_stdout_json(&delete.stdout)["deleted"], true);
+    let state = state.lock().expect("state lock");
+    assert!(!task_attachment_ids(&state.current_task_body).contains(&attachment_id));
+    assert!(state.deleted_attachment_ids.contains(&attachment_id));
+    assert!(!state.attachment_uploads.contains_key(&attachment_id));
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_should_preserve_cli_task_lifecycle_fields_checklist_completion_and_revision_contract()
 {
     let fixture = TestFixture::new();
@@ -868,11 +1146,9 @@ async fn test_should_emit_strict_json_documents_for_empty_task_collections_and_c
     assert!(output.stdout.is_empty());
     let error = parse_stderr_json(&output.stderr);
     assert_eq!(error["error"]["code"], "conflict");
-    assert!(
-        error["error"]["message"]
-            .as_str()
-            .expect("error message")
-            .contains("task changed")
+    assert_eq!(
+        error["error"]["message"],
+        "request conflicted with current server state"
     );
     let state = state.lock().expect("state lock");
     assert!(state.updated_task_body.is_none());
@@ -1353,8 +1629,9 @@ async fn cli_reads_surface_attachment_projection_errors() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn cli_tasks_help_uses_explicit_verbs() {
+    let home = TempDir::new().expect("temp home");
     let output = run_cli(
-        TempDir::new().expect("temp home").path(),
+        home.path(),
         "https://sealtask.com",
         &["tasks", "--help"],
         None,
@@ -1369,6 +1646,28 @@ async fn cli_tasks_help_uses_explicit_verbs() {
     assert!(output.stdout.contains("get"));
     assert!(output.stdout.contains("create"));
     assert!(output.stdout.contains("update"));
+
+    let attachment_help = run_cli(
+        home.path(),
+        "https://sealtask.com",
+        &["tasks", "attachments", "--help"],
+        None,
+    );
+    assert!(attachment_help.status.success());
+    for command in ["upload", "delete", "read", "download"] {
+        assert!(attachment_help.stdout.contains(command));
+    }
+
+    let notes_help = run_cli(
+        home.path(),
+        "https://sealtask.com",
+        &["notes", "--help"],
+        None,
+    );
+    assert!(notes_help.status.success());
+    for command in ["list", "get", "create", "update", "delete"] {
+        assert!(notes_help.stdout.contains(command));
+    }
 }
 
 #[test]
@@ -1698,7 +1997,8 @@ async fn cli_download_respects_output_path_and_force() {
     let download_dir = TempDir::new().expect("download dir");
     seed_credentials(home.path(), &fixture, &server.base_url);
 
-    let custom_path = download_dir.path().join("nested").join("custom.bin");
+    let custom_relative_path = std::path::Path::new("nested").join("custom.bin");
+    let custom_path = download_dir.path().join(&custom_relative_path);
     std::fs::create_dir_all(custom_path.parent().expect("parent")).expect("create parent");
     std::fs::write(&custom_path, b"existing").expect("write existing");
 
@@ -1717,7 +2017,7 @@ async fn cli_download_respects_output_path_and_force() {
             "--attachment-id",
             &fixture.binary_attachment.id.to_string(),
             "--output",
-            custom_path.to_str().expect("utf8 path"),
+            custom_relative_path.to_str().expect("utf8 path"),
             "--password-stdin",
         ],
         Some(&fixture.password),
@@ -1745,7 +2045,7 @@ async fn cli_download_respects_output_path_and_force() {
             "--attachment-id",
             &fixture.binary_attachment.id.to_string(),
             "--output",
-            custom_path.to_str().expect("utf8 path"),
+            custom_relative_path.to_str().expect("utf8 path"),
             "--force",
             "--password-stdin",
         ],
@@ -1763,7 +2063,10 @@ async fn cli_download_respects_output_path_and_force() {
     );
     let result_json: Value = parse_stdout_json(&second_output.stdout);
     assert_eq!(result_json["fileName"], "spec.pdf");
-    assert_eq!(result_json["outputPath"], custom_path.display().to_string());
+    assert_eq!(
+        result_json["outputPath"],
+        custom_relative_path.display().to_string()
+    );
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -3715,6 +4018,7 @@ struct TestFixture {
     owner_user_id: Uuid,
     workspace_id: Uuid,
     mentioned_user_id: Uuid,
+    data_key: SymmetricKey,
     list_key: SymmetricKey,
     binding_key: SymmetricKey,
     opaque_setup: Vec<u8>,
@@ -3724,7 +4028,6 @@ struct TestFixture {
     work_list_key_ciphertext: String,
     work_list_payload_ciphertext: String,
     task_title_ciphertext: String,
-    task_payload_ciphertext: String,
     comment_body_ciphertext: String,
     existing_task_body: TaskPayloadBody,
     existing_comment_body: CommentPayloadBody,
@@ -3745,6 +4048,7 @@ struct TestState {
     created_task_request: Option<Value>,
     updated_task_body: Option<TaskPayloadBody>,
     updated_task_request: Option<Value>,
+    current_task_body: TaskPayloadBody,
     moved_task_body: Option<MoveTaskRequestBody>,
     task_section_id: Option<Uuid>,
     task_is_completed: bool,
@@ -3775,11 +4079,29 @@ struct TestState {
     invalid_comment_attachment_metadata: bool,
     attachment_size_mismatch: bool,
     attachment_download_requests: usize,
+    attachment_upload_expected_bytes: HashMap<Uuid, u64>,
+    attachment_uploads: HashMap<Uuid, Vec<u8>>,
+    completed_attachment_ids: HashSet<Uuid>,
+    deleted_attachment_ids: Vec<Uuid>,
+    notes: HashMap<Uuid, StoredNote>,
+    note_create_operations: HashMap<String, (String, Uuid)>,
     base_url: Option<String>,
+}
+
+#[derive(Clone)]
+struct StoredNote {
+    id: Uuid,
+    title_ciphertext: String,
+    payload_ciphertext: String,
+    is_private: bool,
+    note_key_ciphertext: Option<String>,
+    created_at: DateTime<Utc>,
+    updated_at: DateTime<Utc>,
 }
 
 impl TestState {
     fn new(fixture: TestFixture) -> Self {
+        let current_task_body = fixture.existing_task_body.clone();
         Self {
             current_access_token: fixture.access_token.clone(),
             current_refresh_token: fixture.refresh_token.clone(),
@@ -3791,6 +4113,7 @@ impl TestState {
             created_task_request: None,
             updated_task_body: None,
             updated_task_request: None,
+            current_task_body,
             moved_task_body: None,
             task_section_id: None,
             task_is_completed: false,
@@ -3821,6 +4144,12 @@ impl TestState {
             invalid_comment_attachment_metadata: false,
             attachment_size_mismatch: false,
             attachment_download_requests: 0,
+            attachment_upload_expected_bytes: HashMap::new(),
+            attachment_uploads: HashMap::new(),
+            completed_attachment_ids: HashSet::new(),
+            deleted_attachment_ids: Vec::new(),
+            notes: HashMap::new(),
+            note_create_operations: HashMap::new(),
             base_url: None,
         }
     }
@@ -3934,12 +4263,6 @@ impl TestFixture {
                 "template_id": Uuid::now_v7().to_string()
             }))),
         };
-        let task_payload_ciphertext = encrypt_task_payload(
-            &build_task_payload_envelope(existing_task_body.clone(), 1),
-            &list_key,
-        )
-        .expect("task payload")
-        .base64;
         let task_title_ciphertext = seal_text_value("Existing task").expect("task title").base64;
 
         let existing_comment_body = CommentPayloadBody {
@@ -3977,6 +4300,7 @@ impl TestFixture {
             owner_user_id,
             workspace_id,
             mentioned_user_id,
+            data_key,
             list_key,
             binding_key,
             opaque_setup: opaque_account.setup,
@@ -3986,7 +4310,6 @@ impl TestFixture {
             work_list_key_ciphertext,
             work_list_payload_ciphertext,
             task_title_ciphertext,
-            task_payload_ciphertext,
             comment_body_ciphertext,
             existing_task_body,
             existing_comment_body,
@@ -4015,6 +4338,44 @@ struct UpdateTaskRequestBody {
     title_ciphertext_proof: Option<String>,
     payload_ciphertext: Option<String>,
     payload_ciphertext_proof: Option<String>,
+    attachment_ids: Option<Vec<Uuid>>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CreateNoteRequestBody {
+    idempotency_key: String,
+    idempotency_commitment: String,
+    title_ciphertext: String,
+    title_ciphertext_proof: String,
+    payload_ciphertext: String,
+    payload_ciphertext_proof: String,
+    #[serde(default)]
+    is_private: bool,
+    note_key_ciphertext: Option<String>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct UpdateNoteRequestBody {
+    expected_updated_at: Option<DateTime<Utc>>,
+    title_ciphertext: Option<String>,
+    title_ciphertext_proof: Option<String>,
+    payload_ciphertext: Option<String>,
+    payload_ciphertext_proof: Option<String>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct InitiateAttachmentRequestBody {
+    operation_id: Uuid,
+    ciphertext_bytes: u64,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CompleteAttachmentRequestBody {
+    ciphertext_bytes: u64,
 }
 
 #[derive(Deserialize)]
@@ -4085,6 +4446,23 @@ async fn spawn_server(state: Arc<Mutex<TestState>>) -> TestServer {
         .route("/work-lists/{id}/archive", post(archive_work_list))
         .route("/work-lists/{id}/unarchive", post(unarchive_work_list))
         .route("/work-lists/{id}/tasks", get(list_tasks).post(create_task))
+        .route("/work-lists/{id}/notes", get(list_notes).post(create_note))
+        .route(
+            "/work-lists/{id}/notes/{note_id}",
+            get(get_note).patch(update_note).delete(delete_note),
+        )
+        .route(
+            "/work-lists/{id}/attachments",
+            post(initiate_attachment_upload),
+        )
+        .route(
+            "/work-lists/{id}/attachments/{attachment_id}/complete",
+            post(complete_attachment_upload),
+        )
+        .route(
+            "/work-lists/{id}/attachments/{attachment_id}",
+            axum::routing::delete(delete_attachment),
+        )
         .route(
             "/work-lists/{id}/attachments/{attachment_id}/download",
             get(get_attachment_download),
@@ -4112,6 +4490,7 @@ async fn spawn_server(state: Arc<Mutex<TestState>>) -> TestServer {
         )
         .route("/me/tasks", get(list_my_tasks))
         .route("/downloads/{attachment_id}", get(download_attachment_bytes))
+        .route("/uploads/{attachment_id}", put(upload_attachment_bytes))
         .with_state(state.clone());
 
     let listener = TcpListener::bind("127.0.0.1:0")
@@ -4401,6 +4780,250 @@ async fn unarchive_work_list(
     (StatusCode::OK, Json(payload))
 }
 
+async fn list_notes(
+    Path(work_list_id): Path<Uuid>,
+    State(state): State<Arc<Mutex<TestState>>>,
+    headers: HeaderMap,
+) -> (StatusCode, Json<Value>) {
+    authorize(&state, &headers);
+    let state = state.lock().expect("state lock");
+    assert_eq!(work_list_id, state.fixture.work_list_id);
+    let notes = state
+        .notes
+        .values()
+        .map(|note| note_response_json(&state, note))
+        .collect::<Vec<_>>();
+    (StatusCode::OK, Json(json!({ "notes": notes })))
+}
+
+async fn get_note(
+    Path((work_list_id, note_id)): Path<(Uuid, Uuid)>,
+    State(state): State<Arc<Mutex<TestState>>>,
+    headers: HeaderMap,
+) -> (StatusCode, Json<Value>) {
+    authorize(&state, &headers);
+    let state = state.lock().expect("state lock");
+    assert_eq!(work_list_id, state.fixture.work_list_id);
+    match state.notes.get(&note_id) {
+        Some(note) => (StatusCode::OK, Json(note_response_json(&state, note))),
+        None => (
+            StatusCode::NOT_FOUND,
+            Json(json!({ "error": "not_found", "message": "note not found" })),
+        ),
+    }
+}
+
+async fn create_note(
+    Path(work_list_id): Path<Uuid>,
+    State(state): State<Arc<Mutex<TestState>>>,
+    headers: HeaderMap,
+    Json(payload): Json<CreateNoteRequestBody>,
+) -> (StatusCode, Json<Value>) {
+    authorize(&state, &headers);
+    let mut state = state.lock().expect("state lock");
+    assert_eq!(work_list_id, state.fixture.work_list_id);
+    validate_note_ciphertexts(
+        &state.fixture,
+        payload.is_private,
+        payload.note_key_ciphertext.as_deref(),
+        &payload.title_ciphertext,
+        &payload.title_ciphertext_proof,
+        &payload.payload_ciphertext,
+        &payload.payload_ciphertext_proof,
+    );
+    if let Some((commitment, note_id)) = state
+        .note_create_operations
+        .get(&payload.idempotency_key)
+        .cloned()
+    {
+        if commitment != payload.idempotency_commitment {
+            return (
+                StatusCode::CONFLICT,
+                Json(json!({
+                    "error": "conflict",
+                    "message": "idempotencyKey was already used for a different note create"
+                })),
+            );
+        }
+        let note = state.notes.get(&note_id).expect("idempotent note remains");
+        return (StatusCode::OK, Json(note_response_json(&state, note)));
+    }
+    let now = Utc::now();
+    let note = StoredNote {
+        id: Uuid::now_v7(),
+        title_ciphertext: payload.title_ciphertext,
+        payload_ciphertext: payload.payload_ciphertext,
+        is_private: payload.is_private,
+        note_key_ciphertext: payload.note_key_ciphertext,
+        created_at: now,
+        updated_at: now,
+    };
+    let response = note_response_json(&state, &note);
+    state.note_create_operations.insert(
+        payload.idempotency_key,
+        (payload.idempotency_commitment, note.id),
+    );
+    state.notes.insert(note.id, note);
+    (StatusCode::CREATED, Json(response))
+}
+
+async fn update_note(
+    Path((work_list_id, note_id)): Path<(Uuid, Uuid)>,
+    State(state): State<Arc<Mutex<TestState>>>,
+    headers: HeaderMap,
+    Json(payload): Json<UpdateNoteRequestBody>,
+) -> (StatusCode, Json<Value>) {
+    authorize(&state, &headers);
+    let mut state = state.lock().expect("state lock");
+    assert_eq!(work_list_id, state.fixture.work_list_id);
+    let Some(current) = state.notes.get(&note_id).cloned() else {
+        return (
+            StatusCode::NOT_FOUND,
+            Json(json!({ "error": "not_found", "message": "note not found" })),
+        );
+    };
+    assert_eq!(payload.expected_updated_at, Some(current.updated_at));
+    let title_ciphertext = payload
+        .title_ciphertext
+        .unwrap_or_else(|| current.title_ciphertext.clone());
+    let payload_ciphertext = payload
+        .payload_ciphertext
+        .unwrap_or_else(|| current.payload_ciphertext.clone());
+    validate_note_ciphertexts(
+        &state.fixture,
+        current.is_private,
+        current.note_key_ciphertext.as_deref(),
+        &title_ciphertext,
+        payload
+            .title_ciphertext_proof
+            .as_deref()
+            .expect("updated note title proof"),
+        &payload_ciphertext,
+        payload
+            .payload_ciphertext_proof
+            .as_deref()
+            .expect("updated note payload proof"),
+    );
+    let note = StoredNote {
+        title_ciphertext,
+        payload_ciphertext,
+        updated_at: current.updated_at + Duration::milliseconds(1),
+        ..current
+    };
+    let response = note_response_json(&state, &note);
+    state.notes.insert(note.id, note);
+    (StatusCode::OK, Json(response))
+}
+
+async fn delete_note(
+    Path((work_list_id, note_id)): Path<(Uuid, Uuid)>,
+    State(state): State<Arc<Mutex<TestState>>>,
+    headers: HeaderMap,
+    _payload: Option<Json<DeleteRequestBody>>,
+) -> StatusCode {
+    authorize(&state, &headers);
+    let mut state = state.lock().expect("state lock");
+    assert_eq!(work_list_id, state.fixture.work_list_id);
+    if state.notes.remove(&note_id).is_some() {
+        StatusCode::NO_CONTENT
+    } else {
+        StatusCode::NOT_FOUND
+    }
+}
+
+async fn initiate_attachment_upload(
+    Path(work_list_id): Path<Uuid>,
+    State(state): State<Arc<Mutex<TestState>>>,
+    headers: HeaderMap,
+    Json(payload): Json<InitiateAttachmentRequestBody>,
+) -> (StatusCode, Json<Value>) {
+    authorize(&state, &headers);
+    let mut state = state.lock().expect("state lock");
+    assert_eq!(work_list_id, state.fixture.work_list_id);
+    assert!(!payload.operation_id.is_nil());
+    let attachment_id = Uuid::now_v7();
+    state
+        .attachment_upload_expected_bytes
+        .insert(attachment_id, payload.ciphertext_bytes);
+    let base_url = state.base_url.clone().expect("base URL");
+    (
+        StatusCode::CREATED,
+        Json(json!({
+            "attachmentId": attachment_id,
+            "uploadUrl": format!("{base_url}/uploads/{attachment_id}"),
+            "uploadHeaders": { "content-type": "application/octet-stream" },
+            "expiresAt": Utc::now() + Duration::minutes(5)
+        })),
+    )
+}
+
+async fn upload_attachment_bytes(
+    Path(attachment_id): Path<Uuid>,
+    State(state): State<Arc<Mutex<TestState>>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> StatusCode {
+    assert_eq!(
+        headers
+            .get("content-type")
+            .and_then(|value| value.to_str().ok()),
+        Some("application/octet-stream")
+    );
+    let mut state = state.lock().expect("state lock");
+    assert_eq!(
+        state.attachment_upload_expected_bytes.get(&attachment_id),
+        Some(&(body.len() as u64))
+    );
+    state
+        .attachment_uploads
+        .insert(attachment_id, body.to_vec());
+    StatusCode::OK
+}
+
+async fn complete_attachment_upload(
+    Path((work_list_id, attachment_id)): Path<(Uuid, Uuid)>,
+    State(state): State<Arc<Mutex<TestState>>>,
+    headers: HeaderMap,
+    Json(payload): Json<CompleteAttachmentRequestBody>,
+) -> StatusCode {
+    authorize(&state, &headers);
+    let mut state = state.lock().expect("state lock");
+    assert_eq!(work_list_id, state.fixture.work_list_id);
+    assert_eq!(
+        state.attachment_upload_expected_bytes.get(&attachment_id),
+        Some(&payload.ciphertext_bytes)
+    );
+    assert_eq!(
+        state
+            .attachment_uploads
+            .get(&attachment_id)
+            .map(|bytes| bytes.len() as u64),
+        Some(payload.ciphertext_bytes)
+    );
+    state.completed_attachment_ids.insert(attachment_id);
+    StatusCode::NO_CONTENT
+}
+
+async fn delete_attachment(
+    Path((work_list_id, attachment_id)): Path<(Uuid, Uuid)>,
+    State(state): State<Arc<Mutex<TestState>>>,
+    headers: HeaderMap,
+) -> StatusCode {
+    authorize(&state, &headers);
+    let mut state = state.lock().expect("state lock");
+    assert_eq!(work_list_id, state.fixture.work_list_id);
+    if task_attachment_ids(&state.current_task_body).contains(&attachment_id) {
+        return StatusCode::CONFLICT;
+    }
+    state
+        .attachment_upload_expected_bytes
+        .remove(&attachment_id);
+    state.attachment_uploads.remove(&attachment_id);
+    state.completed_attachment_ids.remove(&attachment_id);
+    state.deleted_attachment_ids.push(attachment_id);
+    StatusCode::NO_CONTENT
+}
+
 async fn get_attachment_download(
     Path((work_list_id, attachment_id)): Path<(Uuid, Uuid)>,
     State(state): State<Arc<Mutex<TestState>>>,
@@ -4417,7 +5040,7 @@ async fn get_attachment_download(
         Json(json!({
             "downloadUrl": format!("{base_url}/downloads/{}", attachment.id),
             "downloadHeaders": {
-                "x-attachment-token": "ok"
+                "if-match": "test-etag"
             },
             "expiresAt": Utc::now() + Duration::minutes(5)
         })),
@@ -4594,6 +5217,11 @@ async fn create_task(
 
     let decrypted = decrypt_task_payload(&state.fixture.list_key, &payload_bytes)
         .expect("decrypt created task");
+    assert_eq!(
+        decrypt_encrypted_text_value(&title_bytes, &state.fixture.list_key, TASK_TITLE_CONTEXT,)
+            .expect("decrypt created task title"),
+        decrypted.body.title
+    );
     state.created_task_body = Some(decrypted.body.clone());
 
     let response = json!({
@@ -4660,6 +5288,32 @@ async fn update_task(
         let decrypted = decrypt_task_payload(&state.fixture.list_key, &payload_bytes)
             .expect("decrypt updated task");
         state.updated_task_body = Some(decrypted.body.clone());
+        if let Some(attachment_ids) = payload.attachment_ids.as_ref() {
+            let payload_ids = task_attachment_ids(&decrypted.body);
+            assert_eq!(
+                payload_ids.iter().copied().collect::<HashSet<_>>(),
+                attachment_ids.iter().copied().collect::<HashSet<_>>()
+            );
+            let previous_ids = task_attachment_ids(&state.current_task_body);
+            for removed in previous_ids
+                .into_iter()
+                .filter(|id| !payload_ids.contains(id))
+            {
+                state.deleted_attachment_ids.push(removed);
+                state.attachment_uploads.remove(&removed);
+                state.completed_attachment_ids.remove(&removed);
+            }
+            for added in payload_ids
+                .iter()
+                .filter(|id| !task_attachment_ids(&state.current_task_body).contains(id))
+            {
+                assert!(
+                    state.completed_attachment_ids.contains(added),
+                    "new task attachment must be completed before attachment"
+                );
+            }
+        }
+        state.current_task_body = decrypted.body.clone();
     }
 
     if let Some(title_ciphertext) = payload.title_ciphertext.as_ref() {
@@ -4670,6 +5324,15 @@ async fn update_task(
             payload.title_ciphertext_proof.as_deref(),
             Some(title_proof.as_str())
         );
+        assert_eq!(
+            decrypt_encrypted_text_value(
+                &title_bytes,
+                &state.fixture.list_key,
+                TASK_TITLE_CONTEXT,
+            )
+            .expect("decrypt updated task title"),
+            state.current_task_body.title
+        );
     }
 
     state.task_updated_at += Duration::milliseconds(1);
@@ -4679,7 +5342,7 @@ async fn update_task(
         "workListId": state.fixture.work_list_id,
         "createdByMembershipId": state.fixture.membership_id,
         "titleCiphertext": payload.title_ciphertext.unwrap_or_else(|| state.fixture.task_title_ciphertext.clone()),
-        "payloadCiphertext": payload.payload_ciphertext.unwrap_or_else(|| state.fixture.task_payload_ciphertext.clone()),
+        "payloadCiphertext": task_payload_ciphertext(&state),
         "sectionId": payload_json.get("sectionId").cloned().unwrap_or_else(|| json!(state.task_section_id)),
         "priority": payload_json.get("priority").cloned().unwrap_or(Value::Null),
         "position": "a",
@@ -5016,10 +5679,10 @@ async fn download_attachment_bytes(
     headers: HeaderMap,
 ) -> (StatusCode, HeaderMap, Vec<u8>) {
     let token = headers
-        .get("x-attachment-token")
+        .get("if-match")
         .and_then(|value| value.to_str().ok())
         .expect("attachment token header");
-    assert_eq!(token, "ok");
+    assert_eq!(token, "test-etag");
 
     let mut state = state.lock().expect("state lock");
     state.attachment_download_requests += 1;
@@ -5367,6 +6030,54 @@ fn task_response_json(state: &TestState) -> serde_json::Value {
     })
 }
 
+fn note_response_json(state: &TestState, note: &StoredNote) -> Value {
+    json!({
+        "id": note.id,
+        "workListId": state.fixture.work_list_id,
+        "createdByMembershipId": state.fixture.membership_id,
+        "titleCiphertext": note.title_ciphertext,
+        "legacyCborFields": [],
+        "payloadCiphertext": note.payload_ciphertext,
+        "isPrivate": note.is_private,
+        "noteKeyCiphertext": note.note_key_ciphertext,
+        "createdAt": note.created_at,
+        "updatedAt": note.updated_at,
+    })
+}
+
+fn validate_note_ciphertexts(
+    fixture: &TestFixture,
+    is_private: bool,
+    note_key_ciphertext: Option<&str>,
+    title_ciphertext: &str,
+    title_proof: &str,
+    payload_ciphertext: &str,
+    payload_proof: &str,
+) {
+    let title_bytes = decode_b64(title_ciphertext);
+    let payload_bytes = decode_b64(payload_ciphertext);
+    assert_eq!(
+        compute_payload_proof(&title_bytes, &fixture.binding_key).expect("note title proof"),
+        title_proof
+    );
+    assert_eq!(
+        compute_payload_proof(&payload_bytes, &fixture.binding_key).expect("note payload proof"),
+        payload_proof
+    );
+    let note_key = if is_private {
+        let wrapped_key = decode_b64(note_key_ciphertext.expect("private note key ciphertext"));
+        decrypt_note_key(&wrapped_key, &fixture.data_key).expect("decrypt private note key")
+    } else {
+        assert!(note_key_ciphertext.is_none());
+        fixture.list_key.clone()
+    };
+    let envelope = decrypt_note_payload(&note_key, &payload_bytes).expect("decrypt note payload");
+    assert_eq!(envelope.kind, "note");
+    let title = decrypt_encrypted_text_value(&title_bytes, &note_key, NOTE_TITLE_CONTEXT)
+        .expect("decrypt note title");
+    assert_eq!(title, envelope.body.title);
+}
+
 fn work_list_summary_json(state: &TestState) -> serde_json::Value {
     json!({
         "id": state.fixture.work_list_id,
@@ -5435,7 +6146,7 @@ fn task_payload_ciphertext(state: &TestState) -> String {
     }
 
     if state.invalid_task_attachment_metadata {
-        let mut body = state.fixture.existing_task_body.clone();
+        let mut body = state.current_task_body.clone();
         body.attachments = Some(vec![json_value_to_flexible(json!({
             "id": state.fixture.text_attachment.id.to_string()
         }))]);
@@ -5447,7 +6158,29 @@ fn task_payload_ciphertext(state: &TestState) -> String {
         .base64;
     }
 
-    state.fixture.task_payload_ciphertext.clone()
+    encrypt_task_payload(
+        &build_task_payload_envelope(state.current_task_body.clone(), 1),
+        &state.fixture.list_key,
+    )
+    .expect("current task payload")
+    .base64
+}
+
+fn task_attachment_ids(body: &TaskPayloadBody) -> Vec<Uuid> {
+    body.attachments
+        .as_ref()
+        .into_iter()
+        .flatten()
+        .map(|attachment| {
+            let json = flexible_value_to_json(attachment.clone());
+            Uuid::parse_str(
+                json.get("id")
+                    .and_then(Value::as_str)
+                    .expect("attachment id string"),
+            )
+            .expect("attachment UUID")
+        })
+        .collect()
 }
 
 fn comment_body_ciphertext(state: &TestState) -> String {
@@ -5530,23 +6263,17 @@ fn encrypt_attachment_ciphertext(
 
 fn encode_attachment_blob_key(
     list_key: &SymmetricKey,
-    attachment_id: Uuid,
+    _attachment_id: Uuid,
     file_key: &SymmetricKey,
     ciphertext_bytes: &[u8],
 ) -> sealtask_client_core::PublicResult<Vec<u8>> {
     let blob_ref = AttachmentBlobRef {
         version: ATTACHMENT_BLOB_REF_VERSION,
-        object_key: format!("workspaces/test/attachments/{attachment_id}"),
         ciphertext_bytes: u64::try_from(ciphertext_bytes.len()).expect("ciphertext length"),
         file_key: file_key.as_bytes().to_vec(),
         enc_context: ATTACHMENT_BLOB_CONTEXT_LABEL.to_string(),
     };
-    let plaintext = serialize_to_cbor(&blob_ref)?;
-    let sealed = StrongBoxKeyRing::new(list_key.clone())
-        .strong_box()
-        .encrypt(plaintext, ATTACHMENT_REF_CONTEXT)
-        .expect("seal attachment ref");
-    SealedPayload::new(sealed).to_bytes()
+    encode_production_attachment_blob_key(list_key, &blob_ref)
 }
 
 fn attachment_payload_value(attachment: &TestAttachmentFixture) -> FlexibleValue {

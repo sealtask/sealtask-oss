@@ -23,7 +23,7 @@ use tempfile::NamedTempFile;
 use uuid::Uuid;
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
-use sealtask_client_core::{PublicError, PublicResult};
+use sealtask_client_core::{PublicError, PublicResult, ResponseFailureKind, TransportFailureKind};
 
 const OPAQUE_SERVER_ID: &[u8] = b"worklist.api";
 const DATA_KEY_KEYCHAIN_SERVICE: &str = "sealtask.data-key";
@@ -37,6 +37,8 @@ const CREDENTIALS_LOCK_FILE_NAME: &str = "credentials.lock";
 const CREDENTIALS_CHANGED_MESSAGE: &str =
     "credentials changed while the command was running; retry the command";
 const CREDENTIAL_REFRESH_TIMEOUT: StdDuration = StdDuration::from_secs(30);
+const MAX_RETRY_AFTER_SECONDS: u64 = 24 * 60 * 60;
+const MAX_REFRESH_RESPONSE_BYTES: usize = 64 * 1024;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -620,7 +622,7 @@ async fn refresh_credentials_if_needed_in(
             refresh_access_token(client, base_url, &current.refresh_token),
         )
         .await
-        .map_err(|_| PublicError::unexpected("token refresh timed out"))??;
+        .map_err(|_| PublicError::transport(TransportFailureKind::Timeout))??;
         let mut refreshed = current;
         update_credentials_with_refresh(&mut refreshed, refresh_response);
         save_credentials_unlocked(dir, &refreshed)?;
@@ -1204,9 +1206,9 @@ pub async fn refresh_access_token(
         })
         .send()
         .await
-        .map_err(|err| map_reqwest_error(err, "token refresh"))?;
+        .map_err(map_refresh_transport_error)?;
 
-    parse_json_response(response, "refresh response").await
+    parse_refresh_response(response).await
 }
 
 pub async fn logout(
@@ -1421,6 +1423,101 @@ fn map_reqwest_error(err: reqwest::Error, context: &str) -> PublicError {
     } else {
         PublicError::unexpected(format!("API request failed during {context}: {err}"))
     }
+}
+
+fn map_refresh_transport_error(err: reqwest::Error) -> PublicError {
+    if err.is_timeout() {
+        PublicError::transport(TransportFailureKind::Timeout)
+    } else if err.is_connect() {
+        PublicError::transport(TransportFailureKind::Connect)
+    } else if err.is_body() {
+        PublicError::transport(TransportFailureKind::Body)
+    } else {
+        PublicError::transport(TransportFailureKind::Other)
+    }
+}
+
+async fn parse_refresh_response(response: reqwest::Response) -> PublicResult<RefreshResponse> {
+    let status = response.status();
+    let retry_after = parse_retry_after(response.headers());
+    let body = read_bounded_refresh_body(response).await;
+    if !status.is_success() {
+        let backend_error_code = body
+            .ok()
+            .and_then(|body| serde_json::from_slice::<ApiError>(&body).ok())
+            .map(|api_error| api_error.error);
+        return Err(PublicError::http(
+            status.as_u16(),
+            backend_error_code,
+            retry_after,
+        ));
+    }
+
+    serde_json::from_slice(&body?).map_err(map_refresh_json_error)
+}
+
+async fn read_bounded_refresh_body(mut response: reqwest::Response) -> PublicResult<Vec<u8>> {
+    if response.content_length().is_some_and(|length| {
+        usize::try_from(length).map_or(true, |length| length > MAX_REFRESH_RESPONSE_BYTES)
+    }) {
+        return Err(refresh_body_too_large_error());
+    }
+
+    let mut body = Vec::new();
+    loop {
+        let chunk = response
+            .chunk()
+            .await
+            .map_err(map_refresh_transport_error)?;
+        let Some(chunk) = chunk else {
+            return Ok(body);
+        };
+        let Some(next_len) = body.len().checked_add(chunk.len()) else {
+            return Err(refresh_body_too_large_error());
+        };
+        if next_len > MAX_REFRESH_RESPONSE_BYTES {
+            return Err(refresh_body_too_large_error());
+        }
+        body.extend_from_slice(&chunk);
+    }
+}
+
+fn refresh_body_too_large_error() -> PublicError {
+    PublicError::response(
+        ResponseFailureKind::BodyTooLarge,
+        "refresh response exceeds the client safety limit",
+    )
+}
+
+fn map_refresh_json_error(err: serde_json::Error) -> PublicError {
+    let (kind, message) = match err.classify() {
+        serde_json::error::Category::Data => (
+            ResponseFailureKind::JsonSchema,
+            "refresh response JSON does not match the expected schema",
+        ),
+        serde_json::error::Category::Eof | serde_json::error::Category::Syntax => (
+            ResponseFailureKind::JsonMalformed,
+            "refresh response contains malformed JSON",
+        ),
+        serde_json::error::Category::Io => (
+            ResponseFailureKind::BodyRead,
+            "refresh response body could not be read",
+        ),
+    };
+    PublicError::response(kind, message)
+}
+
+fn parse_retry_after(headers: &reqwest::header::HeaderMap) -> Option<StdDuration> {
+    let value = headers
+        .get(reqwest::header::RETRY_AFTER)?
+        .to_str()
+        .ok()?
+        .trim();
+    if value.is_empty() || !value.bytes().all(|byte| byte.is_ascii_digit()) {
+        return None;
+    }
+    let seconds = value.parse::<u64>().unwrap_or(MAX_RETRY_AFTER_SECONDS);
+    Some(StdDuration::from_secs(seconds.min(MAX_RETRY_AFTER_SECONDS)))
 }
 
 async fn parse_json_response<T: for<'de> Deserialize<'de>>(
@@ -2430,6 +2527,113 @@ mod tests {
         }
     }
 
+    #[tokio::test]
+    async fn refresh_should_preserve_structured_rate_limit_metadata_without_backend_prose() {
+        const PRIVATE_MESSAGE: &str =
+            "retry refresh-secret at https://private.example.test/account/42";
+        let app = Router::new().route(
+            "/auth/refresh",
+            post(|| async {
+                let mut response = (
+                    StatusCode::TOO_MANY_REQUESTS,
+                    Json(json!({
+                        "error": "refresh_rate_limited",
+                        "message": PRIVATE_MESSAGE
+                    })),
+                )
+                    .into_response();
+                response
+                    .headers_mut()
+                    .insert(header::RETRY_AFTER, HeaderValue::from_static("7"));
+                response
+            }),
+        );
+        let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind");
+        let address = listener.local_addr().expect("address");
+        tokio::spawn(async move {
+            axum::serve(listener, app).await.expect("serve refresh API");
+        });
+
+        let error = refresh_access_token(
+            &reqwest::Client::new(),
+            &format!("http://{address}"),
+            "refresh-secret",
+        )
+        .await
+        .expect_err("rate-limited refresh must fail");
+
+        assert_eq!(error.http_status(), Some(429));
+        assert_eq!(error.backend_error_code(), Some("refresh_rate_limited"));
+        assert_eq!(error.retry_after(), Some(StdDuration::from_secs(7)));
+        assert_eq!(error.code(), "rate_limited");
+        assert_eq!(error.transport_failure_kind(), None);
+        assert!(!error.to_string().contains(PRIVATE_MESSAGE));
+        assert!(!format!("{error:?}").contains(PRIVATE_MESSAGE));
+        assert!(!format!("{error:?}").contains("refresh-secret"));
+    }
+
+    #[tokio::test]
+    async fn refresh_should_reject_oversized_response_bodies_without_exposing_them() {
+        const PRIVATE_BODY_PREFIX: &str = "refresh-secret-private-response:";
+        let app = Router::new().route(
+            "/auth/refresh",
+            post(|| async {
+                format!(
+                    "{PRIVATE_BODY_PREFIX}{}",
+                    "x".repeat(MAX_REFRESH_RESPONSE_BYTES)
+                )
+            }),
+        );
+        let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind");
+        let address = listener.local_addr().expect("address");
+        tokio::spawn(async move {
+            axum::serve(listener, app).await.expect("serve refresh API");
+        });
+
+        let error = refresh_access_token(
+            &reqwest::Client::new(),
+            &format!("http://{address}"),
+            "refresh-secret",
+        )
+        .await
+        .expect_err("oversized refresh response must fail");
+
+        assert_eq!(
+            error.response_failure_kind(),
+            Some(ResponseFailureKind::BodyTooLarge)
+        );
+        assert_eq!(error.http_status(), None);
+        assert!(!error.to_string().contains(PRIVATE_BODY_PREFIX));
+        assert!(!format!("{error:?}").contains(PRIVATE_BODY_PREFIX));
+        assert!(!format!("{error:?}").contains("refresh-secret"));
+    }
+
+    #[tokio::test]
+    async fn refresh_should_classify_connection_failures_without_exposing_request_context() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind");
+        let address = listener.local_addr().expect("address");
+        drop(listener);
+        let base_url = format!("http://{address}");
+        let client = reqwest::Client::builder()
+            .connect_timeout(StdDuration::from_secs(1))
+            .timeout(StdDuration::from_secs(1))
+            .build()
+            .expect("client");
+
+        let error = refresh_access_token(&client, &base_url, "refresh-secret")
+            .await
+            .expect_err("connection to a closed listener must fail");
+
+        assert_eq!(
+            error.transport_failure_kind(),
+            Some(TransportFailureKind::Connect)
+        );
+        assert_eq!(error.http_status(), None);
+        assert!(!error.to_string().contains(&base_url));
+        assert!(!format!("{error:?}").contains(&base_url));
+        assert!(!format!("{error:?}").contains("refresh-secret"));
+    }
+
     fn spawn_refresh_race_child(dir: &Path, base_url: &str, ready_path: &Path) -> Child {
         Command::new(std::env::current_exe().expect("current test executable"))
             .arg("--exact")
@@ -2639,10 +2843,11 @@ mod tests {
         )
         .await
         .expect_err("a stalled refresh must time out");
-        assert!(matches!(
-            error,
-            PublicError::Unexpected(message) if message == "token refresh timed out"
-        ));
+        assert_eq!(
+            error.transport_failure_kind(),
+            Some(TransportFailureKind::Timeout)
+        );
+        assert_eq!(error.http_status(), None);
 
         let mut replacement = original;
         replacement.access_token = "replacement-access".to_string();

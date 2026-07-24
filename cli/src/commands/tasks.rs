@@ -2,22 +2,34 @@ use crate::args::{
     TaskArchiveArgsCli, TaskAttachmentsCommand, TaskCompletionArgsCli, TaskCreateArgsCli,
     TaskDeleteArgsCli, TaskMoveArgsCli, TaskUnarchiveArgsCli, TaskUpdateArgsCli, TasksCommand,
 };
+use crate::attachment_output::{resolve_attachment_output_path, write_attachment_file};
 use crate::input::{
-    resolve_attachment_output_path, resolve_delete_input, resolve_task_create_input,
-    resolve_task_update_input, write_attachment_file,
+    read_required_password, resolve_delete_input, resolve_task_create_input,
+    resolve_task_update_input,
 };
-use crate::output::{CliResult, OutputFormat, print_pretty_json};
+use crate::output::{
+    CliError, CliResult, OutputFormat, WarningResult, finish_with_warnings, print_pretty_json,
+    warning_result,
+};
 use crate::render::{
     print_delete_result, print_download_result, print_empty_collection, print_raw_my_tasks,
     print_raw_task_detail, print_raw_tasks, print_readable_attachment, print_task_detail,
     print_tasks,
 };
 use sealtask_client_api::DeleteTaskRequest;
+use sealtask_client_core::PublicError;
+use sealtask_client_core::PublicResult;
 use sealtask_client_runtime::{
-    ArchiveTaskArgs, CreateTaskArgs, DeleteTaskArgs, MoveTaskArgs, MoveTaskInput, RuntimeClient,
-    TaskCompletionArgs, UnarchiveTaskArgs, UpdateTaskArgs,
+    ArchiveTaskArgs, AttachmentUploadPassword, CreateTaskArgs, DeleteTaskArgs,
+    DeleteTaskAttachmentArgs, MoveTaskArgs, MoveTaskInput, OperationCancellation, RuntimeClient,
+    TaskCompletionArgs, UnarchiveTaskArgs, UpdateTaskArgs, UploadTaskAttachmentArgs,
 };
 use serde_json::json;
+use std::future::Future;
+use std::io;
+use std::time::Duration;
+
+const ATTACHMENT_UPLOAD_CANCELLATION_GRACE: Duration = Duration::from_secs(5);
 
 pub(crate) async fn run_tasks(
     runtime: &RuntimeClient,
@@ -109,6 +121,60 @@ async fn run_task_attachments(
     command: TaskAttachmentsCommand,
 ) -> CliResult<()> {
     match command {
+        TaskAttachmentsCommand::Upload(args) => {
+            let password = resolve_attachment_upload_password(args.password_stdin)?;
+            let cancellation = OperationCancellation::new();
+            let supervised = supervise_attachment_upload(
+                runtime.upload_task_attachment_with_cancellation(
+                    UploadTaskAttachmentArgs {
+                        work_list_id: args.work_list_id,
+                        task_id: args.task_id,
+                        path: args.file,
+                        file_name: args.file_name,
+                        content_type: args.content_type,
+                        password,
+                    },
+                    cancellation.clone(),
+                ),
+                tokio::signal::ctrl_c(),
+                tokio::signal::ctrl_c(),
+                cancellation,
+                ATTACHMENT_UPLOAD_CANCELLATION_GRACE,
+            )
+            .await;
+            let result = match supervised.outcome {
+                AttachmentUploadOutcome::Completed(Ok(attachment)) => print_pretty_json(
+                    &attachment,
+                    "serializing uploaded attachment should succeed",
+                ),
+                AttachmentUploadOutcome::Completed(Err(error)) => Err(error.into()),
+                AttachmentUploadOutcome::Interrupted { message } => {
+                    return Err(CliError::interrupted(message, &supervised.warnings));
+                }
+            };
+            finish_with_warnings(format, &supervised.warnings, result)
+        }
+        TaskAttachmentsCommand::Delete(args) => {
+            runtime
+                .delete_task_attachment(DeleteTaskAttachmentArgs {
+                    work_list_id: args.work_list_id,
+                    task_id: args.task_id,
+                    attachment_id: args.attachment_id,
+                    password_stdin: args.password_stdin,
+                })
+                .await?;
+            print_delete_result(
+                format,
+                "attachment",
+                &json!({
+                    "deleted": true,
+                    "workListId": args.work_list_id,
+                    "taskId": args.task_id,
+                    "attachmentId": args.attachment_id,
+                }),
+                &format!("Deleted attachment {}.", args.attachment_id),
+            )
+        }
         TaskAttachmentsCommand::Read(args) => {
             let attachment = runtime
                 .read_task_attachment(
@@ -133,6 +199,136 @@ async fn run_task_attachments(
                 resolve_attachment_output_path(&attachment.attachment.file_name, args.output);
             write_attachment_file(&output_path, &attachment.bytes, args.force)?;
             print_download_result(format, &attachment.attachment.file_name, &output_path)
+        }
+    }
+}
+
+fn resolve_attachment_upload_password(
+    password_stdin: bool,
+) -> CliResult<Option<AttachmentUploadPassword>> {
+    resolve_attachment_upload_password_with(password_stdin, || read_required_password(true, None))
+}
+
+fn resolve_attachment_upload_password_with(
+    password_stdin: bool,
+    read_password: impl FnOnce() -> CliResult<String>,
+) -> CliResult<Option<AttachmentUploadPassword>> {
+    password_stdin
+        .then(read_password)
+        .transpose()?
+        .map(AttachmentUploadPassword::new)
+        .transpose()
+        .map_err(Into::into)
+}
+
+struct SupervisedAttachmentUpload<T> {
+    outcome: AttachmentUploadOutcome<T>,
+    warnings: Vec<WarningResult>,
+}
+
+enum AttachmentUploadOutcome<T> {
+    Completed(PublicResult<T>),
+    Interrupted { message: String },
+}
+
+async fn supervise_attachment_upload<T, U, S1, S2>(
+    upload: U,
+    first_signal: S1,
+    second_signal: S2,
+    cancellation: OperationCancellation,
+    cancellation_grace: Duration,
+) -> SupervisedAttachmentUpload<T>
+where
+    U: Future<Output = PublicResult<T>>,
+    S1: Future<Output = io::Result<()>>,
+    S2: Future<Output = io::Result<()>>,
+{
+    tokio::pin!(upload);
+    tokio::pin!(first_signal);
+    let first_signal_result = tokio::select! {
+        biased;
+        result = &mut upload => {
+            return SupervisedAttachmentUpload {
+                outcome: AttachmentUploadOutcome::Completed(result),
+                warnings: Vec::new(),
+            };
+        }
+        signal_result = &mut first_signal => signal_result,
+    };
+
+    let mut warnings = Vec::new();
+    if let Err(signal_error) = first_signal_result {
+        warnings.push(warning_result(
+            "ctrl_c_listener_failed",
+            format!("failed to listen for Ctrl-C: {signal_error}"),
+        ));
+        return SupervisedAttachmentUpload {
+            outcome: AttachmentUploadOutcome::Completed(upload.await),
+            warnings,
+        };
+    }
+
+    cancellation.cancel();
+    warnings.push(warning_result(
+        "attachment_upload_cancellation_requested",
+        format!(
+            "Ctrl-C received; waiting up to {} seconds for attachment cleanup (press Ctrl-C again to stop waiting)",
+            cancellation_grace.as_secs()
+        ),
+    ));
+
+    tokio::pin!(second_signal);
+    let grace = tokio::time::sleep(cancellation_grace);
+    tokio::pin!(grace);
+    let mut second_listener_active = true;
+    loop {
+        tokio::select! {
+            biased;
+            result = &mut upload => {
+                let outcome = if matches!(result, Err(PublicError::Cancelled(_))) {
+                    AttachmentUploadOutcome::Interrupted {
+                        message: "attachment upload interrupted".to_string(),
+                    }
+                } else {
+                    AttachmentUploadOutcome::Completed(result)
+                };
+                return SupervisedAttachmentUpload { outcome, warnings };
+            }
+            signal_result = &mut second_signal, if second_listener_active => {
+                match signal_result {
+                    Ok(()) => {
+                        warnings.push(warning_result(
+                            "attachment_upload_cancellation_forced",
+                            "second Ctrl-C received before attachment cleanup completed; the backend may need to expire the pending upload".to_string(),
+                        ));
+                        return SupervisedAttachmentUpload {
+                            outcome: AttachmentUploadOutcome::Interrupted {
+                                message: "attachment upload interrupted before cleanup completed".to_string(),
+                            },
+                            warnings,
+                        };
+                    }
+                    Err(signal_error) => {
+                        warnings.push(warning_result(
+                            "ctrl_c_listener_failed",
+                            format!("failed to listen for a second Ctrl-C: {signal_error}"),
+                        ));
+                        second_listener_active = false;
+                    }
+                }
+            }
+            () = &mut grace => {
+                warnings.push(warning_result(
+                    "attachment_upload_cancellation_timed_out",
+                    "attachment cleanup did not finish within the cancellation grace period; the backend may need to expire the pending upload".to_string(),
+                ));
+                return SupervisedAttachmentUpload {
+                    outcome: AttachmentUploadOutcome::Interrupted {
+                        message: "attachment upload interrupted before cleanup completed".to_string(),
+                    },
+                    warnings,
+                };
+            }
         }
     }
 }
@@ -248,4 +444,225 @@ async fn delete_task(
         }),
         &format!("Deleted task {}.", args.task_id),
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicBool, Ordering};
+    use tokio::sync::Notify;
+
+    #[tokio::test]
+    async fn signal_listener_failure_preserves_confirmed_upload_success_as_a_warning() {
+        let cancellation = OperationCancellation::new();
+        let observed_cancellation = cancellation.clone();
+        let upload = async move {
+            tokio::task::yield_now().await;
+            assert!(!observed_cancellation.is_cancelled());
+            Ok::<_, PublicError>(7_u8)
+        };
+        let supervised = supervise_attachment_upload(
+            upload,
+            async { Err(io::Error::other("signal registration failed")) },
+            std::future::pending(),
+            cancellation.clone(),
+            Duration::from_millis(10),
+        )
+        .await;
+
+        assert!(matches!(
+            supervised.outcome,
+            AttachmentUploadOutcome::Completed(Ok(7))
+        ));
+        assert_eq!(supervised.warnings.len(), 1);
+        assert_eq!(supervised.warnings[0].code(), "ctrl_c_listener_failed");
+        assert!(
+            supervised.warnings[0]
+                .message()
+                .contains("signal registration failed")
+        );
+        assert!(!cancellation.is_cancelled());
+    }
+
+    #[tokio::test]
+    async fn signal_listener_failure_preserves_ambiguous_cleanup_error_and_warning() {
+        let cancellation = OperationCancellation::new();
+        let observed_cancellation = cancellation.clone();
+        let upload = async move {
+            tokio::task::yield_now().await;
+            assert!(!observed_cancellation.is_cancelled());
+            Err::<(), _>(PublicError::compensation_failed(
+                "attachment upload",
+                "primary category",
+                "cleanup category",
+            ))
+        };
+        let supervised = supervise_attachment_upload(
+            upload,
+            async { Err(io::Error::other("signal registration failed")) },
+            std::future::pending(),
+            cancellation.clone(),
+            Duration::from_millis(10),
+        )
+        .await;
+
+        assert!(matches!(
+            supervised.outcome,
+            AttachmentUploadOutcome::Completed(Err(PublicError::CompensationFailed {
+                operation,
+                primary,
+                cleanup,
+            })) if operation == "attachment upload"
+                && primary == "primary category"
+                && cleanup == "cleanup category"
+        ));
+        assert_eq!(supervised.warnings[0].code(), "ctrl_c_listener_failed");
+        assert!(
+            supervised.warnings[0]
+                .message()
+                .contains("signal registration failed")
+        );
+        assert!(!cancellation.is_cancelled());
+    }
+
+    #[tokio::test]
+    async fn signal_waits_for_bounded_upload_cleanup_before_returning() {
+        let cancellation = OperationCancellation::new();
+        let upload_cancellation = cancellation.clone();
+        let cleanup_seen = Arc::new(AtomicBool::new(false));
+        let upload_cleanup_seen = cleanup_seen.clone();
+        let started = Arc::new(Notify::new());
+        let upload_started = started.clone();
+        let upload = async move {
+            upload_started.notify_one();
+            while !upload_cancellation.is_cancelled() {
+                tokio::task::yield_now().await;
+            }
+            upload_cleanup_seen.store(true, Ordering::Release);
+            Err::<(), _>(PublicError::cancelled("attachment upload cancelled"))
+        };
+        let signal = async move {
+            started.notified().await;
+            Ok(())
+        };
+
+        let supervised = supervise_attachment_upload(
+            upload,
+            signal,
+            std::future::pending(),
+            cancellation,
+            Duration::from_millis(50),
+        )
+        .await;
+
+        assert!(matches!(
+            supervised.outcome,
+            AttachmentUploadOutcome::Interrupted { .. }
+        ));
+        assert_eq!(
+            supervised.warnings[0].code(),
+            "attachment_upload_cancellation_requested"
+        );
+        assert!(cleanup_seen.load(Ordering::Acquire));
+    }
+
+    #[tokio::test]
+    async fn upload_password_is_consumed_once_before_cancellable_supervision() {
+        let reads = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let reader_reads = reads.clone();
+        let password = resolve_attachment_upload_password_with(true, move || {
+            reader_reads.fetch_add(1, Ordering::AcqRel);
+            Ok("injected password".to_string())
+        })
+        .expect("injected password")
+        .expect("password value");
+        assert_eq!(reads.load(Ordering::Acquire), 1);
+        assert!(!format!("{password:?}").contains("injected password"));
+
+        let cancellation = OperationCancellation::new();
+        let upload_cancellation = cancellation.clone();
+        let upload = async move {
+            while !upload_cancellation.is_cancelled() {
+                tokio::task::yield_now().await;
+            }
+            Err::<(), _>(PublicError::cancelled("attachment upload cancelled"))
+        };
+        let supervised = supervise_attachment_upload(
+            upload,
+            async { Ok(()) },
+            std::future::pending(),
+            cancellation,
+            Duration::from_millis(50),
+        )
+        .await;
+
+        assert!(matches!(
+            supervised.outcome,
+            AttachmentUploadOutcome::Interrupted { .. }
+        ));
+        assert_eq!(reads.load(Ordering::Acquire), 1);
+    }
+
+    #[tokio::test]
+    async fn second_signal_stops_waiting_for_stalled_cleanup() {
+        let cancellation = OperationCancellation::new();
+        let upload_cancellation = cancellation.clone();
+        let upload = async move {
+            while !upload_cancellation.is_cancelled() {
+                tokio::task::yield_now().await;
+            }
+            std::future::pending::<PublicResult<()>>().await
+        };
+        let supervised = supervise_attachment_upload(
+            upload,
+            async { Ok(()) },
+            async { Ok(()) },
+            cancellation,
+            Duration::from_secs(30),
+        )
+        .await;
+
+        assert!(matches!(
+            supervised.outcome,
+            AttachmentUploadOutcome::Interrupted { .. }
+        ));
+        assert!(
+            supervised
+                .warnings
+                .iter()
+                .any(|warning| warning.code() == "attachment_upload_cancellation_forced")
+        );
+    }
+
+    #[tokio::test]
+    async fn grace_timeout_stops_waiting_for_stalled_cleanup() {
+        let cancellation = OperationCancellation::new();
+        let upload_cancellation = cancellation.clone();
+        let upload = async move {
+            while !upload_cancellation.is_cancelled() {
+                tokio::task::yield_now().await;
+            }
+            std::future::pending::<PublicResult<()>>().await
+        };
+        let supervised = supervise_attachment_upload(
+            upload,
+            async { Ok(()) },
+            std::future::pending(),
+            cancellation,
+            Duration::from_millis(1),
+        )
+        .await;
+
+        assert!(matches!(
+            supervised.outcome,
+            AttachmentUploadOutcome::Interrupted { .. }
+        ));
+        assert!(
+            supervised
+                .warnings
+                .iter()
+                .any(|warning| warning.code() == "attachment_upload_cancellation_timed_out")
+        );
+    }
 }

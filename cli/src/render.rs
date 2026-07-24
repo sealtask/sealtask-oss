@@ -6,8 +6,8 @@ use sealtask_client_api::{
     WorkListDetailResponse, WorkListResponse,
 };
 use sealtask_client_runtime::{
-    AgentComment, AgentTaskDetail, AgentTaskSummary, AgentWorkListDetail, AgentWorkListSummary,
-    ReadableAttachment,
+    AgentComment, AgentNote, AgentTaskDetail, AgentTaskSummary, AgentWorkListDetail,
+    AgentWorkListSummary, ReadableAttachment,
 };
 use serde_json::json;
 use std::path::Path;
@@ -44,13 +44,18 @@ pub(crate) fn print_readable_attachment(
             print_pretty_json(attachment, "serializing readable attachment should succeed")?;
         }
         OutputFormat::Table => {
-            print!("{}", attachment.text);
-            if !attachment.text.ends_with('\n') {
+            let text = readable_attachment_terminal_text(&attachment.text);
+            print!("{text}");
+            if !text.ends_with('\n') {
                 println!();
             }
         }
     }
     Ok(())
+}
+
+fn readable_attachment_terminal_text(text: &str) -> String {
+    terminal_block(text)
 }
 
 pub(crate) fn print_comment_json(comment: &AgentComment) -> CliResult<()> {
@@ -80,6 +85,58 @@ pub(crate) fn print_comments(comments: &[AgentComment], format: OutputFormat) ->
                 );
             }
             println!("\nTotal: {} comment(s)", comments.len());
+        }
+    }
+    Ok(())
+}
+
+pub(crate) fn print_notes(notes: &[AgentNote], format: OutputFormat) -> CliResult<()> {
+    match format {
+        OutputFormat::Json => print_pretty_json(notes, "serializing notes should succeed")?,
+        OutputFormat::Table => {
+            println!("{:<36}  {:<8}  {:<40}  Updated", "ID", "Privacy", "Title");
+            println!("{}", "-".repeat(108));
+            for note in notes {
+                println!(
+                    "{:<36}  {:<8}  {:<40}  {}",
+                    note.id,
+                    if note.is_private { "Private" } else { "Shared" },
+                    truncate(note.title.as_deref().unwrap_or("<unreadable note>"), 40),
+                    note.updated_at.format("%Y-%m-%d %H:%M")
+                );
+            }
+            println!("\nTotal: {} note(s)", notes.len());
+        }
+    }
+    Ok(())
+}
+
+pub(crate) fn print_note(note: &AgentNote, format: OutputFormat) -> CliResult<()> {
+    match format {
+        OutputFormat::Json => print_pretty_json(note, "serializing note should succeed")?,
+        OutputFormat::Table => {
+            println!("Note");
+            println!("{}", "=".repeat(60));
+            println!("ID:        {}", note.id);
+            println!("Work List: {}", note.work_list_id);
+            println!(
+                "Privacy:  {}",
+                if note.is_private { "Private" } else { "Shared" }
+            );
+            println!(
+                "Title:    {}",
+                terminal_line(note.title.as_deref().unwrap_or("-"))
+            );
+            if let Some(body) = note.body_markdown.as_deref() {
+                println!();
+                println!("Body");
+                println!("{}", "-".repeat(60));
+                println!("{}", terminal_block(body));
+            }
+            if let Some(read_error) = note.read_error.as_ref() {
+                println!();
+                println!("Read error: {}", terminal_line(&read_error.message));
+            }
         }
     }
     Ok(())
@@ -564,5 +621,50 @@ mod tests {
     #[test]
     fn test_should_prevent_terminal_lines_from_injecting_controls_or_extra_rows() {
         assert_eq!(truncate("a\nb\u{1b}[2J", 4), "a b[");
+    }
+
+    #[test]
+    fn test_should_make_attachment_text_terminal_safe_without_flattening_readable_content() {
+        let input = concat!(
+            "plain \u{1b}[31mred\u{1b}[0m\n",
+            "osc-bel \u{1b}]52;c;Y2xpcGJvYXJk\u{7} after\n",
+            "osc-st \u{1b}]0;forged title\u{1b}\\ after\n",
+            "c0 \u{0}\u{8}\t c1 \u{85}\u{9b}31m\n",
+            "Unicode: Příliš žluťoučký 🦭"
+        );
+
+        let rendered = readable_attachment_terminal_text(input);
+
+        assert!(
+            rendered.chars().all(|ch| ch == '\n' || !ch.is_control()),
+            "human output must contain no active terminal control characters"
+        );
+        assert_eq!(
+            rendered,
+            concat!(
+                "plain [31mred[0m\n",
+                "osc-bel ]52;c;Y2xpcGJvYXJk after\n",
+                "osc-st ]0;forged title\\ after\n",
+                "c0   c1  31m\n",
+                "Unicode: Příliš žluťoučký 🦭"
+            )
+        );
+        let attachment: ReadableAttachment = serde_json::from_value(json!({
+            "attachment": {
+                "id": uuid::Uuid::nil(),
+                "fileName": "control.txt",
+                "contentType": "text/plain",
+                "sizeBytes": input.len(),
+            },
+            "text": input,
+            "contentFormat": "text",
+            "sourceKind": "plain_text",
+        }))
+        .expect("readable attachment");
+        assert_eq!(
+            serde_json::to_value(attachment).expect("readable attachment JSON")["text"],
+            input,
+            "JSON output must preserve the decrypted text exactly"
+        );
     }
 }

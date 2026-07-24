@@ -1,14 +1,21 @@
 mod auth;
 mod comments;
+mod notes;
 mod tasks;
 mod work_lists;
 
+use crate::blocking_crypto::BlockingCryptoAdmission;
 use crate::models::ReadError;
 use crate::password::{
     auto_unlock_ttl_seconds, missing_unlock_error, persisted_unlock_error, read_required_password,
 };
 use crate::projections::read_error_to_public_error;
+use crate::storage::StorageTransferPolicy;
 use crate::unlock_daemon::{SessionKey, fetch_data_key, session_key, unlock};
+use crate::{
+    operation_cancellation::OperationCancellation,
+    upload_lifecycle::{AttachmentUploadFailureReport, UploadLifecycleManager},
+};
 use sealtask_client_api::PublicApiClient;
 use sealtask_client_auth::{
     Credentials, load_credentials_for_url, load_persisted_data_key, normalize_api_url,
@@ -19,13 +26,57 @@ use sealtask_client_crypto::{
     DataKeyCiphertextVersion, SymmetricKey, data_key_ciphertext_version, decrypt_user_data_key,
     decrypt_user_data_key_with_opaque_export_key,
 };
+use std::time::Duration;
 use uuid::Uuid;
 use zeroize::Zeroizing;
+
+#[cfg(test)]
+use crate::models::AgentAttachment;
+#[cfg(test)]
+use std::future::Future;
+#[cfg(test)]
+use std::pin::Pin;
+#[cfg(test)]
+use std::sync::Arc;
+
+#[cfg(test)]
+type TestUploadFuture =
+    Pin<Box<dyn Future<Output = PublicResult<AgentAttachment>> + Send + 'static>>;
+
+#[cfg(test)]
+#[derive(Clone)]
+pub(crate) struct TestUploadWorkflow(
+    Arc<dyn Fn(OperationCancellation) -> TestUploadFuture + Send + Sync>,
+);
+
+#[cfg(test)]
+impl TestUploadWorkflow {
+    pub(crate) fn new(
+        workflow: impl Fn(OperationCancellation) -> TestUploadFuture + Send + Sync + 'static,
+    ) -> Self {
+        Self(Arc::new(workflow))
+    }
+
+    pub(crate) fn start(&self, cancellation: OperationCancellation) -> TestUploadFuture {
+        (self.0)(cancellation)
+    }
+}
+
+#[cfg(test)]
+impl std::fmt::Debug for TestUploadWorkflow {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("TestUploadWorkflow(<injected>)")
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct RuntimeClient {
     pub(crate) api_url: String,
-    http_client: reqwest::Client,
+    pub(crate) storage_policy: StorageTransferPolicy,
+    pub(crate) blocking_crypto: BlockingCryptoAdmission,
+    pub(crate) upload_lifecycle: UploadLifecycleManager,
+    #[cfg(test)]
+    pub(crate) upload_test_workflow: Option<TestUploadWorkflow>,
 }
 
 #[derive(Debug, Clone)]
@@ -35,22 +86,41 @@ pub(crate) struct WorkListContext {
     pub(crate) read_error: Option<ReadError>,
 }
 
+#[derive(Debug, Clone)]
+pub(crate) struct UnlockedWorkListContext {
+    pub(crate) work_list: WorkListContext,
+    pub(crate) data_key: SymmetricKey,
+    pub(crate) membership_id: Uuid,
+}
+
 impl RuntimeClient {
-    #[must_use]
-    pub fn new(api_url: impl Into<String>) -> Self {
-        Self {
-            api_url: normalize_api_url(&api_url.into()),
-            http_client: reqwest::Client::new(),
-        }
+    pub fn new(api_url: impl Into<String>) -> PublicResult<Self> {
+        Self::with_storage_origins(api_url, std::iter::empty::<String>())
+    }
+
+    pub fn with_storage_origins<I, S>(
+        api_url: impl Into<String>,
+        storage_origins: I,
+    ) -> PublicResult<Self>
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<str>,
+    {
+        let api_url = normalize_api_url(&api_url.into());
+        let storage_policy = StorageTransferPolicy::new(&api_url, storage_origins)?;
+        Ok(Self {
+            api_url,
+            storage_policy,
+            blocking_crypto: BlockingCryptoAdmission::default(),
+            upload_lifecycle: UploadLifecycleManager::default(),
+            #[cfg(test)]
+            upload_test_workflow: None,
+        })
     }
 
     #[must_use]
     pub fn api_url(&self) -> &str {
         &self.api_url
-    }
-
-    pub(crate) fn http_client(&self) -> &reqwest::Client {
-        &self.http_client
     }
 
     pub fn current_session_key(&self, credentials: &Credentials) -> PublicResult<SessionKey> {
@@ -74,10 +144,22 @@ impl RuntimeClient {
                 "session expired - run 'sealtask auth login' to authenticate",
             ));
         }
-        Ok(PublicApiClient::with_credentials(
-            &self.api_url,
-            credentials,
-        ))
+        PublicApiClient::with_credentials(&self.api_url, credentials)
+    }
+
+    /// Waits up to `timeout` for active attachment uploads and their compensation to finish.
+    ///
+    /// A timeout does not abort the owned lifecycle worker. If the process is forcibly stopped
+    /// (including with SIGKILL) after the timeout, durable backend orphan cleanup is the final
+    /// recovery mechanism for an initiated but unlinked attachment.
+    pub async fn drain_attachment_uploads(&self, timeout: Duration) -> PublicResult<()> {
+        self.upload_lifecycle.drain(timeout).await
+    }
+
+    /// Removes and returns the bounded, secret-safe attachment upload failure reports.
+    #[must_use]
+    pub fn take_attachment_upload_failure_reports(&self) -> Vec<AttachmentUploadFailureReport> {
+        self.upload_lifecycle.take_failure_reports()
     }
 
     pub(crate) async fn load_work_list_context(
@@ -86,14 +168,96 @@ impl RuntimeClient {
         password_stdin: bool,
         prompt_message: &str,
     ) -> PublicResult<(PublicApiClient, WorkListContext)> {
+        let (client, context) = self
+            .load_unlocked_work_list_context(work_list_id, password_stdin, prompt_message)
+            .await?;
+        Ok((client, context.work_list))
+    }
+
+    pub(crate) async fn load_unlocked_work_list_context(
+        &self,
+        work_list_id: Uuid,
+        password_stdin: bool,
+        prompt_message: &str,
+    ) -> PublicResult<(PublicApiClient, UnlockedWorkListContext)> {
         let mut credentials = self.require_logged_in_credentials()?;
         let data_key = self
             .load_data_key(&mut credentials, password_stdin, prompt_message)
             .await?;
-        let mut client = PublicApiClient::with_credentials(&self.api_url, credentials);
+        let mut client = PublicApiClient::with_credentials(&self.api_url, credentials)?;
         let work_list = client.get_work_list(work_list_id).await?;
-        let context = self.context_from_work_list_detail(&work_list, Some(&data_key));
+        let context = UnlockedWorkListContext {
+            membership_id: work_list.work_list.membership.id,
+            work_list: self.context_from_work_list_detail(&work_list, Some(&data_key)),
+            data_key,
+        };
         Ok((client, context))
+    }
+
+    pub(crate) async fn load_unlocked_work_list_context_with_password(
+        &self,
+        work_list_id: Uuid,
+        password: Option<&str>,
+        prompt_message: &str,
+        cancellation: &OperationCancellation,
+    ) -> PublicResult<(PublicApiClient, UnlockedWorkListContext)> {
+        let mut credentials = self.require_logged_in_credentials()?;
+        let data_key = match password {
+            Some(password) => {
+                self.decrypt_data_key_for_attachment_upload(
+                    &mut credentials,
+                    password,
+                    cancellation,
+                )
+                .await?
+            }
+            None => {
+                self.load_data_key(&mut credentials, false, prompt_message)
+                    .await?
+            }
+        };
+        if cancellation.is_cancelled() {
+            return Err(PublicError::cancelled("attachment upload cancelled"));
+        }
+        let mut client = PublicApiClient::with_credentials(&self.api_url, credentials)?;
+        let work_list = tokio::select! {
+            biased;
+            () = cancellation.cancelled() => {
+                return Err(PublicError::cancelled("attachment upload cancelled"));
+            }
+            result = client.get_work_list(work_list_id) => result?,
+        };
+        let context = UnlockedWorkListContext {
+            membership_id: work_list.work_list.membership.id,
+            work_list: self.context_from_work_list_detail(&work_list, Some(&data_key)),
+            data_key,
+        };
+        Ok((client, context))
+    }
+
+    async fn decrypt_data_key_for_attachment_upload(
+        &self,
+        credentials: &mut Credentials,
+        password: &str,
+        cancellation: &OperationCancellation,
+    ) -> PublicResult<SymmetricKey> {
+        match data_key_ciphertext_version(&credentials.data_key_ciphertext)? {
+            DataKeyCiphertextVersion::LegacyPasswordV1 => {
+                let password = Zeroizing::new(password.to_string());
+                let ciphertext = credentials.data_key_ciphertext.clone();
+                self.blocking_crypto
+                    .run_cancellable(
+                        cancellation,
+                        move || decrypt_user_data_key(&password, &ciphertext),
+                        "attachment data-key decryption task failed",
+                    )
+                    .await
+            }
+            DataKeyCiphertextVersion::OpaqueExportKeyV2 => {
+                self.decrypt_data_key_with_password(credentials, password)
+                    .await
+            }
+        }
     }
 
     pub(crate) fn require_work_list_key<'a>(
@@ -116,10 +280,7 @@ impl RuntimeClient {
     ) -> PublicResult<SymmetricKey> {
         let session_key = self.current_session_key(credentials)?;
         if password_stdin {
-            let password = Zeroizing::new(read_required_password(
-                password_stdin,
-                Some(prompt_message),
-            )?);
+            let password = Zeroizing::new(read_required_password(true, Some(prompt_message))?);
             return self
                 .decrypt_data_key_with_password(credentials, &password)
                 .await;
@@ -145,12 +306,19 @@ impl RuntimeClient {
     ) -> PublicResult<SymmetricKey> {
         match data_key_ciphertext_version(&credentials.data_key_ciphertext)? {
             DataKeyCiphertextVersion::LegacyPasswordV1 => {
-                decrypt_user_data_key(password, &credentials.data_key_ciphertext)
+                let password = Zeroizing::new(password.to_string());
+                let ciphertext = credentials.data_key_ciphertext.clone();
+                self.blocking_crypto
+                    .run(
+                        move || decrypt_user_data_key(&password, &ciphertext),
+                        "data-key decryption task failed",
+                    )
+                    .await
             }
             DataKeyCiphertextVersion::OpaqueExportKeyV2 => {
                 let (opaque_state, client_login_state) = opaque_login_start(password)?;
                 let mut client =
-                    PublicApiClient::with_credentials(&self.api_url, credentials.clone());
+                    PublicApiClient::with_credentials(&self.api_url, credentials.clone())?;
                 let challenge = client.start_opaque_export_key(&client_login_state).await?;
                 *credentials = client.into_credentials().ok_or_else(|| {
                     PublicError::unexpected(
@@ -184,5 +352,66 @@ impl RuntimeClient {
             unlock(session_key, &data_key, auto_unlock_ttl_seconds()?)?;
             Ok(Some(data_key))
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use base64::Engine as _;
+    use base64::engine::general_purpose::STANDARD_NO_PAD;
+    use sealtask_client_crypto::{DATA_KEY_SALT_BYTES, SealedPayload};
+    use std::sync::atomic::{AtomicBool, Ordering};
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+    async fn non_upload_legacy_password_kdf_keeps_the_tokio_worker_responsive() {
+        let runtime = RuntimeClient::new("http://127.0.0.1:9").expect("runtime");
+        let blocking_crypto = runtime.blocking_crypto.clone();
+        let mut credentials = test_legacy_credentials();
+        let decrypt = tokio::spawn(async move {
+            runtime
+                .decrypt_data_key_with_password(&mut credentials, "test password")
+                .await
+        });
+
+        tokio::time::timeout(Duration::from_secs(1), blocking_crypto.wait_for_start())
+            .await
+            .expect("legacy KDF starts on the blocking pool");
+        let heartbeat = Arc::new(AtomicBool::new(false));
+        let heartbeat_seen = heartbeat.clone();
+        tokio::spawn(async move {
+            heartbeat_seen.store(true, Ordering::Release);
+        })
+        .await
+        .expect("single-worker heartbeat");
+        assert!(
+            heartbeat.load(Ordering::Acquire),
+            "generic legacy password KDF must not run on the Tokio worker"
+        );
+
+        decrypt
+            .await
+            .expect("legacy KDF caller joins")
+            .expect_err("intentionally malformed sealed key fails after KDF");
+    }
+
+    fn test_legacy_credentials() -> Credentials {
+        let mut ciphertext = vec![0x5a; DATA_KEY_SALT_BYTES];
+        ciphertext.push(0xa5);
+        let data_key_ciphertext = STANDARD_NO_PAD.encode(
+            SealedPayload::new(ciphertext)
+                .to_bytes()
+                .expect("encode legacy data-key payload"),
+        );
+        Credentials {
+            api_url: "http://127.0.0.1:9".to_string(),
+            access_token: "access".to_string(),
+            refresh_token: "refresh".to_string(),
+            access_expires_at: chrono::Utc::now() + chrono::Duration::hours(1),
+            refresh_expires_at: chrono::Utc::now() + chrono::Duration::hours(2),
+            user_id: Uuid::now_v7(),
+            email: "legacy@example.com".to_string(),
+            data_key_ciphertext,
+        }
     }
 }

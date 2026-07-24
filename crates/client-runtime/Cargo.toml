@@ -13,8 +13,11 @@ publish = ["crates-io"]
 
 [dependencies]
 base64.workspace = true
+cap-fs-ext.workspace = true
+cap-std.workspace = true
 chrono.workspace = true
 html2md.workspace = true
+hickory-resolver.workspace = true
 rpassword.workspace = true
 reqwest.workspace = true
 serde.workspace = true
@@ -34,3 +37,4 @@ sealtask-client-crypto = { version = "0.2.0", path = "../client-crypto" }
 
 [dev-dependencies]
 tempfile.workspace = true
+tokio = { workspace = true, features = ["test-util"] }

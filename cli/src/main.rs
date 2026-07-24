@@ -4,6 +4,7 @@
 mod output;
 
 mod args;
+mod attachment_output;
 mod commands;
 mod input;
 mod render;
@@ -11,7 +12,8 @@ mod render;
 use args::{Cli, Command};
 use clap::Parser;
 use commands::{
-    run_auth, run_comments, run_info, run_lists, run_lists_get, run_me, run_stats, run_tasks,
+    run_auth, run_comments, run_info, run_lists, run_lists_get, run_me, run_notes, run_stats,
+    run_tasks,
 };
 use output::{CliError, CliResult, OutputFormat, print_clap_error, print_cli_error};
 use sealtask_client_core::PublicError;
@@ -28,7 +30,7 @@ async fn main() {
         Err(CliError::BrokenPipe) => std::process::exit(0),
         Err(err) => {
             let _ = print_cli_error(&err, format);
-            std::process::exit(1);
+            std::process::exit(err.exit_code());
         }
     }
 }
@@ -54,7 +56,7 @@ async fn run(cli: Cli, format: OutputFormat) -> CliResult<()> {
         return serve(socket_path).await.map_err(Into::into);
     }
 
-    let runtime = RuntimeClient::new(&cli.api_url);
+    let runtime = RuntimeClient::with_storage_origins(&cli.api_url, &cli.storage_origin)?;
     let Some(command) = cli.command else {
         return Err(PublicError::validation("a command is required").into());
     };
@@ -88,5 +90,6 @@ async fn run(cli: Cli, format: OutputFormat) -> CliResult<()> {
             password_stdin,
         } => run_lists_get(&runtime, format, work_list_id, password_stdin, false).await,
         Command::Comments { command } => run_comments(&runtime, format, command).await,
+        Command::Notes { command } => run_notes(&runtime, format, command).await,
     }
 }

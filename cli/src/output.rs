@@ -9,6 +9,10 @@ pub(crate) type CliResult<T> = Result<T, CliError>;
 #[derive(Debug)]
 pub(crate) enum CliError {
     BrokenPipe,
+    Interrupted {
+        message: String,
+        warnings: Vec<WarningResult>,
+    },
     Public(PublicError),
     PublicWithWarnings {
         error: PublicError,
@@ -20,10 +24,10 @@ impl std::error::Error for CliError {}
 
 impl fmt::Display for CliError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if let Some(err) = self.public_error() {
-            err.fmt(f)
-        } else {
-            write!(f, "broken pipe")
+        match self {
+            Self::BrokenPipe => write!(f, "broken pipe"),
+            Self::Interrupted { message, .. } => message.fmt(f),
+            Self::Public(error) | Self::PublicWithWarnings { error, .. } => error.fmt(f),
         }
     }
 }
@@ -35,27 +39,17 @@ impl From<PublicError> for CliError {
 }
 
 impl CliError {
-    fn public_error(&self) -> Option<&PublicError> {
-        match self {
-            Self::BrokenPipe => None,
-            Self::Public(err) | Self::PublicWithWarnings { error: err, .. } => Some(err),
-        }
-    }
-
     fn code(&self) -> &'static str {
-        match self.public_error() {
-            None => "broken_pipe",
-            Some(PublicError::Validation(_)) => "validation",
-            Some(PublicError::Conflict(_)) => "conflict",
-            Some(PublicError::Crypto(_)) => "crypto",
-            Some(PublicError::Unexpected(_)) => "unexpected",
-            Some(PublicError::MfaRequiredUseBeginLogin) => "mfa_required_use_begin_login",
-            Some(PublicError::MfaInputRequired) => "mfa_input_required",
+        match self {
+            Self::BrokenPipe => "broken_pipe",
+            Self::Interrupted { .. } => "interrupted",
+            Self::Public(error) | Self::PublicWithWarnings { error, .. } => error.code(),
         }
     }
 
     fn warnings(&self) -> &[WarningResult] {
         match self {
+            Self::Interrupted { warnings, .. } => warnings,
             Self::PublicWithWarnings { warnings, .. } => warnings,
             _ => &[],
         }
@@ -65,6 +59,21 @@ impl CliError {
         Self::PublicWithWarnings {
             error,
             warnings: warnings.to_vec(),
+        }
+    }
+
+    pub(crate) fn interrupted(message: impl Into<String>, warnings: &[WarningResult]) -> Self {
+        Self::Interrupted {
+            message: message.into(),
+            warnings: warnings.to_vec(),
+        }
+    }
+
+    pub(crate) fn exit_code(&self) -> i32 {
+        if matches!(self, Self::Interrupted { .. }) {
+            130
+        } else {
+            1
         }
     }
 
@@ -205,6 +214,18 @@ pub(crate) struct WarningResult {
     message: String,
 }
 
+impl WarningResult {
+    #[cfg(test)]
+    pub(crate) fn code(&self) -> &'static str {
+        self.code
+    }
+
+    #[cfg(test)]
+    pub(crate) fn message(&self) -> &str {
+        &self.message
+    }
+}
+
 pub(crate) fn print_cli_error(err: &CliError, format: OutputFormat) -> CliResult<()> {
     match format {
         OutputFormat::Table => {
@@ -260,6 +281,17 @@ pub(crate) fn finish_with_warnings<T>(
             Ok(value)
         }
         Err(CliError::BrokenPipe) => Err(CliError::BrokenPipe),
+        Err(CliError::Interrupted {
+            message,
+            warnings: existing,
+        }) => {
+            let mut combined = warnings.to_vec();
+            combined.extend(existing);
+            Err(CliError::Interrupted {
+                message,
+                warnings: combined,
+            })
+        }
         Err(CliError::Public(error)) => Err(CliError::with_warnings(error, warnings)),
         Err(CliError::PublicWithWarnings {
             error,
@@ -399,6 +431,44 @@ mod tests {
 
     struct AlwaysFailWriter;
 
+    #[test]
+    fn test_should_delegate_public_error_classification_to_core() {
+        let errors = [
+            PublicError::validation("message"),
+            PublicError::conflict("message"),
+            PublicError::entitlement("message"),
+            PublicError::payload_too_large("message"),
+            PublicError::rate_limited("message"),
+            PublicError::request_timeout("retry the request"),
+            PublicError::crypto("message"),
+            PublicError::unexpected("message"),
+            PublicError::cancelled("message"),
+            PublicError::compensation_failed("operation", "primary", "cleanup"),
+            PublicError::outcome_ambiguous("operation", "details"),
+            PublicError::mfa_required_use_begin_login(),
+            PublicError::mfa_input_required(),
+        ];
+
+        for error in errors {
+            let expected = error.code();
+            assert_eq!(CliError::from(error).code(), expected);
+        }
+    }
+
+    #[test]
+    fn request_timeout_keeps_stable_json_code_and_retry_guidance() {
+        let error = CliError::from(PublicError::request_timeout(
+            "request body timed out before execution; retry the request",
+        ));
+        let result = error.error_result();
+
+        assert_eq!(result.code, "request_timeout");
+        assert_eq!(
+            result.message,
+            "request body timed out before execution; retry the request"
+        );
+    }
+
     impl Write for AlwaysFailWriter {
         fn write(&mut self, _buf: &[u8]) -> io::Result<usize> {
             Err(io::Error::new(io::ErrorKind::BrokenPipe, "stderr closed"))
@@ -501,6 +571,28 @@ mod tests {
         let document: serde_json::Value =
             serde_json::from_slice(&output).expect("parse JSON warning output");
         assert_eq!(document["warnings"][0]["message"], message);
+    }
+
+    #[test]
+    fn interrupted_outcome_uses_exit_130_and_json_error_with_warnings() {
+        let warnings = [warning_result(
+            "attachment_upload_cancellation_timed_out",
+            "cleanup timed out".to_string(),
+        )];
+        let error = CliError::interrupted("attachment upload interrupted", &warnings);
+
+        assert_eq!(error.exit_code(), 130);
+        assert_eq!(error.code(), "interrupted");
+        let document = serde_json::to_value(StderrEnvelope {
+            warnings: error.warnings(),
+            error: Some(error.error_result()),
+        })
+        .expect("JSON error envelope");
+        assert_eq!(document["error"]["code"], "interrupted");
+        assert_eq!(
+            document["warnings"][0]["code"],
+            "attachment_upload_cancellation_timed_out"
+        );
     }
 
     #[test]

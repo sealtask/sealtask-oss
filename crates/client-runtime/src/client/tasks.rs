@@ -12,9 +12,10 @@ use sealtask_client_api::{
 };
 use sealtask_client_core::{PublicError, PublicResult};
 use sealtask_client_crypto::{
-    ChecklistItemPayload, TaskPayloadBody, build_task_payload_envelope, compute_payload_proof,
-    compute_task_create_semantic_commitment, decode_sealed_blob, decrypt_task_payload,
-    derive_payload_binding_key, encrypt_task_payload, plaintext_rich_text, seal_text_value,
+    ChecklistItemPayload, TASK_TITLE_CONTEXT, TaskPayloadBody, build_task_payload_envelope,
+    compute_payload_proof, compute_task_create_semantic_commitment, decode_sealed_blob,
+    decrypt_task_payload, derive_payload_binding_key, encrypt_task_payload, encrypt_text_value,
+    plaintext_rich_text,
 };
 use serde::Serialize;
 use uuid::Uuid;
@@ -48,7 +49,7 @@ impl RuntimeClient {
             )
             .await?;
         let mut client =
-            sealtask_client_api::PublicApiClient::with_credentials(&self.api_url, credentials);
+            sealtask_client_api::PublicApiClient::with_credentials(&self.api_url, credentials)?;
 
         if all || work_list_id.is_none() {
             let work_lists = client.list_work_lists().await?;
@@ -178,7 +179,7 @@ impl RuntimeClient {
         };
         let envelope = build_task_payload_envelope(task_body, 1);
         let payload_ciphertext = encrypt_task_payload(&envelope, list_key)?;
-        let title_ciphertext = seal_text_value(normalized_title)?;
+        let title_ciphertext = encrypt_text_value(normalized_title, list_key, TASK_TITLE_CONTEXT)?;
         let payload_proof = compute_payload_proof(&payload_ciphertext.bytes, &binding_key)?;
         let title_proof = compute_payload_proof(&title_ciphertext.bytes, &binding_key)?;
 
@@ -291,7 +292,8 @@ impl RuntimeClient {
             if normalized_title.is_empty() {
                 return Err(PublicError::validation("title cannot be empty"));
             }
-            let title_ciphertext = seal_text_value(normalized_title)?;
+            let title_ciphertext =
+                encrypt_text_value(normalized_title, list_key, TASK_TITLE_CONTEXT)?;
             let title_proof = compute_payload_proof(&title_ciphertext.bytes, &binding_key)?;
             request.title_ciphertext = Some(title_ciphertext.base64);
             request.title_ciphertext_proof = Some(title_proof);

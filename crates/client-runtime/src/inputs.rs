@@ -1,10 +1,13 @@
 use chrono::{DateTime, Utc};
-use sealtask_client_api::{DeleteCommentRequest, DeleteTaskRequest};
+use sealtask_client_api::{DeleteCommentRequest, DeleteNoteRequest, DeleteTaskRequest};
 use sealtask_client_core::{PublicError, PublicResult};
 use sealtask_client_crypto::ChecklistItemPayload;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::collections::HashSet;
+use std::fmt;
+use std::path::PathBuf;
 use uuid::Uuid;
+use zeroize::Zeroizing;
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub enum TaskFieldPatch<T> {
@@ -98,6 +101,48 @@ pub struct CommentInput {
     pub body: String,
 }
 
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct NoteCreateInput {
+    pub title: String,
+    #[serde(default)]
+    pub body: String,
+    #[serde(default)]
+    pub is_private: bool,
+    /// Stable user-scoped key for retrying one logical create after process
+    /// loss or an ambiguous response.
+    pub idempotency_key: String,
+}
+
+impl fmt::Debug for NoteCreateInput {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("NoteCreateInput")
+            .field("title_present", &!self.title.is_empty())
+            .field("body_present", &!self.body.is_empty())
+            .field("is_private", &self.is_private)
+            .field("idempotency_key", &self.idempotency_key)
+            .finish()
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct NoteUpdateInput {
+    #[serde(default)]
+    pub title: Option<String>,
+    #[serde(default)]
+    pub body: Option<String>,
+}
+
+impl fmt::Debug for NoteUpdateInput {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("NoteUpdateInput")
+            .field("title_present", &self.title.is_some())
+            .field("body_present", &self.body.is_some())
+            .finish()
+    }
+}
+
 #[derive(Debug, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MoveTaskInput {
@@ -179,6 +224,87 @@ pub struct DeleteCommentArgs {
     pub task_id: Uuid,
     pub comment_id: Uuid,
     pub input: DeleteCommentRequest,
+}
+
+pub struct CreateNoteArgs {
+    pub work_list_id: Uuid,
+    pub input: NoteCreateInput,
+    pub password_stdin: bool,
+}
+
+impl fmt::Debug for CreateNoteArgs {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("CreateNoteArgs")
+            .field("work_list_id", &self.work_list_id)
+            .field("input", &self.input)
+            .field("password_stdin", &self.password_stdin)
+            .finish()
+    }
+}
+
+pub struct UpdateNoteArgs {
+    pub work_list_id: Uuid,
+    pub note_id: Uuid,
+    pub input: NoteUpdateInput,
+    pub password_stdin: bool,
+}
+
+impl fmt::Debug for UpdateNoteArgs {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("UpdateNoteArgs")
+            .field("work_list_id", &self.work_list_id)
+            .field("note_id", &self.note_id)
+            .field("input", &self.input)
+            .field("password_stdin", &self.password_stdin)
+            .finish()
+    }
+}
+
+#[derive(Debug)]
+pub struct DeleteNoteArgs {
+    pub work_list_id: Uuid,
+    pub note_id: Uuid,
+    pub input: DeleteNoteRequest,
+}
+
+#[derive(Debug)]
+pub struct UploadTaskAttachmentArgs {
+    pub work_list_id: Uuid,
+    pub task_id: Uuid,
+    pub path: PathBuf,
+    pub file_name: Option<String>,
+    pub content_type: Option<String>,
+    pub password: Option<AttachmentUploadPassword>,
+}
+
+pub struct AttachmentUploadPassword(Zeroizing<String>);
+
+impl AttachmentUploadPassword {
+    pub fn new(password: impl Into<String>) -> PublicResult<Self> {
+        let password = Zeroizing::new(password.into());
+        if password.is_empty() {
+            return Err(PublicError::validation("password is required"));
+        }
+        Ok(Self(password))
+    }
+
+    pub(crate) fn expose_secret(&self) -> &str {
+        &self.0
+    }
+}
+
+impl fmt::Debug for AttachmentUploadPassword {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("AttachmentUploadPassword(<redacted>)")
+    }
+}
+
+#[derive(Debug)]
+pub struct DeleteTaskAttachmentArgs {
+    pub work_list_id: Uuid,
+    pub task_id: Uuid,
+    pub attachment_id: Uuid,
+    pub password_stdin: bool,
 }
 
 pub(crate) fn validate_priority(priority: Option<i8>) -> PublicResult<()> {
@@ -301,5 +427,55 @@ mod tests {
         }))
         .expect_err("typo must be rejected");
         assert!(error.to_string().contains("unknown field"));
+    }
+
+    #[test]
+    fn attachment_upload_password_debug_is_redacted() {
+        let password =
+            AttachmentUploadPassword::new("correct horse battery staple").expect("valid password");
+
+        let debug = format!("{password:?}");
+
+        assert_eq!(debug, "AttachmentUploadPassword(<redacted>)");
+        assert!(!debug.contains("correct horse battery staple"));
+    }
+
+    #[test]
+    fn note_input_and_argument_debug_redact_plaintext() {
+        let create_title = "runtime-create-title-canary";
+        let create_body = "runtime-create-body-canary";
+        let create = CreateNoteArgs {
+            work_list_id: Uuid::now_v7(),
+            input: NoteCreateInput {
+                title: create_title.to_string(),
+                body: create_body.to_string(),
+                is_private: true,
+                idempotency_key: "note:debug".to_string(),
+            },
+            password_stdin: false,
+        };
+        let create_debug = format!("{create:?}");
+        assert!(!create_debug.contains(create_title));
+        assert!(!create_debug.contains(create_body));
+        assert!(create_debug.contains("title_present: true"));
+        assert!(create_debug.contains("body_present: true"));
+        assert!(create_debug.contains("is_private: true"));
+
+        let update_title = "runtime-update-title-canary";
+        let update_body = "runtime-update-body-canary";
+        let update = UpdateNoteArgs {
+            work_list_id: Uuid::now_v7(),
+            note_id: Uuid::now_v7(),
+            input: NoteUpdateInput {
+                title: Some(update_title.to_string()),
+                body: Some(update_body.to_string()),
+            },
+            password_stdin: false,
+        };
+        let update_debug = format!("{update:?}");
+        assert!(!update_debug.contains(update_title));
+        assert!(!update_debug.contains(update_body));
+        assert!(update_debug.contains("title_present: true"));
+        assert!(update_debug.contains("body_present: true"));
     }
 }

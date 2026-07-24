@@ -1,11 +1,14 @@
-use crate::args::{TaskCreateArgsCli, TaskUpdateArgsCli};
+use crate::args::{NoteCreateArgsCli, NoteUpdateArgsCli, TaskCreateArgsCli, TaskUpdateArgsCli};
 use crate::output::{CliResult, flush_stdout};
 use sealtask_client_core::{PublicError, PublicResult};
-use sealtask_client_runtime::{CommentInput, TaskCreateInput, TaskFieldPatch, TaskUpdateInput};
+use sealtask_client_runtime::{
+    CommentInput, NoteCreateInput, NoteUpdateInput, TaskCreateInput, TaskFieldPatch,
+    TaskUpdateInput,
+};
 use serde::de::DeserializeOwned;
-use std::fs::{self, OpenOptions};
-use std::io::{self, Read, Write};
-use std::path::{Path, PathBuf};
+use std::fs;
+use std::io::{self, Read};
+use std::path::Path;
 use zeroize::Zeroizing;
 
 #[derive(Debug, Clone, Copy)]
@@ -94,6 +97,47 @@ pub(crate) fn resolve_comment_input(
         .map(str::to_owned)
         .ok_or_else(|| PublicError::validation("comment body is required"))?;
     Ok(CommentInput { body })
+}
+
+pub(crate) fn resolve_note_create_input(args: &NoteCreateArgsCli) -> PublicResult<NoteCreateInput> {
+    if let Some(input) = load_structured_input::<NoteCreateInput>(
+        args.input_file.as_deref(),
+        args.input_stdin,
+        args.password_stdin,
+    )? {
+        return Ok(input);
+    }
+
+    let title = args
+        .title
+        .clone()
+        .ok_or_else(|| PublicError::validation("note title is required"))?;
+    let idempotency_key = args.idempotency_key.clone().ok_or_else(|| {
+        PublicError::validation(
+            "--idempotency-key is required so note creation can be retried safely after process loss",
+        )
+    })?;
+    Ok(NoteCreateInput {
+        title,
+        body: args.body.clone().unwrap_or_default(),
+        is_private: args.is_private,
+        idempotency_key,
+    })
+}
+
+pub(crate) fn resolve_note_update_input(args: &NoteUpdateArgsCli) -> PublicResult<NoteUpdateInput> {
+    if let Some(input) = load_structured_input::<NoteUpdateInput>(
+        args.input_file.as_deref(),
+        args.input_stdin,
+        args.password_stdin,
+    )? {
+        return Ok(input);
+    }
+
+    Ok(NoteUpdateInput {
+        title: args.title.clone(),
+        body: args.body.clone(),
+    })
 }
 
 pub(crate) fn resolve_delete_input<T: Default + DeserializeOwned>(
@@ -208,75 +252,10 @@ pub(crate) fn read_required_password(
     Ok(password)
 }
 
-pub(crate) fn resolve_attachment_output_path(file_name: &str, output: Option<PathBuf>) -> PathBuf {
-    output.unwrap_or_else(|| PathBuf::from(sanitize_attachment_file_name(file_name)))
-}
-
-fn sanitize_attachment_file_name(file_name: &str) -> String {
-    let candidate = Path::new(file_name)
-        .file_name()
-        .and_then(|value| value.to_str())
-        .map(str::trim)
-        .filter(|value| !value.is_empty() && *value != "." && *value != "..")
-        .unwrap_or("attachment.bin");
-
-    candidate
-        .chars()
-        .map(sanitize_attachment_file_name_char)
-        .collect()
-}
-
-fn sanitize_attachment_file_name_char(ch: char) -> char {
-    match ch {
-        '/' | '\\' | '\0' => '_',
-        ch if ch.is_control() => '_',
-        _ => ch,
-    }
-}
-
-pub(crate) fn write_attachment_file(path: &Path, bytes: &[u8], force: bool) -> PublicResult<()> {
-    if let Some(parent) = path.parent()
-        && !parent.as_os_str().is_empty()
-    {
-        fs::create_dir_all(parent).map_err(|err| {
-            PublicError::unexpected(format!(
-                "failed to create output directory {}: {err}",
-                parent.display()
-            ))
-        })?;
-    }
-
-    let mut options = OpenOptions::new();
-    options.write(true);
-    if force {
-        options.create(true).truncate(true);
-    } else {
-        options.create_new(true);
-    }
-
-    let mut file = options.open(path).map_err(|err| {
-        if err.kind() == io::ErrorKind::AlreadyExists {
-            return PublicError::validation(format!(
-                "output file {} already exists; use --force to overwrite",
-                path.display()
-            ));
-        }
-        PublicError::unexpected(format!(
-            "failed to open output file {}: {err}",
-            path.display()
-        ))
-    })?;
-    file.write_all(bytes).map_err(|err| {
-        PublicError::unexpected(format!(
-            "failed to write output file {}: {err}",
-            path.display()
-        ))
-    })
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use uuid::Uuid;
 
     #[test]
     fn test_should_keep_whole_trimmed_non_login_password_stdin_contract() {
@@ -285,10 +264,20 @@ mod tests {
     }
 
     #[test]
-    fn test_should_remove_terminal_controls_from_default_attachment_file_names() {
-        assert_eq!(
-            sanitize_attachment_file_name("report\n\u{1b}[2J.txt"),
-            "report__[2J.txt"
-        );
+    fn note_create_requires_a_process_recoverable_idempotency_key() {
+        let args = NoteCreateArgsCli {
+            work_list_id: Uuid::now_v7(),
+            title: Some("Retry-safe note".to_string()),
+            body: None,
+            is_private: false,
+            idempotency_key: None,
+            input_file: None,
+            input_stdin: false,
+            password_stdin: false,
+        };
+
+        let error = resolve_note_create_input(&args)
+            .expect_err("an ephemeral default cannot survive Ctrl-C or process loss");
+        assert!(error.to_string().contains("--idempotency-key is required"));
     }
 }
