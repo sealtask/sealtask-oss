@@ -962,6 +962,7 @@ mod tests {
         let response_body = serde_json::to_vec(&intended).expect("note response");
         let gate = Arc::new((Mutex::new(false), Condvar::new()));
         let server_gate = gate.clone();
+        let server_admission = runtime.blocking_crypto.clone();
         let server = tokio::spawn(async move {
             let (mut mutation, _) = listener.accept().await.expect("mutation connection");
             read_http_request(&mut mutation).await;
@@ -971,6 +972,15 @@ mod tests {
                 listener.accept().await.expect("reconciliation connection");
             read_http_request(&mut reconciliation).await;
             release_blocking_gate(&server_gate);
+            tokio::time::timeout(Duration::from_secs(1), async {
+                while server_admission.waiting_count() != 0
+                    || server_admission.available_permits() != 2
+                {
+                    tokio::task::yield_now().await;
+                }
+            })
+            .await
+            .expect("drain saturated blocking admission");
             write_http_response(&mut reconciliation, &response_body).await;
         });
         let mut client = PublicApiClient::with_credentials(&api_url, test_credentials(&api_url))
