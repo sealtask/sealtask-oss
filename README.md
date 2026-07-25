@@ -94,18 +94,18 @@ decrypted data-key bootstrap in the platform keychain:
 
 ```bash
 printf '%s\n' "$SEALTASK_PASSWORD" \
-  | cargo run -p sealtask -- --json auth login \
+  | cargo run -p sealtask -- --json --non-interactive auth login \
       --email agent-user@example.com --password-stdin
 
 printf '%s\n' "$SEALTASK_PASSWORD" \
-  | cargo run -p sealtask -- --json auth unlock \
+  | cargo run -p sealtask -- --json --non-interactive auth unlock \
       --ttl-seconds 28800 --password-stdin
 ```
 
 Create a task with the native lifecycle fields and a retry key:
 
 ```bash
-cargo run -p sealtask -- --json tasks create \
+cargo run -p sealtask -- --json --non-interactive tasks create \
   --work-list-id <list-id> \
   --title 'Prepare release notes' \
   --priority 5 \
@@ -158,9 +158,9 @@ the CLI; a concurrent change returns a conflict so the agent can re-read,
 reconcile, and retry instead of silently overwriting newer state.
 
 ```bash
-cargo run -p sealtask -- --json tasks complete \
+cargo run -p sealtask -- --json --non-interactive tasks complete \
   --work-list-id <list-id> --task-id <task-id>
-cargo run -p sealtask -- --json tasks reopen \
+cargo run -p sealtask -- --json --non-interactive tasks reopen \
   --work-list-id <list-id> --task-id <task-id>
 ```
 
@@ -176,19 +176,19 @@ use the work-list key; `--private` creates a per-note key that is wrapped with
 the current user's data key.
 
 ```bash
-cargo run -p sealtask -- --json notes create \
+cargo run -p sealtask -- --json --non-interactive notes create \
   --work-list-id <list-id> \
   --title 'Release context' \
   --body 'Keep this with the project.' \
   --idempotency-key 'agent:run-42:release-context'
 
-cargo run -p sealtask -- --json notes create \
+cargo run -p sealtask -- --json --non-interactive notes create \
   --work-list-id <list-id> \
   --title 'Private scratchpad' \
   --private \
   --idempotency-key 'agent:run-42:private-scratchpad'
 
-cargo run -p sealtask -- --json notes update \
+cargo run -p sealtask -- --json --non-interactive notes update \
   --work-list-id <list-id> --note-id <note-id> \
   --title 'Revised title' --body 'Revised body'
 ```
@@ -215,11 +215,11 @@ never performs maximum-size note JSON work on a Tokio worker.
 ### Task attachment uploads and deletion
 
 ```bash
-cargo run -p sealtask -- --json tasks attachments upload \
+cargo run -p sealtask -- --json --non-interactive tasks attachments upload \
   --work-list-id <list-id> --task-id <task-id> \
   --file ./release-notes.md
 
-cargo run -p sealtask -- --json tasks attachments delete \
+cargo run -p sealtask -- --json --non-interactive tasks attachments delete \
   --work-list-id <list-id> --task-id <task-id> \
   --attachment-id <attachment-id>
 ```
@@ -258,28 +258,40 @@ development and tests.
 
 ### JSON process contract
 
-`sealtask info` reports `"jsonContractVersion": 1`. For ordinary commands run
-with `--json`, version 1 guarantees:
+`sealtask --json info` reports `"jsonContractVersion": 1`. For ordinary commands run
+with `--json --non-interactive`, version 1 guarantees:
 
+- `--json` emits one compact JSON document; `--format json-pretty` emits the
+  same document with indentation
 - success writes exactly one JSON document to stdout; stderr is empty unless a
   structured warning is emitted
 - collection commands always write a JSON array, including `[]` for an empty
   result
 - warnings and runtime errors are written to stderr as one JSON envelope, for
-  example `{"warnings":[...]}` or `{"error":{"code":"validation","message":"..."}}`
+  example `{"warnings":[...]}` or
+  `{"error":{"code":"validation","message":"...","retryable":false}}`
+- errors may also expose `retryAfterSeconds`, `backendCode`, `httpStatus`,
+  `outcome`, and an actionable `hint`; agents should branch on fields rather
+  than message copy
 - successful commands exit `0`, runtime/validation failures exit `1`, and Clap
   argument-parsing failures retain Clap's exit code (`2` for usage errors)
 - a closed stdout pipe is treated as successful consumer termination and exits
   `0`
 
-Help and version output retain Clap's human-readable text format, even when the
-raw argument list also contains `--json`.
+Help and version output retain Clap's human-readable text format. Use
+`sealtask --json schema [COMMAND ...]` for a versioned machine-readable command
+and argument description.
+
+`--json` controls presentation; `--non-interactive` controls prompts. Automation
+should pass both. Human sessions can request pretty JSON while retaining
+interactive auth prompts.
 
 Example enrolled-account automation input:
 
 ```bash
 printf '%s\n%s\n' "$SEALTASK_PASSWORD" "$SEALTASK_MFA_CODE" \
-  | cargo run -p sealtask -- auth login --email user@example.com --password-stdin
+  | cargo run -p sealtask -- --json --non-interactive auth login \
+      --email user@example.com --password-stdin
 ```
 
 Do not pass authenticator or backup codes as command-line arguments; arguments
@@ -301,14 +313,34 @@ Library callers construct the runtime with `RuntimeClient::new(api_url)?` for
 same-origin storage or `RuntimeClient::with_storage_origins(api_url, origins)?`
 for an explicit cross-origin storage allowlist.
 
-The CLI stores credentials and local unlock state in the `.sealtask`
-configuration directory.
+The default profile stores credentials in `~/.sealtask`. Named profiles keep
+credentials and their daemon/keychain identity isolated beneath
+`~/.sealtask/profiles/<name>`:
+
+```bash
+sealtask --profile build-agent --json auth status
+SEALTASK_PROFILE=build-agent sealtask --json tasks list --all
+```
+
+Use `--config-dir <path>` or `SEALTASK_CONFIG_DIR` to relocate the base state
+directory for CI or sandboxed agents. `auth status` and `info` report the
+resolved profile and directory.
 
 ## Development Notes
 
-- The CLI defaults to table/text output for humans; pass `--json` for machine-readable output.
+- The CLI defaults to table/text output for humans, including mutation results.
+  Pass `--json` for compact machine output or `--format json-pretty` for
+  indented JSON.
+- Every public command and option has generated help. `schema` exposes the same
+  command tree as versioned JSON for agents.
 - Read commands return decrypted agent-facing models by default; raw wire DTOs are only available through hidden debug flags.
-- Encrypted read and write commands are non-interactive by default. Use `auth unlock --password-stdin` for a temporary in-memory session, or `auth keychain store --password-stdin` to persist a local bootstrap secret in the platform keychain.
+- Use `--non-interactive` whenever prompting would be unsafe. Non-interactive
+  task creation requires a stable idempotency key. Use
+  `auth unlock --password-stdin` for a temporary in-memory session, or
+  `auth keychain store --password-stdin` to persist a local bootstrap secret in
+  the platform keychain.
+- Structured JSON inputs are exclusive with scalar editing flags and reject
+  unknown fields instead of silently ignoring them.
 - Password unlock supports legacy password-wrapped version 1 accounts and OPAQUE export-key version 2 accounts. Version 2 password unlock contacts the authenticated API; later daemon- or keychain-backed commands do not repeat that exchange.
 - `tasks get` includes typed attachment metadata and lists attachment IDs in table output.
 - `tasks attachments read` prints readable attachments to stdout, including plain text passthrough and DOCX rendered as Markdown; with `--json` it emits the rendered content plus attachment metadata.

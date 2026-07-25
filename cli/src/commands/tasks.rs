@@ -8,13 +8,12 @@ use crate::input::{
     resolve_task_update_input,
 };
 use crate::output::{
-    CliError, CliResult, OutputFormat, WarningResult, finish_with_warnings, print_pretty_json,
-    warning_result,
+    CliError, CliResult, OutputFormat, WarningResult, finish_with_warnings, warning_result,
 };
 use crate::render::{
-    print_delete_result, print_download_result, print_empty_collection, print_raw_my_tasks,
-    print_raw_task_detail, print_raw_tasks, print_readable_attachment, print_task_detail,
-    print_tasks,
+    print_attachment, print_delete_result, print_download_result, print_empty_collection,
+    print_raw_my_tasks, print_raw_task_detail, print_raw_tasks, print_readable_attachment,
+    print_task, print_task_detail, print_tasks,
 };
 use sealtask_client_api::DeleteTaskRequest;
 use sealtask_client_core::PublicError;
@@ -34,6 +33,7 @@ const ATTACHMENT_UPLOAD_CANCELLATION_GRACE: Duration = Duration::from_secs(5);
 pub(crate) async fn run_tasks(
     runtime: &RuntimeClient,
     format: OutputFormat,
+    non_interactive: bool,
     command: TasksCommand,
 ) -> CliResult<()> {
     match command {
@@ -101,13 +101,13 @@ pub(crate) async fn run_tasks(
                 .await?;
             print_task_detail(&detail, format)
         }
-        TasksCommand::Create(args) => create_task(runtime, args).await,
-        TasksCommand::Update(args) => update_task(runtime, args).await,
-        TasksCommand::Move(args) => move_task(runtime, args).await,
-        TasksCommand::Complete(args) => set_task_completion(runtime, args, true).await,
-        TasksCommand::Reopen(args) => set_task_completion(runtime, args, false).await,
-        TasksCommand::Archive(args) => archive_task(runtime, args).await,
-        TasksCommand::Unarchive(args) => unarchive_task(runtime, args).await,
+        TasksCommand::Create(args) => create_task(runtime, format, non_interactive, args).await,
+        TasksCommand::Update(args) => update_task(runtime, format, args).await,
+        TasksCommand::Move(args) => move_task(runtime, format, args).await,
+        TasksCommand::Complete(args) => set_task_completion(runtime, format, args, true).await,
+        TasksCommand::Reopen(args) => set_task_completion(runtime, format, args, false).await,
+        TasksCommand::Archive(args) => archive_task(runtime, format, args).await,
+        TasksCommand::Unarchive(args) => unarchive_task(runtime, format, args).await,
         TasksCommand::Delete(args) => delete_task(runtime, format, args).await,
         TasksCommand::Attachments { command } => {
             run_task_attachments(runtime, format, command).await
@@ -143,10 +143,9 @@ async fn run_task_attachments(
             )
             .await;
             let result = match supervised.outcome {
-                AttachmentUploadOutcome::Completed(Ok(attachment)) => print_pretty_json(
-                    &attachment,
-                    "serializing uploaded attachment should succeed",
-                ),
+                AttachmentUploadOutcome::Completed(Ok(attachment)) => {
+                    print_attachment(&attachment, format)
+                }
                 AttachmentUploadOutcome::Completed(Err(error)) => Err(error.into()),
                 AttachmentUploadOutcome::Interrupted { message } => {
                     return Err(CliError::interrupted(message, &supervised.warnings));
@@ -333,8 +332,19 @@ where
     }
 }
 
-async fn create_task(runtime: &RuntimeClient, args: TaskCreateArgsCli) -> CliResult<()> {
+async fn create_task(
+    runtime: &RuntimeClient,
+    format: OutputFormat,
+    non_interactive: bool,
+    args: TaskCreateArgsCli,
+) -> CliResult<()> {
     let input = resolve_task_create_input(&args)?;
+    if non_interactive && input.idempotency_key.is_none() {
+        return Err(PublicError::validation(
+            "--non-interactive tasks create requires --idempotency-key or input field idempotencyKey",
+        )
+        .into());
+    }
     let created = runtime
         .create_task(CreateTaskArgs {
             work_list_id: args.work_list_id,
@@ -342,10 +352,14 @@ async fn create_task(runtime: &RuntimeClient, args: TaskCreateArgsCli) -> CliRes
             password_stdin: args.password_stdin,
         })
         .await?;
-    print_pretty_json(&created, "serializing created task should succeed")
+    print_task(&created, format)
 }
 
-async fn update_task(runtime: &RuntimeClient, args: TaskUpdateArgsCli) -> CliResult<()> {
+async fn update_task(
+    runtime: &RuntimeClient,
+    format: OutputFormat,
+    args: TaskUpdateArgsCli,
+) -> CliResult<()> {
     let input = resolve_task_update_input(&args)?;
     let updated = runtime
         .update_task(UpdateTaskArgs {
@@ -355,10 +369,14 @@ async fn update_task(runtime: &RuntimeClient, args: TaskUpdateArgsCli) -> CliRes
             password_stdin: args.password_stdin,
         })
         .await?;
-    print_pretty_json(&updated, "serializing updated task should succeed")
+    print_task(&updated, format)
 }
 
-async fn move_task(runtime: &RuntimeClient, args: TaskMoveArgsCli) -> CliResult<()> {
+async fn move_task(
+    runtime: &RuntimeClient,
+    format: OutputFormat,
+    args: TaskMoveArgsCli,
+) -> CliResult<()> {
     let moved = runtime
         .move_task(MoveTaskArgs {
             work_list_id: args.work_list_id,
@@ -370,11 +388,12 @@ async fn move_task(runtime: &RuntimeClient, args: TaskMoveArgsCli) -> CliResult<
             password_stdin: args.password_stdin,
         })
         .await?;
-    print_pretty_json(&moved, "serializing moved task should succeed")
+    print_task(&moved, format)
 }
 
 async fn set_task_completion(
     runtime: &RuntimeClient,
+    format: OutputFormat,
     args: TaskCompletionArgsCli,
     complete: bool,
 ) -> CliResult<()> {
@@ -388,17 +407,14 @@ async fn set_task_completion(
     } else {
         runtime.reopen_task(args).await?
     };
-    print_pretty_json(
-        &task,
-        if complete {
-            "serializing completed task should succeed"
-        } else {
-            "serializing reopened task should succeed"
-        },
-    )
+    print_task(&task, format)
 }
 
-async fn archive_task(runtime: &RuntimeClient, args: TaskArchiveArgsCli) -> CliResult<()> {
+async fn archive_task(
+    runtime: &RuntimeClient,
+    format: OutputFormat,
+    args: TaskArchiveArgsCli,
+) -> CliResult<()> {
     let archived = runtime
         .archive_task(ArchiveTaskArgs {
             work_list_id: args.work_list_id,
@@ -406,10 +422,14 @@ async fn archive_task(runtime: &RuntimeClient, args: TaskArchiveArgsCli) -> CliR
             password_stdin: args.password_stdin,
         })
         .await?;
-    print_pretty_json(&archived, "serializing archived task should succeed")
+    print_task(&archived, format)
 }
 
-async fn unarchive_task(runtime: &RuntimeClient, args: TaskUnarchiveArgsCli) -> CliResult<()> {
+async fn unarchive_task(
+    runtime: &RuntimeClient,
+    format: OutputFormat,
+    args: TaskUnarchiveArgsCli,
+) -> CliResult<()> {
     let unarchived = runtime
         .unarchive_task(UnarchiveTaskArgs {
             work_list_id: args.work_list_id,
@@ -417,7 +437,7 @@ async fn unarchive_task(runtime: &RuntimeClient, args: TaskUnarchiveArgsCli) -> 
             password_stdin: args.password_stdin,
         })
         .await?;
-    print_pretty_json(&unarchived, "serializing unarchived task should succeed")
+    print_task(&unarchived, format)
 }
 
 async fn delete_task(

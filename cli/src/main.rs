@@ -7,15 +7,17 @@ mod args;
 mod attachment_output;
 mod commands;
 mod input;
+mod output_models;
 mod render;
 
 use args::{Cli, Command};
 use clap::Parser;
 use commands::{
-    run_auth, run_comments, run_info, run_lists, run_lists_get, run_me, run_notes, run_stats,
-    run_tasks,
+    run_auth, run_comments, run_info, run_lists, run_lists_get, run_me, run_notes, run_schema,
+    run_stats, run_tasks,
 };
 use output::{CliError, CliResult, OutputFormat, print_clap_error, print_cli_error};
+use sealtask_client_auth::configure_local_state;
 use sealtask_client_core::PublicError;
 use sealtask_client_runtime::{RuntimeClient, serve};
 use std::ffi::OsString;
@@ -23,8 +25,9 @@ use std::ffi::OsString;
 #[tokio::main]
 async fn main() {
     let args = std::env::args_os().collect::<Vec<_>>();
-    let format = OutputFormat::from_raw_args(&args);
-    let cli = parse_cli_or_exit(&args, format);
+    let raw_format = OutputFormat::from_raw_args(&args);
+    let cli = parse_cli_or_exit(&args, raw_format);
+    let format = OutputFormat::from_cli(&cli);
     match run(cli, format).await {
         Ok(()) => {}
         Err(CliError::BrokenPipe) => std::process::exit(0),
@@ -43,8 +46,8 @@ fn parse_cli_or_exit(args: &[OsString], format: OutputFormat) -> Cli {
 }
 
 fn exit_after_clap_error(err: clap::Error, format: OutputFormat) -> ! {
-    if format == OutputFormat::Json && err.use_stderr() {
-        let _ = print_clap_error(&err);
+    if format.is_json() && err.use_stderr() {
+        let _ = print_clap_error(&err, format);
         std::process::exit(err.exit_code());
     }
 
@@ -52,6 +55,8 @@ fn exit_after_clap_error(err: clap::Error, format: OutputFormat) -> ! {
 }
 
 async fn run(cli: Cli, format: OutputFormat) -> CliResult<()> {
+    configure_local_state(cli.config_dir.clone(), cli.profile.as_deref())?;
+
     if let Some(socket_path) = cli.serve_unlock_daemon.as_deref() {
         return serve(socket_path).await.map_err(Into::into);
     }
@@ -62,8 +67,9 @@ async fn run(cli: Cli, format: OutputFormat) -> CliResult<()> {
     };
 
     match command {
-        Command::Info => run_info(&runtime),
-        Command::Auth { command } => run_auth(&runtime, format, command).await,
+        Command::Info => run_info(&runtime, format),
+        Command::Schema { command } => run_schema(format, &command),
+        Command::Auth { command } => run_auth(&runtime, format, cli.non_interactive, command).await,
         Command::Me => run_me(&runtime, format).await,
         Command::Lists {
             verbose,
@@ -83,7 +89,9 @@ async fn run(cli: Cli, format: OutputFormat) -> CliResult<()> {
             )
             .await
         }
-        Command::Tasks { command } => run_tasks(&runtime, format, command).await,
+        Command::Tasks { command } => {
+            run_tasks(&runtime, format, cli.non_interactive, command).await
+        }
         Command::Stats => run_stats(&runtime, format).await,
         Command::Inspect {
             work_list_id,

@@ -4,6 +4,7 @@ use std::fmt;
 use std::fs::{self, File, OpenOptions};
 use std::io::{BufReader, Write};
 use std::path::{Path, PathBuf};
+use std::sync::OnceLock;
 use std::time::{Duration as StdDuration, Instant};
 
 use argon2::{Algorithm, Argon2, Params, Version};
@@ -27,6 +28,8 @@ use sealtask_client_core::{PublicError, PublicResult, ResponseFailureKind, Trans
 
 const OPAQUE_SERVER_ID: &[u8] = b"worklist.api";
 const DATA_KEY_KEYCHAIN_SERVICE: &str = "sealtask.data-key";
+const CONFIG_DIR_ENV: &str = "SEALTASK_CONFIG_DIR";
+const PROFILE_ENV: &str = "SEALTASK_PROFILE";
 const TEST_KEYCHAIN_DIR_ENV: &str = "SEALTASK_TEST_KEYCHAIN_DIR";
 const MFA_CAPABILITIES_HEADER: &str = "X-Worklist-Auth-Capabilities";
 const MFA_CAPABILITIES_VALUE: &str = "mfa-totp-v1";
@@ -39,6 +42,16 @@ const CREDENTIALS_CHANGED_MESSAGE: &str =
 const CREDENTIAL_REFRESH_TIMEOUT: StdDuration = StdDuration::from_secs(30);
 const MAX_RETRY_AFTER_SECONDS: u64 = 24 * 60 * 60;
 const MAX_REFRESH_RESPONSE_BYTES: usize = 64 * 1024;
+const DEFAULT_PROFILE: &str = "default";
+const MAX_PROFILE_NAME_BYTES: usize = 64;
+
+static LOCAL_STATE_OVERRIDE: OnceLock<LocalStateOverride> = OnceLock::new();
+
+#[derive(Debug, Clone)]
+struct LocalStateOverride {
+    base_dir: Option<PathBuf>,
+    profile: String,
+}
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -504,10 +517,30 @@ impl CipherSuite for ClientCipherSuite {
     type Ksf = ClientKsf;
 }
 
+pub fn configure_local_state(base_dir: Option<PathBuf>, profile: Option<&str>) -> PublicResult<()> {
+    let profile = normalize_profile(profile)?;
+    LOCAL_STATE_OVERRIDE
+        .set(LocalStateOverride { base_dir, profile })
+        .map_err(|_| PublicError::unexpected("local state configuration is already initialized"))
+}
+
+pub fn active_profile() -> PublicResult<String> {
+    local_state_settings().map(|settings| settings.profile)
+}
+
 pub fn config_dir() -> PublicResult<PathBuf> {
-    dirs::home_dir()
-        .map(|home| home.join(".sealtask"))
-        .ok_or_else(|| PublicError::unexpected("could not determine home directory"))
+    let settings = local_state_settings()?;
+    let base_dir = match settings.base_dir {
+        Some(path) => path,
+        None => dirs::home_dir()
+            .map(|home| home.join(".sealtask"))
+            .ok_or_else(|| PublicError::unexpected("could not determine home directory"))?,
+    };
+    if settings.profile == DEFAULT_PROFILE {
+        Ok(base_dir)
+    } else {
+        Ok(base_dir.join("profiles").join(settings.profile))
+    }
 }
 
 pub fn credentials_path() -> PublicResult<PathBuf> {
@@ -516,6 +549,38 @@ pub fn credentials_path() -> PublicResult<PathBuf> {
 
 pub fn normalize_api_url(api_url: &str) -> String {
     api_url.trim_end_matches('/').to_string()
+}
+
+fn local_state_settings() -> PublicResult<LocalStateOverride> {
+    if let Some(settings) = LOCAL_STATE_OVERRIDE.get() {
+        return Ok(settings.clone());
+    }
+
+    let base_dir = std::env::var_os(CONFIG_DIR_ENV)
+        .filter(|value| !value.is_empty())
+        .map(PathBuf::from);
+    let profile = std::env::var(PROFILE_ENV).ok();
+    Ok(LocalStateOverride {
+        base_dir,
+        profile: normalize_profile(profile.as_deref())?,
+    })
+}
+
+fn normalize_profile(profile: Option<&str>) -> PublicResult<String> {
+    let profile = profile.unwrap_or(DEFAULT_PROFILE).trim();
+    if profile.is_empty()
+        || profile.len() > MAX_PROFILE_NAME_BYTES
+        || profile == "."
+        || profile == ".."
+        || !profile
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'_' | b'-'))
+    {
+        return Err(PublicError::validation(format!(
+            "profile must contain 1 to {MAX_PROFILE_NAME_BYTES} ASCII letters, digits, '.', '_', or '-' and cannot be '.' or '..'"
+        )));
+    }
+    Ok(profile.to_string())
 }
 
 pub fn load_credentials() -> PublicResult<Option<Credentials>> {
@@ -1319,12 +1384,18 @@ fn platform_keyring_entry(credentials: &Credentials) -> PublicResult<keyring::En
 
 fn persisted_data_key_entry_name(credentials: &Credentials) -> PublicResult<String> {
     let fingerprint = data_key_fingerprint(&credentials.data_key_ciphertext)?;
-    Ok(format!(
+    let entry = format!(
         "{}::{}::{}",
         normalize_api_url(&credentials.api_url),
         credentials.user_id,
         fingerprint
-    ))
+    );
+    let profile = active_profile()?;
+    if profile == DEFAULT_PROFILE {
+        Ok(entry)
+    } else {
+        Ok(format!("profile:{profile}::{entry}"))
+    }
 }
 
 fn data_key_fingerprint(data_key_ciphertext: &str) -> PublicResult<String> {
@@ -1602,6 +1673,22 @@ mod tests {
     const REFRESH_RACE_BASE_URL_ENV: &str = "SEALTASK_REFRESH_RACE_BASE_URL";
     const REFRESH_RACE_CREDENTIALS_DIR_ENV: &str = "SEALTASK_REFRESH_RACE_CREDENTIALS_DIR";
     const REFRESH_RACE_READY_PATH_ENV: &str = "SEALTASK_REFRESH_RACE_READY_PATH";
+
+    #[test]
+    fn profile_names_are_path_safe_and_stable() {
+        for valid in ["default", "agent-1", "work.account", "CI_runner"] {
+            assert_eq!(
+                normalize_profile(Some(valid)).expect("valid profile"),
+                valid
+            );
+        }
+        for invalid in ["", ".", "..", "with/slash", "with space", "équipe"] {
+            assert!(
+                normalize_profile(Some(invalid)).is_err(),
+                "profile unexpectedly accepted: {invalid:?}"
+            );
+        }
+    }
 
     async fn spawn_mfa_server(
         status: StatusCode,

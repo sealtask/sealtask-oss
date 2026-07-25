@@ -39,19 +39,40 @@ where
 pub(crate) async fn run_auth(
     runtime: &RuntimeClient,
     format: OutputFormat,
+    non_interactive: bool,
     command: AuthCommand,
 ) -> CliResult<()> {
     match command {
         AuthCommand::Login {
             email,
             password_stdin,
-        } => login::run(format, runtime.api_url(), email, password_stdin).await,
+        } => {
+            login::run(
+                format,
+                runtime.api_url(),
+                email,
+                password_stdin,
+                non_interactive,
+            )
+            .await
+        }
         AuthCommand::Unlock {
             ttl_seconds,
             password_stdin,
-        } => session::unlock(format, runtime, ttl_seconds, password_stdin).await,
+        } => {
+            session::unlock(
+                format,
+                runtime,
+                ttl_seconds,
+                password_stdin,
+                non_interactive,
+            )
+            .await
+        }
         AuthCommand::Lock => session::lock(format),
-        AuthCommand::Keychain { command } => session::keychain(format, runtime, command).await,
+        AuthCommand::Keychain { command } => {
+            session::keychain(format, runtime, command, non_interactive).await
+        }
         AuthCommand::Logout => session::logout(format, runtime).await,
         AuthCommand::Status => status::run(format, runtime),
     }

@@ -628,7 +628,7 @@ pub struct AuditPatchRequest {
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct DeleteTaskRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub audit_patch: Option<AuditPatchRequest>,
@@ -651,7 +651,7 @@ pub struct UpdateCommentRequest {
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct DeleteCommentRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub audit_patch: Option<AuditPatchRequest>,

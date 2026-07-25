@@ -2,7 +2,7 @@ use super::revoke_session_with_timeout;
 use crate::args::KeychainCommand;
 use crate::output::{
     CliResult, OutputFormat, WarningResult, finish_with_warnings, print_simple_result,
-    public_result_with_warnings, require_password_stdin_for_json_command, warning_result,
+    public_result_with_warnings, warning_result,
 };
 use sealtask_client_auth::{
     clear_credentials_if_current, clear_persisted_data_key, load_credentials_for_url,
@@ -48,8 +48,9 @@ pub(super) async fn unlock(
     runtime: &RuntimeClient,
     ttl_seconds: u64,
     password_stdin: bool,
+    non_interactive: bool,
 ) -> CliResult<()> {
-    require_password_stdin_for_json_command(format, password_stdin, "auth unlock")?;
+    require_password_stdin_for_non_interactive(non_interactive, password_stdin, "auth unlock")?;
     runtime.unlock_daemon(ttl_seconds, password_stdin).await?;
     print_unlock_result(
         format,
@@ -68,10 +69,15 @@ pub(super) async fn keychain(
     format: OutputFormat,
     runtime: &RuntimeClient,
     command: KeychainCommand,
+    non_interactive: bool,
 ) -> CliResult<()> {
     let (status, table_message) = match command {
         KeychainCommand::Store { password_stdin } => {
-            require_password_stdin_for_json_command(format, password_stdin, "auth keychain store")?;
+            require_password_stdin_for_non_interactive(
+                non_interactive,
+                password_stdin,
+                "auth keychain store",
+            )?;
             runtime.store_persisted_data_key(password_stdin).await?;
             (
                 "available",
@@ -95,6 +101,20 @@ pub(super) async fn keychain(
         "serializing keychain result should succeed",
         table_message,
     )
+}
+
+fn require_password_stdin_for_non_interactive(
+    non_interactive: bool,
+    password_stdin: bool,
+    command_name: &str,
+) -> CliResult<()> {
+    if non_interactive && !password_stdin {
+        return Err(PublicError::validation(format!(
+            "--non-interactive {command_name} requires --password-stdin"
+        ))
+        .into());
+    }
+    Ok(())
 }
 
 pub(super) async fn logout(format: OutputFormat, runtime: &RuntimeClient) -> CliResult<()> {

@@ -80,6 +80,7 @@ async fn cli_proven_flows_round_trip_through_mock_api() {
         home.path(),
         &server.base_url,
         &[
+            "--json",
             "tasks",
             "create",
             "--work-list-id",
@@ -112,6 +113,7 @@ async fn cli_proven_flows_round_trip_through_mock_api() {
         home.path(),
         &server.base_url,
         &[
+            "--json",
             "tasks",
             "update",
             "--work-list-id",
@@ -141,6 +143,7 @@ async fn cli_proven_flows_round_trip_through_mock_api() {
         home.path(),
         &server.base_url,
         &[
+            "--json",
             "tasks",
             "move",
             "--work-list-id",
@@ -167,6 +170,7 @@ async fn cli_proven_flows_round_trip_through_mock_api() {
         home.path(),
         &server.base_url,
         &[
+            "--json",
             "tasks",
             "archive",
             "--work-list-id",
@@ -189,6 +193,7 @@ async fn cli_proven_flows_round_trip_through_mock_api() {
         home.path(),
         &server.base_url,
         &[
+            "--json",
             "tasks",
             "unarchive",
             "--work-list-id",
@@ -211,6 +216,7 @@ async fn cli_proven_flows_round_trip_through_mock_api() {
         home.path(),
         &server.base_url,
         &[
+            "--json",
             "comments",
             "create",
             "--work-list-id",
@@ -235,6 +241,7 @@ async fn cli_proven_flows_round_trip_through_mock_api() {
         home.path(),
         &server.base_url,
         &[
+            "--json",
             "comments",
             "update",
             "--work-list-id",
@@ -1668,6 +1675,216 @@ async fn cli_tasks_help_uses_explicit_verbs() {
     for command in ["list", "get", "create", "update", "delete"] {
         assert!(notes_help.stdout.contains(command));
     }
+
+    let create_help = run_cli(
+        home.path(),
+        "https://sealtask.com",
+        &["tasks", "create", "--help"],
+        None,
+    );
+    assert!(create_help.status.success());
+    for description in [
+        "Create an encrypted task",
+        "Task priority: 1 (low), 3 (medium), 5 (high), or 8 (urgent)",
+        "Read the complete camelCase task input object",
+        "Never prompt",
+    ] {
+        assert!(
+            create_help.stdout.contains(description),
+            "missing help description {description:?}: {}",
+            create_help.stdout
+        );
+    }
+}
+
+#[test]
+fn cli_schema_and_output_formats_are_machine_discoverable() {
+    let home = TempDir::new().expect("temp home");
+    let compact = run_cli(
+        home.path(),
+        "https://sealtask.com",
+        &["--json", "schema", "tasks", "create"],
+        None,
+    );
+    assert!(
+        compact.status.success(),
+        "schema failed: {}",
+        compact.stderr
+    );
+    assert_eq!(compact.stdout.lines().count(), 1);
+    let schema = parse_stdout_json(&compact.stdout);
+    assert_eq!(schema["schemaVersion"], 1);
+    assert_eq!(schema["name"], "create");
+    assert!(
+        schema["arguments"]
+            .as_array()
+            .expect("arguments")
+            .iter()
+            .any(|argument| argument["long"] == "idempotency-key")
+    );
+
+    let pretty = run_cli(
+        home.path(),
+        "https://sealtask.com",
+        &["--format", "json-pretty", "info"],
+        None,
+    );
+    assert!(
+        pretty.status.success(),
+        "pretty info failed: {}",
+        pretty.stderr
+    );
+    assert!(pretty.stdout.lines().count() > 1);
+    assert_eq!(parse_stdout_json(&pretty.stdout)["jsonContractVersion"], 1);
+
+    let human = run_cli(home.path(), "https://sealtask.com", &["info"], None);
+    assert!(
+        human.status.success(),
+        "human info failed: {}",
+        human.stderr
+    );
+    assert!(human.stdout.starts_with("SealTask CLI contract version 1"));
+}
+
+#[test]
+fn cli_profiles_isolate_credentials_and_support_custom_config_roots() {
+    let home = TempDir::new().expect("temp home");
+    let fixture = TestFixture::new();
+    seed_credentials(home.path(), &fixture, "https://sealtask.com");
+    let isolated = run_cli(
+        home.path(),
+        "https://sealtask.com",
+        &["--json", "--profile", "isolated-agent", "auth", "status"],
+        None,
+    );
+    assert!(
+        isolated.status.success(),
+        "isolated status failed: {}",
+        isolated.stderr
+    );
+    assert_eq!(parse_stdout_json(&isolated.stdout)["loggedIn"], false);
+
+    let config_root = home.path().join("agent-state");
+    let output = run_cli(
+        home.path(),
+        "https://sealtask.com",
+        &[
+            "--json",
+            "--config-dir",
+            config_root.to_str().expect("UTF-8 config path"),
+            "--profile",
+            "build-agent",
+            "auth",
+            "status",
+        ],
+        None,
+    );
+    assert!(
+        output.status.success(),
+        "profile status failed: {}",
+        output.stderr
+    );
+    let status = parse_stdout_json(&output.stdout);
+    assert_eq!(status["loggedIn"], false);
+    assert_eq!(status["profile"], "build-agent");
+    assert_eq!(
+        status["configDirectory"],
+        config_root
+            .join("profiles/build-agent")
+            .display()
+            .to_string()
+    );
+    assert_eq!(
+        status["credentialsPath"],
+        config_root
+            .join("profiles/build-agent/credentials.json")
+            .display()
+            .to_string()
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn cli_mutations_honor_human_output_and_automation_idempotency() {
+    let fixture = TestFixture::new();
+    let state = Arc::new(Mutex::new(TestState::new(fixture.clone())));
+    let server = spawn_server(state).await;
+    let home = TempDir::new().expect("temp home");
+    seed_credentials(home.path(), &fixture, &server.base_url);
+
+    let human = run_cli(
+        home.path(),
+        &server.base_url,
+        &[
+            "tasks",
+            "create",
+            "--work-list-id",
+            &fixture.work_list_id.to_string(),
+            "--title",
+            "Human-readable result",
+            "--password-stdin",
+        ],
+        Some(&fixture.password),
+    );
+    assert!(
+        human.status.success(),
+        "human create failed: {}",
+        human.stderr
+    );
+    assert!(human.stdout.starts_with("Task "));
+    assert!(!human.stdout.trim_start().starts_with('{'));
+
+    let non_interactive = run_cli(
+        home.path(),
+        &server.base_url,
+        &[
+            "--json",
+            "--non-interactive",
+            "tasks",
+            "create",
+            "--work-list-id",
+            &fixture.work_list_id.to_string(),
+            "--title",
+            "Unsafe retry",
+            "--password-stdin",
+        ],
+        Some(&fixture.password),
+    );
+    assert!(!non_interactive.status.success());
+    let error = parse_stderr_json(&non_interactive.stderr);
+    assert_eq!(error["error"]["code"], "validation");
+    assert!(
+        error["error"]["message"]
+            .as_str()
+            .expect("message")
+            .contains("requires --idempotency-key")
+    );
+}
+
+#[test]
+fn cli_structured_inputs_conflict_with_scalar_fields_at_parse_time() {
+    let home = TempDir::new().expect("temp home");
+    let input_path = home.path().join("task.json");
+    std::fs::write(&input_path, r#"{"title":"from file"}"#).expect("write task input");
+    let output = run_cli(
+        home.path(),
+        "https://sealtask.com",
+        &[
+            "--json",
+            "tasks",
+            "create",
+            "--work-list-id",
+            &Uuid::now_v7().to_string(),
+            "--input-file",
+            input_path.to_str().expect("UTF-8 input path"),
+            "--title",
+            "silently ignored before",
+        ],
+        None,
+    );
+    assert_eq!(output.status.code(), Some(2));
+    assert!(output.stdout.is_empty());
+    assert_json_error_contains(&output.stderr, "--input-file");
+    assert_json_error_contains(&output.stderr, "--title");
 }
 
 #[test]
@@ -1681,7 +1898,12 @@ fn cli_public_name_is_sealtask() {
         help.stdout
     );
 
-    let info = run_cli(home.path(), "https://sealtask.com", &["info"], None);
+    let info = run_cli(
+        home.path(),
+        "https://sealtask.com",
+        &["--json", "info"],
+        None,
+    );
     assert!(info.status.success(), "info failed: {}", info.stderr);
     assert_eq!(parse_stdout_json(&info.stdout)["commandName"], "sealtask");
 }
@@ -2027,7 +2249,11 @@ async fn cli_download_respects_output_path_and_force() {
         !first_output.status.success(),
         "download unexpectedly overwrote file"
     );
-    assert!(first_output.stderr.contains("already exists"));
+    assert!(
+        first_output.stderr.contains("already exists"),
+        "unexpected stderr: {}",
+        first_output.stderr
+    );
 
     let second_output = run_cli_in_dir(
         home.path(),
@@ -2173,11 +2399,9 @@ async fn cli_rejects_input_stdin_with_password_stdin() {
     );
 
     assert!(!output.status.success(), "command unexpectedly succeeded");
-    assert!(
-        output
-            .stderr
-            .contains("--input-stdin cannot be combined with --password-stdin")
-    );
+    assert!(output.stderr.contains("--input-stdin"));
+    assert!(output.stderr.contains("--password-stdin"));
+    assert!(output.stderr.contains("cannot be used with"));
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -3005,13 +3229,13 @@ async fn test_should_query_unlock_daemon_status_when_credentials_are_missing() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn cli_json_login_requires_email_non_interactively() {
+async fn cli_non_interactive_login_requires_email() {
     let home = TempDir::new().expect("temp home");
 
     let output = run_cli(
         home.path(),
         "https://sealtask.com",
-        &["--json", "auth", "login"],
+        &["--json", "--non-interactive", "auth", "login"],
         None,
     );
     assert!(!output.status.success(), "login unexpectedly succeeded");
@@ -3021,14 +3245,24 @@ async fn cli_json_login_requires_email_non_interactively() {
         output.stdout
     );
 
-    assert_json_error_message(&output.stderr, "--json auth login requires --email");
+    assert_json_error_message(
+        &output.stderr,
+        "--non-interactive auth login requires --email",
+    );
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn cli_json_login_requires_password_stdin_non_interactively() {
+async fn cli_non_interactive_login_requires_password_stdin() {
     assert_json_password_stdin_required(
-        &["--json", "auth", "login", "--email", "agent@example.com"],
-        "--json auth login requires --password-stdin",
+        &[
+            "--json",
+            "--non-interactive",
+            "auth",
+            "login",
+            "--email",
+            "agent@example.com",
+        ],
+        "--non-interactive auth login requires --password-stdin",
     );
 }
 
@@ -3476,18 +3710,18 @@ async fn cli_login_process_maps_upgrade_and_terminal_or_retryable_mfa_without_se
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn cli_json_unlock_requires_password_stdin_non_interactively() {
+async fn cli_non_interactive_unlock_requires_password_stdin() {
     assert_json_password_stdin_required(
-        &["--json", "auth", "unlock"],
-        "--json auth unlock requires --password-stdin",
+        &["--json", "--non-interactive", "auth", "unlock"],
+        "--non-interactive auth unlock requires --password-stdin",
     );
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn cli_json_keychain_store_requires_password_stdin_non_interactively() {
+async fn cli_non_interactive_keychain_store_requires_password_stdin() {
     assert_json_password_stdin_required(
-        &["--json", "auth", "keychain", "store"],
-        "--json auth keychain store requires --password-stdin",
+        &["--json", "--non-interactive", "auth", "keychain", "store"],
+        "--non-interactive auth keychain store requires --password-stdin",
     );
 }
 

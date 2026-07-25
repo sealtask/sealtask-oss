@@ -226,7 +226,7 @@ impl fmt::Debug for UpdateNoteRequest {
 }
 
 #[derive(Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct DeleteNoteRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub audit_patch: Option<AuditPatchRequest>,

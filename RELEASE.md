@@ -46,6 +46,12 @@ successful no-factor, interactive TOTP, one-time backup-code, one-line
 `mfa_input_required`, and two-line stdin login flows. A path dependency or the
 dry-run package result is not release evidence.
 
+Also verify the installed CLI contract: `sealtask --json info` reports
+`jsonContractVersion: 1`, `sealtask --json schema tasks create` is a single
+compact JSON document, `--format json-pretty` is equivalent except for
+whitespace, and two named profiles under a temporary `--config-dir` do not
+share credentials or unlock state.
+
 Exercise data-key unlock against both a legacy version 1 account and an OPAQUE
 export-key version 2 account. For version 2, record successful single-command,
 unlock-daemon, and platform-keychain flows against the hosted API, including an

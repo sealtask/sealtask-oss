@@ -1,8 +1,8 @@
 use super::revoke_session_with_timeout;
 use crate::input::{prompt, read_required_password};
 use crate::output::{
-    CliResult, OutputFormat, WarningResult, finish_with_warnings, print_pretty_json,
-    require_password_stdin_for_json_command, terminal_line, warning_result,
+    CliResult, OutputFormat, WarningResult, finish_with_warnings, print_json, terminal_line,
+    warning_result,
 };
 use sealtask_client_auth::{
     AuthResponse, CompleteMfaLoginError, Credentials, LoginOutcome, SecretMfaCode,
@@ -34,6 +34,7 @@ pub(super) async fn run(
     api_url: &str,
     email_flag: Option<String>,
     password_stdin: bool,
+    non_interactive: bool,
 ) -> CliResult<()> {
     let normalized_api_url = normalize_api_url(api_url);
     let stored_credentials = load_credentials()?;
@@ -49,8 +50,10 @@ pub(super) async fn run(
         return Ok(());
     }
 
-    if format == OutputFormat::Json && email_flag.is_none() {
-        return Err(PublicError::validation("--json auth login requires --email").into());
+    if non_interactive && email_flag.is_none() {
+        return Err(
+            PublicError::validation("--non-interactive auth login requires --email").into(),
+        );
     }
 
     let email = match email_flag {
@@ -60,7 +63,12 @@ pub(super) async fn run(
     if email.is_empty() {
         return Err(PublicError::validation("email is required").into());
     }
-    require_password_stdin_for_json_command(format, password_stdin, "auth login")?;
+    if non_interactive && !password_stdin {
+        return Err(PublicError::validation(
+            "--non-interactive auth login requires --password-stdin",
+        )
+        .into());
+    }
 
     let mut login_stdin = password_stdin.then(read_login_stdin_lines).transpose()?;
     let password = Zeroizing::new(if let Some(lines) = &mut login_stdin {
@@ -69,7 +77,7 @@ pub(super) async fn run(
         read_required_password(false, None)?
     });
 
-    if format == OutputFormat::Table {
+    if !format.is_json() {
         println!("Authenticating...");
     }
     let client = reqwest::Client::new();
@@ -87,7 +95,7 @@ pub(super) async fn run(
                 }
                 let code = match supplied_code.take() {
                     Some(code) => code,
-                    None if password_stdin => {
+                    None if password_stdin || non_interactive => {
                         drop(pending);
                         return Err(PublicError::mfa_input_required().into());
                     }
@@ -342,7 +350,9 @@ fn build_login_result(
 
 fn print_login_result(format: OutputFormat, result: &LoginResult, api_url: &str) -> CliResult<()> {
     match format {
-        OutputFormat::Json => print_pretty_json(result, "serializing login result should succeed"),
+        OutputFormat::Json | OutputFormat::JsonPretty => {
+            print_json(result, format, "serializing login result should succeed")
+        }
         OutputFormat::Table => {
             if result.already_logged_in {
                 println!(

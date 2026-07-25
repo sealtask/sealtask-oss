@@ -2,8 +2,8 @@ use crate::args::{
     CommentCreateArgsCli, CommentDeleteArgsCli, CommentUpdateArgsCli, CommentsCommand,
 };
 use crate::input::{resolve_comment_input, resolve_delete_input};
-use crate::output::{CliResult, OutputFormat, print_pretty_json};
-use crate::render::{print_comment_json, print_comments, print_delete_result};
+use crate::output::{CliResult, OutputFormat};
+use crate::render::{print_comment, print_comments, print_delete_result, print_empty_collection};
 use sealtask_client_api::DeleteCommentRequest;
 use sealtask_client_runtime::{
     CreateCommentArgs, DeleteCommentArgs, RuntimeClient, UpdateCommentArgs,
@@ -22,8 +22,8 @@ pub(crate) async fn run_comments(
             task_id,
             password_stdin,
         } => list_comments(runtime, format, work_list_id, task_id, password_stdin).await,
-        CommentsCommand::Create(args) => create_comment(runtime, args).await,
-        CommentsCommand::Update(args) => update_comment(runtime, args).await,
+        CommentsCommand::Create(args) => create_comment(runtime, format, args).await,
+        CommentsCommand::Update(args) => update_comment(runtime, format, args).await,
         CommentsCommand::Delete(args) => delete_comment(runtime, format, args).await,
     }
 }
@@ -39,20 +39,16 @@ async fn list_comments(
         .list_comments(work_list_id, task_id, password_stdin)
         .await?;
     if comments.is_empty() {
-        return match format {
-            OutputFormat::Json => {
-                print_pretty_json(&comments, "serializing comments should succeed")
-            }
-            OutputFormat::Table => {
-                println!("No comments found.");
-                Ok(())
-            }
-        };
+        return print_empty_collection(format, "No comments found.");
     }
     print_comments(&comments, format)
 }
 
-async fn create_comment(runtime: &RuntimeClient, args: CommentCreateArgsCli) -> CliResult<()> {
+async fn create_comment(
+    runtime: &RuntimeClient,
+    format: OutputFormat,
+    args: CommentCreateArgsCli,
+) -> CliResult<()> {
     let input = resolve_comment_input(
         args.body.as_deref(),
         args.input_file.as_deref(),
@@ -67,10 +63,14 @@ async fn create_comment(runtime: &RuntimeClient, args: CommentCreateArgsCli) -> 
             password_stdin: args.password_stdin,
         })
         .await?;
-    print_comment_json(&created)
+    print_comment(&created, format)
 }
 
-async fn update_comment(runtime: &RuntimeClient, args: CommentUpdateArgsCli) -> CliResult<()> {
+async fn update_comment(
+    runtime: &RuntimeClient,
+    format: OutputFormat,
+    args: CommentUpdateArgsCli,
+) -> CliResult<()> {
     let input = resolve_comment_input(
         args.body.as_deref(),
         args.input_file.as_deref(),
@@ -86,7 +86,7 @@ async fn update_comment(runtime: &RuntimeClient, args: CommentUpdateArgsCli) -> 
             password_stdin: args.password_stdin,
         })
         .await?;
-    print_comment_json(&updated)
+    print_comment(&updated, format)
 }
 
 async fn delete_comment(

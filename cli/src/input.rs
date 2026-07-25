@@ -1,5 +1,5 @@
 use crate::args::{NoteCreateArgsCli, NoteUpdateArgsCli, TaskCreateArgsCli, TaskUpdateArgsCli};
-use crate::output::{CliResult, flush_stdout};
+use crate::output::{CliResult, write_stderr};
 use sealtask_client_core::{PublicError, PublicResult};
 use sealtask_client_runtime::{
     CommentInput, NoteCreateInput, NoteUpdateInput, TaskCreateInput, TaskFieldPatch,
@@ -209,8 +209,7 @@ fn parse_json_input<T: DeserializeOwned>(contents: &str, source: &str) -> Public
 }
 
 pub(crate) fn prompt(label: &str) -> CliResult<String> {
-    print!("{label}");
-    flush_stdout()?;
+    write_stderr(format_args!("{label}"))?;
 
     let mut input = String::new();
     io::stdin()
@@ -279,5 +278,14 @@ mod tests {
         let error = resolve_note_create_input(&args)
             .expect_err("an ephemeral default cannot survive Ctrl-C or process loss");
         assert!(error.to_string().contains("--idempotency-key is required"));
+    }
+
+    #[test]
+    fn structured_comment_input_rejects_unknown_fields() {
+        let error =
+            parse_json_input::<CommentInput>(r#"{"body":"hello","ignoredBefore":true}"#, "test")
+                .expect_err("unknown fields must not be silently ignored");
+        assert!(error.to_string().contains("unknown field"));
+        assert!(error.to_string().contains("ignoredBefore"));
     }
 }

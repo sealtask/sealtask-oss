@@ -1,3 +1,4 @@
+use crate::args::{Cli, OutputArg};
 use sealtask_client_core::{PublicError, PublicResult};
 use serde::Serialize;
 use std::ffi::{OsStr, OsString};
@@ -78,10 +79,30 @@ impl CliError {
     }
 
     fn error_result(&self) -> ErrorResult {
-        ErrorResult {
+        let mut result = ErrorResult {
             code: self.code(),
             message: self.to_string(),
+            retryable: false,
+            retry_after_seconds: None,
+            backend_code: None,
+            http_status: None,
+            outcome: None,
+            hint: error_hint(self.code()),
+        };
+        match self {
+            Self::Public(error) | Self::PublicWithWarnings { error, .. } => {
+                result.retryable = public_error_is_retryable(error);
+                result.retry_after_seconds = error.retry_after().map(|delay| delay.as_secs());
+                result.backend_code = error.backend_error_code().map(str::to_owned);
+                result.http_status = error.http_status();
+                result.outcome = public_error_outcome(error);
+            }
+            Self::Interrupted { .. } => {
+                result.outcome = Some("interrupted");
+            }
+            Self::BrokenPipe => {}
         }
+        result
     }
 }
 
@@ -115,11 +136,8 @@ pub(crate) fn write_stderr_line(args: fmt::Arguments<'_>) -> CliResult<()> {
     write_line_to_stream(io::stderr().lock(), args, "print to", "stderr", false)
 }
 
-pub(crate) fn flush_stdout() -> CliResult<()> {
-    io::stdout()
-        .lock()
-        .flush()
-        .map_err(|err| map_stream_error(err, "flush", "stdout", true))
+pub(crate) fn write_stderr(args: fmt::Arguments<'_>) -> CliResult<()> {
+    write_to_stream(io::stderr().lock(), args, "print to", "stderr", false)
 }
 
 fn write_to_stream<W: Write>(
@@ -164,14 +182,32 @@ fn map_stream_error(
     }
 }
 
-pub(crate) fn print_pretty_json<T: Serialize + ?Sized>(value: &T, context: &str) -> CliResult<()> {
-    let output = serde_json::to_string_pretty(value).expect(context);
+pub(crate) fn print_json<T: Serialize + ?Sized>(
+    value: &T,
+    format: OutputFormat,
+    context: &str,
+) -> CliResult<()> {
+    let output = if format.pretty_json() {
+        serde_json::to_string_pretty(value)
+    } else {
+        serde_json::to_string(value)
+    }
+    .expect(context);
     println!("{output}");
     Ok(())
 }
 
-fn print_pretty_json_stderr<T: Serialize + ?Sized>(value: &T, context: &str) -> CliResult<()> {
-    let output = serde_json::to_string_pretty(value).expect(context);
+fn print_json_stderr<T: Serialize + ?Sized>(
+    value: &T,
+    format: OutputFormat,
+    context: &str,
+) -> CliResult<()> {
+    let output = if format.pretty_json() {
+        serde_json::to_string_pretty(value)
+    } else {
+        serde_json::to_string(value)
+    }
+    .expect(context);
     write_stderr_line(format_args!("{output}"))
 }
 
@@ -179,15 +215,55 @@ fn print_pretty_json_stderr<T: Serialize + ?Sized>(value: &T, context: &str) -> 
 pub(crate) enum OutputFormat {
     Table,
     Json,
+    JsonPretty,
 }
 
 impl OutputFormat {
     #[must_use]
     pub(crate) fn from_raw_args(args: &[OsString]) -> Self {
-        if args.iter().any(|arg| arg == OsStr::new("--json")) {
-            Self::Json
-        } else {
-            Self::Table
+        let mut detected = Self::Table;
+        for (index, arg) in args.iter().enumerate() {
+            if arg == OsStr::new("--json") {
+                return Self::Json;
+            }
+            if arg == OsStr::new("--format")
+                && let Some(value) = args.get(index + 1).and_then(|value| value.to_str())
+            {
+                detected = Self::from_output_value(value);
+            }
+            if let Some(value) = arg.to_str().and_then(|arg| arg.strip_prefix("--format=")) {
+                detected = Self::from_output_value(value);
+            }
+        }
+        detected
+    }
+
+    #[must_use]
+    pub(crate) fn from_cli(cli: &Cli) -> Self {
+        if cli.json {
+            return Self::Json;
+        }
+        match cli.format {
+            Some(OutputArg::Json) => Self::Json,
+            Some(OutputArg::JsonPretty) => Self::JsonPretty,
+            Some(OutputArg::Table) | None => Self::Table,
+        }
+    }
+
+    #[must_use]
+    pub(crate) const fn is_json(self) -> bool {
+        matches!(self, Self::Json | Self::JsonPretty)
+    }
+
+    const fn pretty_json(self) -> bool {
+        matches!(self, Self::JsonPretty)
+    }
+
+    fn from_output_value(value: &str) -> Self {
+        match value {
+            "json" => Self::Json,
+            "json-pretty" => Self::JsonPretty,
+            _ => Self::Table,
         }
     }
 }
@@ -197,6 +273,17 @@ impl OutputFormat {
 struct ErrorResult {
     code: &'static str,
     message: String,
+    retryable: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    retry_after_seconds: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    backend_code: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    http_status: Option<u16>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    outcome: Option<&'static str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    hint: Option<&'static str>,
 }
 
 #[derive(Debug, Serialize)]
@@ -232,7 +319,8 @@ pub(crate) fn print_cli_error(err: &CliError, format: OutputFormat) -> CliResult
             print_warnings(format, err.warnings())?;
             write_table_error(io::stderr().lock(), err)
         }
-        OutputFormat::Json => print_json_stderr(
+        OutputFormat::Json | OutputFormat::JsonPretty => print_json_stderr_envelope(
+            format,
             err.warnings(),
             Some(err.error_result()),
             "serializing CLI error should succeed",
@@ -250,16 +338,36 @@ fn write_table_error<W: Write>(mut stream: W, err: &CliError) -> CliResult<()> {
     )
 }
 
-pub(crate) fn print_clap_error(err: &clap::Error) -> CliResult<()> {
+pub(crate) fn print_clap_error(err: &clap::Error, format: OutputFormat) -> CliResult<()> {
     print_json_error(
+        format,
         "validation",
         err.to_string().trim_end().to_string(),
         "serializing clap parse error should succeed",
     )
 }
 
-fn print_json_error(code: &'static str, message: String, context: &str) -> CliResult<()> {
-    print_json_stderr(&[], Some(ErrorResult { code, message }), context)
+fn print_json_error(
+    format: OutputFormat,
+    code: &'static str,
+    message: String,
+    context: &str,
+) -> CliResult<()> {
+    print_json_stderr_envelope(
+        format,
+        &[],
+        Some(ErrorResult {
+            code,
+            message,
+            retryable: false,
+            retry_after_seconds: None,
+            backend_code: None,
+            http_status: None,
+            outcome: None,
+            hint: error_hint(code),
+        }),
+        context,
+    )
 }
 
 fn print_warnings(format: OutputFormat, warnings: &[WarningResult]) -> CliResult<()> {
@@ -338,11 +446,16 @@ fn write_warnings<W: Write>(
             }
             Ok(())
         }
-        OutputFormat::Json => {
-            let output = serde_json::to_string_pretty(&StderrEnvelope {
+        OutputFormat::Json | OutputFormat::JsonPretty => {
+            let envelope = StderrEnvelope {
                 warnings,
                 error: None,
-            })
+            };
+            let output = if format.pretty_json() {
+                serde_json::to_string_pretty(&envelope)
+            } else {
+                serde_json::to_string(&envelope)
+            }
             .expect("serializing CLI warnings should succeed");
             write_line_to_stream(
                 stream,
@@ -376,27 +489,13 @@ fn sanitize_terminal_text(value: &str, preserve_newlines: bool) -> String {
         .collect()
 }
 
-fn print_json_stderr(
+fn print_json_stderr_envelope(
+    format: OutputFormat,
     warnings: &[WarningResult],
     error: Option<ErrorResult>,
     context: &str,
 ) -> CliResult<()> {
-    print_pretty_json_stderr(&StderrEnvelope { warnings, error }, context)
-}
-
-pub(crate) fn require_password_stdin_for_json_command(
-    format: OutputFormat,
-    password_stdin: bool,
-    command_name: &str,
-) -> CliResult<()> {
-    if format == OutputFormat::Json && !password_stdin {
-        return Err(PublicError::validation(format!(
-            "--json {command_name} requires --password-stdin"
-        ))
-        .into());
-    }
-
-    Ok(())
+    print_json_stderr(&StderrEnvelope { warnings, error }, format, context)
 }
 
 pub(crate) fn public_result_with_warnings<T>(
@@ -417,11 +516,56 @@ pub(crate) fn print_simple_result<T: Serialize + ?Sized>(
     table_message: &str,
 ) -> CliResult<()> {
     match format {
-        OutputFormat::Json => print_pretty_json(payload, context),
+        OutputFormat::Json | OutputFormat::JsonPretty => print_json(payload, format, context),
         OutputFormat::Table => {
             println!("{table_message}");
             Ok(())
         }
+    }
+}
+
+fn public_error_is_retryable(error: &PublicError) -> bool {
+    matches!(
+        error.code(),
+        "rate_limited"
+            | "request_timeout"
+            | "transport_timeout"
+            | "transport_connect"
+            | "transport_body"
+            | "transport_other"
+            | "response_body_read"
+            | "response_body_truncated"
+            | "response_transport"
+            | "http_server_error"
+    )
+}
+
+fn public_error_outcome(error: &PublicError) -> Option<&'static str> {
+    match error {
+        PublicError::CompensationFailed { .. } => Some("cleanup_failed"),
+        PublicError::OutcomeAmbiguous { .. } => Some("ambiguous"),
+        PublicError::CommittedButLocalProcessingFailed { .. } => Some("committed"),
+        PublicError::Cancelled(_) => Some("cancelled"),
+        _ => None,
+    }
+}
+
+fn error_hint(code: &str) -> Option<&'static str> {
+    match code {
+        "authentication" => Some("Run 'sealtask auth login' and retry."),
+        "mfa_input_required" => {
+            Some("Provide the authenticator or backup code on login stdin line 2.")
+        }
+        "conflict" => Some("Re-read the resource, reconcile the latest state, and retry."),
+        "rate_limited" => Some("Wait for retryAfterSeconds when present before retrying."),
+        "outcome_ambiguous" => {
+            Some("Inspect the resource before retrying; the mutation may have committed.")
+        }
+        "committed_but_local_processing_failed" => {
+            Some("Fetch the committed resource instead of repeating the mutation.")
+        }
+        "validation" => Some("Review command help and the rejected input field."),
+        _ => None,
     }
 }
 
@@ -430,6 +574,30 @@ mod tests {
     use super::*;
 
     struct AlwaysFailWriter;
+
+    #[test]
+    fn raw_json_detection_survives_an_invalid_or_conflicting_format_flag() {
+        let invalid_then_json = [
+            OsString::from("sealtask"),
+            OsString::from("--format"),
+            OsString::from("invalid"),
+            OsString::from("--json"),
+        ];
+        let pretty_then_json = [
+            OsString::from("sealtask"),
+            OsString::from("--format=json-pretty"),
+            OsString::from("--json"),
+        ];
+
+        assert_eq!(
+            OutputFormat::from_raw_args(&invalid_then_json),
+            OutputFormat::Json
+        );
+        assert_eq!(
+            OutputFormat::from_raw_args(&pretty_then_json),
+            OutputFormat::Json
+        );
+    }
 
     #[test]
     fn test_should_delegate_public_error_classification_to_core() {
@@ -467,6 +635,44 @@ mod tests {
             result.message,
             "request body timed out before execution; retry the request"
         );
+        assert!(result.retryable);
+    }
+
+    #[test]
+    fn machine_errors_expose_retry_transport_and_outcome_metadata() {
+        let rate_limited = CliError::from(PublicError::rate_limited_with_retry_after(
+            "retry later",
+            std::time::Duration::from_secs(17),
+        ))
+        .error_result();
+        assert!(rate_limited.retryable);
+        assert_eq!(rate_limited.retry_after_seconds, Some(17));
+        assert_eq!(
+            rate_limited.hint,
+            Some("Wait for retryAfterSeconds when present before retrying.")
+        );
+
+        let http = CliError::from(PublicError::http(
+            409,
+            Some("revision_mismatch".to_string()),
+            None,
+        ))
+        .error_result();
+        assert_eq!(http.http_status, Some(409));
+        assert_eq!(http.backend_code.as_deref(), Some("revision_mismatch"));
+        assert!(!http.retryable);
+
+        let server = CliError::from(PublicError::http(503, None, None)).error_result();
+        assert_eq!(server.http_status, Some(503));
+        assert!(server.retryable);
+
+        let ambiguous = CliError::from(PublicError::outcome_ambiguous(
+            "create task",
+            "unknown commit",
+        ))
+        .error_result();
+        assert_eq!(ambiguous.outcome, Some("ambiguous"));
+        assert!(!ambiguous.retryable);
     }
 
     impl Write for AlwaysFailWriter {

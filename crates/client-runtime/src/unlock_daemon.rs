@@ -4,7 +4,7 @@ use std::process::Stdio;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use base64::Engine as _;
-use base64::engine::general_purpose::STANDARD_NO_PAD;
+use base64::engine::general_purpose::{STANDARD_NO_PAD, URL_SAFE_NO_PAD};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use socket2::{Domain, SockAddr, Socket, Type};
@@ -124,7 +124,28 @@ impl UnlockStore {
 }
 
 pub fn socket_path() -> PublicResult<PathBuf> {
-    Ok(config_dir()?.join(SOCKET_FILE_NAME))
+    socket_path_for_config_dir(&config_dir()?)
+}
+
+fn socket_path_for_config_dir(config_dir: &Path) -> PublicResult<PathBuf> {
+    let preferred_path = config_dir.join(SOCKET_FILE_NAME);
+    if SockAddr::unix(&preferred_path).is_ok() {
+        return Ok(preferred_path);
+    }
+
+    let mut hasher = Sha256::new();
+    hasher.update(config_dir.as_os_str().to_string_lossy().as_bytes());
+    let digest = hasher.finalize();
+    let directory_name = format!("sealtask-unlock-{}", URL_SAFE_NO_PAD.encode(&digest[..16]));
+    let fallback_path = Path::new("/tmp")
+        .join(directory_name)
+        .join(SOCKET_FILE_NAME);
+    SockAddr::unix(&fallback_path).map_err(|err| {
+        PublicError::unexpected(format!(
+            "failed to resolve a short unlock daemon socket path: {err}"
+        ))
+    })?;
+    Ok(fallback_path)
 }
 
 pub fn session_key(
@@ -752,6 +773,25 @@ mod tests {
         assert_eq!(args.len(), 2);
         assert_eq!(args[0], "--serve-unlock-daemon");
         assert_eq!(args[1], "/tmp/sealtask-unlock.sock");
+    }
+
+    #[test]
+    fn long_profile_config_paths_use_a_short_deterministic_socket_path() {
+        let long_config_dir = PathBuf::from("/tmp").join("profile".repeat(40));
+
+        let first = socket_path_for_config_dir(&long_config_dir).expect("short socket path");
+        let second = socket_path_for_config_dir(&long_config_dir).expect("stable socket path");
+
+        assert_eq!(first, second);
+        assert_eq!(
+            first.parent().and_then(Path::parent),
+            Some(Path::new("/tmp"))
+        );
+        assert_eq!(
+            first.file_name().and_then(|name| name.to_str()),
+            Some(SOCKET_FILE_NAME)
+        );
+        SockAddr::unix(&first).expect("fallback must fit the platform socket limit");
     }
 
     #[test]

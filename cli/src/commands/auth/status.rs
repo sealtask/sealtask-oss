@@ -1,7 +1,7 @@
-use crate::output::{CliResult, OutputFormat, print_pretty_json, terminal_line};
+use crate::output::{CliResult, OutputFormat, print_json, terminal_line};
 use sealtask_client_auth::{
-    Credentials, PersistedDataKeyStatus, credentials_path, load_credentials, normalize_api_url,
-    persisted_data_key_status,
+    Credentials, PersistedDataKeyStatus, active_profile, config_dir, credentials_path,
+    load_credentials, normalize_api_url, persisted_data_key_status,
 };
 use sealtask_client_runtime::{RuntimeClient, UnlockStatus};
 use serde::Serialize;
@@ -41,6 +41,8 @@ struct ApiUrlMismatch {
 #[serde(rename_all = "camelCase")]
 struct LoggedInStatusResult {
     logged_in: bool,
+    profile: String,
+    config_directory: String,
     email: String,
     api_url: String,
     user_id: Uuid,
@@ -60,6 +62,8 @@ struct LoggedInStatusResult {
 #[serde(rename_all = "camelCase")]
 struct LoggedOutStatusResult {
     logged_in: bool,
+    profile: String,
+    config_directory: String,
     credentials_path: String,
     unlock_daemon: UnlockDaemonStatusResult,
     persisted_bootstrap: PersistedBootstrapStatus,
@@ -73,14 +77,15 @@ enum AuthStatusResult {
 pub(super) fn run(format: OutputFormat, runtime: &RuntimeClient) -> CliResult<()> {
     match load_auth_status(runtime)? {
         AuthStatusResult::LoggedIn(status) => match format {
-            OutputFormat::Json => {
-                print_pretty_json(&status, "serializing auth status should succeed")
+            OutputFormat::Json | OutputFormat::JsonPretty => {
+                print_json(&status, format, "serializing auth status should succeed")
             }
             OutputFormat::Table => print_logged_in_auth_status(&status),
         },
         AuthStatusResult::LoggedOut(status) => match format {
-            OutputFormat::Json => print_pretty_json(
+            OutputFormat::Json | OutputFormat::JsonPretty => print_json(
                 &status,
+                format,
                 "serializing unauthenticated auth status should succeed",
             ),
             OutputFormat::Table => print_logged_out_auth_status(&status),
@@ -109,6 +114,8 @@ fn logged_in_auth_status(
 
     Ok(AuthStatusResult::LoggedIn(LoggedInStatusResult {
         logged_in: true,
+        profile: active_profile()?,
+        config_directory: config_dir()?.display().to_string(),
         email: credentials.email.clone(),
         api_url: credentials.api_url.clone(),
         user_id: credentials.user_id,
@@ -132,6 +139,8 @@ fn logged_in_auth_status(
 fn logged_out_auth_status(runtime: &RuntimeClient) -> CliResult<AuthStatusResult> {
     Ok(AuthStatusResult::LoggedOut(LoggedOutStatusResult {
         logged_in: false,
+        profile: active_profile()?,
+        config_directory: config_dir()?.display().to_string(),
         credentials_path: credentials_path()?.display().to_string(),
         unlock_daemon: unlock_daemon_status(runtime.unlock_status()?),
         persisted_bootstrap: runtime
@@ -181,6 +190,7 @@ fn unavailable_persisted_bootstrap_status() -> PersistedBootstrapStatus {
 }
 
 fn print_logged_in_auth_status(status: &LoggedInStatusResult) -> CliResult<()> {
+    println!("Profile: {}", terminal_line(&status.profile));
     println!("Logged in as: {}", terminal_line(&status.email));
     println!("API URL: {}", terminal_line(&status.api_url));
     println!("User ID: {}", status.user_id);
@@ -208,6 +218,7 @@ fn print_logged_in_auth_status(status: &LoggedInStatusResult) -> CliResult<()> {
 }
 
 fn print_logged_out_auth_status(status: &LoggedOutStatusResult) -> CliResult<()> {
+    println!("Profile: {}", terminal_line(&status.profile));
     println!("Not logged in.");
     println!(
         "Credentials would be stored at: {}",
