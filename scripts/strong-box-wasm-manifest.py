@@ -109,11 +109,23 @@ def write_manifest() -> None:
     print(f"Wrote {manifest_path}")
 
 
+def reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    value: dict[str, Any] = {}
+    for key, item in pairs:
+        if key in value:
+            raise ValueError(f"duplicate JSON key in build manifest: {key}")
+        value[key] = item
+    return value
+
+
 def load_manifest() -> dict[str, Any]:
     manifest_path = OSS_DIR / MANIFEST_RELATIVE_PATH
     require_file(manifest_path, "StrongBox WASM build manifest")
     try:
-        value = json.loads(manifest_path.read_text(encoding="utf-8"))
+        value = json.loads(
+            manifest_path.read_text(encoding="utf-8"),
+            object_pairs_hook=reject_duplicate_keys,
+        )
     except json.JSONDecodeError as error:
         raise ValueError(f"invalid JSON in {manifest_path}: {error}") from error
     if not isinstance(value, dict):

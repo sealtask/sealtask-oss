@@ -390,10 +390,12 @@ resolved profile and directory.
 
 ## Repository Flow
 
-This public repository is mirrored automatically from SealTask's upstream
-development repository with fast-forward-only updates. Public changes must be
-ported back upstream before the next mirror; otherwise publication intentionally
-stops instead of overwriting them. Release tags are write-once.
+This public repository is a read-only mirror of SealTask's upstream development
+repository. Mirror updates are fast-forward-only and release tags are
+write-once. Do not merge pull requests or push commits directly to public
+`main`: even an identical patch would create different Git history and the
+next safe mirror update would intentionally stop. See
+[`CONTRIBUTING.md`](./CONTRIBUTING.md) for the proposal flow.
 
 ## Legal review
 

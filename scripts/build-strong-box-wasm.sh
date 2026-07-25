@@ -161,15 +161,21 @@ case "$MODE" in
       "$PATH_CHECK" "$OUTPUT_PATH"
       echo "Copied StrongBox WASM to $OUTPUT_PATH"
     fi
+    if [[ "$(uname -s)" != "Linux" || "$(uname -m)" != "x86_64" ]]; then
+      echo "warning: this host build is for development only; canonical artifact verification requires linux/amd64" >&2
+    fi
     ;;
   update)
     mkdir -p "$(dirname "$PUBLIC_ARTIFACT")"
     cp "$BUILT_WASM" "$PUBLIC_ARTIFACT"
     "$MANIFEST_TOOL" update
+    VERIFY_ARGS=(verify --built-wasm "$BUILT_WASM")
     if [[ -n "$OUTPUT_PATH" ]]; then
       mkdir -p "$(dirname "$OUTPUT_PATH")"
       cp "$BUILT_WASM" "$OUTPUT_PATH"
+      VERIFY_ARGS+=(--frontend-wasm "$OUTPUT_PATH")
     fi
+    "$MANIFEST_TOOL" "${VERIFY_ARGS[@]}"
     ;;
   verify)
     VERIFY_ARGS=(verify --built-wasm "$BUILT_WASM")
