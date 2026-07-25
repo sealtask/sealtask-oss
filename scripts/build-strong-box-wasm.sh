@@ -40,15 +40,17 @@ if ! command -v cargo >/dev/null 2>&1; then
   exit 1
 fi
 
-if ! command -v python3 >/dev/null 2>&1; then
-  echo "Python 3.11 or newer is required to verify the WASM manifest" >&2
-  exit 1
-fi
+if [[ "$MODE" != "build" ]]; then
+  if ! command -v python3 >/dev/null 2>&1; then
+    echo "Python 3.11 or newer is required to verify the WASM manifest" >&2
+    exit 1
+  fi
 
-python3 -c 'import sys; raise SystemExit(sys.version_info < (3, 11))' || {
-  echo "Python 3.11 or newer is required to verify the WASM manifest" >&2
-  exit 1
-}
+  python3 -c 'import sys; raise SystemExit(sys.version_info < (3, 11))' || {
+    echo "Python 3.11 or newer is required to verify the WASM manifest" >&2
+    exit 1
+  }
+fi
 
 canonical_dir() {
   local path="$1"
