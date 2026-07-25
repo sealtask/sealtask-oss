@@ -475,7 +475,7 @@ fn normalize_base_url(value: String) -> String {
 
 fn build_control_plane_client() -> PublicResult<reqwest::Client> {
     reqwest::Client::builder()
-        .hickory_dns(true)
+        .no_hickory_dns()
         .connect_timeout(API_CONNECT_TIMEOUT)
         .read_timeout(API_READ_TIMEOUT)
         .timeout(API_REQUEST_TIMEOUT)

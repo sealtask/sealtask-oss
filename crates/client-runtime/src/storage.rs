@@ -68,13 +68,16 @@ struct HickoryStorageResolver {
 
 impl HickoryStorageResolver {
     fn from_system_configuration() -> PublicResult<Self> {
-        let resolver = TokioResolver::builder_tokio()
-            .map_err(|err| {
-                PublicError::unexpected(format!(
-                    "failed to configure attachment storage DNS resolver: {err}"
-                ))
-            })?
-            .build();
+        let builder = TokioResolver::builder_tokio().map_err(|err| {
+            PublicError::unexpected(format!(
+                "failed to configure attachment storage DNS resolver: {err}"
+            ))
+        })?;
+        let resolver = builder.build().map_err(|err| {
+            PublicError::unexpected(format!(
+                "failed to build attachment storage DNS resolver: {err}"
+            ))
+        })?;
         Ok(Self { resolver })
     }
 }
@@ -186,7 +189,7 @@ impl StorageTransferPolicy {
         let mut builder = match STORAGE_PROXY_POLICY {
             StorageProxyPolicy::DirectOnly => builder.no_proxy(),
         }
-        .hickory_dns(true)
+        .no_hickory_dns()
         .redirect(redirect::Policy::none())
         .connect_timeout(self.timeouts.connect.min(timeout))
         .read_timeout(self.timeouts.read.min(timeout))
