@@ -1,7 +1,7 @@
 # SealTask OSS
 
-Open-source Rust workspace for the `sealtask` CLI, shared client crates, and
-the browser StrongBox WASM engine. The canonical repository is
+Open-source workspace for the `sealtask` CLI, shared Rust client crates, and
+the browser cryptography engine. The canonical repository is
 [`sealtask/sealtask-oss`](https://github.com/sealtask/sealtask-oss).
 
 This repository contains the early public client surface for SealTask:
@@ -14,6 +14,8 @@ This repository contains the early public client surface for SealTask:
 - `sealtask-client-runtime`: unlock-aware runtime that projects raw API responses into agent-facing decrypted models
 - `strong-box`: SealTask's GPL-3.0 StrongBox fork used by the browser engine
 - `strong-box-wasm`: the Rust-to-WASM bindings shipped in the SealTask browser client
+- `@sealtask/crypto-web`: the TypeScript browser runtime, encrypted payload
+  protocols, and trust verification code used by the production SPA
 
 ## Status
 
@@ -81,6 +83,7 @@ crates/client-crypto/   # client-side crypto and payload helpers
 crates/client-runtime/  # decrypted agent-facing runtime and read models
 crates/strong-box/       # StrongBox fork used by the browser WASM build
 crates/strong-box-wasm/  # browser WASM ABI and cryptographic bindings
+packages/crypto-web/     # production browser crypto and trust engine
 artifacts/strong-box-wasm/
                         # canonical WASM byte and strict build manifest
 scripts/build-strong-box-wasm.sh
@@ -94,6 +97,7 @@ Requirements:
 
 - Rust 1.94.0 (also pinned by `rust-toolchain.toml`)
 - Python 3.11 or newer for strict manifest generation and verification
+- Bun for the browser crypto package
 
 Common commands:
 
@@ -102,6 +106,8 @@ cargo check --workspace --all-targets --locked
 cargo test --workspace --all-targets --locked
 ./scripts/build-strong-box-wasm.sh build
 ./scripts/build-strong-box-wasm.sh verify
+bun install --frozen-lockfile
+bun run check:crypto-web
 cargo run -p sealtask -- --help
 cargo run -p sealtask -- auth unlock --password-stdin
 cargo run -p sealtask -- auth keychain store --password-stdin

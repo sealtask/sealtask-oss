@@ -10,6 +10,24 @@ permissions:
   contents: read
 
 jobs:
+  browser-crypto:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install browser crypto dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Check browser crypto package
+        run: bun run check:crypto-web
+
   rust:
     runs-on: ubuntu-latest
 

@@ -1,0 +1,12 @@
+{
+  "name": "@sealtask/oss-workspace",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "check:crypto-web": "bun run --cwd packages/crypto-web check",
+    "test:crypto-web": "bun run --cwd packages/crypto-web test"
+  }
+}
