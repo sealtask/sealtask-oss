@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "artifact": {
+    "path": "artifacts/strong-box-wasm/strong_box_wasm_bg.wasm",
+    "sha256": "a5c3cdda8b7901c7b94c22f9bda87d67031e82aa8fdeb984c53e587a660653a6",
+    "sizeBytes": 158297
+  },
+  "source": {
+    "repository": "https://github.com/sealtask/sealtask-oss",
+    "cargoLock": {
+      "path": "Cargo.lock",
+      "sha256": "cd66a214f44c964ce1644c3df231661084c8c35de9395e781fd92572d8902b30"
+    },
+    "packages": [
+      {
+        "name": "strong-box",
+        "version": "0.0.0-git",
+        "path": "crates/strong-box"
+      },
+      {
+        "name": "strong-box-wasm",
+        "version": "0.1.0",
+        "path": "crates/strong-box-wasm"
+      }
+    ]
+  },
+  "build": {
+    "rustToolchain": "1.94.0",
+    "rustcVersion": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+    "cargoVersion": "cargo 1.94.0 (85eff7c80 2026-01-15)",
+    "target": "wasm32-unknown-unknown",
+    "profile": "wasm-release",
+    "canonicalPlatform": "linux/amd64",
+    "command": "./scripts/build-strong-box-wasm.sh update",
+    "wasmOpt": null
+  },
+  "license": "GPL-3.0-only"
+}
