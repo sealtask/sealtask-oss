@@ -1,6 +1,8 @@
 # SealTask OSS
 
-Open-source Rust workspace for the `sealtask` CLI and shared client crates.
+Open-source Rust workspace for the `sealtask` CLI, shared client crates, and
+the browser StrongBox WASM engine. The canonical repository is
+[`sealtask/sealtask-oss`](https://github.com/sealtask/sealtask-oss).
 
 This repository contains the early public client surface for SealTask:
 
@@ -10,6 +12,8 @@ This repository contains the early public client surface for SealTask:
 - `sealtask-client-api`: typed HTTP client for the SealTask API
 - `sealtask-client-crypto`: client-side crypto helpers for sealed payloads and key derivation
 - `sealtask-client-runtime`: unlock-aware runtime that projects raw API responses into agent-facing decrypted models
+- `strong-box`: SealTask's GPL-3.0 StrongBox fork used by the browser engine
+- `strong-box-wasm`: the Rust-to-WASM bindings shipped in the SealTask browser client
 
 ## Status
 
@@ -63,6 +67,12 @@ crates/client-auth/     # auth, credentials, and session helpers
 crates/client-api/      # typed API client
 crates/client-crypto/   # client-side crypto and payload helpers
 crates/client-runtime/  # decrypted agent-facing runtime and read models
+crates/strong-box/       # StrongBox fork used by the browser WASM build
+crates/strong-box-wasm/  # browser WASM ABI and cryptographic bindings
+artifacts/strong-box-wasm/
+                        # canonical WASM byte and strict build manifest
+scripts/build-strong-box-wasm.sh
+                        # pinned build/update/verification entrypoint
 .github/workflows/ci.yml
 ```
 
@@ -70,13 +80,16 @@ crates/client-runtime/  # decrypted agent-facing runtime and read models
 
 Requirements:
 
-- Rust stable toolchain
+- Rust 1.94.0 (also pinned by `rust-toolchain.toml`)
+- Python 3.11 or newer for strict manifest generation and verification
 
 Common commands:
 
 ```bash
-cargo check
-cargo test
+cargo check --workspace --all-targets --locked
+cargo test --workspace --all-targets --locked
+./scripts/build-strong-box-wasm.sh build
+./scripts/build-strong-box-wasm.sh verify
 cargo run -p sealtask -- --help
 cargo run -p sealtask -- auth unlock --password-stdin
 cargo run -p sealtask -- auth keychain store --password-stdin
@@ -85,6 +98,30 @@ cargo run -p sealtask -- --json tasks attachments read --work-list-id <list-id> 
 cargo run -p sealtask -- --json tasks attachments download --work-list-id <list-id> --task-id <task-id> --attachment-id <attachment-id>
 cargo run -p sealtask -- --json notes list --work-list-id <list-id>
 ```
+
+## Browser WASM provenance
+
+`crates/strong-box` and `crates/strong-box-wasm` are the production source for
+the WASM byte shipped by SealTask. All development, CI, and Docker builds use
+Rust 1.94.0, the `wasm32-unknown-unknown` target, Cargo's `wasm-release`
+profile, the checked-in lockfile, and the same path-remapped build script.
+Unpinned, host-dependent `wasm-opt` post-processing is deliberately not used.
+
+The canonical Linux/AMD64 byte and its strict manifest live in
+`artifacts/strong-box-wasm/`. The verifier rebuilds from this workspace and
+requires byte-for-byte equality with the artifact, its SHA-256 and size in the
+manifest, and the manifest's Cargo lockfile digest and toolchain metadata.
+
+Maintainers refresh the checked artifact only on Linux/AMD64:
+
+```bash
+./scripts/build-strong-box-wasm.sh update
+git diff -- artifacts/strong-box-wasm/
+./scripts/build-strong-box-wasm.sh verify
+```
+
+An immutable release tag binds the manifest and artifact to the public source
+tree that contains them.
 
 ## Agent task automation
 
@@ -353,7 +390,17 @@ resolved profile and directory.
 
 ## Repository Flow
 
-This public repository is mirrored automatically from SealTask's upstream development repository. The code here is intended to be consumable as a normal standalone Rust workspace, but some changes may land here after first being developed upstream.
+This public repository is mirrored automatically from SealTask's upstream
+development repository with fast-forward-only updates. Public changes must be
+ported back upstream before the next mirror; otherwise publication intentionally
+stops instead of overwriting them. Release tags are write-once.
+
+## Legal review
+
+The StrongBox fork and the browser bindings are licensed under
+`GPL-3.0-only`. This source publication is an engineering compliance step, not
+legal advice. SealTask's counsel should confirm the obligations that apply to
+hosted web delivery and licensed self-hosted distributions.
 
 ## License
 

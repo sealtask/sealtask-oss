@@ -6,6 +6,8 @@ members = [
     "crates/client-core",
     "crates/client-crypto",
     "crates/client-runtime",
+    "crates/strong-box",
+    "crates/strong-box-wasm",
 ]
 resolver = "2"
 
@@ -47,3 +49,14 @@ undocx = "0.5.2"
 uuid = { version = "1.18.1", features = ["serde", "v7"] }
 zeroize = { version = "1.8", features = ["zeroize_derive"] }
 zip = { version = "2.4.2", default-features = false, features = ["deflate"] }
+
+[profile.wasm-release]
+inherits = "release"
+opt-level = "z"
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"
+
+[workspace.lints.clippy]
+unwrap_used = "deny"
