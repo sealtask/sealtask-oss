@@ -23,5 +23,8 @@ strong-box = { path = "../strong-box" }
 x25519-dalek = { version = "2.0", default-features = true, features = ["static_secrets"] }
 zeroize = { version = "1.8", features = ["zeroize_derive"] }
 
+[dev-dependencies]
+serde_json.workspace = true
+
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 getrandom_02 = { package = "getrandom", version = "0.2", features = ["custom"] }

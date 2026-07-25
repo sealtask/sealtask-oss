@@ -3143,6 +3143,7 @@ version = "0.2.1"
 dependencies = [
  "argon2",
  "base64",
+ "chacha20poly1305",
  "hkdf",
  "hmac",
  "rand_core 0.6.4",
@@ -3153,6 +3154,7 @@ dependencies = [
  "sha2",
  "strong-box 0.5.1",
  "uuid",
+ "x25519-dalek",
  "zeroize",
 ]
 
@@ -3541,7 +3543,7 @@ dependencies = [
  "constant_time_eq 0.4.2",
  "hkdf",
  "parking_lot",
- "rand 0.9.4",
+ "rand 0.10.2",
  "secrecy",
  "sha2",
  "thiserror 2.0.18",
@@ -3583,6 +3585,7 @@ dependencies = [
  "chacha20poly1305",
  "getrandom 0.2.17",
  "hkdf",
+ "serde_json",
  "sha2",
  "strong-box 0.0.0-git",
  "x25519-dalek",

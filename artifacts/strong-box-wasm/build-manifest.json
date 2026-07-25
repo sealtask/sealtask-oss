@@ -2,14 +2,14 @@
   "schemaVersion": 1,
   "artifact": {
     "path": "artifacts/strong-box-wasm/strong_box_wasm_bg.wasm",
-    "sha256": "6ab34efeddccbf21ca8b6cae955b4d942daba1d16ba0fbe66e8b8c84f3364a05",
-    "sizeBytes": 157627
+    "sha256": "4e66bb60c82898db425054fc63f44fbfdd5cb811da06a050cfb0291aa540f79d",
+    "sizeBytes": 159775
   },
   "source": {
     "repository": "https://github.com/sealtask/sealtask-oss",
     "cargoLock": {
       "path": "Cargo.lock",
-      "sha256": "a4a20d3111cdbffab574f70b47ac83b9e8ba0888ea111c37d3a9074038192a78"
+      "sha256": "cfa0cd6f30c7270045ae47f4ca1aa6faf4af4b00147cb153a9e3b49b9d886a2b"
     },
     "packages": [
       {

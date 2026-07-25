@@ -5,6 +5,8 @@ on:
     branches:
       - main
   pull_request:
+  schedule:
+    - cron: "43 4 * * 1"
 
 permissions:
   contents: read
@@ -21,12 +23,20 @@ jobs:
 
       - name: Install Bun
         uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
 
       - name: Install browser crypto dependencies
         run: bun install --frozen-lockfile
 
       - name: Check browser crypto package
         run: bun run check:crypto-web
+
+      - name: Install Playwright Chromium
+        run: bunx playwright install --with-deps chromium
+
+      - name: Test browser crypto in secure Chromium
+        run: bun run --cwd packages/crypto-web test:browser
 
   rust:
     runs-on: ubuntu-latest
@@ -49,6 +59,12 @@ jobs:
 
       - name: Cache cargo artifacts
         uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+
+      - name: Install pinned cargo-audit
+        run: cargo install cargo-audit --version 0.22.2 --locked
+
+      - name: Audit dependencies
+        run: cargo audit --deny warnings --file Cargo.lock
 
       - name: Check formatting
         run: cargo fmt --all --check

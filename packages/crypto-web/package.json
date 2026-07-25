@@ -1,6 +1,6 @@
 {
   "name": "@sealtask/crypto-web",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "SealTask browser cryptography runtime, encrypted protocols, and trust verification engine",
   "type": "module",
@@ -31,19 +31,14 @@
   ],
   "scripts": {
     "check": "bun run check:boundary && bun run typecheck && bun run test",
-    "check:boundary": "node scripts/check-boundary.mjs",
+    "check:boundary": "node --test scripts/check-boundary.test.mjs && node scripts/check-boundary.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:browser": "playwright test -c playwright.config.ts --project=secure-chromium"
   },
   "dependencies": {
     "@serenity-kit/opaque": "1.1.0",
     "argon2-browser": "1.18.0",
     "cbor-x": "1.6.0"
-  },
-  "devDependencies": {
-    "@types/node": "24.10.1",
-    "typescript": "5.9.3",
-    "vite": "7.3.6",
-    "vitest": "4.0.14"
   }
 }

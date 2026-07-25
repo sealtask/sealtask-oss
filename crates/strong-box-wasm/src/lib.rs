@@ -90,7 +90,7 @@ const ERR_HPKE_DECAP_FAILED: u32 = 21;
 const ERR_HPKE_DERIVE_FAILED: u32 = 22;
 
 const HPKE_MODE_BASE: u8 = 0x00;
-const HPKE_KEM_ID: u16 = 0x0010; // X25519
+const HPKE_KEM_ID: u16 = 0x0020; // DHKEM(X25519, HKDF-SHA256)
 const HPKE_KDF_ID: u16 = 0x0001; // HKDF-SHA256
 const HPKE_AEAD_ID: u16 = 0x0003; // ChaCha20-Poly1305
 const HPKE_LABEL_PREFIX: &[u8] = b"HPKE-v1";
@@ -379,36 +379,63 @@ fn hpke_encap(
     }
 
     let mut sk_bytes = [0u8; KEY_SIZE_BYTES];
-    getrandom_02::getrandom(&mut sk_bytes)
-        .map_err(|_| BridgeError::Hpke("failed to generate ephemeral key"))?;
-    let sk = StaticSecret::from(sk_bytes);
-    let enc = PublicKey::from(&sk).to_bytes();
+    if getrandom_02::getrandom(&mut sk_bytes).is_err() {
+        sk_bytes.zeroize();
+        return Err(BridgeError::Hpke("failed to generate ephemeral key"));
+    }
+    let result = hpke_encap_with_private_key(recipient_pub, info, aad, plaintext, &sk_bytes);
     sk_bytes.zeroize();
+    result
+}
 
-    let recipient_key = PublicKey::from(
-        <[u8; HPKE_ENC_LEN]>::try_from(recipient_pub).map_err(|_| BridgeError::InvalidKeyLength)?,
-    );
-    let mut shared = sk.diffie_hellman(&recipient_key).to_bytes();
-    if shared.iter().all(|b| *b == 0) {
+fn hpke_encap_with_private_key(
+    recipient_pub: &[u8],
+    info: &[u8],
+    aad: &[u8],
+    plaintext: &[u8],
+    ephemeral_private: &[u8; KEY_SIZE_BYTES],
+) -> Result<Vec<u8>, BridgeError> {
+    let recipient_pub_bytes =
+        <[u8; HPKE_ENC_LEN]>::try_from(recipient_pub).map_err(|_| BridgeError::InvalidKeyLength)?;
+    let recipient_key = PublicKey::from(recipient_pub_bytes);
+    let sk = StaticSecret::from(*ephemeral_private);
+    let enc = PublicKey::from(&sk).to_bytes();
+    let mut dh = sk.diffie_hellman(&recipient_key).to_bytes();
+    if dh.iter().all(|byte| *byte == 0) {
+        dh.zeroize();
         return Err(BridgeError::Hpke("derived shared secret is invalid"));
     }
 
-    let kem_context = [enc.as_slice(), recipient_pub].concat();
-    let (mut aead_key, mut base_nonce) = derive_hpke_keys(&kem_context, info, &shared)?;
-    shared.zeroize();
+    let shared_secret_result = dhkem_shared_secret(&dh, &enc, &recipient_pub_bytes);
+    dh.zeroize();
+    let mut shared_secret = shared_secret_result?;
+    let keys_result = derive_hpke_keys(info, &shared_secret);
+    shared_secret.zeroize();
+    let (mut aead_key, mut base_nonce) = keys_result?;
 
-    let cipher = ChaCha20Poly1305::new_from_slice(&aead_key)
-        .map_err(|_| BridgeError::Hpke("invalid HPKE AEAD key"))?;
+    let cipher = match ChaCha20Poly1305::new_from_slice(&aead_key) {
+        Ok(cipher) => cipher,
+        Err(_) => {
+            aead_key.zeroize();
+            base_nonce.zeroize();
+            return Err(BridgeError::Hpke("invalid HPKE AEAD key"));
+        }
+    };
 
-    let ciphertext = cipher
-        .encrypt(
-            Nonce::from_slice(&base_nonce),
-            Payload {
-                msg: plaintext,
-                aad,
-            },
-        )
-        .map_err(|_| BridgeError::Hpke("HPKE encryption failed"))?;
+    let ciphertext = match cipher.encrypt(
+        Nonce::from_slice(&base_nonce),
+        Payload {
+            msg: plaintext,
+            aad,
+        },
+    ) {
+        Ok(ciphertext) => ciphertext,
+        Err(_) => {
+            aead_key.zeroize();
+            base_nonce.zeroize();
+            return Err(BridgeError::Hpke("HPKE encryption failed"));
+        }
+    };
 
     let packed = pack_hpke_result(&base_nonce, &enc, &ciphertext);
     aead_key.zeroize();
@@ -435,28 +462,45 @@ fn hpke_decap(
     let peer_pub = PublicKey::from(
         <[u8; HPKE_ENC_LEN]>::try_from(enc).map_err(|_| BridgeError::InvalidKeyLength)?,
     );
-    let mut shared = sk.diffie_hellman(&peer_pub).to_bytes();
-    if shared.iter().all(|b| *b == 0) {
+    let mut dh = sk.diffie_hellman(&peer_pub).to_bytes();
+    if dh.iter().all(|byte| *byte == 0) {
+        dh.zeroize();
         return Err(BridgeError::Hpke("derived shared secret is invalid"));
     }
 
+    let enc_bytes =
+        <[u8; HPKE_ENC_LEN]>::try_from(enc).map_err(|_| BridgeError::InvalidKeyLength)?;
     let recipient_pub_bytes = PublicKey::from(&sk).to_bytes();
-    let kem_context = [enc, recipient_pub_bytes.as_slice()].concat();
-    let (mut aead_key, mut base_nonce) = derive_hpke_keys(&kem_context, info, &shared)?;
-    shared.zeroize();
+    let shared_secret_result = dhkem_shared_secret(&dh, &enc_bytes, &recipient_pub_bytes);
+    dh.zeroize();
+    let mut shared_secret = shared_secret_result?;
+    let keys_result = derive_hpke_keys(info, &shared_secret);
+    shared_secret.zeroize();
+    let (mut aead_key, mut base_nonce) = keys_result?;
 
-    let cipher = ChaCha20Poly1305::new_from_slice(&aead_key)
-        .map_err(|_| BridgeError::Hpke("invalid HPKE AEAD key"))?;
+    let cipher = match ChaCha20Poly1305::new_from_slice(&aead_key) {
+        Ok(cipher) => cipher,
+        Err(_) => {
+            aead_key.zeroize();
+            base_nonce.zeroize();
+            return Err(BridgeError::Hpke("invalid HPKE AEAD key"));
+        }
+    };
 
-    let plaintext = cipher
-        .decrypt(
-            Nonce::from_slice(&base_nonce),
-            Payload {
-                msg: ciphertext,
-                aad,
-            },
-        )
-        .map_err(|_| BridgeError::Hpke("HPKE decryption failed"))?;
+    let plaintext = match cipher.decrypt(
+        Nonce::from_slice(&base_nonce),
+        Payload {
+            msg: ciphertext,
+            aad,
+        },
+    ) {
+        Ok(plaintext) => plaintext,
+        Err(_) => {
+            aead_key.zeroize();
+            base_nonce.zeroize();
+            return Err(BridgeError::Hpke("HPKE decryption failed"));
+        }
+    };
 
     let packed = pack_hpke_result(&base_nonce, enc, &plaintext);
     aead_key.zeroize();
@@ -464,27 +508,104 @@ fn hpke_decap(
     Ok(packed)
 }
 
+fn dhkem_shared_secret(
+    dh: &[u8; KEY_SIZE_BYTES],
+    enc: &[u8; HPKE_ENC_LEN],
+    recipient_pub: &[u8; HPKE_ENC_LEN],
+) -> Result<[u8; KEY_SIZE_BYTES], BridgeError> {
+    let mut kem_context = [enc.as_slice(), recipient_pub.as_slice()].concat();
+    let suite_id = kem_suite_id();
+    let mut eae_prk = labeled_extract_with_suite(&suite_id, None, b"eae_prk", dh)?;
+    let shared_secret_bytes_result = labeled_expand_with_suite(
+        &suite_id,
+        &eae_prk,
+        b"shared_secret",
+        &kem_context,
+        KEY_SIZE_BYTES,
+    );
+    eae_prk.zeroize();
+    kem_context.zeroize();
+
+    let mut shared_secret_bytes = shared_secret_bytes_result?;
+    let shared_secret = match <[u8; KEY_SIZE_BYTES]>::try_from(shared_secret_bytes.as_slice()) {
+        Ok(bytes) => bytes,
+        Err(_) => {
+            shared_secret_bytes.zeroize();
+            return Err(BridgeError::Hpke("failed to derive HPKE shared secret"));
+        }
+    };
+    shared_secret_bytes.zeroize();
+    Ok(shared_secret)
+}
+
 fn derive_hpke_keys(
-    kem_context: &[u8],
     info: &[u8],
     shared_secret: &[u8],
 ) -> Result<([u8; KEY_SIZE_BYTES], [u8; HPKE_NONCE_LEN]), BridgeError> {
-    let key_schedule_context = [&[HPKE_MODE_BASE], kem_context, info].concat();
+    let mut psk_id_hash = labeled_extract(None, b"psk_id_hash", &[])?;
+    let info_hash_result = labeled_extract(None, b"info_hash", info);
+    if info_hash_result.is_err() {
+        psk_id_hash.zeroize();
+    }
+    let mut info_hash = info_hash_result?;
+    let mut key_schedule_context = [
+        &[HPKE_MODE_BASE],
+        psk_id_hash.as_slice(),
+        info_hash.as_slice(),
+    ]
+    .concat();
+    psk_id_hash.zeroize();
+    info_hash.zeroize();
 
-    let mut secret = labeled_extract(None, b"secret", shared_secret)?;
-    let key_bytes = labeled_expand(&secret, b"key", &key_schedule_context, KEY_SIZE_BYTES)?;
-    let nonce_bytes = labeled_expand(
+    let secret_result = labeled_extract(Some(shared_secret), b"secret", &[]);
+    if secret_result.is_err() {
+        key_schedule_context.zeroize();
+    }
+    let mut secret = secret_result?;
+
+    let key_bytes_result = labeled_expand(&secret, b"key", &key_schedule_context, KEY_SIZE_BYTES);
+    if key_bytes_result.is_err() {
+        secret.zeroize();
+        key_schedule_context.zeroize();
+    }
+    let mut key_bytes = key_bytes_result?;
+
+    let nonce_bytes_result = labeled_expand(
         &secret,
         b"base_nonce",
         &key_schedule_context,
         HPKE_NONCE_LEN,
-    )?;
+    );
     secret.zeroize();
+    key_schedule_context.zeroize();
 
-    let key = <[u8; KEY_SIZE_BYTES]>::try_from(key_bytes.as_slice())
-        .map_err(|_| BridgeError::Hpke("failed to derive HPKE key"))?;
-    let nonce = <[u8; HPKE_NONCE_LEN]>::try_from(nonce_bytes.as_slice())
-        .map_err(|_| BridgeError::Hpke("failed to derive HPKE nonce"))?;
+    let mut nonce_bytes = match nonce_bytes_result {
+        Ok(bytes) => bytes,
+        Err(err) => {
+            key_bytes.zeroize();
+            return Err(err);
+        }
+    };
+
+    let mut key = match <[u8; KEY_SIZE_BYTES]>::try_from(key_bytes.as_slice()) {
+        Ok(key) => key,
+        Err(_) => {
+            key_bytes.zeroize();
+            nonce_bytes.zeroize();
+            return Err(BridgeError::Hpke("failed to derive HPKE key"));
+        }
+    };
+    key_bytes.zeroize();
+
+    let nonce = match <[u8; HPKE_NONCE_LEN]>::try_from(nonce_bytes.as_slice()) {
+        Ok(nonce) => nonce,
+        Err(_) => {
+            key.zeroize();
+            nonce_bytes.zeroize();
+            return Err(BridgeError::Hpke("failed to derive HPKE nonce"));
+        }
+    };
+    nonce_bytes.zeroize();
 
     Ok((key, nonce))
 }
@@ -494,18 +615,29 @@ fn labeled_extract(
     label: &[u8],
     ikm: &[u8],
 ) -> Result<[u8; KEY_SIZE_BYTES], BridgeError> {
+    labeled_extract_with_suite(&suite_id(), salt, label, ikm)
+}
+
+fn labeled_extract_with_suite(
+    suite_id: &[u8],
+    salt: Option<&[u8]>,
+    label: &[u8],
+    ikm: &[u8],
+) -> Result<[u8; KEY_SIZE_BYTES], BridgeError> {
     let mut labeled =
-        Vec::with_capacity(HPKE_LABEL_PREFIX.len() + suite_id().len() + label.len() + ikm.len());
+        Vec::with_capacity(HPKE_LABEL_PREFIX.len() + suite_id.len() + label.len() + ikm.len());
     labeled.extend_from_slice(HPKE_LABEL_PREFIX);
-    labeled.extend_from_slice(&suite_id());
+    labeled.extend_from_slice(suite_id);
     labeled.extend_from_slice(label);
     labeled.extend_from_slice(ikm);
 
-    let hkdf = Hkdf::<Sha256>::new(salt, &labeled);
-    let mut okm = [0u8; KEY_SIZE_BYTES];
-    hkdf.expand(&[], &mut okm)
-        .map_err(|_| BridgeError::Hpke("HKDF extract failed"))?;
-    Ok(okm)
+    let (mut prk, _) = Hkdf::<Sha256>::extract(salt, &labeled);
+    labeled.zeroize();
+
+    let mut output = [0u8; KEY_SIZE_BYTES];
+    output.copy_from_slice(&prk);
+    prk.zeroize();
+    Ok(output)
 }
 
 fn labeled_expand(
@@ -514,21 +646,46 @@ fn labeled_expand(
     info: &[u8],
     length: usize,
 ) -> Result<Vec<u8>, BridgeError> {
-    let mut labeled = Vec::with_capacity(
-        2 + HPKE_LABEL_PREFIX.len() + suite_id().len() + label.len() + info.len(),
-    );
+    labeled_expand_with_suite(&suite_id(), prk, label, info, length)
+}
+
+fn labeled_expand_with_suite(
+    suite_id: &[u8],
+    prk: &[u8],
+    label: &[u8],
+    info: &[u8],
+    length: usize,
+) -> Result<Vec<u8>, BridgeError> {
+    let mut labeled =
+        Vec::with_capacity(2 + HPKE_LABEL_PREFIX.len() + suite_id.len() + label.len() + info.len());
     labeled.extend_from_slice(&(length as u16).to_be_bytes());
     labeled.extend_from_slice(HPKE_LABEL_PREFIX);
-    labeled.extend_from_slice(&suite_id());
+    labeled.extend_from_slice(suite_id);
     labeled.extend_from_slice(label);
     labeled.extend_from_slice(info);
 
-    let hkdf =
-        Hkdf::<Sha256>::from_prk(prk).map_err(|_| BridgeError::Hpke("HKDF expand init failed"))?;
+    let hkdf = match Hkdf::<Sha256>::from_prk(prk) {
+        Ok(hkdf) => hkdf,
+        Err(_) => {
+            labeled.zeroize();
+            return Err(BridgeError::Hpke("HKDF expand init failed"));
+        }
+    };
     let mut okm = vec![0u8; length];
-    hkdf.expand(&labeled, &mut okm)
-        .map_err(|_| BridgeError::Hpke("HKDF expand failed"))?;
+    let expand_result = hkdf.expand(&labeled, &mut okm);
+    labeled.zeroize();
+    if expand_result.is_err() {
+        okm.zeroize();
+        return Err(BridgeError::Hpke("HKDF expand failed"));
+    }
     Ok(okm)
+}
+
+fn kem_suite_id() -> [u8; 5] {
+    let mut out = [0u8; 5];
+    out[0..3].copy_from_slice(b"KEM");
+    out[3..5].copy_from_slice(&HPKE_KEM_ID.to_be_bytes());
+    out
 }
 
 fn suite_id() -> [u8; 10] {
@@ -671,6 +828,10 @@ unsafe fn write_result(target: *mut StrongBoxResult, value: StrongBoxResult) {
 mod tests {
     use super::*;
 
+    const HPKE_FIXTURES: &str = include_str!("../../../testdata/hpke-vectors.json");
+    const CRYPTO_WEB_HPKE_FIXTURES: &str =
+        include_str!("../../../packages/crypto-web/test/fixtures/hpke-vectors.json");
+
     #[cfg(miri)]
     const MISALIGN_SHIFT: usize = 1;
 
@@ -731,6 +892,60 @@ mod tests {
         }
     }
 
+    fn hpke_fixtures() -> serde_json::Value {
+        serde_json::from_str(HPKE_FIXTURES).expect("HPKE fixture JSON should parse")
+    }
+
+    fn fixture_bytes(fixtures: &serde_json::Value, section: &str, field: &str) -> Vec<u8> {
+        let value = fixtures[section][field]
+            .as_str()
+            .unwrap_or_else(|| panic!("missing HPKE fixture field {section}.{field}"));
+        assert_eq!(value.len() % 2, 0, "{section}.{field} must have even hex");
+
+        value
+            .as_bytes()
+            .chunks_exact(2)
+            .map(|pair| {
+                let pair = std::str::from_utf8(pair).expect("fixture hex should be UTF-8");
+                u8::from_str_radix(pair, 16).expect("fixture should contain valid hex")
+            })
+            .collect()
+    }
+
+    fn fixture_array<const N: usize>(
+        fixtures: &serde_json::Value,
+        section: &str,
+        field: &str,
+    ) -> [u8; N] {
+        fixture_bytes(fixtures, section, field)
+            .try_into()
+            .unwrap_or_else(|_| panic!("{section}.{field} should contain {N} bytes"))
+    }
+
+    fn unpack_hpke_result(packed: &[u8]) -> (&[u8], &[u8], &[u8]) {
+        assert!(
+            packed.len() >= 12,
+            "packed HPKE result should have a header"
+        );
+        let nonce_len = u32::from_le_bytes(packed[0..4].try_into().expect("nonce length")) as usize;
+        let enc_len = u32::from_le_bytes(packed[4..8].try_into().expect("enc length")) as usize;
+        let payload_len =
+            u32::from_le_bytes(packed[8..12].try_into().expect("payload length")) as usize;
+        assert_eq!(
+            packed.len(),
+            12 + nonce_len + enc_len + payload_len,
+            "packed HPKE result lengths should match"
+        );
+
+        let nonce_end = 12 + nonce_len;
+        let enc_end = nonce_end + enc_len;
+        (
+            &packed[12..nonce_end],
+            &packed[nonce_end..enc_end],
+            &packed[enc_end..],
+        )
+    }
+
     #[test]
     fn encrypt_and_decrypt_round_trip() {
         let key = [1u8; KEY_SIZE_BYTES];
@@ -751,6 +966,60 @@ mod tests {
 
         let err = encrypt_with_key(&key, context, plaintext).unwrap_err();
         assert!(matches!(err, BridgeError::InvalidKeyLength));
+    }
+
+    #[test]
+    fn hpke_matches_rfc_9180_appendix_a2_and_opens_shared_ciphertext() {
+        let fixtures = hpke_fixtures();
+        let section = "rfc9180_appendix_a2";
+        assert_eq!(
+            fixtures[section]["suite"]["kem"].as_u64(),
+            Some(u64::from(HPKE_KEM_ID))
+        );
+
+        let sender_private =
+            fixture_array::<KEY_SIZE_BYTES>(&fixtures, section, "sender_private_key");
+        let recipient_private =
+            fixture_array::<KEY_SIZE_BYTES>(&fixtures, section, "recipient_private_key");
+        let recipient_public =
+            fixture_array::<HPKE_ENC_LEN>(&fixtures, section, "recipient_public_key");
+        let info = fixture_bytes(&fixtures, section, "info");
+        let aad = fixture_bytes(&fixtures, section, "aad");
+        let plaintext = fixture_bytes(&fixtures, section, "plaintext");
+        let expected_enc = fixture_bytes(&fixtures, section, "enc");
+        let expected_nonce = fixture_bytes(&fixtures, section, "nonce");
+        let expected_ciphertext = fixture_bytes(&fixtures, section, "ciphertext");
+
+        let sealed = hpke_encap_with_private_key(
+            &recipient_public,
+            &info,
+            &aad,
+            &plaintext,
+            &sender_private,
+        )
+        .expect("RFC HPKE seal should succeed");
+        let (nonce, enc, ciphertext) = unpack_hpke_result(&sealed);
+        assert_eq!(nonce, expected_nonce);
+        assert_eq!(enc, expected_enc);
+        assert_eq!(ciphertext, expected_ciphertext);
+
+        let opened = hpke_decap(
+            &recipient_private,
+            &info,
+            &aad,
+            &expected_enc,
+            &expected_ciphertext,
+        )
+        .expect("shared RFC HPKE ciphertext should open");
+        let (nonce, enc, recovered) = unpack_hpke_result(&opened);
+        assert_eq!(nonce, expected_nonce);
+        assert_eq!(enc, expected_enc);
+        assert_eq!(recovered, plaintext);
+    }
+
+    #[test]
+    fn hpke_fixture_copies_remain_identical() {
+        assert_eq!(HPKE_FIXTURES, CRYPTO_WEB_HPKE_FIXTURES);
     }
 
     #[cfg(miri)]

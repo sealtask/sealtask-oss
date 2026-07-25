@@ -591,12 +591,15 @@ mod tests {
             .recv()
             .await
             .expect("second blocking task starts");
-        assert!(started_rx.try_recv().is_err());
-        assert_eq!(maximum.load(Ordering::Acquire), 2);
-        assert!(
-            admission.waiting_count() >= 2,
-            "remaining work must wait at the shared admission boundary"
-        );
+        let waiting_observed = tokio::time::timeout(Duration::from_secs(5), async {
+            while admission.waiting_count() < 2 {
+                tokio::task::yield_now().await;
+            }
+        })
+        .await
+        .is_ok();
+        let additional_work_started = started_rx.try_recv().is_ok();
+        let maximum_before_release = maximum.load(Ordering::Acquire);
 
         let (lock, condition) = &*gate;
         *lock
@@ -608,6 +611,12 @@ mod tests {
                 .expect("blocking crypto caller joins")
                 .expect("blocking crypto succeeds");
         }
+        assert!(!additional_work_started);
+        assert_eq!(maximum_before_release, 2);
+        assert!(
+            waiting_observed,
+            "remaining work must wait at the shared admission boundary"
+        );
         assert_eq!(maximum.load(Ordering::Acquire), 2);
     }
 

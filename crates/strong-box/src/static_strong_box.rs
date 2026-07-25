@@ -5,7 +5,7 @@ use chacha20poly1305::{
 	aead::{Aead as _, Payload},
 };
 #[cfg(not(target_arch = "wasm32"))]
-use rand::{RngCore, rng};
+use rand::{Rng, rng};
 use std::{collections::HashMap, fmt::Debug};
 
 use super::{Error, Key, KeyId, StrongBox};

@@ -104,10 +104,13 @@ Common commands:
 ```bash
 cargo check --workspace --all-targets --locked
 cargo test --workspace --all-targets --locked
+cargo run -p sealtask-client-crypto --example generate_compat_fixtures -- --check
 ./scripts/build-strong-box-wasm.sh build
 ./scripts/build-strong-box-wasm.sh verify
 bun install --frozen-lockfile
 bun run check:crypto-web
+bun run --cwd packages/crypto-web test:browser
+cargo audit --deny warnings --file Cargo.lock
 cargo run -p sealtask -- --help
 cargo run -p sealtask -- auth unlock --password-stdin
 cargo run -p sealtask -- auth keychain store --password-stdin
@@ -140,6 +143,20 @@ git diff -- artifacts/strong-box-wasm/
 
 An immutable release tag binds the manifest and artifact to the public source
 tree that contains them.
+
+## Browser compatibility corpus
+
+`testdata/crypto-compat-v1.json` freezes the persisted Rust/browser boundary
+for data-key wrappers, recovery and StrongBox wrappers, sealed payloads and
+proofs, tasks/comments/notes/attachments, invite bindings and authentication,
+and transparency proofs. `sealtask-client-crypto` is the deterministic
+reference generator; browser tests consume the checked bytes through the
+canonical WASM bridge.
+
+HPKE migration vectors are intentionally separate. New writes use RFC 9180's
+X25519 KEM ID `0x0020`; the browser retains decrypt-only support for the two
+historical `0x0010` SealTask dialects. The old plaintext-CBOR development
+artifact is not part of the public browser package.
 
 ## Agent task automation
 

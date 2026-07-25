@@ -39,7 +39,7 @@ pub fn generate_key() -> Key {
 
 #[cfg(not(target_arch = "wasm32"))]
 fn fill_key_bytes(bytes: &mut [u8; 32]) {
-	use rand::{RngCore, rng};
+	use rand::{Rng, rng};
 	rng().fill_bytes(bytes);
 }
 

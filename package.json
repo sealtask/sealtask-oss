@@ -6,7 +6,15 @@
     "packages/*"
   ],
   "scripts": {
-    "check:crypto-web": "bun run --cwd packages/crypto-web check",
+    "check:crypto-web": "bun run test:release-manifest && bun run --cwd packages/crypto-web check",
+    "test:release-manifest": "node --test scripts/crypto-release-manifest.test.mjs",
     "test:crypto-web": "bun run --cwd packages/crypto-web test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.60.0",
+    "@types/node": "24.10.1",
+    "typescript": "5.9.3",
+    "vite": "7.3.6",
+    "vitest": "4.0.14"
   }
 }

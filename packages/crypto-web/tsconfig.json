@@ -27,6 +27,8 @@
     ]
   },
   "include": [
+    "browser-tests",
+    "playwright.config.ts",
     "src",
     "test",
     "vitest.config.ts"

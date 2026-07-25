@@ -17,14 +17,25 @@ const HASH_LENGTH = 32
 const KEY_LENGTH = 32
 const NONCE_LENGTH = 12
 const MODE_BASE = 0x00
-const KEM_ID = 0x0010
+const KEM_ID = 0x0020
+// Early SealTask releases used RFC 9180's P-256 codepoint while carrying
+// X25519 keys and two non-standard key schedules. Accept it on read only.
+const LEGACY_KEM_ID = 0x0010
 const KDF_ID = 0x0001
 const AEAD_ID = 0x0003
+const EMPTY_BYTES = new Uint8Array(0)
 
 const LABEL_PREFIX = textEncoder.encode('HPKE-v1')
+const KEM_SUITE_ID = concatBytes(textEncoder.encode('KEM'), i2osp(KEM_ID, 2))
 const SUITE_ID = concatBytes(
   textEncoder.encode('HPKE'),
   i2osp(KEM_ID, 2),
+  i2osp(KDF_ID, 2),
+  i2osp(AEAD_ID, 2),
+)
+const LEGACY_SUITE_ID = concatBytes(
+  textEncoder.encode('HPKE'),
+  i2osp(LEGACY_KEM_ID, 2),
   i2osp(KDF_ID, 2),
   i2osp(AEAD_ID, 2),
 )
@@ -91,23 +102,27 @@ export function decodeHpkeEnvelope(bytes: Uint8Array): HpkeEnvelope {
 }
 
 export async function hpkeOpen(params: HpkeOpenParams): Promise<Uint8Array> {
-  const bridge = await maybeGetHpkeBridge()
-  if (bridge?.hpkeDecap) {
-    const envelope =
-      params.envelope instanceof Uint8Array
-        ? decodeHpkeEnvelope(params.envelope)
-        : normalizeHpkeEnvelope(params.envelope)
+  const envelope =
+    params.envelope instanceof Uint8Array
+      ? decodeHpkeEnvelope(params.envelope)
+      : normalizeHpkeEnvelope(params.envelope)
 
-    return bridge.hpkeDecap({
-      recipientPrivateKey: params.recipientPrivateKey,
-      info: params.info,
-      aad: params.aad,
-      enc: envelope.enc,
-      ciphertext: envelope.ciphertext,
-    })
+  // The WASM bridge implements the current RFC 9180 suite. Historical
+  // 0x0010 envelopes must stay on the accept-only compatibility path below.
+  if (isCurrentHpkeSuite(envelope.suite)) {
+    const bridge = await maybeGetHpkeBridge()
+    if (bridge?.hpkeDecap) {
+      return bridge.hpkeDecap({
+        recipientPrivateKey: params.recipientPrivateKey,
+        info: params.info,
+        aad: params.aad,
+        enc: envelope.enc,
+        ciphertext: envelope.ciphertext,
+      })
+    }
   }
 
-  return hpkeOpenPure(params)
+  return hpkeOpenPure({ ...params, envelope })
 }
 
 async function hpkeSealPure(params: HpkeSealParams): Promise<HpkeSealResult> {
@@ -117,40 +132,51 @@ async function hpkeSealPure(params: HpkeSealParams): Promise<HpkeSealResult> {
 
   const ephemeralSeed = randomBytes(32)
   const privateKey = clampScalar(ephemeralSeed)
-  const enc = await derivePublicKey(privateKey)
-  const sharedSecret = await deriveSharedSecret({
-    privateKey,
-    peerPublicKey: params.recipientPublicKey,
-  })
-  zeroBytes(ephemeralSeed)
-  zeroBytes(privateKey)
+  let enc: Uint8Array = new Uint8Array(0)
+  let dh: Uint8Array = new Uint8Array(0)
+  try {
+    enc = await derivePublicKey(privateKey)
+    dh = await deriveSharedSecret({
+      privateKey,
+      peerPublicKey: params.recipientPublicKey,
+    })
+  } finally {
+    zeroBytes(ephemeralSeed)
+    zeroBytes(privateKey)
+  }
 
-  if (sharedSecret.every((byte) => byte === 0)) {
+  if (dh.every((byte) => byte === 0)) {
+    zeroBytes(dh)
     throw new Error('Derived HPKE shared secret is invalid.')
   }
 
-  const kemContext = concatBytes(enc, params.recipientPublicKey)
-  const keyScheduleContext = concatBytes(new Uint8Array([MODE_BASE]), kemContext, params.info)
-  const secret = await labeledExtract(null, 'secret', sharedSecret)
-  zeroBytes(sharedSecret)
-  const [key, baseNonce] = await Promise.all([
-    labeledExpand(secret, 'key', keyScheduleContext, KEY_LENGTH),
-    labeledExpand(secret, 'base_nonce', keyScheduleContext, NONCE_LENGTH),
-  ])
+  let sharedSecret: Uint8Array | undefined
+  try {
+    sharedSecret = await dhkemSharedSecret(dh, enc, params.recipientPublicKey)
+  } finally {
+    zeroBytes(dh)
+  }
 
-  const ciphertext = chacha20Poly1305Seal({
-    key,
-    nonce: baseNonce,
-    aad: params.aad,
-    plaintext: params.plaintext,
-  })
+  let key: Uint8Array | undefined
+  let baseNonce: Uint8Array | undefined
+  try {
+    ;({ key, baseNonce } = await keySchedule(sharedSecret, params.info))
+  } finally {
+    zeroBytes(sharedSecret)
+  }
 
-  const nonceCopy = baseNonce.slice()
-  zeroBytes(secret)
-  zeroBytes(baseNonce)
-  zeroBytes(key)
-
-  return { enc, ciphertext, nonce: nonceCopy }
+  try {
+    const ciphertext = chacha20Poly1305Seal({
+      key,
+      nonce: baseNonce,
+      aad: params.aad,
+      plaintext: params.plaintext,
+    })
+    return { enc, ciphertext, nonce: baseNonce.slice() }
+  } finally {
+    zeroBytes(baseNonce)
+    zeroBytes(key)
+  }
 }
 
 async function hpkeOpenPure(params: HpkeOpenParams): Promise<Uint8Array> {
@@ -162,39 +188,238 @@ async function hpkeOpenPure(params: HpkeOpenParams): Promise<Uint8Array> {
       ? decodeHpkeEnvelope(params.envelope)
       : normalizeHpkeEnvelope(params.envelope)
 
-  const recipientPublicKey = await derivePublicKey(params.recipientPrivateKey)
-  const sharedSecret = await deriveSharedSecret({
-    privateKey: params.recipientPrivateKey,
-    peerPublicKey: envelope.enc,
-  })
-  if (sharedSecret.every((byte) => byte === 0)) {
+  let recipientPublicKey: Uint8Array | undefined
+  let dh: Uint8Array | undefined
+  try {
+    recipientPublicKey = await derivePublicKey(params.recipientPrivateKey)
+    dh = await deriveSharedSecret({
+      privateKey: params.recipientPrivateKey,
+      peerPublicKey: envelope.enc,
+    })
+  } catch (error) {
     zeroBytes(recipientPublicKey)
-    zeroBytes(sharedSecret)
+    zeroBytes(dh)
+    throw error
+  }
+
+  if (dh.every((byte) => byte === 0)) {
+    zeroBytes(recipientPublicKey)
+    zeroBytes(dh)
     throw new Error('Derived HPKE shared secret is invalid.')
   }
 
-  const kemContext = concatBytes(envelope.enc, recipientPublicKey)
-  zeroBytes(recipientPublicKey)
-  const keyScheduleContext = concatBytes(new Uint8Array([MODE_BASE]), kemContext, params.info)
-  const secret = await labeledExtract(null, 'secret', sharedSecret)
-  zeroBytes(sharedSecret)
-  const [key, baseNonce] = await Promise.all([
-    labeledExpand(secret, 'key', keyScheduleContext, KEY_LENGTH),
-    labeledExpand(secret, 'base_nonce', keyScheduleContext, NONCE_LENGTH),
-  ])
-  zeroBytes(secret)
+  if (isLegacyHpkeSuite(envelope.suite)) {
+    try {
+      return await openLegacyHpkeEnvelope({
+        dh,
+        recipientPublicKey,
+        info: params.info,
+        aad: params.aad,
+        envelope,
+      })
+    } finally {
+      zeroBytes(recipientPublicKey)
+      zeroBytes(dh)
+    }
+  }
 
-  const plaintext = chacha20Poly1305Open({
-    key,
-    nonce: baseNonce,
-    aad: params.aad,
-    ciphertext: envelope.ciphertext,
-  })
+  let sharedSecret: Uint8Array | undefined
+  try {
+    sharedSecret = await dhkemSharedSecret(dh, envelope.enc, recipientPublicKey)
+  } finally {
+    zeroBytes(recipientPublicKey)
+    zeroBytes(dh)
+  }
 
-  zeroBytes(baseNonce)
-  zeroBytes(key)
+  let key: Uint8Array | undefined
+  let baseNonce: Uint8Array | undefined
+  try {
+    ;({ key, baseNonce } = await keySchedule(sharedSecret, params.info))
+  } finally {
+    zeroBytes(sharedSecret)
+  }
 
-  return plaintext
+  try {
+    return chacha20Poly1305Open({
+      key,
+      nonce: baseNonce,
+      aad: params.aad,
+      ciphertext: envelope.ciphertext,
+    })
+  } finally {
+    zeroBytes(baseNonce)
+    zeroBytes(key)
+  }
+}
+
+async function openLegacyHpkeEnvelope(params: {
+  dh: Uint8Array
+  recipientPublicKey: Uint8Array
+  info: Uint8Array
+  aad: Uint8Array
+  envelope: HpkeEnvelope
+}): Promise<Uint8Array> {
+  if (params.envelope.ciphertext.length < 16) {
+    throw new Error('ChaCha20-Poly1305 ciphertext must include an authentication tag.')
+  }
+
+  const kemContext = concatBytes(params.envelope.enc, params.recipientPublicKey)
+  const keyScheduleContext = concatBytes(
+    new Uint8Array([MODE_BASE]),
+    kemContext,
+    params.info,
+  )
+  zeroBytes(kemContext)
+
+  let extractedSecret: Uint8Array | undefined
+  try {
+    extractedSecret = await labeledExtractWithSuite(
+      LEGACY_SUITE_ID,
+      null,
+      'secret',
+      params.dh,
+    )
+
+    // The historical Rust/WASM bridge accidentally expanded the extract PRK
+    // once more with empty info. Try that exact dialect first.
+    let wasmSecret: Uint8Array | undefined
+    let wasmKey: Uint8Array | undefined
+    let wasmNonce: Uint8Array | undefined
+    try {
+      wasmSecret = await hkdfExpand(extractedSecret, EMPTY_BYTES, HASH_LENGTH)
+      ;({ key: wasmKey, baseNonce: wasmNonce } = await legacyKeySchedule(
+        wasmSecret,
+        keyScheduleContext,
+      ))
+      try {
+        return chacha20Poly1305Open({
+          key: wasmKey,
+          nonce: wasmNonce,
+          aad: params.aad,
+          ciphertext: params.envelope.ciphertext,
+        })
+      } catch {
+        // Continue with the historical browser dialect.
+      }
+    } finally {
+      zeroBytes(wasmNonce)
+      zeroBytes(wasmKey)
+      zeroBytes(wasmSecret)
+    }
+
+    // The browser fallback used the raw extract PRK and an early Poly1305
+    // padding implementation. This is decrypt-only compatibility.
+    let browserKey: Uint8Array | undefined
+    let browserNonce: Uint8Array | undefined
+    try {
+      ;({ key: browserKey, baseNonce: browserNonce } = await legacyKeySchedule(
+        extractedSecret,
+        keyScheduleContext,
+      ))
+      try {
+        return legacyChacha20Poly1305Open({
+          key: browserKey,
+          nonce: browserNonce,
+          aad: params.aad,
+          ciphertext: params.envelope.ciphertext,
+        })
+      } catch {
+        throw new Error('ChaCha20-Poly1305 authentication failed.')
+      }
+    } finally {
+      zeroBytes(browserNonce)
+      zeroBytes(browserKey)
+    }
+  } finally {
+    zeroBytes(extractedSecret)
+    zeroBytes(keyScheduleContext)
+  }
+}
+
+async function legacyKeySchedule(
+  secret: Uint8Array,
+  keyScheduleContext: Uint8Array,
+): Promise<{ key: Uint8Array; baseNonce: Uint8Array }> {
+  const key = await labeledExpandWithSuite(
+    LEGACY_SUITE_ID,
+    secret,
+    'key',
+    keyScheduleContext,
+    KEY_LENGTH,
+  )
+  try {
+    const baseNonce = await labeledExpandWithSuite(
+      LEGACY_SUITE_ID,
+      secret,
+      'base_nonce',
+      keyScheduleContext,
+      NONCE_LENGTH,
+    )
+    return { key, baseNonce }
+  } catch (error) {
+    zeroBytes(key)
+    throw error
+  }
+}
+
+async function dhkemSharedSecret(
+  dh: Uint8Array,
+  enc: Uint8Array,
+  recipientPublicKey: Uint8Array,
+): Promise<Uint8Array> {
+  const kemContext = concatBytes(enc, recipientPublicKey)
+  let eaePrk: Uint8Array | undefined
+  try {
+    eaePrk = await labeledExtractWithSuite(KEM_SUITE_ID, null, 'eae_prk', dh)
+    return await labeledExpandWithSuite(
+      KEM_SUITE_ID,
+      eaePrk,
+      'shared_secret',
+      kemContext,
+      HASH_LENGTH,
+    )
+  } finally {
+    zeroBytes(eaePrk)
+    zeroBytes(kemContext)
+  }
+}
+
+async function keySchedule(
+  sharedSecret: Uint8Array,
+  info: Uint8Array,
+): Promise<{ key: Uint8Array; baseNonce: Uint8Array }> {
+  let pskIdHash: Uint8Array | undefined
+  let infoHash: Uint8Array | undefined
+  let keyScheduleContext: Uint8Array | undefined
+  try {
+    pskIdHash = await labeledExtract(null, 'psk_id_hash', EMPTY_BYTES)
+    infoHash = await labeledExtract(null, 'info_hash', info)
+    keyScheduleContext = concatBytes(new Uint8Array([MODE_BASE]), pskIdHash, infoHash)
+  } finally {
+    zeroBytes(pskIdHash)
+    zeroBytes(infoHash)
+  }
+
+  let secret: Uint8Array | undefined
+  try {
+    secret = await labeledExtract(sharedSecret, 'secret', EMPTY_BYTES)
+    const key = await labeledExpand(secret, 'key', keyScheduleContext, KEY_LENGTH)
+    try {
+      const baseNonce = await labeledExpand(
+        secret,
+        'base_nonce',
+        keyScheduleContext,
+        NONCE_LENGTH,
+      )
+      return { key, baseNonce }
+    } catch (error) {
+      zeroBytes(key)
+      throw error
+    }
+  } finally {
+    zeroBytes(secret)
+    zeroBytes(keyScheduleContext)
+  }
 }
 
 export async function computeKeyFingerprint(publicKey: Uint8Array): Promise<Uint8Array> {
@@ -234,8 +459,7 @@ async function labeledExtract(
   label: string,
   ikm: Uint8Array,
 ): Promise<Uint8Array> {
-  const labeledIkm = concatBytes(LABEL_PREFIX, SUITE_ID, textEncoder.encode(label), ikm)
-  return hkdfExtract(salt, labeledIkm)
+  return labeledExtractWithSuite(SUITE_ID, salt, label, ikm)
 }
 
 async function labeledExpand(
@@ -244,19 +468,57 @@ async function labeledExpand(
   info: Uint8Array,
   length: number,
 ): Promise<Uint8Array> {
+  return labeledExpandWithSuite(SUITE_ID, prk, label, info, length)
+}
+
+async function labeledExtractWithSuite(
+  suiteId: Uint8Array,
+  salt: Uint8Array | null,
+  label: string,
+  ikm: Uint8Array,
+): Promise<Uint8Array> {
+  const labeledIkm = concatBytes(LABEL_PREFIX, suiteId, textEncoder.encode(label), ikm)
+  try {
+    return await hkdfExtract(salt, labeledIkm)
+  } finally {
+    zeroBytes(labeledIkm)
+  }
+}
+
+async function labeledExpandWithSuite(
+  suiteId: Uint8Array,
+  prk: Uint8Array,
+  label: string,
+  info: Uint8Array,
+  length: number,
+): Promise<Uint8Array> {
   const labeledInfo = concatBytes(
     i2osp(length, 2),
     LABEL_PREFIX,
-    SUITE_ID,
+    suiteId,
     textEncoder.encode(label),
     info,
   )
-  return hkdfExpand(prk, labeledInfo, length)
+  try {
+    return await hkdfExpand(prk, labeledInfo, length)
+  } finally {
+    zeroBytes(labeledInfo)
+  }
 }
 
 async function hkdfExtract(salt: Uint8Array | null, ikm: Uint8Array): Promise<Uint8Array> {
   const keyMaterial = salt && salt.length > 0 ? salt : new Uint8Array(HASH_LENGTH)
-  return hmacSha256(keyMaterial, ikm, 'WebCrypto subtle API is unavailable for HPKE.')
+  try {
+    return await hmacSha256(
+      keyMaterial,
+      ikm,
+      'WebCrypto subtle API is unavailable for HPKE.',
+    )
+  } finally {
+    if (keyMaterial !== salt) {
+      zeroBytes(keyMaterial)
+    }
+  }
 }
 
 async function hkdfExpand(prk: Uint8Array, info: Uint8Array, length: number): Promise<Uint8Array> {
@@ -264,18 +526,33 @@ async function hkdfExpand(prk: Uint8Array, info: Uint8Array, length: number): Pr
   const result = new Uint8Array(blocks * HASH_LENGTH)
   let previous: Uint8Array<ArrayBufferLike> = new Uint8Array(0)
 
-  for (let counter = 1; counter <= blocks; counter += 1) {
-    const buffer = new Uint8Array(previous.length + info.length + 1)
-    buffer.set(previous, 0)
-    buffer.set(info, previous.length)
-    buffer[buffer.length - 1] = counter
+  try {
+    for (let counter = 1; counter <= blocks; counter += 1) {
+      const buffer = new Uint8Array(previous.length + info.length + 1)
+      buffer.set(previous, 0)
+      buffer.set(info, previous.length)
+      buffer[buffer.length - 1] = counter
 
-    const block = await hmacSha256(prk, buffer, 'WebCrypto subtle API is unavailable for HPKE.')
-    result.set(block, (counter - 1) * HASH_LENGTH)
-    previous = block
+      let block: Uint8Array
+      try {
+        block = await hmacSha256(
+          prk,
+          buffer,
+          'WebCrypto subtle API is unavailable for HPKE.',
+        )
+      } finally {
+        zeroBytes(buffer)
+      }
+      result.set(block, (counter - 1) * HASH_LENGTH)
+      zeroBytes(previous)
+      previous = block
+    }
+
+    return result.slice(0, length)
+  } finally {
+    zeroBytes(previous)
+    zeroBytes(result)
   }
-
-  return result.slice(0, length)
 }
 
 async function sha256(data: Uint8Array): Promise<Uint8Array> {
@@ -336,12 +613,7 @@ function normalizeHpkeEnvelope(envelope: HpkeEnvelope | Partial<HpkeEnvelope>): 
   if (!suite) {
     throw new Error('HPKE envelope missing suite definition.')
   }
-  if (
-    suite.kem !== KEM_ID ||
-    suite.kdf !== KDF_ID ||
-    suite.aead !== AEAD_ID ||
-    suite.mode !== MODE_BASE
-  ) {
+  if (!isCurrentHpkeSuite(suite) && !isLegacyHpkeSuite(suite)) {
     throw new Error('HPKE envelope uses an unsupported ciphersuite.')
   }
   return {
@@ -350,6 +622,24 @@ function normalizeHpkeEnvelope(envelope: HpkeEnvelope | Partial<HpkeEnvelope>): 
     enc: ensureUint8Array(envelope.enc, 'enc'),
     ciphertext: ensureUint8Array(envelope.ciphertext, 'ciphertext'),
   }
+}
+
+function isCurrentHpkeSuite(suite: HpkeEnvelope['suite']): boolean {
+  return (
+    suite.kem === KEM_ID &&
+    suite.kdf === KDF_ID &&
+    suite.aead === AEAD_ID &&
+    suite.mode === MODE_BASE
+  )
+}
+
+function isLegacyHpkeSuite(suite: HpkeEnvelope['suite']): boolean {
+  return (
+    suite.kem === LEGACY_KEM_ID &&
+    suite.kdf === KDF_ID &&
+    suite.aead === AEAD_ID &&
+    suite.mode === MODE_BASE
+  )
 }
 
 function chacha20Poly1305Seal(params: {
@@ -366,13 +656,26 @@ function chacha20Poly1305Seal(params: {
     throw new Error('ChaCha20-Poly1305 nonce must be 12 bytes.')
   }
 
-  const polyKey = chacha20Block(key, 0, nonce).slice(0, 32)
-  const ciphertext = chacha20Xor(key, nonce, 1, plaintext)
-  const tag = poly1305Authenticate(polyKey, aad, ciphertext)
-  const sealed = new Uint8Array(ciphertext.length + tag.length)
-  sealed.set(ciphertext, 0)
-  sealed.set(tag, ciphertext.length)
-  return sealed
+  let firstBlock: Uint8Array | undefined
+  let polyKey: Uint8Array | undefined
+  let ciphertext: Uint8Array | undefined
+  let tag: Uint8Array | undefined
+  try {
+    firstBlock = chacha20Block(key, 0, nonce)
+    polyKey = firstBlock.slice(0, 32)
+    ciphertext = chacha20Xor(key, nonce, 1, plaintext)
+    tag = poly1305Authenticate(polyKey, aad, ciphertext)
+
+    const sealed = new Uint8Array(ciphertext.length + tag.length)
+    sealed.set(ciphertext, 0)
+    sealed.set(tag, ciphertext.length)
+    return sealed
+  } finally {
+    zeroBytes(firstBlock)
+    zeroBytes(polyKey)
+    zeroBytes(ciphertext)
+    zeroBytes(tag)
+  }
 }
 
 function chacha20Poly1305Open(params: {
@@ -381,6 +684,27 @@ function chacha20Poly1305Open(params: {
   aad: Uint8Array
   ciphertext: Uint8Array
 }): Uint8Array {
+  return chacha20Poly1305OpenWithAuthenticator(params, poly1305Authenticate)
+}
+
+function legacyChacha20Poly1305Open(params: {
+  key: Uint8Array
+  nonce: Uint8Array
+  aad: Uint8Array
+  ciphertext: Uint8Array
+}): Uint8Array {
+  return chacha20Poly1305OpenWithAuthenticator(params, legacyPoly1305Authenticate)
+}
+
+function chacha20Poly1305OpenWithAuthenticator(
+  params: {
+    key: Uint8Array
+    nonce: Uint8Array
+    aad: Uint8Array
+    ciphertext: Uint8Array
+  },
+  authenticate: (key: Uint8Array, aad: Uint8Array, ciphertext: Uint8Array) => Uint8Array,
+): Uint8Array {
   const { key, nonce, aad, ciphertext } = params
   if (ciphertext.length < 16) {
     throw new Error('ChaCha20-Poly1305 ciphertext must include an authentication tag.')
@@ -393,15 +717,29 @@ function chacha20Poly1305Open(params: {
   }
 
   const tagOffset = ciphertext.length - 16
-  const payload = ciphertext.slice(0, tagOffset)
-  const tag = ciphertext.slice(tagOffset)
-  const polyKey = chacha20Block(key, 0, nonce).slice(0, 32)
-  const expectedTag = poly1305Authenticate(polyKey, aad, payload)
-  if (!constantTimeEquals(expectedTag, tag)) {
-    throw new Error('ChaCha20-Poly1305 authentication failed.')
-  }
+  let payload: Uint8Array | undefined
+  let tag: Uint8Array | undefined
+  let firstBlock: Uint8Array | undefined
+  let polyKey: Uint8Array | undefined
+  let expectedTag: Uint8Array | undefined
+  try {
+    payload = ciphertext.slice(0, tagOffset)
+    tag = ciphertext.slice(tagOffset)
+    firstBlock = chacha20Block(key, 0, nonce)
+    polyKey = firstBlock.slice(0, 32)
+    expectedTag = authenticate(polyKey, aad, payload)
+    if (!constantTimeEquals(expectedTag, tag)) {
+      throw new Error('ChaCha20-Poly1305 authentication failed.')
+    }
 
-  return chacha20Xor(key, nonce, 1, payload)
+    return chacha20Xor(key, nonce, 1, payload)
+  } finally {
+    zeroBytes(payload)
+    zeroBytes(tag)
+    zeroBytes(firstBlock)
+    zeroBytes(polyKey)
+    zeroBytes(expectedTag)
+  }
 }
 
 function chacha20Xor(
@@ -413,17 +751,26 @@ function chacha20Xor(
   const output = new Uint8Array(plaintext.length)
   const block = new Uint8Array(64)
   let ctr = counter >>> 0
+  let completed = false
 
-  for (let offset = 0; offset < plaintext.length; offset += 64) {
-    const keystream = chacha20Block(key, ctr, nonce, block)
-    ctr = (ctr + 1) >>> 0
-    const chunk = Math.min(64, plaintext.length - offset)
-    for (let i = 0; i < chunk; i += 1) {
-      output[offset + i] = plaintext[offset + i] ^ keystream[i]
+  try {
+    for (let offset = 0; offset < plaintext.length; offset += 64) {
+      const keystream = chacha20Block(key, ctr, nonce, block)
+      ctr = (ctr + 1) >>> 0
+      const chunk = Math.min(64, plaintext.length - offset)
+      for (let i = 0; i < chunk; i += 1) {
+        output[offset + i] = plaintext[offset + i] ^ keystream[i]
+      }
+    }
+
+    completed = true
+    return output
+  } finally {
+    zeroBytes(block)
+    if (!completed) {
+      zeroBytes(output)
     }
   }
-
-  return output
 }
 
 function chacha20Block(
@@ -433,42 +780,48 @@ function chacha20Block(
   buffer?: Uint8Array,
 ): Uint8Array {
   const state = new Uint32Array(16)
-  state[0] = 0x61707865
-  state[1] = 0x3320646e
-  state[2] = 0x79622d32
-  state[3] = 0x6b206574
+  let working: Uint32Array | undefined
+  try {
+    state[0] = 0x61707865
+    state[1] = 0x3320646e
+    state[2] = 0x79622d32
+    state[3] = 0x6b206574
 
-  for (let i = 0; i < 8; i += 1) {
-    state[4 + i] = readUint32LE(key, i * 4)
+    for (let i = 0; i < 8; i += 1) {
+      state[4 + i] = readUint32LE(key, i * 4)
+    }
+
+    state[12] = counter >>> 0
+    state[13] = readUint32LE(nonce, 0)
+    state[14] = readUint32LE(nonce, 4)
+    state[15] = readUint32LE(nonce, 8)
+
+    working = state.slice()
+
+    for (let round = 0; round < 10; round += 1) {
+      quarterRound(working, 0, 4, 8, 12)
+      quarterRound(working, 1, 5, 9, 13)
+      quarterRound(working, 2, 6, 10, 14)
+      quarterRound(working, 3, 7, 11, 15)
+      quarterRound(working, 0, 5, 10, 15)
+      quarterRound(working, 1, 6, 11, 12)
+      quarterRound(working, 2, 7, 8, 13)
+      quarterRound(working, 3, 4, 9, 14)
+    }
+
+    for (let i = 0; i < 16; i += 1) {
+      working[i] = (working[i] + state[i]) >>> 0
+    }
+
+    const output = buffer ?? new Uint8Array(64)
+    for (let i = 0; i < 16; i += 1) {
+      writeUint32LE(output, i * 4, working[i])
+    }
+    return output
+  } finally {
+    state.fill(0)
+    working?.fill(0)
   }
-
-  state[12] = counter >>> 0
-  state[13] = readUint32LE(nonce, 0)
-  state[14] = readUint32LE(nonce, 4)
-  state[15] = readUint32LE(nonce, 8)
-
-  const working = state.slice()
-
-  for (let round = 0; round < 10; round += 1) {
-    quarterRound(working, 0, 4, 8, 12)
-    quarterRound(working, 1, 5, 9, 13)
-    quarterRound(working, 2, 6, 10, 14)
-    quarterRound(working, 3, 7, 11, 15)
-    quarterRound(working, 0, 5, 10, 15)
-    quarterRound(working, 1, 6, 11, 12)
-    quarterRound(working, 2, 7, 8, 13)
-    quarterRound(working, 3, 4, 9, 14)
-  }
-
-  for (let i = 0; i < 16; i += 1) {
-    working[i] = (working[i] + state[i]) >>> 0
-  }
-
-  const output = buffer ?? new Uint8Array(64)
-  for (let i = 0; i < 16; i += 1) {
-    writeUint32LE(output, i * 4, working[i])
-  }
-  return output
 }
 
 function quarterRound(state: Uint32Array, a: number, b: number, c: number, d: number) {
@@ -518,18 +871,57 @@ function poly1305Authenticate(key: Uint8Array, aad: Uint8Array, ciphertext: Uint
   const prime = (1n << 130n) - 5n
   let acc = 0n
 
+  const lengthBlock = new Uint8Array(16)
+  let macData: Uint8Array | undefined
+  try {
+    writeUint64LE(lengthBlock, 0, BigInt(aad.length))
+    writeUint64LE(lengthBlock, 8, BigInt(ciphertext.length))
+    macData = concatBytes(
+      aad,
+      poly1305Padding(aad.length),
+      ciphertext,
+      poly1305Padding(ciphertext.length),
+      lengthBlock,
+    )
+    acc = poly1305Accumulate(acc, r, macData, prime)
+
+    const tagValue = (acc + s) % (1n << 128n)
+    return bigIntToBytes(tagValue, 16)
+  } finally {
+    zeroBytes(lengthBlock)
+    zeroBytes(macData)
+  }
+}
+
+function legacyPoly1305Authenticate(
+  key: Uint8Array,
+  aad: Uint8Array,
+  ciphertext: Uint8Array,
+): Uint8Array {
+  if (key.length !== 32) {
+    throw new Error('Poly1305 key must be 32 bytes.')
+  }
+  const r = clampPolyKey(leBytesToBigInt(key, 0, 16))
+  const s = leBytesToBigInt(key, 16, 16)
+  const prime = (1n << 130n) - 5n
+  let acc = 0n
+
   acc = poly1305Accumulate(acc, r, aad, prime)
-  acc = poly1305Pad(acc, r, aad.length, prime)
+  acc = legacyPoly1305Pad(acc, r, aad.length, prime)
   acc = poly1305Accumulate(acc, r, ciphertext, prime)
-  acc = poly1305Pad(acc, r, ciphertext.length, prime)
+  acc = legacyPoly1305Pad(acc, r, ciphertext.length, prime)
 
   const lengthBlock = new Uint8Array(16)
-  writeUint64LE(lengthBlock, 0, BigInt(aad.length))
-  writeUint64LE(lengthBlock, 8, BigInt(ciphertext.length))
-  acc = poly1305Accumulate(acc, r, lengthBlock, prime)
+  try {
+    writeUint64LE(lengthBlock, 0, BigInt(aad.length))
+    writeUint64LE(lengthBlock, 8, BigInt(ciphertext.length))
+    acc = poly1305Accumulate(acc, r, lengthBlock, prime)
 
-  const tagValue = (acc + s) % (1n << 128n)
-  return bigIntToBytes(tagValue, 16)
+    const tagValue = (acc + s) % (1n << 128n)
+    return bigIntToBytes(tagValue, 16)
+  } finally {
+    zeroBytes(lengthBlock)
+  }
 }
 
 function clampPolyKey(value: bigint): bigint {
@@ -552,7 +944,15 @@ function poly1305Accumulate(
   return acc
 }
 
-function poly1305Pad(acc: bigint, r: bigint, length: number, prime: bigint): bigint {
+function poly1305Padding(length: number): Uint8Array {
+  const remainder = length % 16
+  if (remainder === 0) {
+    return new Uint8Array(0)
+  }
+  return new Uint8Array(16 - remainder)
+}
+
+function legacyPoly1305Pad(acc: bigint, r: bigint, length: number, prime: bigint): bigint {
   const remainder = length % 16
   if (remainder === 0) {
     return acc
