@@ -17,6 +17,12 @@ Downstream crates depend on earlier crates being visible on crates.io, so releas
 - `cargo login` already configured locally, or `CARGO_REGISTRY_TOKEN` set in the environment
 - a clean git worktree unless you explicitly opt into `ALLOW_DIRTY=1`
 
+For the 0.2.1 security maintenance release, require a clean `cargo audit`, the
+full locked workspace suite, strict WASM manifest verification on Linux/AMD64,
+and the browser StrongBox bridge integration test. Confirm that `wee_alloc` is
+absent and that the release tag points at the same commit as the verified
+artifact manifest.
+
 For the 0.2.0 MFA compatibility release, confirm that every workspace package
 and inter-crate dependency pin uses the same version. The new public
 `PublicError::MfaRequiredUseBeginLogin` and `PublicError::MfaInputRequired`

@@ -23,6 +23,18 @@ This workspace is still in active development and is not yet positioned as a sta
 - several APIs may still evolve as the agent workflow surface expands
 - the current release target is the CLI first, with supporting crates published alongside it
 
+## 0.2.1 security note (2026-07-25)
+
+Version 0.2.1 removes the unmaintained `wee_alloc` override from the browser
+WASM bridge and uses Rust's supported default WASM allocator. It also updates
+Hickory DNS, `rpassword`, QUIC protocol, WebPKI, and `anyhow` lockfile entries
+past their published advisories.
+
+HTTP control-plane requests now explicitly use Reqwest's operating-system
+resolver. Attachment storage keeps its patched Hickory resolver for
+pre-connection address validation and pins the validated addresses into the
+dedicated no-proxy, no-redirect transfer client.
+
 ## 0.2.0 compatibility note (2026-07-12)
 
 Version 0.2.0 adds the MFA-aware `begin_login` / `complete_mfa_login` flow and

@@ -3060,7 +3060,7 @@ checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
 
 [[package]]
 name = "sealtask"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "assert_cmd",
  "axum",
@@ -3091,7 +3091,7 @@ dependencies = [
 
 [[package]]
 name = "sealtask-client-api"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "chrono",
  "flate2",
@@ -3106,7 +3106,7 @@ dependencies = [
 
 [[package]]
 name = "sealtask-client-auth"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "argon2",
  "axum",
@@ -3132,14 +3132,14 @@ dependencies = [
 
 [[package]]
 name = "sealtask-client-core"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "thiserror 2.0.18",
 ]
 
 [[package]]
 name = "sealtask-client-crypto"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "argon2",
  "base64",
@@ -3158,7 +3158,7 @@ dependencies = [
 
 [[package]]
 name = "sealtask-client-runtime"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "base64",
  "cap-fs-ext",
