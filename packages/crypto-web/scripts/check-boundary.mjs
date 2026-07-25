@@ -35,7 +35,11 @@ for (const absolutePath of await collectSourceFiles(sourceRoot)) {
   const sourcePath = normalizePath(relative(packageRoot, absolutePath))
   const contents = await readFile(absolutePath, 'utf8')
 
-  if (/(?:legacy-cbor|legacyCbor|LegacyCbor)/.test(contents)) {
+  if (
+    /(?:legacy[-_\s]*cbor|cbor[-_\s]*legacy|decodeLegacyCbor|encodeLegacyCbor)/i.test(
+      contents,
+    )
+  ) {
     failures.push(
       `${sourcePath}: contains private legacy-CBOR compatibility code`,
     )
