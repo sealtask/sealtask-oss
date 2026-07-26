@@ -53,7 +53,7 @@ successful no-factor, interactive TOTP, one-time backup-code, one-line
 dry-run package result is not release evidence.
 
 Also verify the installed CLI contract: `sealtask --json info` reports
-`jsonContractVersion: 1`, `sealtask --json schema tasks create` is a single
+`jsonContractVersion: 2`, `sealtask --json schema tasks create` is a single
 compact JSON document, `--format json-pretty` is equivalent except for
 whitespace, and two named profiles under a temporary `--config-dir` do not
 share credentials or unlock state.

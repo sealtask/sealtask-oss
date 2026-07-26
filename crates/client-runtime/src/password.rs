@@ -1,6 +1,6 @@
 use rpassword::prompt_password;
 use sealtask_client_core::{PublicError, PublicResult};
-use std::io::{self, Read};
+use std::io::{self, IsTerminal, Read};
 use zeroize::Zeroizing;
 
 const DEFAULT_AUTO_UNLOCK_TTL_SECONDS: u64 = 8 * 60 * 60;
@@ -30,13 +30,13 @@ pub(crate) fn auto_unlock_ttl_seconds() -> PublicResult<u64> {
 
 pub(crate) fn missing_unlock_error(prompt_message: &str) -> PublicError {
     PublicError::validation(format!(
-        "{prompt_message} No unlocked local session or persisted bootstrap secret is available. Run 'sealtask auth unlock --password-stdin' for a temporary session or 'sealtask auth keychain store --password-stdin' to persist a local bootstrap secret."
+        "{prompt_message} No unlocked workspace-data session or saved unlock key is available. Run 'sealtask auth unlock' for an interactive temporary session. For automation, run 'sealtask auth unlock --password-stdin' or store a key with 'sealtask auth keychain store --password-stdin'."
     ))
 }
 
 pub(crate) fn persisted_unlock_error(prompt_message: &str, err: PublicError) -> PublicError {
     PublicError::validation(format!(
-        "{prompt_message} Failed to load the persisted bootstrap secret: {err}. Run 'sealtask auth unlock --password-stdin' for a temporary session or 'sealtask auth keychain store --password-stdin' to refresh the local bootstrap secret."
+        "{prompt_message} Failed to load the saved unlock key: {err}. Run 'sealtask auth unlock' for an interactive temporary session. For automation, run 'sealtask auth unlock --password-stdin' or refresh the saved key with 'sealtask auth keychain store --password-stdin'."
     ))
 }
 
@@ -60,10 +60,15 @@ pub(crate) fn read_required_password(
     let password = if password_stdin {
         read_password_from_stdin()?
     } else {
-        if let Some(prompt_message) = prompt_message {
-            println!("{prompt_message}");
+        if !io::stdin().is_terminal() {
+            return Err(PublicError::validation(
+                "cannot prompt for a password because stdin is not a terminal; use --password-stdin",
+            ));
         }
-        read_password("Password: ")?
+        let prompt = prompt_message
+            .map(|message| format!("{message}\nPassword: "))
+            .unwrap_or_else(|| "Password: ".to_string());
+        read_password(&prompt)?
     };
 
     if password.is_empty() {

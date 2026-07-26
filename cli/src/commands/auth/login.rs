@@ -1,5 +1,6 @@
 use super::revoke_session_with_timeout;
 use crate::input::{prompt, read_required_password};
+use crate::interaction::write_interaction_line;
 use crate::output::{
     CliResult, OutputFormat, WarningResult, finish_with_warnings, print_json, terminal_line,
     warning_result,
@@ -58,7 +59,7 @@ pub(super) async fn run(
 
     let email = match email_flag {
         Some(email) => email.trim().to_string(),
-        None => prompt("Email: ")?,
+        None => prompt(format, "Email: ")?,
     };
     if email.is_empty() {
         return Err(PublicError::validation("email is required").into());
@@ -78,7 +79,7 @@ pub(super) async fn run(
     });
 
     if !format.is_json() {
-        println!("Authenticating...");
+        write_interaction_line(format, format_args!("Authenticating..."))?;
     }
     let client = reqwest::Client::new();
     let auth_response = match begin_login(&client, api_url, &email, &password).await? {
@@ -99,7 +100,7 @@ pub(super) async fn run(
                         drop(pending);
                         return Err(PublicError::mfa_input_required().into());
                     }
-                    None => prompt_mfa_code(&challenge)?,
+                    None => prompt_mfa_code(format, &challenge)?,
                 };
                 match complete_mfa_login(&client, pending, SecretMfaCode::new(code)).await {
                     Ok(response) => break response,
@@ -114,7 +115,10 @@ pub(super) async fn run(
                             drop(retry_pending);
                             return Err(PublicError::validation(message).into());
                         }
-                        eprintln!("{}", terminal_line(&message));
+                        write_interaction_line(
+                            format,
+                            format_args!("{}", terminal_line(&message)),
+                        )?;
                         challenge = retry_pending.challenge().clone();
                         if let Some(attempts_remaining) = attempts_remaining {
                             challenge.attempts_remaining = attempts_remaining;
@@ -124,7 +128,7 @@ pub(super) async fn run(
                         }
                         if let Some(wait_seconds) =
                             retry_after_seconds.filter(|seconds| *seconds > 0)
-                            && !wait_for_mfa_retry(&retry_pending, wait_seconds).await
+                            && !wait_for_mfa_retry(format, &retry_pending, wait_seconds).await?
                         {
                             let expired = retry_pending.remaining_seconds() == 0;
                             drop(retry_pending);
@@ -150,7 +154,10 @@ pub(super) async fn run(
                             drop(retry_pending);
                             return Err(PublicError::validation(message).into());
                         }
-                        eprintln!("{}", terminal_line(&message));
+                        write_interaction_line(
+                            format,
+                            format_args!("{}", terminal_line(&message)),
+                        )?;
                         challenge = retry_pending.challenge().clone();
                         challenge.methods = vec![sealtask_client_auth::MfaMethod::BackupCode];
                         pending = retry_pending;
@@ -235,20 +242,24 @@ fn mfa_challenge_is_terminal(expires_in: u64, attempts_remaining: u8) -> bool {
 }
 
 async fn wait_for_mfa_retry(
+    format: OutputFormat,
     pending: &sealtask_client_auth::PendingMfaLogin,
     wait_seconds: u64,
-) -> bool {
+) -> CliResult<bool> {
     let deadline = pending.deadline();
     let Some(retry_at) = mfa_retry_at(std::time::Instant::now(), wait_seconds, deadline) else {
-        return false;
+        return Ok(false);
     };
 
-    eprintln!("Retrying is available in {wait_seconds} seconds.");
-    tokio::select! {
+    write_interaction_line(
+        format,
+        format_args!("Retrying is available in {wait_seconds} seconds."),
+    )?;
+    Ok(tokio::select! {
         biased;
         () = tokio::time::sleep_until(tokio::time::Instant::from_std(deadline)) => false,
         () = tokio::time::sleep_until(tokio::time::Instant::from_std(retry_at)) => true,
-    }
+    })
 }
 
 fn mfa_retry_at(
@@ -314,17 +325,23 @@ fn read_login_stdin_lines_from(mut reader: impl Read) -> CliResult<LoginStdinLin
     })
 }
 
-fn prompt_mfa_code(challenge: &sealtask_client_auth::MfaChallenge) -> CliResult<String> {
+fn prompt_mfa_code(
+    format: OutputFormat,
+    challenge: &sealtask_client_auth::MfaChallenge,
+) -> CliResult<String> {
     if challenge
         .methods
         .contains(&sealtask_client_auth::MfaMethod::Totp)
     {
-        println!(
-            "Enter the 6-digit code from your authenticator app ({} attempts remaining).",
-            challenge.attempts_remaining
-        );
+        write_interaction_line(
+            format,
+            format_args!(
+                "Enter the 6-digit code from your authenticator app ({} attempts remaining).",
+                challenge.attempts_remaining
+            ),
+        )?;
     } else {
-        println!("Enter one of your MFA backup codes.");
+        write_interaction_line(format, format_args!("Enter one of your MFA backup codes."))?;
     }
     let code = rpassword::prompt_password("Authenticator or backup code: ")
         .map_err(|err| PublicError::unexpected(format!("failed to read MFA code: {err}")))?;
@@ -366,6 +383,7 @@ fn print_login_result(format: OutputFormat, result: &LoginResult, api_url: &str)
                     "Credentials saved to {}",
                     terminal_line(&result.credentials_path)
                 );
+                println!("Next: sealtask auth unlock");
             }
             Ok(())
         }

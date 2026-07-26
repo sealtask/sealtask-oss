@@ -26,7 +26,7 @@ impl RuntimeClient {
         let mut credentials = self.require_logged_in_credentials()?;
         let password = Zeroizing::new(read_required_password(
             password_stdin,
-            Some("Password required to unlock the local daemon."),
+            Some("Password required to unlock workspace data."),
         )?);
         let data_key = self
             .decrypt_data_key_with_password(&mut credentials, &password)
@@ -41,7 +41,7 @@ impl RuntimeClient {
         let mut credentials = self.require_logged_in_credentials()?;
         let password = Zeroizing::new(read_required_password(
             password_stdin,
-            Some("Password required to store a local bootstrap secret."),
+            Some("Password required to save an unlock key."),
         )?);
         let data_key = self
             .decrypt_data_key_with_password(&mut credentials, &password)

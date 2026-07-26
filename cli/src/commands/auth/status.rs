@@ -214,7 +214,13 @@ fn print_logged_in_auth_status(status: &LoggedInStatusResult) -> CliResult<()> {
     }
 
     print_unlock_daemon_status(&status.unlock_daemon, "\n")?;
-    print_persisted_bootstrap_status(&status.persisted_bootstrap)
+    print_persisted_bootstrap_status(&status.persisted_bootstrap)?;
+    if matches!(status.session_state, SessionState::RefreshExpired) {
+        println!("Next: sealtask auth login");
+    } else if !status.unlock_daemon.active && status.persisted_bootstrap.status != "available" {
+        println!("Next: sealtask auth unlock");
+    }
+    Ok(())
 }
 
 fn print_logged_out_auth_status(status: &LoggedOutStatusResult) -> CliResult<()> {
@@ -225,7 +231,9 @@ fn print_logged_out_auth_status(status: &LoggedOutStatusResult) -> CliResult<()>
         terminal_line(&status.credentials_path)
     );
     print_unlock_daemon_status(&status.unlock_daemon, "")?;
-    print_persisted_bootstrap_status(&status.persisted_bootstrap)
+    print_persisted_bootstrap_status(&status.persisted_bootstrap)?;
+    println!("Next: sealtask auth login");
+    Ok(())
 }
 
 fn print_unlock_daemon_status(
@@ -235,12 +243,12 @@ fn print_unlock_daemon_status(
     match (status.active, status.expires_at_unix) {
         (true, Some(expires_at_unix)) => {
             println!(
-                "{line_prefix}Unlock daemon: active until unix {}",
+                "{line_prefix}Workspace data: unlocked until Unix timestamp {}",
                 expires_at_unix
             )
         }
-        (true, None) => println!("{line_prefix}Unlock daemon: active"),
-        (false, _) => println!("{line_prefix}Unlock daemon: inactive"),
+        (true, None) => println!("{line_prefix}Workspace data: unlocked"),
+        (false, _) => println!("{line_prefix}Workspace data: locked"),
     }
     Ok(())
 }
@@ -248,11 +256,11 @@ fn print_unlock_daemon_status(
 fn print_persisted_bootstrap_status(status: &PersistedBootstrapStatus) -> CliResult<()> {
     match status.message.as_deref() {
         Some(message) => println!(
-            "Persisted bootstrap: {} ({})",
+            "Saved unlock key: {} ({})",
             status.status,
             terminal_line(message)
         ),
-        None => println!("Persisted bootstrap: {}", status.status),
+        None => println!("Saved unlock key: {}", status.status),
     }
     Ok(())
 }

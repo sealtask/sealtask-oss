@@ -56,13 +56,21 @@ pub(super) async fn unlock(
         format,
         true,
         Some(ttl_seconds),
-        &format!("Unlocked local daemon for {} seconds.", ttl_seconds),
+        &format!(
+            "Workspace data unlocked for {} seconds.\nNext: sealtask lists",
+            ttl_seconds
+        ),
     )
 }
 
 pub(super) fn lock(format: OutputFormat) -> CliResult<()> {
     daemon_lock()?;
-    print_unlock_result(format, false, None, "Locked local daemon.")
+    print_unlock_result(
+        format,
+        false,
+        None,
+        "Workspace data locked.\nNext: sealtask auth unlock",
+    )
 }
 
 pub(super) async fn keychain(
@@ -79,16 +87,13 @@ pub(super) async fn keychain(
                 "auth keychain store",
             )?;
             runtime.store_persisted_data_key(password_stdin).await?;
-            (
-                "available",
-                "Stored a local bootstrap secret in the platform keychain.",
-            )
+            ("available", "Saved an unlock key in the platform keychain.")
         }
         KeychainCommand::Clear => {
             runtime.clear_persisted_data_key()?;
             (
                 "cleared",
-                "Cleared the local bootstrap secret from the platform keychain.",
+                "Cleared the saved unlock key from the platform keychain.",
             )
         }
     };
@@ -127,7 +132,7 @@ pub(super) async fn logout(format: OutputFormat, runtime: &RuntimeClient) -> Cli
                 reason: Some("not_logged_in"),
             },
             "serializing logout result should succeed",
-            "Not logged in.",
+            "Not logged in.\nNext: sealtask auth login",
         );
     };
 
@@ -178,7 +183,7 @@ pub(super) async fn logout(format: OutputFormat, runtime: &RuntimeClient) -> Cli
             reason: None,
         },
         "serializing logout result should succeed",
-        "Logged out successfully.",
+        "Logged out successfully.\nNext: sealtask auth login",
     );
     finish_with_warnings(format, &warnings, print_result)
 }

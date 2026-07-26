@@ -2,6 +2,7 @@ use crate::args::{
     CommentCreateArgsCli, CommentDeleteArgsCli, CommentUpdateArgsCli, CommentsCommand,
 };
 use crate::input::{resolve_comment_input, resolve_delete_input};
+use crate::interaction::require_confirmation;
 use crate::output::{CliResult, OutputFormat};
 use crate::render::{print_comment, print_comments, print_delete_result, print_empty_collection};
 use sealtask_client_api::DeleteCommentRequest;
@@ -14,6 +15,7 @@ use uuid::Uuid;
 pub(crate) async fn run_comments(
     runtime: &RuntimeClient,
     format: OutputFormat,
+    non_interactive: bool,
     command: CommentsCommand,
 ) -> CliResult<()> {
     match command {
@@ -24,7 +26,9 @@ pub(crate) async fn run_comments(
         } => list_comments(runtime, format, work_list_id, task_id, password_stdin).await,
         CommentsCommand::Create(args) => create_comment(runtime, format, args).await,
         CommentsCommand::Update(args) => update_comment(runtime, format, args).await,
-        CommentsCommand::Delete(args) => delete_comment(runtime, format, args).await,
+        CommentsCommand::Delete(args) => {
+            delete_comment(runtime, format, non_interactive, args).await
+        }
     }
 }
 
@@ -92,8 +96,16 @@ async fn update_comment(
 async fn delete_comment(
     runtime: &RuntimeClient,
     format: OutputFormat,
+    non_interactive: bool,
     args: CommentDeleteArgsCli,
 ) -> CliResult<()> {
+    require_confirmation(
+        format,
+        non_interactive,
+        args.yes,
+        args.input_stdin,
+        &format!("comment {} on task {}", args.comment_id, args.task_id),
+    )?;
     let input =
         resolve_delete_input::<DeleteCommentRequest>(args.input_file.as_deref(), args.input_stdin)?;
     runtime

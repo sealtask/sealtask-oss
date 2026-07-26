@@ -7,6 +7,7 @@ mod args;
 mod attachment_output;
 mod commands;
 mod input;
+mod interaction;
 mod output_models;
 mod render;
 
@@ -21,6 +22,19 @@ use sealtask_client_auth::configure_local_state;
 use sealtask_client_core::PublicError;
 use sealtask_client_runtime::{RuntimeClient, serve};
 use std::ffi::OsString;
+
+const ROOT_QUICK_HELP: &str = "\
+SealTask CLI — secure task management from your terminal
+
+Get started:
+  sealtask auth login        Sign in to SealTask
+  sealtask auth unlock       Unlock workspace data
+  sealtask lists             List projects
+  sealtask tasks list --all  List your assigned tasks
+
+Discover:
+  sealtask --help             Show all commands and global options
+  sealtask help <command>     Show help for one command";
 
 #[tokio::main]
 async fn main() {
@@ -55,6 +69,17 @@ fn exit_after_clap_error(err: clap::Error, format: OutputFormat) -> ! {
 }
 
 async fn run(cli: Cli, format: OutputFormat) -> CliResult<()> {
+    if cli.command.is_none() && cli.serve_unlock_daemon.is_none() {
+        if format.is_json() {
+            return Err(PublicError::validation(
+                "a command is required; run 'sealtask --help' to list commands",
+            )
+            .into());
+        }
+        output::write_stdout_line(format_args!("{ROOT_QUICK_HELP}"))?;
+        return Ok(());
+    }
+
     configure_local_state(cli.config_dir.clone(), cli.profile.as_deref())?;
 
     if let Some(socket_path) = cli.serve_unlock_daemon.as_deref() {
@@ -62,9 +87,9 @@ async fn run(cli: Cli, format: OutputFormat) -> CliResult<()> {
     }
 
     let runtime = RuntimeClient::with_storage_origins(&cli.api_url, &cli.storage_origin)?;
-    let Some(command) = cli.command else {
-        return Err(PublicError::validation("a command is required").into());
-    };
+    let command = cli
+        .command
+        .expect("a command is present after handling root guidance");
 
     match command {
         Command::Info => run_info(&runtime, format),
@@ -97,7 +122,11 @@ async fn run(cli: Cli, format: OutputFormat) -> CliResult<()> {
             work_list_id,
             password_stdin,
         } => run_lists_get(&runtime, format, work_list_id, password_stdin, false).await,
-        Command::Comments { command } => run_comments(&runtime, format, command).await,
-        Command::Notes { command } => run_notes(&runtime, format, command).await,
+        Command::Comments { command } => {
+            run_comments(&runtime, format, cli.non_interactive, command).await
+        }
+        Command::Notes { command } => {
+            run_notes(&runtime, format, cli.non_interactive, command).await
+        }
     }
 }

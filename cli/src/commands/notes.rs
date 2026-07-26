@@ -1,5 +1,6 @@
 use crate::args::{NoteCreateArgsCli, NoteDeleteArgsCli, NoteUpdateArgsCli, NotesCommand};
 use crate::input::{resolve_delete_input, resolve_note_create_input, resolve_note_update_input};
+use crate::interaction::require_confirmation;
 use crate::output::{CliResult, OutputFormat};
 use crate::render::{print_delete_result, print_empty_collection, print_note, print_notes};
 use sealtask_client_api::DeleteNoteRequest;
@@ -9,6 +10,7 @@ use serde_json::json;
 pub(crate) async fn run_notes(
     runtime: &RuntimeClient,
     format: OutputFormat,
+    non_interactive: bool,
     command: NotesCommand,
 ) -> CliResult<()> {
     match command {
@@ -34,7 +36,7 @@ pub(crate) async fn run_notes(
         }
         NotesCommand::Create(args) => create_note(runtime, format, args).await,
         NotesCommand::Update(args) => update_note(runtime, format, args).await,
-        NotesCommand::Delete(args) => delete_note(runtime, format, args).await,
+        NotesCommand::Delete(args) => delete_note(runtime, format, non_interactive, args).await,
     }
 }
 
@@ -74,8 +76,16 @@ async fn update_note(
 async fn delete_note(
     runtime: &RuntimeClient,
     format: OutputFormat,
+    non_interactive: bool,
     args: NoteDeleteArgsCli,
 ) -> CliResult<()> {
+    require_confirmation(
+        format,
+        non_interactive,
+        args.yes,
+        args.input_stdin,
+        &format!("note {} in work list {}", args.note_id, args.work_list_id),
+    )?;
     let input =
         resolve_delete_input::<DeleteNoteRequest>(args.input_file.as_deref(), args.input_stdin)?;
     runtime

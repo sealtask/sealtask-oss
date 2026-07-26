@@ -1,5 +1,6 @@
 use crate::args::{NoteCreateArgsCli, NoteUpdateArgsCli, TaskCreateArgsCli, TaskUpdateArgsCli};
-use crate::output::{CliResult, write_stderr};
+use crate::interaction::write_interaction;
+use crate::output::CliResult;
 use sealtask_client_core::{PublicError, PublicResult};
 use sealtask_client_runtime::{
     CommentInput, NoteCreateInput, NoteUpdateInput, TaskCreateInput, TaskFieldPatch,
@@ -7,7 +8,7 @@ use sealtask_client_runtime::{
 };
 use serde::de::DeserializeOwned;
 use std::fs;
-use std::io::{self, Read};
+use std::io::{self, IsTerminal, Read};
 use std::path::Path;
 use zeroize::Zeroizing;
 
@@ -208,8 +209,15 @@ fn parse_json_input<T: DeserializeOwned>(contents: &str, source: &str) -> Public
         .map_err(|err| PublicError::validation(format!("invalid JSON input from {source}: {err}")))
 }
 
-pub(crate) fn prompt(label: &str) -> CliResult<String> {
-    write_stderr(format_args!("{label}"))?;
+pub(crate) fn prompt(format: crate::output::OutputFormat, label: &str) -> CliResult<String> {
+    if !io::stdin().is_terminal() {
+        let field = label.trim().trim_end_matches(':');
+        return Err(PublicError::validation(format!(
+            "cannot prompt for {field} because stdin is not a terminal; pass the value explicitly or use --non-interactive"
+        ))
+        .into());
+    }
+    write_interaction(format, format_args!("{label}"))?;
 
     let mut input = String::new();
     io::stdin()
@@ -238,10 +246,16 @@ pub(crate) fn read_required_password(
     let password = if password_stdin {
         read_password_from_stdin()?
     } else {
-        if let Some(prompt_message) = prompt_message {
-            println!("{prompt_message}");
+        if !io::stdin().is_terminal() {
+            return Err(PublicError::validation(
+                "cannot prompt for a password because stdin is not a terminal; use --password-stdin or --non-interactive",
+            )
+            .into());
         }
-        rpassword::prompt_password("Password: ")
+        let prompt = prompt_message
+            .map(|message| format!("{message}\nPassword: "))
+            .unwrap_or_else(|| "Password: ".to_string());
+        rpassword::prompt_password(prompt)
             .map_err(|err| PublicError::unexpected(format!("failed to read password: {err}")))?
     };
 

@@ -161,8 +161,8 @@ artifact is not part of the public browser package.
 ## Agent task automation
 
 The supported automation mode acts through an authenticated user session. Log
-in once, then either unlock the local daemon for a bounded session or store the
-decrypted data-key bootstrap in the platform keychain:
+in once, then either unlock workspace data for a bounded session or save an
+unlock key in the platform keychain:
 
 ```bash
 printf '%s\n' "$SEALTASK_PASSWORD" \
@@ -293,7 +293,7 @@ cargo run -p sealtask -- --json --non-interactive tasks attachments upload \
 
 cargo run -p sealtask -- --json --non-interactive tasks attachments delete \
   --work-list-id <list-id> --task-id <task-id> \
-  --attachment-id <attachment-id>
+  --attachment-id <attachment-id> --yes
 ```
 
 Upload encrypts file bytes locally with a fresh key, uploads only ciphertext,
@@ -330,8 +330,8 @@ development and tests.
 
 ### JSON process contract
 
-`sealtask --json info` reports `"jsonContractVersion": 1`. For ordinary commands run
-with `--json --non-interactive`, version 1 guarantees:
+`sealtask --json info` reports `"jsonContractVersion": 2`. For ordinary commands run
+with `--json --non-interactive`, version 2 guarantees:
 
 - `--json` emits one compact JSON document; `--format json-pretty` emits the
   same document with indentation
@@ -349,10 +349,19 @@ with `--json --non-interactive`, version 1 guarantees:
   argument-parsing failures retain Clap's exit code (`2` for usage errors)
 - a closed stdout pipe is treated as successful consumer termination and exits
   `0`
+- permanent task, comment, note, and attachment deletion requires `--yes`;
+  interactive table mode prompts when it can safely read from a terminal
 
 Help and version output retain Clap's human-readable text format. Use
 `sealtask --json schema [COMMAND ...]` for a versioned machine-readable command
 and argument description.
+
+Running `sealtask` without a command prints a short quick-start guide and exits
+successfully; `sealtask --help` remains the complete command reference. In
+interactive table mode, prompts are written to stderr. In JSON modes,
+interactive prompts use the controlling terminal instead of stdout or stderr;
+when no terminal is available, the command fails with a structured, actionable
+error. Pass `--non-interactive` to make that policy explicit.
 
 `--json` controls presentation; `--non-interactive` controls prompts. Automation
 should pass both. Human sessions can request pretty JSON while retaining
@@ -409,8 +418,8 @@ resolved profile and directory.
 - Use `--non-interactive` whenever prompting would be unsafe. Non-interactive
   task creation requires a stable idempotency key. Use
   `auth unlock --password-stdin` for a temporary in-memory session, or
-  `auth keychain store --password-stdin` to persist a local bootstrap secret in
-  the platform keychain.
+  `auth keychain store --password-stdin` to save an unlock key in the platform
+  keychain.
 - Structured JSON inputs are exclusive with scalar editing flags and reject
   unknown fields instead of silently ignoring them.
 - Password unlock supports legacy password-wrapped version 1 accounts and OPAQUE export-key version 2 accounts. Version 2 password unlock contacts the authenticated API; later daemon- or keychain-backed commands do not repeat that exchange.

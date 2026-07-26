@@ -299,6 +299,7 @@ async fn cli_proven_flows_round_trip_through_mock_api() {
             "--json",
             "comments",
             "delete",
+            "--yes",
             "--work-list-id",
             &fixture.work_list_id.to_string(),
             "--task-id",
@@ -356,6 +357,7 @@ async fn cli_proven_flows_round_trip_through_mock_api() {
             "--json",
             "tasks",
             "delete",
+            "--yes",
             "--work-list-id",
             &fixture.work_list_id.to_string(),
             "--task-id",
@@ -593,6 +595,7 @@ async fn test_should_round_trip_shared_and_private_notes_through_encrypted_api_c
             "--json",
             "notes",
             "delete",
+            "--yes",
             "--work-list-id",
             &fixture.work_list_id.to_string(),
             "--note-id",
@@ -718,6 +721,7 @@ async fn test_should_upload_encrypt_attach_and_delete_task_attachment() {
             "tasks",
             "attachments",
             "delete",
+            "--yes",
             "--work-list-id",
             &fixture.work_list_id.to_string(),
             "--task-id",
@@ -1735,7 +1739,7 @@ fn cli_schema_and_output_formats_are_machine_discoverable() {
         pretty.stderr
     );
     assert!(pretty.stdout.lines().count() > 1);
-    assert_eq!(parse_stdout_json(&pretty.stdout)["jsonContractVersion"], 1);
+    assert_eq!(parse_stdout_json(&pretty.stdout)["jsonContractVersion"], 2);
 
     let human = run_cli(home.path(), "https://sealtask.com", &["info"], None);
     assert!(
@@ -1743,7 +1747,7 @@ fn cli_schema_and_output_formats_are_machine_discoverable() {
         "human info failed: {}",
         human.stderr
     );
-    assert!(human.stdout.starts_with("SealTask CLI contract version 1"));
+    assert!(human.stdout.starts_with("SealTask CLI contract version 2"));
 }
 
 #[test]
@@ -1906,6 +1910,260 @@ fn cli_public_name_is_sealtask() {
     );
     assert!(info.status.success(), "info failed: {}", info.stderr);
     assert_eq!(parse_stdout_json(&info.stdout)["commandName"], "sealtask");
+}
+
+#[test]
+fn cli_root_without_arguments_matches_release_a_help_contract() {
+    let home = TempDir::new().expect("temp home");
+    let output = run_cli_exact(home.path(), &[], None);
+
+    assert!(
+        output.status.success(),
+        "root guidance failed: {}",
+        output.stderr
+    );
+    assert!(output.stderr.is_empty());
+    assert_eq!(
+        output.stdout,
+        include_str!("golden/release_a_root_help.txt")
+    );
+}
+
+#[test]
+fn cli_root_guidance_is_consistent_with_human_global_options() {
+    let home = TempDir::new().expect("temp home");
+    for args in [
+        &["--profile", "operator"][..],
+        &["--format", "table"][..],
+        &["--non-interactive"][..],
+    ] {
+        let output = run_cli_exact(home.path(), args, None);
+        assert!(
+            output.status.success(),
+            "root guidance failed for {args:?}: {}",
+            output.stderr
+        );
+        assert!(output.stderr.is_empty());
+        assert_eq!(
+            output.stdout,
+            include_str!("golden/release_a_root_help.txt")
+        );
+    }
+}
+
+#[test]
+fn cli_root_json_error_is_one_structured_document() {
+    let home = TempDir::new().expect("temp home");
+    let output = run_cli_exact(home.path(), &["--json"], None);
+
+    assert_eq!(output.status.code(), Some(1));
+    assert!(output.stdout.is_empty());
+    assert_eq!(output.stderr.lines().count(), 1);
+    let error = parse_stderr_json(&output.stderr);
+    assert_eq!(error["error"]["code"], "validation");
+    assert!(
+        error["error"]["message"]
+            .as_str()
+            .expect("error message")
+            .contains("sealtask --help")
+    );
+}
+
+#[test]
+fn cli_human_errors_include_stable_code_and_recovery_hint() {
+    let home = TempDir::new().expect("temp home");
+    let output = run_cli_exact(home.path(), &["--api-url", "not-a-url", "info"], None);
+
+    assert_eq!(output.status.code(), Some(1));
+    assert!(output.stdout.is_empty());
+    assert!(output.stderr.starts_with("error [validation]:"));
+    assert!(
+        output
+            .stderr
+            .ends_with("hint: Review command help and the rejected input field.\n")
+    );
+}
+
+#[test]
+fn cli_all_machine_deletes_require_yes_without_contacting_the_api() {
+    let home = TempDir::new().expect("temp home");
+    let work_list_id = Uuid::now_v7().to_string();
+    let task_id = Uuid::now_v7().to_string();
+    let comment_id = Uuid::now_v7().to_string();
+    let note_id = Uuid::now_v7().to_string();
+    let attachment_id = Uuid::now_v7().to_string();
+    let cases = [
+        (
+            "task",
+            vec![
+                "--json",
+                "--non-interactive",
+                "tasks",
+                "delete",
+                "--work-list-id",
+                &work_list_id,
+                "--task-id",
+                &task_id,
+            ],
+        ),
+        (
+            "comment",
+            vec![
+                "--json",
+                "--non-interactive",
+                "comments",
+                "delete",
+                "--work-list-id",
+                &work_list_id,
+                "--task-id",
+                &task_id,
+                "--comment-id",
+                &comment_id,
+            ],
+        ),
+        (
+            "note",
+            vec![
+                "--json",
+                "--non-interactive",
+                "notes",
+                "delete",
+                "--work-list-id",
+                &work_list_id,
+                "--note-id",
+                &note_id,
+            ],
+        ),
+        (
+            "attachment",
+            vec![
+                "--json",
+                "--non-interactive",
+                "tasks",
+                "attachments",
+                "delete",
+                "--work-list-id",
+                &work_list_id,
+                "--task-id",
+                &task_id,
+                "--attachment-id",
+                &attachment_id,
+            ],
+        ),
+    ];
+
+    for (entity, args) in cases {
+        let output = run_cli(home.path(), "https://sealtask.com", &args, None);
+
+        assert_eq!(output.status.code(), Some(1), "{entity}: {}", output.stderr);
+        assert!(output.stdout.is_empty(), "{entity}");
+        assert_eq!(output.stderr.lines().count(), 1, "{entity}");
+        let error = parse_stderr_json(&output.stderr);
+        assert_eq!(error["error"]["code"], "validation", "{entity}");
+        let message = error["error"]["message"].as_str().expect("error message");
+        assert!(message.contains(entity), "{entity}: {message}");
+        assert!(message.contains("requires --yes"), "{entity}: {message}");
+    }
+}
+
+#[test]
+fn cli_destructive_help_exposes_explicit_confirmation() {
+    let home = TempDir::new().expect("temp home");
+    let cases = [
+        &["tasks", "delete", "--help"][..],
+        &["comments", "delete", "--help"][..],
+        &["notes", "delete", "--help"][..],
+        &["tasks", "attachments", "delete", "--help"][..],
+    ];
+
+    for args in cases {
+        let output = run_cli_exact(home.path(), args, None);
+        assert!(output.status.success(), "{args:?}: {}", output.stderr);
+        assert!(
+            output.stdout.contains("--yes"),
+            "{args:?}: {}",
+            output.stdout
+        );
+    }
+}
+
+#[test]
+fn cli_json_auth_prompts_never_pollute_machine_streams_without_a_terminal() {
+    let home = TempDir::new().expect("temp home");
+    for args in [
+        &["--json", "auth", "login"][..],
+        &["--format", "json-pretty", "auth", "login"][..],
+    ] {
+        let output = run_cli_exact(home.path(), args, None);
+
+        assert_eq!(output.status.code(), Some(1), "{args:?}");
+        assert!(output.stdout.is_empty(), "{args:?}: {}", output.stdout);
+        let error = parse_stderr_json(&output.stderr);
+        assert_eq!(error["error"]["code"], "validation", "{args:?}");
+        assert!(!output.stderr.contains("Email:"), "{args:?}");
+        assert!(!output.stderr.contains("Password:"), "{args:?}");
+    }
+}
+
+#[test]
+fn cli_machine_delete_with_stdin_reserved_still_requires_yes_before_reading() {
+    let home = TempDir::new().expect("temp home");
+    let work_list_id = Uuid::now_v7().to_string();
+    let task_id = Uuid::now_v7().to_string();
+    let output = run_cli(
+        home.path(),
+        "https://sealtask.com",
+        &[
+            "--json",
+            "tasks",
+            "delete",
+            "--work-list-id",
+            &work_list_id,
+            "--task-id",
+            &task_id,
+            "--input-stdin",
+        ],
+        Some("this payload must not be parsed"),
+    );
+
+    assert_eq!(output.status.code(), Some(1));
+    assert!(output.stdout.is_empty());
+    assert_eq!(output.stderr.lines().count(), 1);
+    let error = parse_stderr_json(&output.stderr);
+    assert_eq!(error["error"]["code"], "validation");
+    let message = error["error"]["message"].as_str().expect("error message");
+    assert!(message.contains("requires --yes"));
+    assert!(!message.contains("JSON"));
+}
+
+#[test]
+fn cli_logged_out_human_status_gives_the_next_command() {
+    let home = TempDir::new().expect("temp home");
+    let output = run_cli(
+        home.path(),
+        "https://sealtask.com",
+        &["auth", "status"],
+        None,
+    );
+
+    assert!(output.status.success(), "status failed: {}", output.stderr);
+    assert!(output.stdout.contains("Workspace data: locked"));
+    assert!(output.stdout.contains("Next: sealtask auth login"));
+}
+
+#[test]
+fn cli_logged_in_but_locked_status_gives_the_unlock_command() {
+    let fixture = TestFixture::new();
+    let home = TempDir::new().expect("temp home");
+    let api_url = "https://operator-status.sealtask.example";
+    seed_credentials(home.path(), &fixture, api_url);
+
+    let output = run_cli(home.path(), api_url, &["auth", "status"], None);
+
+    assert!(output.status.success(), "status failed: {}", output.stderr);
+    assert!(output.stdout.contains("Workspace data: locked"));
+    assert!(output.stdout.contains("Saved unlock key:"));
+    assert!(output.stdout.contains("Next: sealtask auth unlock"));
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -2423,6 +2681,7 @@ async fn cli_unlock_daemon_enables_later_decrypt_without_password_flag() {
         "unlock failed: {}",
         unlock_output.stderr
     );
+    assert!(unlock_output.stdout.contains("Next: sealtask lists"));
 
     let task_output = run_cli(
         home.path(),
@@ -2452,6 +2711,7 @@ async fn cli_unlock_daemon_enables_later_decrypt_without_password_flag() {
         "lock failed: {}",
         lock_output.stderr
     );
+    assert!(lock_output.stdout.contains("Next: sealtask auth unlock"));
     assert_eq!(
         state
             .lock()
@@ -2929,6 +3189,7 @@ async fn cli_logout_clears_persisted_bootstrap() {
         "logout failed: {}",
         logout_output.stderr
     );
+    assert!(logout_output.stdout.contains("Next: sealtask auth login"));
 
     seed_credentials(home.path(), &fixture, &server.base_url);
     let task_output = run_cli_with_test_keychain(
@@ -2953,7 +3214,7 @@ async fn cli_logout_clears_persisted_bootstrap() {
     assert!(
         task_output
             .stderr
-            .contains("No unlocked local session or persisted bootstrap secret is available")
+            .contains("No unlocked workspace-data session or saved unlock key is available")
     );
 }
 
@@ -3836,11 +4097,11 @@ async fn cli_decrypted_commands_fail_non_interactively_without_unlock_or_keychai
     assert!(
         task_output
             .stderr
-            .contains("No unlocked local session or persisted bootstrap secret is available")
+            .contains("No unlocked workspace-data session or saved unlock key is available")
     );
     assert_json_error_contains(
         &task_output.stderr,
-        "No unlocked local session or persisted bootstrap secret is available",
+        "No unlocked workspace-data session or saved unlock key is available",
     );
 }
 
@@ -5932,6 +6193,23 @@ async fn download_attachment_bytes(
 
 fn run_cli(home: &std::path::Path, api_url: &str, args: &[&str], stdin: Option<&str>) -> CliOutput {
     run_cli_in_dir(home, home, api_url, args, stdin)
+}
+
+fn run_cli_exact(home: &std::path::Path, args: &[&str], stdin: Option<&str>) -> CliOutput {
+    let mut command = Command::cargo_bin("sealtask").expect("binary");
+    command.env("HOME", home);
+    command.current_dir(home);
+    command.args(args);
+    if let Some(stdin) = stdin {
+        command.write_stdin(stdin.to_string());
+    }
+
+    let output = command.output().expect("run cli");
+    CliOutput {
+        status: output.status,
+        stdout: String::from_utf8(output.stdout).expect("stdout utf8"),
+        stderr: String::from_utf8(output.stderr).expect("stderr utf8"),
+    }
 }
 
 fn spawn_cli_process(home: &std::path::Path, api_url: &str, args: &[&str]) -> Child {

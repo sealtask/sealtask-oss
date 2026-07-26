@@ -11,7 +11,7 @@ pub(crate) fn run_info(runtime: &RuntimeClient, format: OutputFormat) -> CliResu
         "configDirectory": config_dir()?.display().to_string(),
         "commandName": "sealtask",
         "automationProfile": "agent_task_management",
-        "jsonContractVersion": 1,
+        "jsonContractVersion": 2,
         "outputFormats": ["table", "json", "json-pretty"],
         "nonInteractiveFlag": "--non-interactive",
         "authUnlockModes": [
@@ -29,7 +29,7 @@ pub(crate) fn run_info(runtime: &RuntimeClient, format: OutputFormat) -> CliResu
     });
     match format {
         OutputFormat::Table => {
-            println!("SealTask CLI contract version 1");
+            println!("SealTask CLI contract version 2");
             println!("API: {}", runtime.api_url());
             println!("Profile: {}", active_profile()?);
             println!("Config: {}", config_dir()?.display());

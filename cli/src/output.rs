@@ -140,7 +140,7 @@ pub(crate) fn write_stderr(args: fmt::Arguments<'_>) -> CliResult<()> {
     write_to_stream(io::stderr().lock(), args, "print to", "stderr", false)
 }
 
-fn write_to_stream<W: Write>(
+pub(crate) fn write_to_stream<W: Write>(
     mut stream: W,
     args: fmt::Arguments<'_>,
     action: &str,
@@ -329,13 +329,46 @@ pub(crate) fn print_cli_error(err: &CliError, format: OutputFormat) -> CliResult
 }
 
 fn write_table_error<W: Write>(mut stream: W, err: &CliError) -> CliResult<()> {
+    let result = err.error_result();
     write_line_to_stream(
         &mut stream,
-        format_args!("error: {}", terminal_line(&err.to_string())),
+        format_args!(
+            "error [{}]: {}",
+            result.code,
+            terminal_line(&result.message)
+        ),
         "print to",
         "stderr",
         false,
-    )
+    )?;
+    if let Some(retry_after_seconds) = result.retry_after_seconds {
+        write_line_to_stream(
+            &mut stream,
+            format_args!("retry after: {retry_after_seconds}s"),
+            "print to",
+            "stderr",
+            false,
+        )?;
+    }
+    if let Some(outcome) = result.outcome {
+        write_line_to_stream(
+            &mut stream,
+            format_args!("outcome: {}", terminal_line(outcome)),
+            "print to",
+            "stderr",
+            false,
+        )?;
+    }
+    if let Some(hint) = result.hint {
+        write_line_to_stream(
+            stream,
+            format_args!("hint: {}", terminal_line(hint)),
+            "print to",
+            "stderr",
+            false,
+        )?;
+    }
+    Ok(())
 }
 
 pub(crate) fn print_clap_error(err: &clap::Error, format: OutputFormat) -> CliResult<()> {
@@ -754,7 +787,10 @@ mod tests {
         let error_output = String::from_utf8(error_output).expect("error output UTF-8");
         assert_eq!(
             error_output,
-            "error: attachment ']8;;https://example.testname]8;;' next row\n"
+            concat!(
+                "error [validation]: attachment ']8;;https://example.testname]8;;' next row\n",
+                "hint: Review command help and the rejected input field.\n"
+            )
         );
 
         let warnings = [warning_result("unsafe_warning", message.to_string())];

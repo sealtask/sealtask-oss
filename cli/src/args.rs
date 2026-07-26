@@ -8,7 +8,8 @@ use uuid::Uuid;
 #[command(
     name = "sealtask",
     version,
-    about = "CLI for working with SealTask tasks, comments, notes, attachments, and decrypted workspace data"
+    about = "CLI for working with SealTask tasks, comments, notes, attachments, and decrypted workspace data",
+    after_help = "Get started:\n  sealtask auth login\n  sealtask auth status\n  sealtask lists\n  sealtask tasks list --all\n\nRun 'sealtask help <command>' for command-specific help."
 )]
 pub(crate) struct Cli {
     /// SealTask API base URL.
@@ -602,6 +603,9 @@ pub(crate) struct TaskDeleteArgsCli {
     /// Read an optional audit patch from stdin.
     #[arg(long, conflicts_with = "input_file")]
     pub(crate) input_stdin: bool,
+    /// Confirm permanent deletion without prompting.
+    #[arg(long)]
+    pub(crate) yes: bool,
 }
 
 #[derive(Args, Debug)]
@@ -682,6 +686,9 @@ pub(crate) struct CommentDeleteArgsCli {
     /// Read an optional audit patch from stdin.
     #[arg(long, conflicts_with = "input_file")]
     pub(crate) input_stdin: bool,
+    /// Confirm permanent deletion without prompting.
+    #[arg(long)]
+    pub(crate) yes: bool,
 }
 
 #[derive(Args)]
@@ -807,6 +814,9 @@ pub(crate) struct NoteDeleteArgsCli {
     /// Read an optional audit patch from stdin.
     #[arg(long, conflicts_with = "input_file")]
     pub(crate) input_stdin: bool,
+    /// Confirm permanent deletion without prompting.
+    #[arg(long)]
+    pub(crate) yes: bool,
 }
 
 #[derive(Args, Debug)]
@@ -847,6 +857,9 @@ pub(crate) struct TaskAttachmentDeleteArgsCli {
     /// Read the account password from stdin when no local unlock is available.
     #[arg(long)]
     pub(crate) password_stdin: bool,
+    /// Confirm permanent deletion without prompting.
+    #[arg(long)]
+    pub(crate) yes: bool,
 }
 
 #[derive(Args, Debug)]
@@ -902,7 +915,7 @@ pub(crate) enum AuthCommand {
         )]
         password_stdin: bool,
     },
-    /// Start or refresh the memory-only local unlock daemon.
+    /// Unlock workspace data in memory for a bounded session.
     Unlock {
         /// Number of seconds before the memory-only unlock expires.
         #[arg(long, default_value_t = 8 * 60 * 60)]
@@ -911,28 +924,28 @@ pub(crate) enum AuthCommand {
         #[arg(long)]
         password_stdin: bool,
     },
-    /// Clear the current profile's daemon unlock and stop the daemon.
+    /// Lock workspace data and stop the in-memory unlock session.
     Lock,
-    /// Store or clear a decrypted data-key bootstrap in the platform keychain.
+    /// Store or clear this profile's saved unlock key.
     Keychain {
         #[command(subcommand)]
         command: KeychainCommand,
     },
     /// Revoke the remote session and clear this profile's local credentials.
     Logout,
-    /// Inspect credentials, token expiry, daemon state, and keychain state.
+    /// Inspect sign-in, token expiry, workspace-data, and saved-key state.
     Status,
 }
 
 #[derive(Subcommand, Debug)]
 pub(crate) enum KeychainCommand {
-    /// Store a decrypted data-key bootstrap in the platform keychain.
+    /// Save this profile's unlock key in the platform keychain.
     Store {
         /// Read the account password from stdin.
         #[arg(long)]
         password_stdin: bool,
     },
-    /// Remove this profile's platform-keychain bootstrap.
+    /// Remove this profile's saved unlock key.
     Clear,
 }
 

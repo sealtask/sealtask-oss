@@ -8,6 +8,7 @@ use crate::input::{
     read_required_password, resolve_delete_input, resolve_task_create_input,
     resolve_task_update_input,
 };
+use crate::interaction::require_confirmation;
 use crate::output::{
     CliError, CliResult, OutputFormat, WarningResult, finish_with_warnings, warning_result,
 };
@@ -159,9 +160,9 @@ pub(crate) async fn run_tasks(
         TasksCommand::Reopen(args) => set_task_completion(runtime, format, args, false).await,
         TasksCommand::Archive(args) => archive_task(runtime, format, args).await,
         TasksCommand::Unarchive(args) => unarchive_task(runtime, format, args).await,
-        TasksCommand::Delete(args) => delete_task(runtime, format, args).await,
+        TasksCommand::Delete(args) => delete_task(runtime, format, non_interactive, args).await,
         TasksCommand::Attachments { command } => {
-            run_task_attachments(runtime, format, command).await
+            run_task_attachments(runtime, format, non_interactive, command).await
         }
     }
 }
@@ -169,6 +170,7 @@ pub(crate) async fn run_tasks(
 async fn run_task_attachments(
     runtime: &RuntimeClient,
     format: OutputFormat,
+    non_interactive: bool,
     command: TaskAttachmentsCommand,
 ) -> CliResult<()> {
     match command {
@@ -205,6 +207,16 @@ async fn run_task_attachments(
             finish_with_warnings(format, &supervised.warnings, result)
         }
         TaskAttachmentsCommand::Delete(args) => {
+            require_confirmation(
+                format,
+                non_interactive,
+                args.yes,
+                args.password_stdin,
+                &format!(
+                    "attachment {} from task {}",
+                    args.attachment_id, args.task_id
+                ),
+            )?;
             runtime
                 .delete_task_attachment(DeleteTaskAttachmentArgs {
                     work_list_id: args.work_list_id,
@@ -494,8 +506,16 @@ async fn unarchive_task(
 async fn delete_task(
     runtime: &RuntimeClient,
     format: OutputFormat,
+    non_interactive: bool,
     args: TaskDeleteArgsCli,
 ) -> CliResult<()> {
+    require_confirmation(
+        format,
+        non_interactive,
+        args.yes,
+        args.input_stdin,
+        &format!("task {} in work list {}", args.task_id, args.work_list_id),
+    )?;
     let input =
         resolve_delete_input::<DeleteTaskRequest>(args.input_file.as_deref(), args.input_stdin)?;
     runtime
