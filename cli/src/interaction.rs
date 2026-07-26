@@ -1,5 +1,6 @@
 use crate::output::{CliResult, OutputFormat, write_stderr, write_stderr_line, write_to_stream};
 use crate::table::sanitize_cell;
+use crate::terminal;
 use sealtask_client_core::PublicError;
 use std::fs::OpenOptions;
 use std::io::{self, BufRead, IsTerminal, Write};
@@ -91,6 +92,7 @@ pub(crate) fn require_confirmation(
 }
 
 fn confirm_from(mut reader: impl BufRead, writer: impl Write, target: &str) -> CliResult<()> {
+    terminal::clear_active_progress();
     let target = sanitize_cell(target);
     write_to_stream(
         writer,

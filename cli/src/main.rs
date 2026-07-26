@@ -19,6 +19,7 @@ mod resolver;
 mod selectors;
 mod table;
 mod telemetry;
+mod terminal;
 
 use args::{Cli, Command};
 use clap::FromArgMatches;
@@ -38,6 +39,7 @@ use sealtask_client_runtime::{RuntimeClient, serve};
 use std::ffi::{OsStr, OsString};
 use std::time::Duration;
 use telemetry::{Telemetry, TelemetryConfig, TelemetryLevel};
+use terminal::{TerminalOptions, TerminalSession};
 use uuid::Uuid;
 
 const ROOT_QUICK_HELP: &str = "\
@@ -59,10 +61,42 @@ async fn main() {
     let raw_format = OutputFormat::from_raw_args(&args);
     let cli = parse_cli_or_exit(&args, raw_format);
     let format = OutputFormat::from_cli(&cli);
-    match run(cli, format, &args).await {
+    let raw_discovery = matches!(
+        cli.command.as_ref(),
+        Some(Command::Completion { .. } | Command::Man { .. })
+    ) || cli.serve_unlock_daemon.is_some();
+    let terminal = if raw_discovery {
+        Ok(None)
+    } else {
+        TerminalSession::start(TerminalOptions {
+            color: cli.color,
+            pager: cli.pager,
+            pager_explicit: long_option_present(&args, "--pager"),
+            no_pager: cli.no_pager,
+            progress: cli.progress,
+            progress_explicit: long_option_present(&args, "--progress"),
+            quiet: cli.quiet,
+            format,
+            pager_allowed: true,
+        })
+        .map(Some)
+    };
+    let result = match terminal {
+        Ok(terminal) => {
+            let result = run(cli, format, &args).await;
+            let terminal_result = terminal.map_or(Ok(()), TerminalSession::finish);
+            match (result, terminal_result) {
+                (Err(error), _) => Err(error),
+                (Ok(()), terminal_result) => terminal_result,
+            }
+        }
+        Err(error) => Err(error),
+    };
+    match result {
         Ok(()) => {}
         Err(CliError::BrokenPipe) => std::process::exit(0),
         Err(err) => {
+            terminal::clear_active_progress();
             let _ = print_cli_error(&err, format);
             std::process::exit(err.exit_code());
         }
@@ -70,7 +104,7 @@ async fn main() {
 }
 
 fn parse_cli_or_exit(args: &[OsString], format: OutputFormat) -> Cli {
-    let command = discovery::command();
+    let command = discovery::command().color(terminal::clap_color_choice(args, format));
     let matches = command
         .try_get_matches_from(args.iter().cloned())
         .unwrap_or_else(|err| exit_after_clap_error(err, format));
@@ -104,14 +138,14 @@ async fn run(cli: Cli, format: OutputFormat, raw_args: &[OsString]) -> CliResult
 
     match cli.command.as_ref() {
         Some(Command::Completion { shell }) => {
-            ensure_raw_discovery_output(&cli, format, "completion")?;
+            ensure_raw_discovery_output(&cli, format, "completion", raw_args)?;
             return discovery::print_completion(*shell);
         }
         Some(Command::Man {
             command,
             output_dir,
         }) => {
-            ensure_raw_discovery_output(&cli, format, "man")?;
+            ensure_raw_discovery_output(&cli, format, "man", raw_args)?;
             return output_dir.as_deref().map_or_else(
                 || discovery::print_manpage(command),
                 discovery::generate_manpages,
@@ -267,7 +301,12 @@ async fn run(cli: Cli, format: OutputFormat, raw_args: &[OsString]) -> CliResult
     result
 }
 
-fn ensure_raw_discovery_output(cli: &Cli, format: OutputFormat, command: &str) -> CliResult<()> {
+fn ensure_raw_discovery_output(
+    cli: &Cli,
+    format: OutputFormat,
+    command: &str,
+    raw_args: &[OsString],
+) -> CliResult<()> {
     if format.is_json() {
         return Err(PublicError::validation(format!(
             "'sealtask {command}' emits a raw terminal integration artifact and cannot be combined with --json, --format json, or --format json-pretty"
@@ -277,6 +316,19 @@ fn ensure_raw_discovery_output(cli: &Cli, format: OutputFormat, command: &str) -
     if cli.verbosity > 0 || cli.debug {
         return Err(PublicError::validation(format!(
             "'sealtask {command}' cannot be combined with -v, -vv, or --debug because diagnostics would corrupt generated output"
+        ))
+        .into());
+    }
+    if ["--color", "--pager", "--no-pager", "--progress", "--quiet"]
+        .iter()
+        .any(|option| long_option_present(raw_args, option))
+        || raw_args
+            .iter()
+            .skip(1)
+            .any(|argument| argument == OsStr::new("-q"))
+    {
+        return Err(PublicError::validation(format!(
+            "'sealtask {command}' cannot be combined with --color, --pager, --no-pager, --progress, or --quiet because it emits an exact raw artifact"
         ))
         .into());
     }

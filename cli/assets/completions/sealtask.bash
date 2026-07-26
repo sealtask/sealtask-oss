@@ -599,7 +599,7 @@ _sealtask() {
 
     case "${cmd}" in
         sealtask)
-            opts="-v -h -V --api-url --storage-origin --json --format --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --serve-unlock-daemon --help --version completion man info schema auth me projects lists tasks stats doctor config profile inspect comments notes help"
+            opts="-q -v -h -V --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --serve-unlock-daemon --help --version completion man info schema auth me projects lists tasks stats doctor config profile inspect comments notes help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 1 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -615,6 +615,18 @@ _sealtask() {
                     ;;
                 --format)
                     COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    return 0
+                    ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
                     return 0
                     ;;
                 --connect-timeout)
@@ -649,7 +661,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__auth)
-            opts="-v -h --api-url --storage-origin --json --format --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help login unlock lock keychain logout status help"
+            opts="-q -v -h --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help login unlock lock keychain logout status help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -665,6 +677,18 @@ _sealtask() {
                     ;;
                 --format)
                     COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    return 0
+                    ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
                     return 0
                     ;;
                 --connect-timeout)
@@ -835,7 +859,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__auth__subcmd__keychain)
-            opts="-v -h --api-url --storage-origin --json --format --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help store clear help"
+            opts="-q -v -h --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help store clear help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -851,6 +875,18 @@ _sealtask() {
                     ;;
                 --format)
                     COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    return 0
+                    ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
                     return 0
                     ;;
                 --connect-timeout)
@@ -881,7 +917,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__auth__subcmd__keychain__subcmd__clear)
-            opts="-v -h --api-url --storage-origin --json --format --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
+            opts="-q -v -h --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -897,6 +933,18 @@ _sealtask() {
                     ;;
                 --format)
                     COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    return 0
+                    ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
                     return 0
                     ;;
                 --connect-timeout)
@@ -983,7 +1031,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__auth__subcmd__keychain__subcmd__store)
-            opts="-v -h --password-stdin --api-url --storage-origin --json --format --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
+            opts="-q -v -h --password-stdin --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -999,6 +1047,18 @@ _sealtask() {
                     ;;
                 --format)
                     COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    return 0
+                    ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
                     return 0
                     ;;
                 --connect-timeout)
@@ -1029,7 +1089,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__auth__subcmd__lock)
-            opts="-v -h --api-url --storage-origin --json --format --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
+            opts="-q -v -h --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -1045,6 +1105,18 @@ _sealtask() {
                     ;;
                 --format)
                     COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    return 0
+                    ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
                     return 0
                     ;;
                 --connect-timeout)
@@ -1075,7 +1147,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__auth__subcmd__login)
-            opts="-v -h --email --password-stdin --api-url --storage-origin --json --format --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
+            opts="-q -v -h --email --password-stdin --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -1095,6 +1167,18 @@ _sealtask() {
                     ;;
                 --format)
                     COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    return 0
+                    ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
                     return 0
                     ;;
                 --connect-timeout)
@@ -1125,7 +1209,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__auth__subcmd__logout)
-            opts="-v -h --api-url --storage-origin --json --format --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
+            opts="-q -v -h --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -1141,6 +1225,18 @@ _sealtask() {
                     ;;
                 --format)
                     COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    return 0
+                    ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
                     return 0
                     ;;
                 --connect-timeout)
@@ -1171,7 +1267,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__auth__subcmd__status)
-            opts="-v -h --api-url --storage-origin --json --format --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
+            opts="-q -v -h --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -1187,6 +1283,18 @@ _sealtask() {
                     ;;
                 --format)
                     COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    return 0
+                    ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
                     return 0
                     ;;
                 --connect-timeout)
@@ -1217,7 +1325,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__auth__subcmd__unlock)
-            opts="-v -h --ttl --ttl-seconds --password-stdin --api-url --storage-origin --json --format --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
+            opts="-q -v -h --ttl --ttl-seconds --password-stdin --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -1241,6 +1349,18 @@ _sealtask() {
                     ;;
                 --format)
                     COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    return 0
+                    ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
                     return 0
                     ;;
                 --connect-timeout)
@@ -1271,7 +1391,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__comments)
-            opts="-v -h --api-url --storage-origin --json --format --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help list create update delete help"
+            opts="-q -v -h --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help list create update delete help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -1287,6 +1407,18 @@ _sealtask() {
                     ;;
                 --format)
                     COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    return 0
+                    ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
                     return 0
                     ;;
                 --connect-timeout)
@@ -1317,7 +1449,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__comments__subcmd__create)
-            opts="-v -h --task-id --project --work-list-id --body --input-file --input-stdin --password-stdin --api-url --storage-origin --json --format --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
+            opts="-q -v -h --task-id --project --work-list-id --body --input-file --input-stdin --password-stdin --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -1355,6 +1487,18 @@ _sealtask() {
                     COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
                     return 0
                     ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
                 --connect-timeout)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
@@ -1383,7 +1527,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__comments__subcmd__delete)
-            opts="-v -h --task-id --project --work-list-id --comment-id --input-file --input-stdin --password-stdin --yes --api-url --storage-origin --json --format --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
+            opts="-q -v -h --task-id --project --work-list-id --comment-id --input-file --input-stdin --password-stdin --yes --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -1419,6 +1563,18 @@ _sealtask() {
                     ;;
                 --format)
                     COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    return 0
+                    ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
                     return 0
                     ;;
                 --connect-timeout)
@@ -1533,7 +1689,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__comments__subcmd__list)
-            opts="-v -h --project --work-list-id --task-id --password-stdin --api-url --storage-origin --json --format --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
+            opts="-q -v -h --project --work-list-id --task-id --password-stdin --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -1561,6 +1717,18 @@ _sealtask() {
                     ;;
                 --format)
                     COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    return 0
+                    ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
                     return 0
                     ;;
                 --connect-timeout)
@@ -1591,7 +1759,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__comments__subcmd__update)
-            opts="-v -h --task-id --project --work-list-id --comment-id --body --input-file --input-stdin --password-stdin --api-url --storage-origin --json --format --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
+            opts="-q -v -h --task-id --project --work-list-id --comment-id --body --input-file --input-stdin --password-stdin --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -1633,6 +1801,18 @@ _sealtask() {
                     COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
                     return 0
                     ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
                 --connect-timeout)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
@@ -1661,7 +1841,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__completion)
-            opts="-v -h --api-url --storage-origin --json --format --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help bash zsh fish powershell"
+            opts="-q -v -h --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help bash zsh fish powershell"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -1677,6 +1857,18 @@ _sealtask() {
                     ;;
                 --format)
                     COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    return 0
+                    ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
                     return 0
                     ;;
                 --connect-timeout)
@@ -1707,7 +1899,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__config)
-            opts="-v -h --api-url --storage-origin --json --format --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help show help"
+            opts="-q -v -h --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help show help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -1723,6 +1915,18 @@ _sealtask() {
                     ;;
                 --format)
                     COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    return 0
+                    ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
                     return 0
                     ;;
                 --connect-timeout)
@@ -1795,7 +1999,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__config__subcmd__show)
-            opts="-v -h --resolved --api-url --storage-origin --json --format --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
+            opts="-q -v -h --resolved --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -1811,6 +2015,18 @@ _sealtask() {
                     ;;
                 --format)
                     COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    return 0
+                    ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
                     return 0
                     ;;
                 --connect-timeout)
@@ -1841,7 +2057,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__doctor)
-            opts="-v -h --offline --strict --include-keychain --api-url --storage-origin --json --format --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
+            opts="-q -v -h --offline --strict --include-keychain --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -1857,6 +2073,18 @@ _sealtask() {
                     ;;
                 --format)
                     COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    return 0
+                    ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
                     return 0
                     ;;
                 --connect-timeout)
@@ -2741,7 +2969,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__info)
-            opts="-v -h --api-url --storage-origin --json --format --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
+            opts="-q -v -h --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -2757,6 +2985,18 @@ _sealtask() {
                     ;;
                 --format)
                     COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    return 0
+                    ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
                     return 0
                     ;;
                 --connect-timeout)
@@ -2787,7 +3027,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__inspect)
-            opts="-v -h --password-stdin --api-url --storage-origin --json --format --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
+            opts="-q -v -h --password-stdin --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -2803,6 +3043,18 @@ _sealtask() {
                     ;;
                 --format)
                     COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    return 0
+                    ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
                     return 0
                     ;;
                 --connect-timeout)
@@ -2833,7 +3085,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__man)
-            opts="-v -h --output-dir --api-url --storage-origin --json --format --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
+            opts="-q -v -h --output-dir --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -2853,6 +3105,18 @@ _sealtask() {
                     ;;
                 --format)
                     COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    return 0
+                    ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
                     return 0
                     ;;
                 --connect-timeout)
@@ -2883,7 +3147,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__me)
-            opts="-v -h --api-url --storage-origin --json --format --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
+            opts="-q -v -h --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -2899,6 +3163,18 @@ _sealtask() {
                     ;;
                 --format)
                     COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    return 0
+                    ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
                     return 0
                     ;;
                 --connect-timeout)
@@ -2929,7 +3205,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__notes)
-            opts="-v -h --api-url --storage-origin --json --format --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help list get create update delete help"
+            opts="-q -v -h --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help list get create update delete help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -2945,6 +3221,18 @@ _sealtask() {
                     ;;
                 --format)
                     COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    return 0
+                    ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
                     return 0
                     ;;
                 --connect-timeout)
@@ -2975,7 +3263,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__notes__subcmd__create)
-            opts="-v -h --project --work-list-id --title --body --private --idempotency-key --input-file --input-stdin --password-stdin --api-url --storage-origin --json --format --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
+            opts="-q -v -h --project --work-list-id --title --body --private --idempotency-key --input-file --input-stdin --password-stdin --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -3017,6 +3305,18 @@ _sealtask() {
                     COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
                     return 0
                     ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
                 --connect-timeout)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
@@ -3045,7 +3345,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__notes__subcmd__delete)
-            opts="-v -h --note-id --project --work-list-id --input-file --input-stdin --password-stdin --yes --api-url --storage-origin --json --format --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
+            opts="-q -v -h --note-id --project --work-list-id --input-file --input-stdin --password-stdin --yes --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -3079,6 +3379,18 @@ _sealtask() {
                     COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
                     return 0
                     ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
                 --connect-timeout)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
@@ -3107,7 +3419,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__notes__subcmd__get)
-            opts="-v -h --note-id --project --work-list-id --password-stdin --api-url --storage-origin --json --format --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
+            opts="-q -v -h --note-id --project --work-list-id --password-stdin --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -3135,6 +3447,18 @@ _sealtask() {
                     ;;
                 --format)
                     COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    return 0
+                    ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
                     return 0
                     ;;
                 --connect-timeout)
@@ -3263,7 +3587,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__notes__subcmd__list)
-            opts="-v -h --project --work-list-id --password-stdin --api-url --storage-origin --json --format --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
+            opts="-q -v -h --project --work-list-id --password-stdin --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -3287,6 +3611,18 @@ _sealtask() {
                     ;;
                 --format)
                     COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    return 0
+                    ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
                     return 0
                     ;;
                 --connect-timeout)
@@ -3317,7 +3653,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__notes__subcmd__update)
-            opts="-v -h --note-id --project --work-list-id --title --body --input-file --input-stdin --password-stdin --api-url --storage-origin --json --format --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
+            opts="-q -v -h --note-id --project --work-list-id --title --body --input-file --input-stdin --password-stdin --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -3359,6 +3695,18 @@ _sealtask() {
                     COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
                     return 0
                     ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
                 --connect-timeout)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
@@ -3387,7 +3735,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__profile)
-            opts="-v -h --api-url --storage-origin --json --format --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help list use help"
+            opts="-q -v -h --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help list use help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -3403,6 +3751,18 @@ _sealtask() {
                     ;;
                 --format)
                     COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    return 0
+                    ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
                     return 0
                     ;;
                 --connect-timeout)
@@ -3489,7 +3849,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__profile__subcmd__list)
-            opts="-v -h --api-url --storage-origin --json --format --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
+            opts="-q -v -h --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -3505,6 +3865,18 @@ _sealtask() {
                     ;;
                 --format)
                     COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    return 0
+                    ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
                     return 0
                     ;;
                 --connect-timeout)
@@ -3535,7 +3907,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__profile__subcmd__use)
-            opts="-v -h --api-url --storage-origin --json --format --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
+            opts="-q -v -h --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -3551,6 +3923,18 @@ _sealtask() {
                     ;;
                 --format)
                     COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    return 0
+                    ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
                     return 0
                     ;;
                 --connect-timeout)
@@ -3581,7 +3965,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__projects)
-            opts="-v -h --verbose --include-archived --password-stdin --raw --api-url --storage-origin --json --format --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help list get archive unarchive use current clear sections help"
+            opts="-q -v -h --verbose --include-archived --password-stdin --raw --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help list get archive unarchive use current clear sections help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -3597,6 +3981,18 @@ _sealtask() {
                     ;;
                 --format)
                     COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    return 0
+                    ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
                     return 0
                     ;;
                 --connect-timeout)
@@ -3627,7 +4023,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__projects__subcmd__archive)
-            opts="-v -h --password-stdin --raw --api-url --storage-origin --json --format --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
+            opts="-q -v -h --password-stdin --raw --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -3643,6 +4039,18 @@ _sealtask() {
                     ;;
                 --format)
                     COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    return 0
+                    ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
                     return 0
                     ;;
                 --connect-timeout)
@@ -3673,7 +4081,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__projects__subcmd__clear)
-            opts="-v -h --api-url --storage-origin --json --format --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
+            opts="-q -v -h --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -3689,6 +4097,18 @@ _sealtask() {
                     ;;
                 --format)
                     COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    return 0
+                    ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
                     return 0
                     ;;
                 --connect-timeout)
@@ -3719,7 +4139,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__projects__subcmd__current)
-            opts="-v -h --api-url --storage-origin --json --format --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
+            opts="-q -v -h --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -3735,6 +4155,18 @@ _sealtask() {
                     ;;
                 --format)
                     COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    return 0
+                    ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
                     return 0
                     ;;
                 --connect-timeout)
@@ -3765,7 +4197,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__projects__subcmd__get)
-            opts="-v -h --password-stdin --raw --api-url --storage-origin --json --format --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
+            opts="-q -v -h --password-stdin --raw --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -3781,6 +4213,18 @@ _sealtask() {
                     ;;
                 --format)
                     COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    return 0
+                    ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
                     return 0
                     ;;
                 --connect-timeout)
@@ -3965,7 +4409,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__projects__subcmd__list)
-            opts="-v -h --verbose --include-archived --password-stdin --raw --api-url --storage-origin --json --format --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
+            opts="-q -v -h --verbose --include-archived --password-stdin --raw --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -3981,6 +4425,18 @@ _sealtask() {
                     ;;
                 --format)
                     COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    return 0
+                    ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
                     return 0
                     ;;
                 --connect-timeout)
@@ -4011,7 +4467,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__projects__subcmd__sections)
-            opts="-v -h --api-url --storage-origin --json --format --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help list help"
+            opts="-q -v -h --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help list help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -4027,6 +4483,18 @@ _sealtask() {
                     ;;
                 --format)
                     COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    return 0
+                    ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
                     return 0
                     ;;
                 --connect-timeout)
@@ -4099,7 +4567,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__projects__subcmd__sections__subcmd__list)
-            opts="-v -h --project --work-list-id --password-stdin --api-url --storage-origin --json --format --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
+            opts="-q -v -h --project --work-list-id --password-stdin --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -4123,6 +4591,18 @@ _sealtask() {
                     ;;
                 --format)
                     COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    return 0
+                    ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
                     return 0
                     ;;
                 --connect-timeout)
@@ -4153,7 +4633,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__projects__subcmd__unarchive)
-            opts="-v -h --password-stdin --raw --api-url --storage-origin --json --format --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
+            opts="-q -v -h --password-stdin --raw --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -4169,6 +4649,18 @@ _sealtask() {
                     ;;
                 --format)
                     COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    return 0
+                    ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
                     return 0
                     ;;
                 --connect-timeout)
@@ -4199,7 +4691,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__projects__subcmd__use)
-            opts="-v -h --password-stdin --api-url --storage-origin --json --format --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
+            opts="-q -v -h --password-stdin --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -4215,6 +4707,18 @@ _sealtask() {
                     ;;
                 --format)
                     COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    return 0
+                    ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
                     return 0
                     ;;
                 --connect-timeout)
@@ -4245,7 +4749,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__schema)
-            opts="-v -h --api-url --storage-origin --json --format --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
+            opts="-q -v -h --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -4261,6 +4765,18 @@ _sealtask() {
                     ;;
                 --format)
                     COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    return 0
+                    ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
                     return 0
                     ;;
                 --connect-timeout)
@@ -4291,7 +4807,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__stats)
-            opts="-v -h --api-url --storage-origin --json --format --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
+            opts="-q -v -h --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -4307,6 +4823,18 @@ _sealtask() {
                     ;;
                 --format)
                     COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    return 0
+                    ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
                     return 0
                     ;;
                 --connect-timeout)
@@ -4337,7 +4865,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__tasks)
-            opts="-v -h --api-url --storage-origin --json --format --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help list get create update move complete reopen archive unarchive delete attachments help"
+            opts="-q -v -h --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help list get create update move complete reopen archive unarchive delete attachments help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -4353,6 +4881,18 @@ _sealtask() {
                     ;;
                 --format)
                     COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    return 0
+                    ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
                     return 0
                     ;;
                 --connect-timeout)
@@ -4383,7 +4923,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__tasks__subcmd__archive)
-            opts="-v -h --task-id --project --work-list-id --password-stdin --api-url --storage-origin --json --format --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
+            opts="-q -v -h --task-id --project --work-list-id --password-stdin --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -4411,6 +4951,18 @@ _sealtask() {
                     ;;
                 --format)
                     COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    return 0
+                    ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
                     return 0
                     ;;
                 --connect-timeout)
@@ -4441,7 +4993,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__tasks__subcmd__attachments)
-            opts="-v -h --api-url --storage-origin --json --format --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help upload delete read download help"
+            opts="-q -v -h --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help upload delete read download help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -4457,6 +5009,18 @@ _sealtask() {
                     ;;
                 --format)
                     COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    return 0
+                    ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
                     return 0
                     ;;
                 --connect-timeout)
@@ -4487,7 +5051,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__tasks__subcmd__attachments__subcmd__delete)
-            opts="-v -h --task-id --project --work-list-id --attachment-id --password-stdin --yes --api-url --storage-origin --json --format --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
+            opts="-q -v -h --task-id --project --work-list-id --attachment-id --password-stdin --yes --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -4521,6 +5085,18 @@ _sealtask() {
                     COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
                     return 0
                     ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
                 --connect-timeout)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
@@ -4549,7 +5125,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__tasks__subcmd__attachments__subcmd__download)
-            opts="-v -h --task-id --project --work-list-id --attachment-id --output --force --password-stdin --api-url --storage-origin --json --format --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
+            opts="-q -v -h --task-id --project --work-list-id --attachment-id --output --force --password-stdin --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -4585,6 +5161,18 @@ _sealtask() {
                     ;;
                 --format)
                     COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    return 0
+                    ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
                     return 0
                     ;;
                 --connect-timeout)
@@ -4699,7 +5287,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__tasks__subcmd__attachments__subcmd__read)
-            opts="-v -h --task-id --project --work-list-id --attachment-id --password-stdin --api-url --storage-origin --json --format --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
+            opts="-q -v -h --task-id --project --work-list-id --attachment-id --password-stdin --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -4733,6 +5321,18 @@ _sealtask() {
                     COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
                     return 0
                     ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
                 --connect-timeout)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
@@ -4761,7 +5361,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__tasks__subcmd__attachments__subcmd__upload)
-            opts="-v -h --task-id --project --work-list-id --file --file-name --content-type --password-stdin --api-url --storage-origin --json --format --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
+            opts="-q -v -h --task-id --project --work-list-id --file --file-name --content-type --password-stdin --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -4803,6 +5403,18 @@ _sealtask() {
                     COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
                     return 0
                     ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
                 --connect-timeout)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
@@ -4831,7 +5443,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__tasks__subcmd__complete)
-            opts="-v -h --task-id --project --work-list-id --password-stdin --api-url --storage-origin --json --format --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
+            opts="-q -v -h --task-id --project --work-list-id --password-stdin --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -4859,6 +5471,18 @@ _sealtask() {
                     ;;
                 --format)
                     COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    return 0
+                    ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
                     return 0
                     ;;
                 --connect-timeout)
@@ -4889,7 +5513,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__tasks__subcmd__create)
-            opts="-v -h --project --work-list-id --title --body --priority --due-at --due --start-at --section-id --section --idempotency-key --input-file --input-stdin --password-stdin --api-url --storage-origin --json --format --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
+            opts="-q -v -h --project --work-list-id --title --body --priority --due-at --due --start-at --section-id --section --idempotency-key --input-file --input-stdin --password-stdin --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -4955,6 +5579,18 @@ _sealtask() {
                     COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
                     return 0
                     ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
                 --connect-timeout)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
@@ -4983,7 +5619,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__tasks__subcmd__delete)
-            opts="-v -h --task-id --project --work-list-id --input-file --input-stdin --password-stdin --yes --api-url --storage-origin --json --format --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
+            opts="-q -v -h --task-id --project --work-list-id --input-file --input-stdin --password-stdin --yes --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -5017,6 +5653,18 @@ _sealtask() {
                     COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
                     return 0
                     ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
                 --connect-timeout)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
@@ -5045,7 +5693,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__tasks__subcmd__get)
-            opts="-v -h --task-id --project --work-list-id --password-stdin --raw --api-url --storage-origin --json --format --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
+            opts="-q -v -h --task-id --project --work-list-id --password-stdin --raw --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -5073,6 +5721,18 @@ _sealtask() {
                     ;;
                 --format)
                     COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    return 0
+                    ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
                     return 0
                     ;;
                 --connect-timeout)
@@ -5341,7 +6001,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__tasks__subcmd__list)
-            opts="-v -h --project --work-list-id --include-completed --include-archived --all --password-stdin --raw --api-url --storage-origin --json --format --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
+            opts="-q -v -h --project --work-list-id --include-completed --include-archived --all --password-stdin --raw --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -5365,6 +6025,18 @@ _sealtask() {
                     ;;
                 --format)
                     COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    return 0
+                    ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
                     return 0
                     ;;
                 --connect-timeout)
@@ -5395,7 +6067,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__tasks__subcmd__move)
-            opts="-v -h --task-id --project --work-list-id --section-id --section --insert-before-task-id --before --password-stdin --api-url --storage-origin --json --format --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
+            opts="-q -v -h --task-id --project --work-list-id --section-id --section --insert-before-task-id --before --password-stdin --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -5441,6 +6113,18 @@ _sealtask() {
                     COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
                     return 0
                     ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
                 --connect-timeout)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
@@ -5469,7 +6153,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__tasks__subcmd__reopen)
-            opts="-v -h --task-id --project --work-list-id --password-stdin --api-url --storage-origin --json --format --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
+            opts="-q -v -h --task-id --project --work-list-id --password-stdin --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -5497,6 +6181,18 @@ _sealtask() {
                     ;;
                 --format)
                     COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    return 0
+                    ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
                     return 0
                     ;;
                 --connect-timeout)
@@ -5527,7 +6223,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__tasks__subcmd__unarchive)
-            opts="-v -h --task-id --project --work-list-id --password-stdin --api-url --storage-origin --json --format --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
+            opts="-q -v -h --task-id --project --work-list-id --password-stdin --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -5555,6 +6251,18 @@ _sealtask() {
                     ;;
                 --format)
                     COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    return 0
+                    ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
                     return 0
                     ;;
                 --connect-timeout)
@@ -5585,7 +6293,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__tasks__subcmd__update)
-            opts="-v -h --task-id --project --work-list-id --title --body --clear-body --priority --clear-priority --due-at --due --clear-due-at --start-at --clear-start-at --section-id --section --clear-section --input-file --input-stdin --password-stdin --api-url --storage-origin --json --format --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
+            opts="-q -v -h --task-id --project --work-list-id --title --body --clear-body --priority --clear-priority --due-at --due --clear-due-at --start-at --clear-start-at --section-id --section --clear-section --input-file --input-stdin --password-stdin --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -5649,6 +6357,18 @@ _sealtask() {
                     ;;
                 --format)
                     COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    return 0
+                    ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
                     return 0
                     ;;
                 --connect-timeout)

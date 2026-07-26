@@ -171,8 +171,42 @@ crate archive. Maintainers regenerate and verify them with
 
 Long help groups target, field, input, output, safety, and advanced options and
 ends every runnable leaf command with copyable examples. `completion` and `man`
-emit raw artifacts, so they reject JSON and diagnostic-verbosity flags that
-would corrupt stdout.
+emit raw artifacts, so they reject JSON, terminal-presentation, quiet, and
+diagnostic-verbosity flags that would corrupt or obscure stdout.
+
+### Terminal output policy
+
+Human output adapts to the terminal while machine output stays byte-stable:
+
+- `--color auto|always|never` defaults to color only on the destination TTY.
+  `NO_COLOR` (when non-empty), `CLICOLOR=0`, and `TERM=dumb` disable automatic
+  color; an explicit `--color always` overrides them. JSON never contains ANSI.
+- `--pager auto|always|never` pages only long human output by default.
+  `--no-pager` is the explicit short form of `--pager never`. The pager command
+  is the first configured value of `SEALTASK_PAGER`, then `PAGER`, then the
+  platform default. An empty configured value disables paging.
+- `--progress auto|always|never` controls delayed, phase-only indicators on
+  stderr. Automatic progress requires human output plus terminal stdout and
+  stderr, and never claims a byte percentage the runtime cannot measure.
+- `-q` / `--quiet` suppresses automatic paging, progress, and successful mutation
+  acknowledgements. Requested read data, JSON results, warnings, and errors
+  remain visible.
+
+The mode defaults can also be set with `SEALTASK_COLOR`,
+`SEALTASK_PAGER_MODE`, and `SEALTASK_PROGRESS`. Redirected output is plain,
+unpaged, and animation-free in automatic mode:
+
+```bash
+NO_COLOR=1 sealtask tasks list
+SEALTASK_PAGER='less -R' sealtask tasks get "Release checklist"
+sealtask --no-pager tasks list > tasks.txt
+sealtask --quiet tasks complete "Publish artifacts"
+```
+
+Pager values are parsed into a program and argument vector and launched
+directly—never through a shell. Decrypted output is passed only on pager stdin,
+not in arguments or a temporary file. A user-configured pager therefore sees
+the same decrypted content that would otherwise be printed to the terminal.
 
 Selectors accept an exact UUID, an exact or Unicode-normalized name, or a
 unique UUID prefix of at least eight hexadecimal digits. Use `name:<value>` or

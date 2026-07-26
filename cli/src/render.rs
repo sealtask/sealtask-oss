@@ -7,7 +7,8 @@ use crate::output_models::{
     work_list_summaries_v1,
 };
 use crate::selectors::ProjectSection;
-use crate::table::{Alignment, Column, Table, short_unique_ids};
+use crate::table::{Alignment, Column, ColumnStyle, Table, short_unique_ids};
+use crate::terminal;
 use chrono::{DateTime, Utc};
 use chrono_tz::Tz;
 use sealtask_client_api::{
@@ -87,10 +88,12 @@ pub(crate) fn print_download_result(
             "serializing download result should succeed",
         )?,
         OutputFormat::Table => {
-            println!(
-                "Saved attachment to {}",
-                terminal_line(&output_path.display().to_string())
-            );
+            if !terminal::quiet() {
+                println!(
+                    "Saved attachment to {}",
+                    terminal_line(&output_path.display().to_string())
+                );
+            }
         }
     }
     Ok(())
@@ -134,12 +137,14 @@ pub(crate) fn print_attachment(
             "serializing attachment should succeed",
         ),
         OutputFormat::Table => {
-            println!(
-                "Uploaded attachment {} ({}, {} B).",
-                attachment.id,
-                terminal_line(&attachment.file_name),
-                attachment.size_bytes
-            );
+            if !terminal::quiet() {
+                println!(
+                    "Uploaded attachment {} ({}, {} B).",
+                    attachment.id,
+                    terminal_line(&attachment.file_name),
+                    attachment.size_bytes
+                );
+            }
             Ok(())
         }
     }
@@ -153,16 +158,18 @@ pub(crate) fn print_comment(comment: &AgentComment, format: OutputFormat) -> Cli
             "serializing comment should succeed",
         ),
         OutputFormat::Table => {
-            println!("Comment {}", comment.id);
-            println!(
-                "{}",
-                terminal_block(
-                    comment
-                        .body_markdown
-                        .as_deref()
-                        .unwrap_or("<unreadable comment>")
-                )
-            );
+            if !terminal::quiet() {
+                println!("Comment {}", comment.id);
+                println!(
+                    "{}",
+                    terminal_block(
+                        comment
+                            .body_markdown
+                            .as_deref()
+                            .unwrap_or("<unreadable comment>")
+                    )
+                );
+            }
             Ok(())
         }
     }
@@ -210,7 +217,7 @@ pub(crate) fn print_notes(notes: &[AgentNote], format: OutputFormat) -> CliResul
             let ids = selectable_short_ids(&notes.iter().map(|note| note.id).collect::<Vec<_>>());
             let mut table = Table::new([
                 Column::required("ID", 11, 39).preserve(),
-                Column::optional("Privacy", 7, 7, 30),
+                Column::optional("Privacy", 7, 7, 30).semantic(ColumnStyle::Privacy),
                 Column::required("Title", 12, 56).flex(4),
                 Column::optional("Updated", 16, 16, 20),
             ]);
@@ -441,7 +448,7 @@ pub(crate) fn print_work_lists(
                     Column::required("ID", 11, 39).preserve(),
                     Column::required("Title", 12, 56).flex(4),
                     Column::optional("Role", 6, 12, 30),
-                    Column::required("Lifecycle", 9, 9),
+                    Column::required("Lifecycle", 9, 9).semantic(ColumnStyle::Lifecycle),
                     Column::optional("Updated", 16, 16, 20),
                 ]);
                 for (list, id) in lists.iter().zip(ids) {
@@ -516,28 +523,30 @@ pub(crate) fn print_task(task: &AgentTaskSummary, format: OutputFormat) -> CliRe
             "serializing task should succeed",
         ),
         OutputFormat::Table => {
-            println!(
-                "Task {}: {}",
-                task.id,
-                terminal_line(task.title.as_deref().unwrap_or("<unreadable task>"))
-            );
-            if let Some(reference) = task.reference.as_deref() {
-                println!("Ref:    {}", terminal_line(reference));
-            } else if task.reference_number.is_some() {
-                println!("Ref:    <reference unavailable>");
-            }
-            println!(
-                "Status: {}",
-                if task.is_completed {
-                    "Done"
-                } else if task.archived_at.is_some() {
-                    "Archived"
-                } else {
-                    "Active"
+            if !terminal::quiet() {
+                println!(
+                    "Task {}: {}",
+                    task.id,
+                    terminal_line(task.title.as_deref().unwrap_or("<unreadable task>"))
+                );
+                println!(
+                    "Status: {}",
+                    if task.is_completed {
+                        "Done"
+                    } else if task.archived_at.is_some() {
+                        "Archived"
+                    } else {
+                        "Active"
+                    }
+                );
+                if let Some(reference) = task.reference.as_deref() {
+                    println!("Ref:    {}", terminal_line(reference));
+                } else if task.reference_number.is_some() {
+                    println!("Ref:    <reference unavailable>");
                 }
-            );
-            if let Some(due) = task_due_detail(task) {
-                println!("Due:    {due}");
+                if let Some(due) = task_due_detail(task) {
+                    println!("Due:    {due}");
+                }
             }
             Ok(())
         }
@@ -559,9 +568,11 @@ pub(crate) fn print_tasks(tasks: &[AgentTaskSummary], format: OutputFormat) -> C
                 Column::required("Reference", 11, 32).preserve(),
                 Column::optional("ID", 11, 39, 35).preserve(),
                 Column::required("Title", 12, 60).flex(4),
-                Column::optional("Pri", 3, 3, 40).align(Alignment::Right),
+                Column::optional("Pri", 3, 3, 40)
+                    .align(Alignment::Right)
+                    .semantic(ColumnStyle::Priority),
                 Column::optional("Due", 10, 10, 30),
-                Column::required("Status", 6, 10),
+                Column::required("Status", 6, 10).semantic(ColumnStyle::Status),
             ]);
             for (task, id) in tasks.iter().zip(ids) {
                 let priority = priority_label(task.priority);
@@ -745,7 +756,7 @@ pub(crate) fn print_raw_work_lists(
                     Column::required("ID", 11, 39).preserve(),
                     Column::optional("Role", 6, 12, 30),
                     Column::optional("Sections", 8, 8, 20).align(Alignment::Right),
-                    Column::required("Lifecycle", 9, 9),
+                    Column::required("Lifecycle", 9, 9).semantic(ColumnStyle::Lifecycle),
                     Column::optional("Updated", 16, 16, 10),
                 ]);
                 for (list, id) in lists.iter().zip(ids) {
@@ -863,9 +874,11 @@ pub(crate) fn print_raw_tasks(tasks: &[TaskResponse], format: OutputFormat) -> C
             let ids = selectable_short_ids(&tasks.iter().map(|task| task.id).collect::<Vec<_>>());
             let mut table = Table::new([
                 Column::required("ID", 11, 39).preserve(),
-                Column::optional("Pri", 3, 3, 40).align(Alignment::Right),
+                Column::optional("Pri", 3, 3, 40)
+                    .align(Alignment::Right)
+                    .semantic(ColumnStyle::Priority),
                 Column::optional("Due (UTC)", 10, 10, 30),
-                Column::required("Status", 6, 10),
+                Column::required("Status", 6, 10).semantic(ColumnStyle::Status),
                 Column::optional("Comments", 8, 8, 20).align(Alignment::Right),
             ]);
             for (task, id) in tasks.iter().zip(ids) {
@@ -918,9 +931,11 @@ pub(crate) fn print_raw_my_tasks(
             let mut table = Table::new([
                 Column::required("Task ID", 11, 39).preserve(),
                 Column::required("Project ID", 11, 39).preserve(),
-                Column::optional("Pri", 3, 3, 40).align(Alignment::Right),
+                Column::optional("Pri", 3, 3, 40)
+                    .align(Alignment::Right)
+                    .semantic(ColumnStyle::Priority),
                 Column::optional("Due (UTC)", 10, 10, 30),
-                Column::required("Status", 6, 10),
+                Column::required("Status", 6, 10).semantic(ColumnStyle::Status),
             ]);
             for (task, task_id) in tasks.iter().zip(task_ids) {
                 let project_id = project_ids

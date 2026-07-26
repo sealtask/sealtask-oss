@@ -1,3 +1,4 @@
+use crate::terminal::{self, StyleRole};
 use std::cmp::Reverse;
 use std::io::{self, IsTerminal};
 
@@ -16,6 +17,14 @@ pub(crate) enum Alignment {
     #[default]
     Left,
     Right,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum ColumnStyle {
+    Status,
+    Priority,
+    Lifecycle,
+    Privacy,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -39,6 +48,7 @@ pub(crate) struct Column {
     alignment: Alignment,
     retention: Retention,
     preserve: bool,
+    style: Option<ColumnStyle>,
 }
 
 impl Column {
@@ -83,6 +93,12 @@ impl Column {
         self
     }
 
+    #[must_use]
+    pub(crate) const fn semantic(mut self, style: ColumnStyle) -> Self {
+        self.style = Some(style);
+        self
+    }
+
     fn new(
         header: impl Into<String>,
         min_width: usize,
@@ -98,6 +114,7 @@ impl Column {
             alignment: Alignment::Left,
             retention,
             preserve: false,
+            style: None,
         }
     }
 }
@@ -142,10 +159,15 @@ impl Table {
     }
 
     pub(crate) fn render(&self) -> String {
-        self.render_with_width(terminal_width())
+        self.render_with_width_and_color(terminal_width(), terminal::stdout_color_enabled())
     }
 
+    #[cfg(test)]
     pub(crate) fn render_with_width(&self, width: usize) -> String {
+        self.render_with_width_and_color(width, false)
+    }
+
+    fn render_with_width_and_color(&self, width: usize, color: bool) -> String {
         let layout = self.layout(width);
         if layout.indices.is_empty() {
             return String::new();
@@ -157,14 +179,18 @@ impl Table {
             .iter()
             .map(|column| column.header.as_str())
             .collect::<Vec<_>>();
-        rendered.push_str(&render_line(&headers, &self.columns, &layout));
+        rendered.push_str(&render_line(&headers, &self.columns, &layout, true, color));
         rendered.push('\n');
-        rendered.push_str(&"-".repeat(layout.rendered_width()));
+        rendered.push_str(&terminal::style_stdout_explicit(
+            &"-".repeat(layout.rendered_width()),
+            StyleRole::Muted,
+            color,
+        ));
         rendered.push('\n');
 
         for row in &self.rows {
             let cells = row.iter().map(String::as_str).collect::<Vec<_>>();
-            rendered.push_str(&render_line(&cells, &self.columns, &layout));
+            rendered.push_str(&render_line(&cells, &self.columns, &layout, false, color));
             rendered.push('\n');
         }
 
@@ -361,7 +387,13 @@ fn grow_to_budget(
     }
 }
 
-fn render_line(cells: &[&str], columns: &[Column], layout: &Layout) -> String {
+fn render_line(
+    cells: &[&str],
+    columns: &[Column],
+    layout: &Layout,
+    header: bool,
+    color: bool,
+) -> String {
     let last_layout_index = layout.indices.len().saturating_sub(1);
     layout
         .indices
@@ -369,15 +401,53 @@ fn render_line(cells: &[&str], columns: &[Column], layout: &Layout) -> String {
         .enumerate()
         .map(|(layout_index, column_index)| {
             let value = cells.get(*column_index).copied().unwrap_or_default();
-            fit_cell(
+            let fitted = fit_cell(
                 value,
                 layout.widths[layout_index],
                 columns[*column_index].alignment,
                 layout_index != last_layout_index,
-            )
+            );
+            let role = if header {
+                Some(StyleRole::Heading)
+            } else {
+                columns[*column_index]
+                    .style
+                    .and_then(|style| semantic_style(style, value))
+            };
+            role.map_or(fitted.clone(), |role| {
+                terminal::style_stdout_explicit(&fitted, role, color)
+            })
         })
         .collect::<Vec<_>>()
         .join(COLUMN_SEPARATOR)
+}
+
+fn semantic_style(style: ColumnStyle, value: &str) -> Option<StyleRole> {
+    let normalized = value.trim().to_ascii_lowercase();
+    match style {
+        ColumnStyle::Status => match normalized.as_str() {
+            "active" | "open" => Some(StyleRole::Active),
+            "done" | "completed" => Some(StyleRole::Done),
+            "archived" => Some(StyleRole::Archived),
+            _ => None,
+        },
+        ColumnStyle::Priority => match normalized.as_str() {
+            "p1" | "8" => Some(StyleRole::PriorityHigh),
+            "p2" | "5" => Some(StyleRole::PriorityMedium),
+            "p3" | "3" | "p4" | "1" => Some(StyleRole::PriorityLow),
+            _ => None,
+        },
+        ColumnStyle::Lifecycle => match normalized.as_str() {
+            "active" => Some(StyleRole::Active),
+            "archived" => Some(StyleRole::Archived),
+            _ => None,
+        },
+        ColumnStyle::Privacy => match normalized.as_str() {
+            "private" => Some(StyleRole::Private),
+            "shared" => Some(StyleRole::Muted),
+            _ => None,
+        },
+    }
 }
 
 fn fit_cell(value: &str, width: usize, alignment: Alignment, pad_right: bool) -> String {
@@ -534,6 +604,24 @@ mod tests {
         table
     }
 
+    fn strip_ansi(value: &str) -> String {
+        let mut result = String::new();
+        let mut characters = value.chars().peekable();
+        while let Some(character) = characters.next() {
+            if character == '\u{1b}' && characters.peek() == Some(&'[') {
+                characters.next();
+                for control in characters.by_ref() {
+                    if control.is_ascii_alphabetic() {
+                        break;
+                    }
+                }
+            } else {
+                result.push(character);
+            }
+        }
+        result
+    }
+
     #[test]
     fn adapts_at_common_terminal_widths_and_hides_low_priority_columns_first() {
         let table = representative_table();
@@ -567,6 +655,26 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn semantic_color_is_applied_after_layout_without_changing_visual_width() {
+        let mut table = Table::new([
+            Column::required("Title", 8, 24).flex(3),
+            Column::required("Priority", 8, 8).semantic(ColumnStyle::Priority),
+            Column::required("Status", 6, 10).semantic(ColumnStyle::Status),
+        ]);
+        table.push_row(["Release 🦭 safely", "P1", "Active"]);
+
+        let plain = table.render_with_width_and_color(48, false);
+        let colored = table.render_with_width_and_color(48, true);
+        assert_eq!(strip_ansi(&colored), plain);
+        assert!(colored.contains("\u{1b}["));
+        assert!(
+            strip_ansi(&colored)
+                .lines()
+                .all(|line| display_width(line) <= 48)
+        );
     }
 
     #[test]

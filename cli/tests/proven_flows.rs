@@ -2454,6 +2454,124 @@ fn cli_schema_and_output_formats_are_machine_discoverable() {
 }
 
 #[test]
+fn cli_terminal_policies_are_explicit_machine_safe_and_quiet_when_requested() {
+    let home = TempDir::new().expect("temp home");
+
+    let automatic = run_cli_exact(home.path(), &["info"], None);
+    assert!(
+        automatic.status.success(),
+        "info failed: {}",
+        automatic.stderr
+    );
+    assert!(!automatic.stdout.contains('\u{1b}'));
+    assert!(automatic.stderr.is_empty());
+
+    let colored = run_cli_exact(home.path(), &["--color", "always", "info"], None);
+    assert!(
+        colored.status.success(),
+        "colored info failed: {}",
+        colored.stderr
+    );
+    assert!(colored.stdout.contains("\u{1b}[1m"));
+
+    let json = run_cli_exact(home.path(), &["--color", "always", "--json", "info"], None);
+    assert!(json.status.success(), "JSON info failed: {}", json.stderr);
+    assert!(!json.stdout.contains('\u{1b}'));
+    assert!(json.stderr.is_empty());
+    assert_eq!(
+        parse_stdout_json(&json.stdout)["terminalPolicies"]["quietFlag"],
+        "--quiet"
+    );
+
+    let quiet = run_cli_exact(home.path(), &["--quiet", "auth", "logout"], None);
+    assert!(
+        quiet.status.success(),
+        "quiet logout failed: {}",
+        quiet.stderr
+    );
+    assert!(quiet.stdout.is_empty());
+    assert!(quiet.stderr.is_empty());
+
+    let no_pager = run_cli_exact(home.path(), &["--no-pager", "info"], None);
+    assert!(
+        no_pager.status.success(),
+        "--no-pager failed: {}",
+        no_pager.stderr
+    );
+    assert!(
+        no_pager
+            .stdout
+            .starts_with("SealTask CLI contract version 2")
+    );
+
+    let mut no_pager_override = Command::cargo_bin("sealtask").expect("binary");
+    no_pager_override
+        .env("HOME", home.path())
+        .env("SEALTASK_PAGER_MODE", "always")
+        .current_dir(home.path())
+        .args(["--no-pager", "info"]);
+    let no_pager_override = no_pager_override.output().expect("run --no-pager override");
+    assert!(
+        no_pager_override.status.success(),
+        "--no-pager should override SEALTASK_PAGER_MODE: {}",
+        String::from_utf8_lossy(&no_pager_override.stderr)
+    );
+
+    let mut json_environment = Command::cargo_bin("sealtask").expect("binary");
+    json_environment
+        .env("HOME", home.path())
+        .env("SEALTASK_PAGER_MODE", "always")
+        .env("SEALTASK_PROGRESS", "always")
+        .current_dir(home.path())
+        .args(["--json", "info"]);
+    let json_environment = json_environment
+        .output()
+        .expect("run JSON environment policy");
+    assert!(
+        json_environment.status.success(),
+        "JSON should override terminal-mode environment: {}",
+        String::from_utf8_lossy(&json_environment.stderr)
+    );
+    assert!(!json_environment.stdout.contains(&b'\x1b'));
+
+    for (args, expected) in [
+        (
+            &["--pager", "always", "info"][..],
+            "requires stdout to be a terminal",
+        ),
+        (
+            &["--progress", "always", "info"][..],
+            "requires stderr to be a terminal",
+        ),
+    ] {
+        let output = run_cli_exact(home.path(), args, None);
+        assert_eq!(output.status.code(), Some(1), "{args:?}");
+        assert!(output.stdout.is_empty(), "{args:?}: {}", output.stdout);
+        assert!(
+            output.stderr.contains(expected),
+            "{args:?}: {}",
+            output.stderr
+        );
+        assert!(!output.stderr.contains('\u{1b}'));
+    }
+
+    for args in [
+        &["--json", "--pager", "always", "info"][..],
+        &["--json", "--progress", "always", "info"][..],
+    ] {
+        let output = run_cli_exact(home.path(), args, None);
+        assert_eq!(output.status.code(), Some(1), "{args:?}");
+        assert!(output.stdout.is_empty(), "{args:?}: {}", output.stdout);
+        assert_eq!(output.stderr.lines().count(), 1, "{args:?}");
+        assert_eq!(
+            parse_stderr_json(&output.stderr)["error"]["code"],
+            "validation"
+        );
+        assert!(!output.stderr.contains('\u{1b}'));
+    }
+}
+
+#[test]
 fn cli_profiles_isolate_credentials_and_support_custom_config_roots() {
     let home = TempDir::new().expect("temp home");
     let fixture = TestFixture::new();
@@ -3237,6 +3355,9 @@ fn cli_discovery_artifacts_are_local_complete_and_pipe_safe() {
         .env("HOME", home.path())
         .env("SEALTASK_API_URL", "not a URL")
         .env("SEALTASK_CONNECT_TIMEOUT", "not a duration")
+        .env("SEALTASK_COLOR", "never")
+        .env("SEALTASK_PAGER_MODE", "never")
+        .env("SEALTASK_PROGRESS", "never")
         .current_dir(home.path())
         .args(["completion", "zsh"]);
     let completion = completion.output().expect("generate completion");
@@ -3351,13 +3472,16 @@ fn cli_discovery_rejects_modes_that_would_corrupt_generated_output() {
     for args in [
         &["--json", "completion", "fish"][..],
         &["-v", "man", "tasks", "list"][..],
+        &["--color", "never", "completion", "bash"][..],
+        &["--quiet", "man"][..],
     ] {
         let output = run_cli_exact(home.path(), args, None);
         assert_eq!(output.status.code(), Some(1), "{args:?}: {}", output.stderr);
         assert!(output.stdout.is_empty(), "{args:?}: {}", output.stdout);
         assert!(
             output.stderr.contains("corrupt generated output")
-                || output.stderr.contains("raw terminal integration artifact"),
+                || output.stderr.contains("raw terminal integration artifact")
+                || output.stderr.contains("exact raw artifact"),
             "{args:?}: {}",
             output.stderr
         );

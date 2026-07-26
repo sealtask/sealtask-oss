@@ -1,5 +1,7 @@
 use crate::args::{ProjectSectionsCommand, ProjectsCommand};
-use crate::output::{CliResult, OutputFormat, print_json, print_simple_result};
+use crate::output::{
+    CliResult, OutputFormat, mutation_output_enabled, print_json, print_simple_result,
+};
 use crate::project_context::{clear_current_project, load_current_project, save_current_project};
 use crate::render::{
     print_empty_collection, print_project_sections, print_raw_work_list_detail,
@@ -7,6 +9,7 @@ use crate::render::{
 };
 use crate::resolver::{ProjectLifecycle, list_sections, resolve_project};
 use crate::table::sanitize_cell;
+use crate::terminal::with_progress;
 use sealtask_client_auth::active_profile;
 use sealtask_client_core::{PublicError, PublicResult};
 use sealtask_client_runtime::RuntimeClient;
@@ -30,12 +33,12 @@ struct ProjectContextMutationResult {
 }
 
 pub(crate) async fn run_me(runtime: &RuntimeClient, format: OutputFormat) -> CliResult<()> {
-    let user = runtime.get_me().await?;
+    let user = with_progress("Loading account…", runtime.get_me()).await?;
     print_user(&user, format)
 }
 
 pub(crate) async fn run_stats(runtime: &RuntimeClient, format: OutputFormat) -> CliResult<()> {
-    let stats = runtime.get_stats().await?;
+    let stats = with_progress("Loading account statistics…", runtime.get_stats()).await?;
     print_stats(&stats, format)
 }
 
@@ -167,7 +170,8 @@ pub(crate) async fn run_projects(
             )
             .await?;
             let mut client = runtime.authenticated_api_client()?;
-            let target = client.get_work_list(project.id).await?;
+            let target =
+                with_progress("Loading project…", client.get_work_list(project.id)).await?;
             if target.work_list.archived_at.is_some() {
                 return Err(PublicError::validation(
                     "an archived project cannot be selected as current; restore it first with 'sealtask projects unarchive <PROJECT>'",
@@ -320,18 +324,22 @@ async fn list_projects(
 ) -> CliResult<()> {
     if raw {
         let mut client = runtime.authenticated_api_client()?;
-        let lists = client
-            .list_work_lists_with_archived(include_archived)
-            .await?;
+        let lists = with_progress(
+            "Loading projects…",
+            client.list_work_lists_with_archived(include_archived),
+        )
+        .await?;
         if lists.is_empty() {
             return print_empty_collection(format, "No projects found.");
         }
         return print_raw_work_lists(&lists, format, verbose);
     }
 
-    let lists = runtime
-        .list_work_lists_with_archived(password_stdin, include_archived)
-        .await?;
+    let lists = with_progress(
+        "Loading and decrypting projects…",
+        runtime.list_work_lists_with_archived(password_stdin, include_archived),
+    )
+    .await?;
     if lists.is_empty() {
         return print_empty_collection(format, "No projects found.");
     }
@@ -349,23 +357,39 @@ async fn run_project_lifecycle(
     if raw {
         let mut client = runtime.authenticated_api_client()?;
         let work_list = if archive {
-            client.archive_work_list(work_list_id).await?
+            with_progress("Archiving project…", client.archive_work_list(work_list_id)).await?
         } else {
-            client.unarchive_work_list(work_list_id).await?
+            with_progress(
+                "Restoring project…",
+                client.unarchive_work_list(work_list_id),
+            )
+            .await?
         };
-        return print_raw_work_lists(std::slice::from_ref(&work_list), format, true);
+        return if mutation_output_enabled(format) {
+            print_raw_work_lists(std::slice::from_ref(&work_list), format, true)
+        } else {
+            Ok(())
+        };
     }
 
     let work_list = if archive {
-        runtime
-            .archive_work_list(work_list_id, password_stdin)
-            .await?
+        with_progress(
+            "Archiving project…",
+            runtime.archive_work_list(work_list_id, password_stdin),
+        )
+        .await?
     } else {
-        runtime
-            .unarchive_work_list(work_list_id, password_stdin)
-            .await?
+        with_progress(
+            "Restoring project…",
+            runtime.unarchive_work_list(work_list_id, password_stdin),
+        )
+        .await?
     };
-    print_work_lists(std::slice::from_ref(&work_list), format, true)
+    if mutation_output_enabled(format) {
+        print_work_lists(std::slice::from_ref(&work_list), format, true)
+    } else {
+        Ok(())
+    }
 }
 
 pub(crate) async fn run_lists_get(
@@ -377,11 +401,15 @@ pub(crate) async fn run_lists_get(
 ) -> CliResult<()> {
     if raw {
         let mut client = runtime.authenticated_api_client()?;
-        let detail = client.get_work_list(work_list_id).await?;
+        let detail = with_progress("Loading project…", client.get_work_list(work_list_id)).await?;
         return print_raw_work_list_detail(&detail, format);
     }
 
-    let detail = runtime.get_work_list(work_list_id, password_stdin).await?;
+    let detail = with_progress(
+        "Loading and decrypting project…",
+        runtime.get_work_list(work_list_id, password_stdin),
+    )
+    .await?;
     print_work_list_detail(&detail, format)
 }
 

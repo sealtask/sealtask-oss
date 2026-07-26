@@ -1,4 +1,5 @@
 use crate::output::{CliResult, OutputFormat, print_json};
+use crate::terminal::{self, StyleRole};
 use sealtask_client_auth::{UnlockMode, active_profile, config_dir};
 use sealtask_client_crypto::CryptoCapability;
 use sealtask_client_runtime::RuntimeClient;
@@ -15,6 +16,14 @@ pub(crate) fn run_info(runtime: &RuntimeClient, format: OutputFormat) -> CliResu
         "outputFormats": ["table", "json", "json-pretty"],
         "shellCompletions": ["bash", "zsh", "fish", "powershell"],
         "manualPages": true,
+        "terminalPolicies": {
+            "color": ["auto", "always", "never"],
+            "pager": ["auto", "always", "never"],
+            "progress": ["auto", "always", "never"],
+            "quietFlag": "--quiet",
+            "pagerCommandEnvironment": ["SEALTASK_PAGER", "PAGER"],
+            "noColorEnvironment": "NO_COLOR",
+        },
         "nonInteractiveFlag": "--non-interactive",
         "authUnlockModes": [
             UnlockMode::SingleCommand.as_str(),
@@ -31,7 +40,10 @@ pub(crate) fn run_info(runtime: &RuntimeClient, format: OutputFormat) -> CliResu
     });
     match format {
         OutputFormat::Table => {
-            println!("SealTask CLI contract version 2");
+            println!(
+                "{}",
+                terminal::style_stdout("SealTask CLI contract version 2", StyleRole::Heading)
+            );
             println!("API: {}", runtime.api_url());
             println!("Profile: {}", active_profile()?);
             println!("Config: {}", config_dir()?.display());

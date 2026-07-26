@@ -4,7 +4,7 @@
 .SH NAME
 sealtask\-info \- Show machine\-readable CLI capabilities and contract versions
 .SH SYNOPSIS
-\fBsealtask info\fR [\fB\-\-api\-url\fR] [\fB\-\-storage\-origin\fR] [\fB\-\-json\fR] [\fB\-\-format\fR] [\fB\-\-non\-interactive\fR] [\fB\-v \fR]... [\fB\-\-debug\fR] [\fB\-\-connect\-timeout\fR] [\fB\-\-read\-timeout\fR] [\fB\-\-request\-timeout\fR] [\fB\-\-profile\fR] [\fB\-\-config\-dir\fR] [\fB\-h\fR|\fB\-\-help\fR]
+\fBsealtask info\fR [\fB\-\-api\-url\fR] [\fB\-\-storage\-origin\fR] [\fB\-\-json\fR] [\fB\-\-format\fR] [\fB\-\-color\fR] [\fB\-\-pager\fR] [\fB\-\-no\-pager\fR] [\fB\-\-progress\fR] [\fB\-q\fR|\fB\-\-quiet\fR] [\fB\-\-non\-interactive\fR] [\fB\-v \fR]... [\fB\-\-debug\fR] [\fB\-\-connect\-timeout\fR] [\fB\-\-read\-timeout\fR] [\fB\-\-request\-timeout\fR] [\fB\-\-profile\fR] [\fB\-\-config\-dir\fR] [\fB\-h\fR|\fB\-\-help\fR]
 .SH DESCRIPTION
 Show machine\-readable CLI capabilities and contract versions
 .SH OPTIONS
@@ -61,6 +61,66 @@ json
 .IP \(bu 2
 json\-pretty
 .RE
+.TP
+\fB\-\-color\fR \fI<WHEN>\fR [default: auto]
+Control colors in human\-readable output
+.br
+
+.br
+\fIPossible values:\fR
+.RS 14
+.IP \(bu 2
+auto
+.IP \(bu 2
+always
+.IP \(bu 2
+never
+.RE
+.RS
+May also be specified with the \fBSEALTASK_COLOR\fR environment variable.
+.RE
+.TP
+\fB\-\-pager\fR \fI<WHEN>\fR [default: auto]
+Control paging of long human\-readable output
+.br
+
+.br
+\fIPossible values:\fR
+.RS 14
+.IP \(bu 2
+auto
+.IP \(bu 2
+always
+.IP \(bu 2
+never
+.RE
+.RS
+May also be specified with the \fBSEALTASK_PAGER_MODE\fR environment variable.
+.RE
+.TP
+\fB\-\-no\-pager\fR
+Disable paging (equivalent to \-\-pager never)
+.TP
+\fB\-\-progress\fR \fI<WHEN>\fR [default: auto]
+Control delayed progress indicators on stderr
+.br
+
+.br
+\fIPossible values:\fR
+.RS 14
+.IP \(bu 2
+auto
+.IP \(bu 2
+always
+.IP \(bu 2
+never
+.RE
+.RS
+May also be specified with the \fBSEALTASK_PROGRESS\fR environment variable.
+.RE
+.TP
+\fB\-q\fR, \fB\-\-quiet\fR
+Suppress automatic paging, progress, and successful mutation acknowledgements
 .SH INTERACTION
 .TP
 \fB\-\-non\-interactive\fR

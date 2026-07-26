@@ -1,4 +1,5 @@
 use crate::args::{Cli, OutputArg};
+use crate::terminal::{self, StyleRole};
 use sealtask_client_core::{PublicError, PublicResult};
 use serde::Serialize;
 use std::ffi::{OsStr, OsString};
@@ -125,18 +126,26 @@ macro_rules! println {
 }
 
 pub(crate) fn write_stdout(args: fmt::Arguments<'_>) -> CliResult<()> {
+    if terminal::write_buffered_stdout(args, false)? {
+        return Ok(());
+    }
     write_to_stream(io::stdout().lock(), args, "print to", "stdout", true)
 }
 
 pub(crate) fn write_stdout_line(args: fmt::Arguments<'_>) -> CliResult<()> {
+    if terminal::write_buffered_stdout(args, true)? {
+        return Ok(());
+    }
     write_line_to_stream(io::stdout().lock(), args, "print to", "stdout", true)
 }
 
 pub(crate) fn write_stderr_line(args: fmt::Arguments<'_>) -> CliResult<()> {
+    terminal::clear_active_progress();
     write_line_to_stream(io::stderr().lock(), args, "print to", "stderr", false)
 }
 
 pub(crate) fn write_stderr(args: fmt::Arguments<'_>) -> CliResult<()> {
+    terminal::clear_active_progress();
     write_to_stream(io::stderr().lock(), args, "print to", "stderr", false)
 }
 
@@ -330,10 +339,11 @@ pub(crate) fn print_cli_error(err: &CliError, format: OutputFormat) -> CliResult
 
 fn write_table_error<W: Write>(mut stream: W, err: &CliError) -> CliResult<()> {
     let result = err.error_result();
+    let label = terminal::style_stderr("error", StyleRole::Error);
     write_line_to_stream(
         &mut stream,
         format_args!(
-            "error [{}]: {}",
+            "{label} [{}]: {}",
             result.code,
             terminal_line(&result.message)
         ),
@@ -469,9 +479,10 @@ fn write_warnings<W: Write>(
     match format {
         OutputFormat::Table => {
             for warning in warnings {
+                let label = terminal::style_stderr("warning", StyleRole::Warning);
                 write_line_to_stream(
                     &mut stream,
-                    format_args!("warning: {}", terminal_line(&warning.message)),
+                    format_args!("{label}: {}", terminal_line(&warning.message)),
                     "print to",
                     "stderr",
                     false,
@@ -551,10 +562,19 @@ pub(crate) fn print_simple_result<T: Serialize + ?Sized>(
     match format {
         OutputFormat::Json | OutputFormat::JsonPretty => print_json(payload, format, context),
         OutputFormat::Table => {
-            println!("{table_message}");
+            if !terminal::quiet() {
+                println!(
+                    "{}",
+                    terminal::style_stdout(table_message, StyleRole::Success)
+                );
+            }
             Ok(())
         }
     }
+}
+
+pub(crate) fn mutation_output_enabled(format: OutputFormat) -> bool {
+    format.is_json() || !terminal::quiet()
 }
 
 fn public_error_is_retryable(error: &PublicError) -> bool {

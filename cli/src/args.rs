@@ -60,6 +60,52 @@ pub(crate) struct Cli {
     )]
     pub(crate) format: Option<OutputArg>,
 
+    /// Control colors in human-readable output.
+    #[arg(
+        long,
+        env = "SEALTASK_COLOR",
+        value_enum,
+        default_value_t = ColorArg::Auto,
+        global = true,
+        value_name = "WHEN"
+    )]
+    pub(crate) color: ColorArg,
+
+    /// Control paging of long human-readable output.
+    #[arg(
+        long,
+        env = "SEALTASK_PAGER_MODE",
+        value_enum,
+        default_value_t = PagerArg::Auto,
+        global = true,
+        value_name = "WHEN"
+    )]
+    pub(crate) pager: PagerArg,
+
+    /// Disable paging (equivalent to --pager never).
+    #[arg(long, global = true)]
+    pub(crate) no_pager: bool,
+
+    /// Control delayed progress indicators on stderr.
+    #[arg(
+        long,
+        env = "SEALTASK_PROGRESS",
+        value_enum,
+        default_value_t = ProgressArg::Auto,
+        global = true,
+        value_name = "WHEN"
+    )]
+    pub(crate) progress: ProgressArg,
+
+    /// Suppress automatic paging, progress, and successful mutation acknowledgements.
+    #[arg(
+        short = 'q',
+        long,
+        global = true,
+        conflicts_with_all = ["verbosity", "debug"]
+    )]
+    pub(crate) quiet: bool,
+
     /// Never prompt; fail with an actionable validation error when input is missing.
     #[arg(long, global = true)]
     pub(crate) non_interactive: bool,
@@ -119,6 +165,30 @@ pub(crate) enum OutputArg {
     Table,
     Json,
     JsonPretty,
+}
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, ValueEnum)]
+pub(crate) enum ColorArg {
+    #[default]
+    Auto,
+    Always,
+    Never,
+}
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, ValueEnum)]
+pub(crate) enum PagerArg {
+    #[default]
+    Auto,
+    Always,
+    Never,
+}
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, ValueEnum)]
+pub(crate) enum ProgressArg {
+    #[default]
+    Auto,
+    Always,
+    Never,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]

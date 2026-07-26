@@ -18,6 +18,9 @@ _sealtask() {
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
@@ -25,6 +28,9 @@ _sealtask() {
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--serve-unlock-daemon=[]:SERVE_UNLOCK_DAEMON:_files' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -46,12 +52,18 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -66,12 +78,18 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -85,12 +103,18 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -103,12 +127,18 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -122,12 +152,18 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -149,6 +185,9 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
@@ -156,6 +195,9 @@ _arguments "${_arguments_options[@]}" : \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--password-stdin[Read login input from stdin\: trimmed password on line 1 and optional exact authenticator or backup code on line 2]' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -170,6 +212,9 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
@@ -177,6 +222,9 @@ _arguments "${_arguments_options[@]}" : \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--password-stdin[Read the account password from stdin]' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -189,12 +237,18 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -207,12 +261,18 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -233,6 +293,9 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
@@ -240,6 +303,9 @@ _arguments "${_arguments_options[@]}" : \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--password-stdin[Read the account password from stdin]' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -252,12 +318,18 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -302,12 +374,18 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -320,12 +398,18 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -406,12 +490,18 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -424,6 +514,9 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
@@ -434,6 +527,9 @@ _arguments "${_arguments_options[@]}" : \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
 '--raw[]' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -454,6 +550,9 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
@@ -464,6 +563,9 @@ _arguments "${_arguments_options[@]}" : \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
 '--raw[]' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -476,6 +578,9 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
@@ -484,6 +589,9 @@ _arguments "${_arguments_options[@]}" : \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
 '--raw[]' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -497,6 +605,9 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
@@ -505,6 +616,9 @@ _arguments "${_arguments_options[@]}" : \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
 '--raw[]' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -518,6 +632,9 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
@@ -526,6 +643,9 @@ _arguments "${_arguments_options[@]}" : \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
 '--raw[]' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -539,6 +659,9 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
@@ -546,6 +669,9 @@ _arguments "${_arguments_options[@]}" : \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -559,12 +685,18 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -577,12 +709,18 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -595,12 +733,18 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -623,6 +767,9 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
@@ -630,6 +777,9 @@ _arguments "${_arguments_options[@]}" : \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -742,6 +892,9 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
@@ -752,6 +905,9 @@ _arguments "${_arguments_options[@]}" : \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
 '--raw[]' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -772,6 +928,9 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
@@ -782,6 +941,9 @@ _arguments "${_arguments_options[@]}" : \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
 '--raw[]' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -794,6 +956,9 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
@@ -802,6 +967,9 @@ _arguments "${_arguments_options[@]}" : \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
 '--raw[]' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -815,6 +983,9 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
@@ -823,6 +994,9 @@ _arguments "${_arguments_options[@]}" : \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
 '--raw[]' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -836,6 +1010,9 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
@@ -844,6 +1021,9 @@ _arguments "${_arguments_options[@]}" : \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
 '--raw[]' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -857,6 +1037,9 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
@@ -864,6 +1047,9 @@ _arguments "${_arguments_options[@]}" : \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -877,12 +1063,18 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -895,12 +1087,18 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -913,12 +1111,18 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -941,6 +1145,9 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
@@ -948,6 +1155,9 @@ _arguments "${_arguments_options[@]}" : \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -1060,12 +1270,18 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -1088,6 +1304,9 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
@@ -1099,6 +1318,9 @@ _arguments "${_arguments_options[@]}" : \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
 '--raw[]' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -1114,6 +1336,9 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
@@ -1122,6 +1347,9 @@ _arguments "${_arguments_options[@]}" : \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
 '--raw[]' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -1147,6 +1375,9 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
@@ -1155,6 +1386,9 @@ _arguments "${_arguments_options[@]}" : \
 '(--input-file --password-stdin --title --body --priority --due-at --due --start-at --section-id --section --idempotency-key)--input-stdin[Read the complete camelCase task input object from stdin]' \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -1179,6 +1413,9 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
@@ -1192,6 +1429,9 @@ _arguments "${_arguments_options[@]}" : \
 '(--input-file --password-stdin --title --body --clear-body --priority --clear-priority --due-at --due --clear-due-at --start-at --clear-start-at --section-id --section --clear-section)--input-stdin[Read the complete camelCase patch object from stdin]' \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -1212,6 +1452,9 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
@@ -1219,6 +1462,9 @@ _arguments "${_arguments_options[@]}" : \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -1235,6 +1481,9 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
@@ -1242,6 +1491,9 @@ _arguments "${_arguments_options[@]}" : \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -1258,6 +1510,9 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
@@ -1265,6 +1520,9 @@ _arguments "${_arguments_options[@]}" : \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -1281,6 +1539,9 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
@@ -1288,6 +1549,9 @@ _arguments "${_arguments_options[@]}" : \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -1304,6 +1568,9 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
@@ -1311,6 +1578,9 @@ _arguments "${_arguments_options[@]}" : \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -1328,6 +1598,9 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
@@ -1337,6 +1610,9 @@ _arguments "${_arguments_options[@]}" : \
 '(--input-stdin)--password-stdin[Read the account password from stdin while resolving human selectors]' \
 '--yes[Confirm permanent deletion without prompting]' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -1350,12 +1626,18 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -1382,6 +1664,9 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
@@ -1389,6 +1674,9 @@ _arguments "${_arguments_options[@]}" : \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -1406,6 +1694,9 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
@@ -1414,6 +1705,9 @@ _arguments "${_arguments_options[@]}" : \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
 '--yes[Confirm permanent deletion without prompting]' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -1431,6 +1725,9 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
@@ -1438,6 +1735,9 @@ _arguments "${_arguments_options[@]}" : \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -1456,6 +1756,9 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
@@ -1464,6 +1767,9 @@ _arguments "${_arguments_options[@]}" : \
 '--force[Replace an existing output file]' \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -1613,12 +1919,18 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -1631,6 +1943,9 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
@@ -1640,6 +1955,9 @@ _arguments "${_arguments_options[@]}" : \
 '--strict[Exit unsuccessfully when any check warns]' \
 '--include-keychain[Inspect the platform keychain (may trigger an operating-system prompt)]' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -1652,12 +1970,18 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -1678,6 +2002,9 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
@@ -1685,6 +2012,9 @@ _arguments "${_arguments_options[@]}" : \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--resolved[Include resolution sources and defaults]' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -1725,12 +2055,18 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -1751,12 +2087,18 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -1769,12 +2111,18 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -1820,6 +2168,9 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
@@ -1827,6 +2178,9 @@ _arguments "${_arguments_options[@]}" : \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--password-stdin[]' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -1840,12 +2194,18 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -1869,6 +2229,9 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
@@ -1876,6 +2239,9 @@ _arguments "${_arguments_options[@]}" : \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -1894,6 +2260,9 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
@@ -1902,6 +2271,9 @@ _arguments "${_arguments_options[@]}" : \
 '(--input-file --password-stdin --body)--input-stdin[Read the complete camelCase comment input object from stdin]' \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -1921,6 +2293,9 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
@@ -1929,6 +2304,9 @@ _arguments "${_arguments_options[@]}" : \
 '(--input-file --password-stdin --body)--input-stdin[Read the complete camelCase comment input object from stdin]' \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -1947,6 +2325,9 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
@@ -1956,6 +2337,9 @@ _arguments "${_arguments_options[@]}" : \
 '(--input-stdin)--password-stdin[Read the account password from stdin while resolving human selectors]' \
 '--yes[Confirm permanent deletion without prompting]' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -2009,12 +2393,18 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -2037,6 +2427,9 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
@@ -2044,6 +2437,9 @@ _arguments "${_arguments_options[@]}" : \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -2059,6 +2455,9 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
@@ -2066,6 +2465,9 @@ _arguments "${_arguments_options[@]}" : \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -2085,6 +2487,9 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
@@ -2094,6 +2499,9 @@ _arguments "${_arguments_options[@]}" : \
 '(--input-file --password-stdin --title --body --private --idempotency-key)--input-stdin[Read the complete camelCase note input object from stdin]' \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -2112,6 +2520,9 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
@@ -2120,6 +2531,9 @@ _arguments "${_arguments_options[@]}" : \
 '(--input-file --password-stdin --title --body)--input-stdin[Read the complete camelCase note patch from stdin]' \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
@@ -2137,6 +2551,9 @@ _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
@@ -2146,6 +2563,9 @@ _arguments "${_arguments_options[@]}" : \
 '(--input-stdin)--password-stdin[Read the account password from stdin while resolving human selectors]' \
 '--yes[Confirm permanent deletion without prompting]' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \

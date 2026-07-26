@@ -4,6 +4,7 @@ use crate::output::{
     CliResult, OutputFormat, WarningResult, finish_with_warnings, print_simple_result,
     public_result_with_warnings, warning_result,
 };
+use crate::terminal::with_progress;
 use sealtask_client_auth::{
     clear_credentials_if_current, clear_persisted_data_key, load_credentials_for_url,
     logout as revoke_session,
@@ -51,7 +52,17 @@ pub(super) async fn unlock(
     non_interactive: bool,
 ) -> CliResult<()> {
     require_password_stdin_for_non_interactive(non_interactive, password_stdin, "auth unlock")?;
-    runtime.unlock_daemon(ttl_seconds, password_stdin).await?;
+    if password_stdin {
+        with_progress(
+            "Unlocking workspace data…",
+            runtime.unlock_daemon(ttl_seconds, true),
+        )
+        .await?;
+    } else {
+        // The runtime owns the interactive password prompt. Starting a spinner
+        // before it returns would overwrite that secret-input surface.
+        runtime.unlock_daemon(ttl_seconds, false).await?;
+    }
     print_unlock_result(
         format,
         true,
@@ -86,7 +97,12 @@ pub(super) async fn keychain(
                 password_stdin,
                 "auth keychain store",
             )?;
-            runtime.store_persisted_data_key(password_stdin).await?;
+            if password_stdin {
+                with_progress("Saving unlock key…", runtime.store_persisted_data_key(true)).await?;
+            } else {
+                // Keep the runtime-owned password prompt unobstructed.
+                runtime.store_persisted_data_key(false).await?;
+            }
             ("available", "Saved an unlock key in the platform keychain.")
         }
         KeychainCommand::Clear => {
@@ -161,9 +177,12 @@ pub(super) async fn logout(format: OutputFormat, runtime: &RuntimeClient) -> Cli
     public_result_with_warnings(clear_result, &local_warnings)?;
 
     if let Some(warning) = logout_revoke_warning(
-        revoke_session_with_timeout(
-            runtime.api_transport_options().request_timeout(),
-            revoke_session(&client, &credentials.api_url, &credentials.refresh_token),
+        with_progress(
+            "Revoking session…",
+            revoke_session_with_timeout(
+                runtime.api_transport_options().request_timeout(),
+                revoke_session(&client, &credentials.api_url, &credentials.refresh_token),
+            ),
         )
         .await,
     ) {

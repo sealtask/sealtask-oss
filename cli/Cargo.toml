@@ -12,6 +12,7 @@ categories = ["command-line-utilities", "api-bindings"]
 publish = ["crates-io"]
 
 [dependencies]
+anstyle.workspace = true
 base64.workspace = true
 cap-fs-ext.workspace = true
 cap-std.workspace = true
@@ -26,6 +27,7 @@ rpassword.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true
+shlex.workspace = true
 tempfile.workspace = true
 terminal_size.workspace = true
 tokio.workspace = true

@@ -3,6 +3,7 @@ use crate::selectors::{
     EntityCandidate, EntitySelector, ProjectSection, ResolvedEntity, project_sections,
     resolve_entity, section_candidates,
 };
+use crate::terminal::with_progress;
 use sealtask_client_core::{PublicError, PublicResult};
 use sealtask_client_runtime::{AgentNote, AgentTaskSummary, AgentWorkListSummary, RuntimeClient};
 use uuid::Uuid;
@@ -43,9 +44,11 @@ pub(crate) async fn resolve_project(
         if let Ok(id) = Uuid::parse_str(selector.as_str()) {
             return Ok(ResolvedProject { id, title: None });
         }
-        let projects = runtime
-            .list_work_lists_with_archived(password_stdin, true)
-            .await?;
+        let projects = with_progress(
+            "Resolving project…",
+            runtime.list_work_lists_with_archived(password_stdin, true),
+        )
+        .await?;
         let filtered = projects
             .iter()
             .filter(|project| project_matches_lifecycle(project, lifecycle))
@@ -79,10 +82,12 @@ pub(crate) async fn load_project(
     project_id: Uuid,
     password_stdin: bool,
 ) -> PublicResult<AgentWorkListSummary> {
-    Ok(runtime
-        .get_work_list(project_id, password_stdin)
-        .await?
-        .work_list)
+    Ok(with_progress(
+        "Loading and decrypting project…",
+        runtime.get_work_list(project_id, password_stdin),
+    )
+    .await?
+    .work_list)
 }
 
 pub(crate) async fn resolve_optional_project(
@@ -122,9 +127,11 @@ pub(crate) async fn resolve_task(
     if let Ok(id) = Uuid::parse_str(selector.as_str()) {
         return Ok(ResolvedEntity { id, name: None });
     }
-    let tasks = runtime
-        .list_project_tasks(project_id, true, true, password_stdin)
-        .await?;
+    let tasks = with_progress(
+        "Resolving task…",
+        runtime.list_project_tasks(project_id, true, true, password_stdin),
+    )
+    .await?;
     let candidates = tasks
         .iter()
         .filter(|task| task_matches_lifecycle(task, lifecycle))
@@ -157,7 +164,11 @@ pub(crate) async fn resolve_note(
     if let Ok(id) = Uuid::parse_str(selector.as_str()) {
         return Ok(ResolvedEntity { id, name: None });
     }
-    let notes = runtime.list_notes(project_id, password_stdin).await?;
+    let notes = with_progress(
+        "Resolving note…",
+        runtime.list_notes(project_id, password_stdin),
+    )
+    .await?;
     resolve_entity(
         "note",
         &format!("project {project_id}"),

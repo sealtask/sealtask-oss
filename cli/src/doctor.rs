@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use crate::operator_config::OperatorSettingsStore;
 use crate::output::{CliResult, OutputFormat, print_json, terminal_line};
 use crate::table::sanitize_cell;
+use crate::terminal::{self, StyleRole, with_progress};
 use chrono::{DateTime, Utc};
 use reqwest::Url;
 use sealtask_client_auth::{
@@ -145,7 +146,10 @@ pub(crate) fn print_doctor_report(
             print_json(report, format, "serializing doctor report should succeed")
         }
         OutputFormat::Table => {
-            println!("SealTask Doctor");
+            println!(
+                "{}",
+                terminal::style_stdout("SealTask Doctor", StyleRole::Heading)
+            );
             println!("{}", "=".repeat(60));
             println!(
                 "Profile: {}",
@@ -188,7 +192,7 @@ pub(crate) fn print_doctor_report(
                     .unwrap_or_default();
                 println!(
                     "{:<4}  {:<35}  {}{}",
-                    check.status.label(),
+                    terminal::style_stdout(check.status.label(), check.status.style_role()),
                     diagnostic_terminal_line(&check.id),
                     diagnostic_terminal_line(&check.summary),
                     error_code
@@ -206,7 +210,10 @@ pub(crate) fn print_doctor_report(
                 report.summary.failed,
                 report.summary.skipped
             );
-            println!("Outcome: {}", report.outcome.label());
+            println!(
+                "Outcome: {}",
+                terminal::style_stdout(report.outcome.label(), report.outcome.style_role())
+            );
             Ok(())
         }
     }
@@ -221,6 +228,15 @@ impl DiagnosticCheckStatus {
             Self::Skipped => "SKIP",
         }
     }
+
+    const fn style_role(self) -> StyleRole {
+        match self {
+            Self::Pass => StyleRole::Success,
+            Self::Warning => StyleRole::Warning,
+            Self::Fail => StyleRole::Error,
+            Self::Skipped => StyleRole::Muted,
+        }
+    }
 }
 
 impl DiagnosticOutcomeV1 {
@@ -229,6 +245,14 @@ impl DiagnosticOutcomeV1 {
             Self::Passed => "PASSED",
             Self::PassedWithWarnings => "PASSED WITH WARNINGS",
             Self::Failed => "FAILED",
+        }
+    }
+
+    const fn style_role(self) -> StyleRole {
+        match self {
+            Self::Passed => StyleRole::Success,
+            Self::PassedWithWarnings => StyleRole::Warning,
+            Self::Failed => StyleRole::Error,
         }
     }
 }
@@ -1075,7 +1099,7 @@ where
         return None;
     }
 
-    match health_probe().await {
+    match with_progress("Checking API health…", health_probe()).await {
         Ok(status) => {
             checks.push(DiagnosticCheckV1::pass(
                 "api.reachability",
@@ -1133,7 +1157,7 @@ where
         return None;
     }
 
-    match identity_probe().await {
+    match with_progress("Checking authenticated identity…", identity_probe()).await {
         Ok(authenticated_user_id) => {
             if authenticated_user_id == credential_user_id {
                 checks.push(DiagnosticCheckV1::pass(

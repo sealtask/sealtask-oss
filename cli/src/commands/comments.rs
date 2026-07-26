@@ -7,6 +7,7 @@ use crate::output::{CliResult, OutputFormat};
 use crate::render::{print_comment, print_comments, print_delete_result, print_empty_collection};
 use crate::resolver::{ProjectLifecycle, TaskLifecycle, resolve_project, resolve_task};
 use crate::selectors::ResolvedEntity;
+use crate::terminal::with_progress;
 use sealtask_client_api::DeleteCommentRequest;
 use sealtask_client_runtime::{
     CreateCommentArgs, DeleteCommentArgs, RuntimeClient, UpdateCommentArgs,
@@ -62,9 +63,11 @@ async fn list_comments(
     task_id: Uuid,
     password_stdin: bool,
 ) -> CliResult<()> {
-    let comments = runtime
-        .list_comments(work_list_id, task_id, password_stdin)
-        .await?;
+    let comments = with_progress(
+        "Loading and decrypting comments…",
+        runtime.list_comments(work_list_id, task_id, password_stdin),
+    )
+    .await?;
     if comments.is_empty() {
         return print_empty_collection(format, "No comments found.");
     }
@@ -99,14 +102,16 @@ async fn create_comment(
         args.input_stdin,
         args.password_stdin,
     )?;
-    let created = runtime
-        .create_comment(CreateCommentArgs {
+    let created = with_progress(
+        "Creating comment…",
+        runtime.create_comment(CreateCommentArgs {
             work_list_id: project.id,
             task_id: task.id,
             input,
             password_stdin: args.password_stdin,
-        })
-        .await?;
+        }),
+    )
+    .await?;
     print_comment(&created, format)
 }
 
@@ -138,15 +143,17 @@ async fn update_comment(
         args.input_stdin,
         args.password_stdin,
     )?;
-    let updated = runtime
-        .update_comment(UpdateCommentArgs {
+    let updated = with_progress(
+        "Updating comment…",
+        runtime.update_comment(UpdateCommentArgs {
             work_list_id: project.id,
             task_id: task.id,
             comment_id: args.comment_id,
             input,
             password_stdin: args.password_stdin,
-        })
-        .await?;
+        }),
+    )
+    .await?;
     print_comment(&updated, format)
 }
 
@@ -187,14 +194,16 @@ async fn delete_comment(
     )?;
     let input =
         resolve_delete_input::<DeleteCommentRequest>(args.input_file.as_deref(), args.input_stdin)?;
-    runtime
-        .delete_comment(DeleteCommentArgs {
+    with_progress(
+        "Deleting comment…",
+        runtime.delete_comment(DeleteCommentArgs {
             work_list_id: project.id,
             task_id: task.id,
             comment_id: args.comment_id,
             input,
-        })
-        .await?;
+        }),
+    )
+    .await?;
     print_delete_result(
         format,
         "comment",

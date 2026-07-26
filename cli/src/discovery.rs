@@ -200,7 +200,7 @@ fn argument_heading(path: &[String], argument: &Arg) -> &'static str {
             "api_url" | "storage_origin" | "connect_timeout" | "read_timeout"
             | "request_timeout" => "Connection",
             "profile" | "config_dir" => "Profile",
-            "json" | "format" => "Output",
+            "json" | "format" | "color" | "pager" | "no_pager" | "progress" | "quiet" => "Output",
             "non_interactive" => "Interaction",
             "verbosity" | "debug" => "Diagnostics",
             _ => "Options",
@@ -225,7 +225,8 @@ fn argument_heading(path: &[String], argument: &Arg) -> &'static str {
         | "file_name" | "content_type" => "Fields",
         "include_archived" | "include_completed" | "all" => "Filters",
         "input_file" | "input_stdin" | "password_stdin" | "file" => "Input",
-        "format" | "json" | "verbose" | "raw" | "output" => "Output",
+        "format" | "json" | "verbose" | "raw" | "output" | "color" | "pager" | "no_pager"
+        | "progress" | "quiet" => "Output",
         "yes" | "force" => "Safety",
         "idempotency_key" | "ttl_seconds" => "Advanced",
         _ => "Options",

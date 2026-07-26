@@ -1,6 +1,6 @@
 # Print an optspec for argparse to handle cmd's options that are independent of any subcommand.
 function __fish_sealtask_global_optspecs
-    string join \n api-url= storage-origin= json format= non-interactive v debug connect-timeout= read-timeout= request-timeout= profile= config-dir= serve-unlock-daemon= h/help V/version
+    string join \n api-url= storage-origin= json format= color= pager= no-pager progress= q/quiet non-interactive v debug connect-timeout= read-timeout= request-timeout= profile= config-dir= serve-unlock-daemon= h/help V/version
 end
 
 function __fish_sealtask_needs_command
@@ -29,6 +29,15 @@ complete -c sealtask -n "__fish_sealtask_needs_command" -l storage-origin -d 'Tr
 complete -c sealtask -n "__fish_sealtask_needs_command" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_needs_command" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_needs_command" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_needs_command" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_needs_command" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_needs_command" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_needs_command" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
@@ -36,6 +45,8 @@ complete -c sealtask -n "__fish_sealtask_needs_command" -l profile -d 'Isolate c
 complete -c sealtask -n "__fish_sealtask_needs_command" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_needs_command" -l serve-unlock-daemon -r -F
 complete -c sealtask -n "__fish_sealtask_needs_command" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_needs_command" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_needs_command" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_needs_command" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_needs_command" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_needs_command" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -63,12 +74,23 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand completion" -l storage
 complete -c sealtask -n "__fish_sealtask_using_subcommand completion" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand completion" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand completion" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand completion" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand completion" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand completion" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand completion" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand completion" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand completion" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand completion" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand completion" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand completion" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand completion" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand completion" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand completion" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -79,12 +101,23 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand man" -l storage-origin
 complete -c sealtask -n "__fish_sealtask_using_subcommand man" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand man" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand man" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand man" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand man" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand man" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand man" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand man" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand man" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand man" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand man" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand man" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand man" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand man" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand man" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -94,12 +127,23 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand info" -l storage-origi
 complete -c sealtask -n "__fish_sealtask_using_subcommand info" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand info" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand info" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand info" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand info" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand info" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand info" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand info" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand info" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand info" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand info" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand info" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand info" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand info" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand info" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -109,12 +153,23 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand schema" -l storage-ori
 complete -c sealtask -n "__fish_sealtask_using_subcommand schema" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand schema" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand schema" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand schema" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand schema" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand schema" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand schema" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand schema" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand schema" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand schema" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand schema" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand schema" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand schema" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand schema" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand schema" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -124,12 +179,23 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and not __fish_s
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and not __fish_seen_subcommand_from login unlock lock keychain logout status help" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and not __fish_seen_subcommand_from login unlock lock keychain logout status help" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and not __fish_seen_subcommand_from login unlock lock keychain logout status help" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and not __fish_seen_subcommand_from login unlock lock keychain logout status help" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and not __fish_seen_subcommand_from login unlock lock keychain logout status help" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and not __fish_seen_subcommand_from login unlock lock keychain logout status help" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and not __fish_seen_subcommand_from login unlock lock keychain logout status help" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and not __fish_seen_subcommand_from login unlock lock keychain logout status help" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and not __fish_seen_subcommand_from login unlock lock keychain logout status help" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and not __fish_seen_subcommand_from login unlock lock keychain logout status help" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and not __fish_seen_subcommand_from login unlock lock keychain logout status help" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and not __fish_seen_subcommand_from login unlock lock keychain logout status help" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and not __fish_seen_subcommand_from login unlock lock keychain logout status help" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and not __fish_seen_subcommand_from login unlock lock keychain logout status help" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and not __fish_seen_subcommand_from login unlock lock keychain logout status help" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -147,6 +213,15 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from login" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from login" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from login" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from login" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from login" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from login" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from login" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
@@ -154,6 +229,8 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from login" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from login" -l password-stdin -d 'Read login input from stdin: trimmed password on line 1 and optional exact authenticator or backup code on line 2'
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from login" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from login" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from login" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from login" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from login" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from login" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -165,6 +242,15 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from unlock" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from unlock" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from unlock" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from unlock" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from unlock" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from unlock" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from unlock" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
@@ -172,6 +258,8 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from unlock" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from unlock" -l password-stdin -d 'Read the account password from stdin'
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from unlock" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from unlock" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from unlock" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from unlock" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from unlock" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from unlock" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -181,12 +269,23 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from lock" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from lock" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from lock" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from lock" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from lock" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from lock" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from lock" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from lock" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from lock" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from lock" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from lock" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from lock" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from lock" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from lock" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from lock" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -196,12 +295,23 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from keychain" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from keychain" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from keychain" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from keychain" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from keychain" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from keychain" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from keychain" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from keychain" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from keychain" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from keychain" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from keychain" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from keychain" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from keychain" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from keychain" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from keychain" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -214,12 +324,23 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from logout" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from logout" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from logout" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from logout" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from logout" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from logout" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from logout" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from logout" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from logout" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from logout" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from logout" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from logout" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from logout" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from logout" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from logout" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -229,12 +350,23 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from status" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from status" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from status" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from status" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from status" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from status" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from status" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from status" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from status" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from status" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from status" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from status" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from status" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from status" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from status" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -251,12 +383,23 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand me" -l storage-origin 
 complete -c sealtask -n "__fish_sealtask_using_subcommand me" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand me" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand me" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand me" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand me" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand me" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand me" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand me" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand me" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand me" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand me" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand me" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand me" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand me" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand me" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -266,6 +409,15 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fi
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
@@ -276,6 +428,8 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fi
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l raw
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -294,6 +448,15 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_s
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from list" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from list" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from list" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from list" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from list" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from list" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from list" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
@@ -304,6 +467,8 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_s
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from list" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from list" -l raw
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from list" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from list" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from list" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from list" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from list" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from list" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -313,6 +478,15 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_s
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from get" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from get" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from get" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from get" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from get" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from get" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from get" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
@@ -321,6 +495,8 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_s
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from get" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from get" -l raw
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from get" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from get" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from get" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from get" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from get" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from get" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -330,6 +506,15 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_s
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from archive" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from archive" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from archive" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from archive" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from archive" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from archive" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from archive" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
@@ -338,6 +523,8 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_s
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from archive" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from archive" -l raw
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from archive" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from archive" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from archive" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from archive" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from archive" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from archive" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -347,6 +534,15 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_s
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from unarchive" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from unarchive" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from unarchive" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from unarchive" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from unarchive" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from unarchive" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from unarchive" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
@@ -355,6 +551,8 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_s
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from unarchive" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from unarchive" -l raw
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from unarchive" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from unarchive" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from unarchive" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from unarchive" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from unarchive" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from unarchive" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -364,6 +562,15 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_s
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from use" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from use" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from use" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from use" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from use" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from use" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from use" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
@@ -371,6 +578,8 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_s
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from use" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from use" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from use" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from use" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from use" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from use" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from use" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from use" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -380,12 +589,23 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_s
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from current" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from current" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from current" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from current" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from current" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from current" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from current" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from current" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from current" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from current" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from current" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from current" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from current" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from current" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from current" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -395,12 +615,23 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_s
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from clear" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from clear" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from clear" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from clear" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from clear" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from clear" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from clear" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from clear" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from clear" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from clear" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from clear" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from clear" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from clear" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from clear" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from clear" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -410,12 +641,23 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_s
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from sections" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from sections" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from sections" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from sections" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from sections" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from sections" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from sections" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from sections" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from sections" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from sections" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from sections" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from sections" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from sections" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from sections" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from sections" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -436,6 +678,15 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
@@ -446,6 +697,8 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l raw
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -464,6 +717,15 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from list" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from list" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from list" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from list" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from list" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from list" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from list" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
@@ -474,6 +736,8 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from list" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from list" -l raw
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from list" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from list" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from list" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from list" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from list" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from list" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -483,6 +747,15 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from get" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from get" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from get" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from get" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from get" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from get" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from get" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
@@ -491,6 +764,8 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from get" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from get" -l raw
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from get" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from get" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from get" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from get" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from get" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from get" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -500,6 +775,15 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from archive" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from archive" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from archive" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from archive" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from archive" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from archive" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from archive" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
@@ -508,6 +792,8 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from archive" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from archive" -l raw
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from archive" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from archive" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from archive" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from archive" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from archive" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from archive" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -517,6 +803,15 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from unarchive" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from unarchive" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from unarchive" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from unarchive" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from unarchive" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from unarchive" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from unarchive" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
@@ -525,6 +820,8 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from unarchive" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from unarchive" -l raw
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from unarchive" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from unarchive" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from unarchive" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from unarchive" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from unarchive" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from unarchive" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -534,6 +831,15 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from use" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from use" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from use" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from use" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from use" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from use" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from use" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
@@ -541,6 +847,8 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from use" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from use" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from use" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from use" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from use" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from use" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from use" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from use" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -550,12 +858,23 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from current" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from current" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from current" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from current" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from current" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from current" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from current" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from current" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from current" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from current" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from current" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from current" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from current" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from current" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from current" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -565,12 +884,23 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from clear" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from clear" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from clear" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from clear" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from clear" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from clear" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from clear" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from clear" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from clear" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from clear" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from clear" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from clear" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from clear" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from clear" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from clear" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -580,12 +910,23 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from sections" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from sections" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from sections" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from sections" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from sections" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from sections" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from sections" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from sections" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from sections" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from sections" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from sections" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from sections" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from sections" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from sections" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from sections" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -606,12 +947,23 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create update move complete reopen archive unarchive delete attachments help" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create update move complete reopen archive unarchive delete attachments help" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create update move complete reopen archive unarchive delete attachments help" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create update move complete reopen archive unarchive delete attachments help" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create update move complete reopen archive unarchive delete attachments help" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create update move complete reopen archive unarchive delete attachments help" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create update move complete reopen archive unarchive delete attachments help" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create update move complete reopen archive unarchive delete attachments help" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create update move complete reopen archive unarchive delete attachments help" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create update move complete reopen archive unarchive delete attachments help" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create update move complete reopen archive unarchive delete attachments help" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create update move complete reopen archive unarchive delete attachments help" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create update move complete reopen archive unarchive delete attachments help" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create update move complete reopen archive unarchive delete attachments help" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create update move complete reopen archive unarchive delete attachments help" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -635,6 +987,15 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from list" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from list" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from list" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from list" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from list" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from list" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from list" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
@@ -646,6 +1007,8 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from list" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from list" -l raw
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from list" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from list" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from list" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from list" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from list" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from list" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -658,6 +1021,15 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from get" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from get" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from get" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from get" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from get" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from get" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from get" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
@@ -666,6 +1038,8 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from get" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from get" -l raw
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from get" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from get" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from get" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from get" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from get" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from get" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -687,6 +1061,15 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from create" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from create" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from create" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from create" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from create" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from create" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from create" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
@@ -695,6 +1078,8 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from create" -l input-stdin -d 'Read the complete camelCase task input object from stdin'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from create" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from create" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from create" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from create" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from create" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from create" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from create" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -716,6 +1101,15 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from update" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from update" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from update" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from update" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from update" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from update" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from update" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
@@ -729,6 +1123,8 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from update" -l input-stdin -d 'Read the complete camelCase patch object from stdin'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from update" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from update" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from update" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from update" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from update" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from update" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from update" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -745,6 +1141,15 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from move" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from move" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from move" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from move" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from move" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from move" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from move" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
@@ -752,6 +1157,8 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from move" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from move" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from move" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from move" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from move" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from move" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from move" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from move" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -764,6 +1171,15 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from complete" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from complete" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from complete" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from complete" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from complete" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from complete" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from complete" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
@@ -771,6 +1187,8 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from complete" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from complete" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from complete" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from complete" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from complete" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from complete" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from complete" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from complete" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -783,6 +1201,15 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from reopen" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from reopen" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from reopen" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from reopen" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from reopen" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from reopen" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from reopen" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
@@ -790,6 +1217,8 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from reopen" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from reopen" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from reopen" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from reopen" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from reopen" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from reopen" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from reopen" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from reopen" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -802,6 +1231,15 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from archive" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from archive" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from archive" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from archive" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from archive" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from archive" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from archive" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
@@ -809,6 +1247,8 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from archive" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from archive" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from archive" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from archive" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from archive" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from archive" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from archive" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from archive" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -821,6 +1261,15 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from unarchive" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from unarchive" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from unarchive" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from unarchive" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from unarchive" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from unarchive" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from unarchive" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
@@ -828,6 +1277,8 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from unarchive" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from unarchive" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from unarchive" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from unarchive" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from unarchive" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from unarchive" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from unarchive" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from unarchive" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -841,6 +1292,15 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from delete" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from delete" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from delete" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from delete" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from delete" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from delete" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from delete" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
@@ -850,6 +1310,8 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from delete" -l password-stdin -d 'Read the account password from stdin while resolving human selectors'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from delete" -l yes -d 'Confirm permanent deletion without prompting'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from delete" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from delete" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from delete" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from delete" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from delete" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from delete" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -859,12 +1321,23 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from attachments" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from attachments" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from attachments" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from attachments" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from attachments" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from attachments" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from attachments" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from attachments" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from attachments" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from attachments" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from attachments" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from attachments" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from attachments" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from attachments" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from attachments" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -891,12 +1364,23 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand stats" -l storage-orig
 complete -c sealtask -n "__fish_sealtask_using_subcommand stats" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand stats" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand stats" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand stats" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand stats" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand stats" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand stats" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand stats" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand stats" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand stats" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand stats" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand stats" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand stats" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand stats" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand stats" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -906,6 +1390,15 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand doctor" -l storage-ori
 complete -c sealtask -n "__fish_sealtask_using_subcommand doctor" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand doctor" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand doctor" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand doctor" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand doctor" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand doctor" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand doctor" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
@@ -915,6 +1408,8 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand doctor" -l offline -d 
 complete -c sealtask -n "__fish_sealtask_using_subcommand doctor" -l strict -d 'Exit unsuccessfully when any check warns'
 complete -c sealtask -n "__fish_sealtask_using_subcommand doctor" -l include-keychain -d 'Inspect the platform keychain (may trigger an operating-system prompt)'
 complete -c sealtask -n "__fish_sealtask_using_subcommand doctor" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand doctor" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand doctor" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand doctor" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand doctor" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand doctor" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -924,12 +1419,23 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand config; and not __fish
 complete -c sealtask -n "__fish_sealtask_using_subcommand config; and not __fish_seen_subcommand_from show help" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand config; and not __fish_seen_subcommand_from show help" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand config; and not __fish_seen_subcommand_from show help" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand config; and not __fish_seen_subcommand_from show help" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand config; and not __fish_seen_subcommand_from show help" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand config; and not __fish_seen_subcommand_from show help" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand config; and not __fish_seen_subcommand_from show help" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand config; and not __fish_seen_subcommand_from show help" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand config; and not __fish_seen_subcommand_from show help" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand config; and not __fish_seen_subcommand_from show help" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand config; and not __fish_seen_subcommand_from show help" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand config; and not __fish_seen_subcommand_from show help" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand config; and not __fish_seen_subcommand_from show help" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand config; and not __fish_seen_subcommand_from show help" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand config; and not __fish_seen_subcommand_from show help" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -941,6 +1447,15 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand config; and __fish_see
 complete -c sealtask -n "__fish_sealtask_using_subcommand config; and __fish_seen_subcommand_from show" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand config; and __fish_seen_subcommand_from show" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand config; and __fish_seen_subcommand_from show" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand config; and __fish_seen_subcommand_from show" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand config; and __fish_seen_subcommand_from show" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand config; and __fish_seen_subcommand_from show" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand config; and __fish_seen_subcommand_from show" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
@@ -948,6 +1463,8 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand config; and __fish_see
 complete -c sealtask -n "__fish_sealtask_using_subcommand config; and __fish_seen_subcommand_from show" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand config; and __fish_seen_subcommand_from show" -l resolved -d 'Include resolution sources and defaults'
 complete -c sealtask -n "__fish_sealtask_using_subcommand config; and __fish_seen_subcommand_from show" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand config; and __fish_seen_subcommand_from show" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand config; and __fish_seen_subcommand_from show" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand config; and __fish_seen_subcommand_from show" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand config; and __fish_seen_subcommand_from show" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand config; and __fish_seen_subcommand_from show" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -959,12 +1476,23 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and not __fis
 complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and not __fish_seen_subcommand_from list use help" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and not __fish_seen_subcommand_from list use help" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and not __fish_seen_subcommand_from list use help" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and not __fish_seen_subcommand_from list use help" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and not __fish_seen_subcommand_from list use help" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and not __fish_seen_subcommand_from list use help" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and not __fish_seen_subcommand_from list use help" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and not __fish_seen_subcommand_from list use help" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and not __fish_seen_subcommand_from list use help" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and not __fish_seen_subcommand_from list use help" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and not __fish_seen_subcommand_from list use help" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and not __fish_seen_subcommand_from list use help" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and not __fish_seen_subcommand_from list use help" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and not __fish_seen_subcommand_from list use help" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and not __fish_seen_subcommand_from list use help" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -977,12 +1505,23 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and __fish_se
 complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and __fish_seen_subcommand_from list" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and __fish_seen_subcommand_from list" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and __fish_seen_subcommand_from list" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and __fish_seen_subcommand_from list" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and __fish_seen_subcommand_from list" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and __fish_seen_subcommand_from list" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and __fish_seen_subcommand_from list" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and __fish_seen_subcommand_from list" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and __fish_seen_subcommand_from list" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and __fish_seen_subcommand_from list" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and __fish_seen_subcommand_from list" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and __fish_seen_subcommand_from list" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and __fish_seen_subcommand_from list" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and __fish_seen_subcommand_from list" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and __fish_seen_subcommand_from list" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -992,12 +1531,23 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and __fish_se
 complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and __fish_seen_subcommand_from use" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and __fish_seen_subcommand_from use" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and __fish_seen_subcommand_from use" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and __fish_seen_subcommand_from use" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and __fish_seen_subcommand_from use" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and __fish_seen_subcommand_from use" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and __fish_seen_subcommand_from use" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and __fish_seen_subcommand_from use" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and __fish_seen_subcommand_from use" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and __fish_seen_subcommand_from use" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and __fish_seen_subcommand_from use" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and __fish_seen_subcommand_from use" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and __fish_seen_subcommand_from use" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and __fish_seen_subcommand_from use" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and __fish_seen_subcommand_from use" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -1010,6 +1560,15 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand inspect" -l storage-or
 complete -c sealtask -n "__fish_sealtask_using_subcommand inspect" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand inspect" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand inspect" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand inspect" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand inspect" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand inspect" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand inspect" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
@@ -1017,6 +1576,8 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand inspect" -l profile -d
 complete -c sealtask -n "__fish_sealtask_using_subcommand inspect" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand inspect" -l password-stdin
 complete -c sealtask -n "__fish_sealtask_using_subcommand inspect" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand inspect" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand inspect" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand inspect" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand inspect" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand inspect" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -1026,12 +1587,23 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and not __fi
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and not __fish_seen_subcommand_from list create update delete help" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and not __fish_seen_subcommand_from list create update delete help" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and not __fish_seen_subcommand_from list create update delete help" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and not __fish_seen_subcommand_from list create update delete help" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and not __fish_seen_subcommand_from list create update delete help" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and not __fish_seen_subcommand_from list create update delete help" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and not __fish_seen_subcommand_from list create update delete help" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and not __fish_seen_subcommand_from list create update delete help" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and not __fish_seen_subcommand_from list create update delete help" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and not __fish_seen_subcommand_from list create update delete help" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and not __fish_seen_subcommand_from list create update delete help" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and not __fish_seen_subcommand_from list create update delete help" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and not __fish_seen_subcommand_from list create update delete help" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and not __fish_seen_subcommand_from list create update delete help" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and not __fish_seen_subcommand_from list create update delete help" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -1049,6 +1621,15 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_s
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from list" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from list" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from list" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from list" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from list" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from list" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from list" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
@@ -1056,6 +1637,8 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_s
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from list" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from list" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from list" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from list" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from list" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from list" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from list" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from list" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -1070,6 +1653,15 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_s
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from create" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from create" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from create" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from create" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from create" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from create" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from create" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
@@ -1078,6 +1670,8 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_s
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from create" -l input-stdin -d 'Read the complete camelCase comment input object from stdin'
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from create" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from create" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from create" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from create" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from create" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from create" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from create" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -1093,6 +1687,15 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_s
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from update" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from update" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from update" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from update" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from update" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from update" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from update" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
@@ -1101,6 +1704,8 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_s
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from update" -l input-stdin -d 'Read the complete camelCase comment input object from stdin'
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from update" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from update" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from update" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from update" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from update" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from update" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from update" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -1115,6 +1720,15 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_s
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from delete" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from delete" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from delete" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from delete" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from delete" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from delete" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from delete" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
@@ -1124,6 +1738,8 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_s
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from delete" -l password-stdin -d 'Read the account password from stdin while resolving human selectors'
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from delete" -l yes -d 'Confirm permanent deletion without prompting'
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from delete" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from delete" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from delete" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from delete" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from delete" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from delete" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -1138,12 +1754,23 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create update delete help" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create update delete help" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create update delete help" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create update delete help" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create update delete help" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create update delete help" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create update delete help" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create update delete help" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create update delete help" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create update delete help" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create update delete help" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create update delete help" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create update delete help" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create update delete help" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create update delete help" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -1161,6 +1788,15 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from list" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from list" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from list" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from list" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from list" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from list" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from list" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
@@ -1168,6 +1804,8 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from list" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from list" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from list" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from list" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from list" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from list" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from list" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from list" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -1180,6 +1818,15 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from get" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from get" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from get" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from get" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from get" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from get" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from get" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
@@ -1187,6 +1834,8 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from get" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from get" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from get" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from get" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from get" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from get" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from get" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from get" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -1202,6 +1851,15 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from create" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from create" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from create" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from create" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from create" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from create" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from create" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
@@ -1211,6 +1869,8 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from create" -l input-stdin -d 'Read the complete camelCase note input object from stdin'
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from create" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from create" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from create" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from create" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from create" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from create" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from create" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -1226,6 +1886,15 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from update" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from update" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from update" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from update" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from update" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from update" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from update" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
@@ -1234,6 +1903,8 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from update" -l input-stdin -d 'Read the complete camelCase note patch from stdin'
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from update" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from update" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from update" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from update" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from update" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from update" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from update" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
@@ -1247,6 +1918,15 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from delete" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from delete" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from delete" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from delete" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from delete" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from delete" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from delete" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
@@ -1256,6 +1936,8 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from delete" -l password-stdin -d 'Read the account password from stdin while resolving human selectors'
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from delete" -l yes -d 'Confirm permanent deletion without prompting'
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from delete" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from delete" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from delete" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from delete" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from delete" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from delete" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'

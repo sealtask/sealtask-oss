@@ -1,5 +1,6 @@
 use crate::discovery;
 use crate::output::{CliResult, OutputFormat, print_json};
+use crate::terminal;
 use clap::Command;
 use sealtask_client_core::PublicError;
 use serde::Serialize;
@@ -39,7 +40,10 @@ pub(crate) fn run(format: OutputFormat, path: &[String]) -> CliResult<()> {
         .join(" ");
     match format {
         OutputFormat::Table => {
-            let mut display_command = selected.clone().bin_name(&display_path);
+            let mut display_command = selected
+                .clone()
+                .bin_name(&display_path)
+                .color(terminal::clap_stdout_color_choice());
             print!("{}", display_command.render_long_help());
             Ok(())
         }

@@ -2,9 +2,10 @@ use super::revoke_session_with_timeout;
 use crate::input::{prompt, read_required_password};
 use crate::interaction::write_interaction_line;
 use crate::output::{
-    CliResult, OutputFormat, WarningResult, finish_with_warnings, print_json, terminal_line,
-    warning_result,
+    CliResult, OutputFormat, WarningResult, finish_with_warnings, mutation_output_enabled,
+    print_json, terminal_line, warning_result,
 };
+use crate::terminal::with_progress;
 use sealtask_client_auth::{
     AuthResponse, CompleteMfaLoginError, Credentials, LoginOutcome, SecretMfaCode,
     auth_response_to_credentials, begin_login, clear_persisted_data_key, complete_mfa_login,
@@ -79,11 +80,13 @@ pub(super) async fn run(
         read_required_password(false, None)?
     });
 
-    if !format.is_json() {
-        write_interaction_line(format, format_args!("Authenticating..."))?;
-    }
     let client = runtime.control_plane_http_client()?;
-    let auth_response = match begin_login(&client, api_url, &email, &password).await? {
+    let auth_response = match with_progress(
+        "Authenticating…",
+        begin_login(&client, api_url, &email, &password),
+    )
+    .await?
+    {
         LoginOutcome::Authenticated(response) => response,
         LoginOutcome::MfaRequired {
             mut pending,
@@ -103,7 +106,12 @@ pub(super) async fn run(
                     }
                     None => prompt_mfa_code(format, &challenge)?,
                 };
-                match complete_mfa_login(&client, pending, SecretMfaCode::new(code)).await {
+                match with_progress(
+                    "Verifying sign-in…",
+                    complete_mfa_login(&client, pending, SecretMfaCode::new(code)),
+                )
+                .await
+                {
                     Ok(response) => break response,
                     Err(CompleteMfaLoginError::Retryable {
                         message,
@@ -184,12 +192,15 @@ pub(super) async fn run(
     if let Some(previous_credentials) = previous_credentials.as_ref().filter(|previous| {
         !previous.is_refresh_expired() && previous.refresh_token != credentials.refresh_token
     }) && let Some(warning) = previous_session_revoke_warning(
-        revoke_session_with_timeout(
-            runtime.api_transport_options().request_timeout(),
-            revoke_session(
-                &client,
-                &previous_credentials.api_url,
-                &previous_credentials.refresh_token,
+        with_progress(
+            "Revoking the previous session…",
+            revoke_session_with_timeout(
+                runtime.api_transport_options().request_timeout(),
+                revoke_session(
+                    &client,
+                    &previous_credentials.api_url,
+                    &previous_credentials.refresh_token,
+                ),
             ),
         )
         .await,
@@ -375,6 +386,9 @@ fn print_login_result(format: OutputFormat, result: &LoginResult, api_url: &str)
             print_json(result, format, "serializing login result should succeed")
         }
         OutputFormat::Table => {
+            if !mutation_output_enabled(format) {
+                return Ok(());
+            }
             if result.already_logged_in {
                 println!(
                     "Already logged in as {} ({})",

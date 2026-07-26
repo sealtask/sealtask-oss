@@ -23,6 +23,7 @@ use crate::resolver::{
     resolve_section, resolve_task,
 };
 use crate::selectors::{EntitySelector, ResolvedEntity};
+use crate::terminal::{ProgressGuard, with_progress};
 use chrono::Utc;
 use sealtask_client_api::DeleteTaskRequest;
 use sealtask_client_core::PublicError;
@@ -73,7 +74,9 @@ pub(crate) async fn run_tasks(
             if raw {
                 let mut client = runtime.authenticated_api_client()?;
                 if all || work_list_id.is_none() {
-                    let tasks = client.get_all_my_tasks(include_completed).await?;
+                    let tasks =
+                        with_progress("Loading tasks…", client.get_all_my_tasks(include_completed))
+                            .await?;
                     if tasks.is_empty() {
                         return print_empty_collection(format, "No tasks found.");
                     }
@@ -81,7 +84,11 @@ pub(crate) async fn run_tasks(
                 }
 
                 let work_list_id = work_list_id.expect("validated work list id");
-                let response = client.get_tasks(work_list_id, include_archived).await?;
+                let response = with_progress(
+                    "Loading project tasks…",
+                    client.get_tasks(work_list_id, include_archived),
+                )
+                .await?;
                 let tasks: Vec<_> = if include_completed {
                     response.tasks
                 } else {
@@ -98,18 +105,22 @@ pub(crate) async fn run_tasks(
             }
 
             let tasks = if let Some(work_list_id) = work_list_id {
-                runtime
-                    .list_project_tasks(
+                with_progress(
+                    "Loading and decrypting project tasks…",
+                    runtime.list_project_tasks(
                         work_list_id,
                         include_completed,
                         include_archived,
                         password_stdin,
-                    )
-                    .await?
+                    ),
+                )
+                .await?
             } else {
-                runtime
-                    .list_tasks(None, include_completed, all, password_stdin)
-                    .await?
+                with_progress(
+                    "Loading and decrypting tasks…",
+                    runtime.list_tasks(None, include_completed, all, password_stdin),
+                )
+                .await?
             };
             if tasks.is_empty() {
                 let message = if all || work_list_id.is_none() {
@@ -148,13 +159,16 @@ pub(crate) async fn run_tasks(
             .await?;
             if raw {
                 let mut client = runtime.authenticated_api_client()?;
-                let detail = client.get_task(project.id, task.id).await?;
+                let detail =
+                    with_progress("Loading task…", client.get_task(project.id, task.id)).await?;
                 return print_raw_task_detail(&detail, format);
             }
 
-            let detail = runtime
-                .get_task(project.id, task.id, password_stdin)
-                .await?;
+            let detail = with_progress(
+                "Loading and decrypting task…",
+                runtime.get_task(project.id, task.id, password_stdin),
+            )
+            .await?;
             print_task_detail(&detail, format)
         }
         TasksCommand::Resolve(args) => {
@@ -246,6 +260,7 @@ async fn run_task_attachments(
                 resolve_attachment_upload_password(args.password_stdin)?
             };
             let cancellation = OperationCancellation::new();
+            let progress = ProgressGuard::start("Uploading and linking attachment…");
             let supervised = supervise_attachment_upload(
                 runtime.upload_task_attachment_with_cancellation(
                     UploadTaskAttachmentArgs {
@@ -262,8 +277,10 @@ async fn run_task_attachments(
                 tokio::signal::ctrl_c(),
                 cancellation,
                 ATTACHMENT_UPLOAD_CANCELLATION_GRACE,
+                Some(&progress),
             )
             .await;
+            drop(progress);
             let result = match supervised.outcome {
                 AttachmentUploadOutcome::Completed(Ok(attachment)) => {
                     print_attachment(&attachment, format)
@@ -298,14 +315,16 @@ async fn run_task_attachments(
                     project_id
                 ),
             )?;
-            runtime
-                .delete_task_attachment(DeleteTaskAttachmentArgs {
+            with_progress(
+                "Deleting attachment…",
+                runtime.delete_task_attachment(DeleteTaskAttachmentArgs {
                     work_list_id: project_id,
                     task_id: task.id,
                     attachment_id: args.attachment_id,
                     password_stdin: args.password_stdin,
-                })
-                .await?;
+                }),
+            )
+            .await?;
             print_delete_result(
                 format,
                 "attachment",
@@ -329,9 +348,16 @@ async fn run_task_attachments(
                 TaskLifecycle::Any,
             )
             .await?;
-            let attachment = runtime
-                .read_task_attachment(project_id, task.id, args.attachment_id, args.password_stdin)
-                .await?;
+            let attachment = with_progress(
+                "Downloading and decrypting attachment…",
+                runtime.read_task_attachment(
+                    project_id,
+                    task.id,
+                    args.attachment_id,
+                    args.password_stdin,
+                ),
+            )
+            .await?;
             print_readable_attachment(&attachment, format)
         }
         TaskAttachmentsCommand::Download(args) => {
@@ -345,14 +371,16 @@ async fn run_task_attachments(
                 TaskLifecycle::Any,
             )
             .await?;
-            let attachment = runtime
-                .download_task_attachment(
+            let attachment = with_progress(
+                "Downloading and decrypting attachment…",
+                runtime.download_task_attachment(
                     project_id,
                     task.id,
                     args.attachment_id,
                     args.password_stdin,
-                )
-                .await?;
+                ),
+            )
+            .await?;
             let output_path =
                 resolve_attachment_output_path(&attachment.attachment.file_name, args.output);
             write_attachment_file(&output_path, &attachment.bytes, args.force)?;
@@ -428,6 +456,7 @@ async fn supervise_attachment_upload<T, U, S1, S2>(
     second_signal: S2,
     cancellation: OperationCancellation,
     cancellation_grace: Duration,
+    progress: Option<&ProgressGuard>,
 ) -> SupervisedAttachmentUpload<T>
 where
     U: Future<Output = PublicResult<T>>,
@@ -460,6 +489,9 @@ where
     }
 
     cancellation.cancel();
+    if let Some(progress) = progress {
+        progress.set_message("Cancelling upload; cleaning up…");
+    }
     warnings.push(warning_result(
         "attachment_upload_cancellation_requested",
         format!(
@@ -556,13 +588,15 @@ async fn create_task(
         )
         .into());
     }
-    let created = runtime
-        .create_task(CreateTaskArgs {
+    let created = with_progress(
+        "Creating task…",
+        runtime.create_task(CreateTaskArgs {
             work_list_id: project.id,
             input,
             password_stdin: args.password_stdin,
-        })
-        .await?;
+        }),
+    )
+    .await?;
     print_task(&created, format)
 }
 
@@ -593,14 +627,16 @@ async fn update_task(
                 .id,
         );
     }
-    let updated = runtime
-        .update_task(UpdateTaskArgs {
+    let updated = with_progress(
+        "Updating task…",
+        runtime.update_task(UpdateTaskArgs {
             work_list_id: project_id,
             task_id: task.id,
             input,
             password_stdin: args.password_stdin,
-        })
-        .await?;
+        }),
+    )
+    .await?;
     print_task(&updated, format)
 }
 
@@ -646,8 +682,9 @@ async fn move_task(
         (None, None) => None,
         (Some(_), Some(_)) => unreachable!("clap rejects conflicting task targets"),
     };
-    let moved = runtime
-        .move_task(MoveTaskArgs {
+    let moved = with_progress(
+        "Moving task…",
+        runtime.move_task(MoveTaskArgs {
             work_list_id: project_id,
             task_id: task.id,
             input: MoveTaskInput {
@@ -655,8 +692,9 @@ async fn move_task(
                 insert_before_task_id,
             },
             password_stdin: args.password_stdin,
-        })
-        .await?;
+        }),
+    )
+    .await?;
     print_task(&moved, format)
 }
 
@@ -687,9 +725,9 @@ async fn set_task_completion(
         password_stdin: args.password_stdin,
     };
     let task = if complete {
-        runtime.complete_task(runtime_args).await?
+        with_progress("Completing task…", runtime.complete_task(runtime_args)).await?
     } else {
-        runtime.reopen_task(runtime_args).await?
+        with_progress("Reopening task…", runtime.reopen_task(runtime_args)).await?
     };
     print_task(&task, format)
 }
@@ -709,13 +747,15 @@ async fn archive_task(
         TaskLifecycle::Active,
     )
     .await?;
-    let archived = runtime
-        .archive_task(ArchiveTaskArgs {
+    let archived = with_progress(
+        "Archiving task…",
+        runtime.archive_task(ArchiveTaskArgs {
             work_list_id: project_id,
             task_id: task.id,
             password_stdin: args.password_stdin,
-        })
-        .await?;
+        }),
+    )
+    .await?;
     print_task(&archived, format)
 }
 
@@ -734,13 +774,15 @@ async fn unarchive_task(
         TaskLifecycle::Archived,
     )
     .await?;
-    let unarchived = runtime
-        .unarchive_task(UnarchiveTaskArgs {
+    let unarchived = with_progress(
+        "Restoring task…",
+        runtime.unarchive_task(UnarchiveTaskArgs {
             work_list_id: project_id,
             task_id: task.id,
             password_stdin: args.password_stdin,
-        })
-        .await?;
+        }),
+    )
+    .await?;
     print_task(&unarchived, format)
 }
 
@@ -769,13 +811,15 @@ async fn delete_task(
     )?;
     let input =
         resolve_delete_input::<DeleteTaskRequest>(args.input_file.as_deref(), args.input_stdin)?;
-    runtime
-        .delete_task(DeleteTaskArgs {
+    with_progress(
+        "Deleting task…",
+        runtime.delete_task(DeleteTaskArgs {
             work_list_id: project_id,
             task_id: task.id,
             input,
-        })
-        .await?;
+        }),
+    )
+    .await?;
     print_delete_result(
         format,
         "task",
@@ -817,6 +861,7 @@ mod tests {
             std::future::pending(),
             cancellation.clone(),
             Duration::from_millis(10),
+            None,
         )
         .await;
 
@@ -853,6 +898,7 @@ mod tests {
             std::future::pending(),
             cancellation.clone(),
             Duration::from_millis(10),
+            None,
         )
         .await;
 
@@ -902,6 +948,7 @@ mod tests {
             std::future::pending(),
             cancellation,
             Duration::from_millis(50),
+            None,
         )
         .await;
 
@@ -943,6 +990,7 @@ mod tests {
             std::future::pending(),
             cancellation,
             Duration::from_millis(50),
+            None,
         )
         .await;
 
@@ -969,6 +1017,7 @@ mod tests {
             async { Ok(()) },
             cancellation,
             Duration::from_secs(30),
+            None,
         )
         .await;
 
@@ -1000,6 +1049,7 @@ mod tests {
             std::future::pending(),
             cancellation,
             Duration::from_millis(1),
+            None,
         )
         .await;
 
