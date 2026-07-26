@@ -13,6 +13,7 @@ mod input;
 mod interaction;
 mod operator_config;
 mod output_models;
+mod picker;
 mod project_context;
 mod render;
 mod resolver;
@@ -24,8 +25,8 @@ mod terminal;
 use args::{Cli, Command};
 use clap::FromArgMatches;
 use commands::{
-    run_auth, run_comments, run_config, run_info, run_lists_get, run_me, run_notes, run_profile,
-    run_projects, run_schema, run_stats, run_tasks,
+    run_auth, run_comments, run_config, run_info, run_lists_get, run_me, run_notes, run_pick,
+    run_profile, run_projects, run_schema, run_stats, run_tasks,
 };
 use operator_config::{
     OperatorOverrides, parse_timeout, resolve_operator_config,
@@ -65,6 +66,7 @@ async fn main() {
         cli.command.as_ref(),
         Some(Command::Completion { .. } | Command::Man { .. })
     ) || cli.serve_unlock_daemon.is_some();
+    let composable_picker = matches!(cli.command.as_ref(), Some(Command::Pick { .. }));
     let terminal = if raw_discovery {
         Ok(None)
     } else {
@@ -77,7 +79,7 @@ async fn main() {
             progress_explicit: long_option_present(&args, "--progress"),
             quiet: cli.quiet,
             format,
-            pager_allowed: true,
+            pager_allowed: !composable_picker,
         })
         .map(Some)
     };
@@ -152,6 +154,22 @@ async fn run(cli: Cli, format: OutputFormat, raw_args: &[OsString]) -> CliResult
             );
         }
         _ => {}
+    }
+
+    if matches!(cli.command.as_ref(), Some(Command::Pick { .. })) {
+        if format.is_json() {
+            return Err(PublicError::validation(
+                "'sealtask pick' emits one raw reusable selector and cannot be combined with --json, --format json, or --format json-pretty",
+            )
+            .into());
+        }
+        if cli.non_interactive {
+            return Err(PublicError::validation(
+                "'sealtask pick' requires an interactive controlling terminal; use a UUID, id:<prefix>, or exact name directly when running non-interactively",
+            )
+            .into());
+        }
+        picker::ensure_picker_terminal()?;
     }
 
     let telemetry_level = TelemetryLevel::from_flags(cli.verbosity, cli.debug);
@@ -232,6 +250,7 @@ async fn run(cli: Cli, format: OutputFormat, raw_args: &[OsString]) -> CliResult
             run_auth(&runtime, format, cli.non_interactive, command).await
         }
         (Command::Me, Ok(runtime)) => run_me(&runtime, format).await,
+        (Command::Pick { command }, Ok(runtime)) => run_pick(&runtime, command).await,
         (
             Command::Projects {
                 verbose,
@@ -404,6 +423,7 @@ fn command_name(command: &Command) -> &'static str {
         Command::Schema { .. } => "schema",
         Command::Auth { .. } => "auth",
         Command::Me => "me",
+        Command::Pick { .. } => "pick",
         Command::Projects { .. } => "projects",
         Command::Tasks { .. } => "tasks",
         Command::Stats => "stats",

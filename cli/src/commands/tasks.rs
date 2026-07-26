@@ -419,7 +419,7 @@ async fn resolve_task_target(
 }
 
 fn selector_needs_discovery(selector: Option<&EntitySelector>) -> bool {
-    selector.is_some_and(|selector| uuid::Uuid::parse_str(selector.as_str()).is_err())
+    selector.is_some_and(|selector| selector.exact_id().is_none())
 }
 
 fn resolve_attachment_upload_password(

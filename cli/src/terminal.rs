@@ -239,7 +239,10 @@ impl TerminalPolicy {
             )
             .into());
         }
-        let pager_mode = if options.quiet || options.format.is_json() {
+        let pager_mode = if options.quiet
+            || options.format.is_json()
+            || (!options.pager_allowed && !options.pager_explicit)
+        {
             PagerArg::Never
         } else {
             requested_pager_mode
@@ -1009,6 +1012,22 @@ mod tests {
         let error = TerminalPolicy::resolve(forced, &env, snapshot(true, true))
             .expect_err("forced pager should reject an empty pager command");
         assert!(error.to_string().contains("empty SEALTASK_PAGER"));
+    }
+
+    #[test]
+    fn raw_composable_output_ignores_environment_paging_but_rejects_explicit_forcing() {
+        let mut inherited = options();
+        inherited.pager = PagerArg::Always;
+        inherited.pager_allowed = false;
+        let policy = TerminalPolicy::resolve(inherited, &environment(), snapshot(false, true))
+            .expect("environment defaults must not break raw composition");
+        assert_eq!(policy.pager_mode, PagerArg::Never);
+
+        let mut explicit = inherited;
+        explicit.pager_explicit = true;
+        let error = TerminalPolicy::resolve(explicit, &environment(), snapshot(true, true))
+            .expect_err("explicit paging must be rejected for raw output");
+        assert!(error.to_string().contains("paging is unavailable"));
     }
 
     #[test]

@@ -58,6 +58,7 @@ complete -c sealtask -n "__fish_sealtask_needs_command" -f -a "info" -d 'Show ma
 complete -c sealtask -n "__fish_sealtask_needs_command" -f -a "schema" -d 'Describe commands and arguments as human help or versioned JSON'
 complete -c sealtask -n "__fish_sealtask_needs_command" -f -a "auth" -d 'Authenticate, inspect the session, and manage local unlock state'
 complete -c sealtask -n "__fish_sealtask_needs_command" -f -a "me" -d 'Show the current authenticated user'
+complete -c sealtask -n "__fish_sealtask_needs_command" -f -a "pick" -d 'Fuzzy-pick an entity while printing only a reusable opaque selector'
 complete -c sealtask -n "__fish_sealtask_needs_command" -f -a "projects" -d 'List, inspect, select, archive, or restore projects'
 complete -c sealtask -n "__fish_sealtask_needs_command" -f -a "lists" -d 'List, inspect, select, archive, or restore projects'
 complete -c sealtask -n "__fish_sealtask_needs_command" -f -a "tasks" -d 'List, inspect, create, update, move, or delete tasks'
@@ -404,6 +405,97 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand me" -l non-interactive
 complete -c sealtask -n "__fish_sealtask_using_subcommand me" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand me" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
 complete -c sealtask -n "__fish_sealtask_using_subcommand me" -s h -l help -d 'Print help (see more with \'--help\')'
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and not __fish_seen_subcommand_from project task help" -l api-url -d 'SealTask API base URL' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and not __fish_seen_subcommand_from project task help" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and not __fish_seen_subcommand_from project task help" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+json\t''
+json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and not __fish_seen_subcommand_from project task help" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and not __fish_seen_subcommand_from project task help" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and not __fish_seen_subcommand_from project task help" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and not __fish_seen_subcommand_from project task help" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and not __fish_seen_subcommand_from project task help" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and not __fish_seen_subcommand_from project task help" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and not __fish_seen_subcommand_from project task help" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and not __fish_seen_subcommand_from project task help" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and not __fish_seen_subcommand_from project task help" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and not __fish_seen_subcommand_from project task help" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and not __fish_seen_subcommand_from project task help" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and not __fish_seen_subcommand_from project task help" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and not __fish_seen_subcommand_from project task help" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and not __fish_seen_subcommand_from project task help" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and not __fish_seen_subcommand_from project task help" -s h -l help -d 'Print help (see more with \'--help\')'
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and not __fish_seen_subcommand_from project task help" -f -a "project" -d 'Pick an accessible project'
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and not __fish_seen_subcommand_from project task help" -f -a "task" -d 'Pick a task in the selected/current project'
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and not __fish_seen_subcommand_from project task help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from project" -l api-url -d 'SealTask API base URL' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from project" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from project" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+json\t''
+json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from project" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from project" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from project" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from project" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from project" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from project" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from project" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from project" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from project" -l include-archived -d 'Include archived projects'
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from project" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from project" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from project" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from project" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from project" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from project" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from project" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from project" -s h -l help -d 'Print help (see more with \'--help\')'
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from task" -l project -d 'Project name, UUID, or unique UUID prefix' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from task" -l work-list-id -d 'Exact project UUID (legacy compatibility)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from task" -l api-url -d 'SealTask API base URL' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from task" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from task" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+json\t''
+json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from task" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from task" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from task" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from task" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from task" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from task" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from task" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from task" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from task" -l include-completed -d 'Include completed tasks'
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from task" -l include-archived -d 'Include archived tasks'
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from task" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from task" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from task" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from task" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from task" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from task" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from task" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from task" -s h -l help -d 'Print help (see more with \'--help\')'
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from help" -f -a "project" -d 'Pick an accessible project'
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from help" -f -a "task" -d 'Pick a task in the selected/current project'
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
@@ -1948,28 +2040,31 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from help" -f -a "update" -d 'Patch an encrypted note'
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from help" -f -a "delete" -d 'Permanently delete a note'
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
-complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me projects tasks stats doctor config profile inspect comments notes help" -f -a "completion" -d 'Generate a shell completion script without reading configuration or credentials'
-complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me projects tasks stats doctor config profile inspect comments notes help" -f -a "man" -d 'Render a manual page for the root command or a nested command path'
-complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me projects tasks stats doctor config profile inspect comments notes help" -f -a "info" -d 'Show machine-readable CLI capabilities and contract versions'
-complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me projects tasks stats doctor config profile inspect comments notes help" -f -a "schema" -d 'Describe commands and arguments as human help or versioned JSON'
-complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me projects tasks stats doctor config profile inspect comments notes help" -f -a "auth" -d 'Authenticate, inspect the session, and manage local unlock state'
-complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me projects tasks stats doctor config profile inspect comments notes help" -f -a "me" -d 'Show the current authenticated user'
-complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me projects tasks stats doctor config profile inspect comments notes help" -f -a "projects" -d 'List, inspect, select, archive, or restore projects'
-complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me projects tasks stats doctor config profile inspect comments notes help" -f -a "tasks" -d 'List, inspect, create, update, move, or delete tasks'
-complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me projects tasks stats doctor config profile inspect comments notes help" -f -a "stats" -d 'Show current dashboard task counts'
-complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me projects tasks stats doctor config profile inspect comments notes help" -f -a "doctor" -d 'Diagnose local state, authentication, unlock, and API connectivity'
-complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me projects tasks stats doctor config profile inspect comments notes help" -f -a "config" -d 'Inspect resolved operator configuration'
-complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me projects tasks stats doctor config profile inspect comments notes help" -f -a "profile" -d 'List profiles or change the persisted default profile'
-complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me projects tasks stats doctor config profile inspect comments notes help" -f -a "inspect"
-complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me projects tasks stats doctor config profile inspect comments notes help" -f -a "comments" -d 'List, create, update, or delete task comments'
-complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me projects tasks stats doctor config profile inspect comments notes help" -f -a "notes" -d 'List, inspect, create, update, or delete encrypted notes'
-complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me projects tasks stats doctor config profile inspect comments notes help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats doctor config profile inspect comments notes help" -f -a "completion" -d 'Generate a shell completion script without reading configuration or credentials'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats doctor config profile inspect comments notes help" -f -a "man" -d 'Render a manual page for the root command or a nested command path'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats doctor config profile inspect comments notes help" -f -a "info" -d 'Show machine-readable CLI capabilities and contract versions'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats doctor config profile inspect comments notes help" -f -a "schema" -d 'Describe commands and arguments as human help or versioned JSON'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats doctor config profile inspect comments notes help" -f -a "auth" -d 'Authenticate, inspect the session, and manage local unlock state'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats doctor config profile inspect comments notes help" -f -a "me" -d 'Show the current authenticated user'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats doctor config profile inspect comments notes help" -f -a "pick" -d 'Fuzzy-pick an entity while printing only a reusable opaque selector'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats doctor config profile inspect comments notes help" -f -a "projects" -d 'List, inspect, select, archive, or restore projects'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats doctor config profile inspect comments notes help" -f -a "tasks" -d 'List, inspect, create, update, move, or delete tasks'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats doctor config profile inspect comments notes help" -f -a "stats" -d 'Show current dashboard task counts'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats doctor config profile inspect comments notes help" -f -a "doctor" -d 'Diagnose local state, authentication, unlock, and API connectivity'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats doctor config profile inspect comments notes help" -f -a "config" -d 'Inspect resolved operator configuration'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats doctor config profile inspect comments notes help" -f -a "profile" -d 'List profiles or change the persisted default profile'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats doctor config profile inspect comments notes help" -f -a "inspect"
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats doctor config profile inspect comments notes help" -f -a "comments" -d 'List, create, update, or delete task comments'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats doctor config profile inspect comments notes help" -f -a "notes" -d 'List, inspect, create, update, or delete encrypted notes'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats doctor config profile inspect comments notes help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from auth" -f -a "login" -d 'Sign in with an email and password, optionally completing MFA'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from auth" -f -a "unlock" -d 'Unlock workspace data in memory for a bounded session'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from auth" -f -a "lock" -d 'Lock workspace data and stop the in-memory unlock session'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from auth" -f -a "keychain" -d 'Store or clear this profile\'s saved unlock key'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from auth" -f -a "logout" -d 'Revoke the remote session and clear this profile\'s local credentials'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from auth" -f -a "status" -d 'Inspect sign-in, token expiry, workspace-data, and saved-key state'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from pick" -f -a "project" -d 'Pick an accessible project'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from pick" -f -a "task" -d 'Pick a task in the selected/current project'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from projects" -f -a "list" -d 'List accessible projects'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from projects" -f -a "get" -d 'Show one decrypted project'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from projects" -f -a "archive" -d 'Archive a project and make it read-only'

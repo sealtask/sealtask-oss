@@ -18,6 +18,14 @@ impl EntitySelector {
     pub(crate) fn as_str(&self) -> &str {
         &self.0
     }
+
+    pub(crate) fn exact_id(&self) -> Option<Uuid> {
+        Uuid::parse_str(&self.0).ok().or_else(|| {
+            self.0
+                .strip_prefix("id:")
+                .and_then(|value| Uuid::parse_str(value).ok())
+        })
+    }
 }
 
 impl fmt::Debug for EntitySelector {
@@ -49,16 +57,36 @@ impl FromStr for EntitySelector {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq)]
 pub(crate) struct EntityCandidate {
     pub(crate) id: Uuid,
     pub(crate) name: Option<String>,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+impl fmt::Debug for EntityCandidate {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("EntityCandidate")
+            .field("id", &self.id)
+            .field("name_present", &self.name.is_some())
+            .finish()
+    }
+}
+
+#[derive(Clone, Eq, PartialEq)]
 pub(crate) struct ResolvedEntity {
     pub(crate) id: Uuid,
     pub(crate) name: Option<String>,
+}
+
+impl fmt::Debug for ResolvedEntity {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("ResolvedEntity")
+            .field("id", &self.id)
+            .field("name_present", &self.name.is_some())
+            .finish()
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
@@ -81,7 +109,7 @@ pub(crate) fn resolve_entity(
     list_command: &str,
 ) -> PublicResult<ResolvedEntity> {
     let raw = selector.as_str();
-    if let Ok(id) = Uuid::parse_str(raw) {
+    if let Some(id) = selector.exact_id() {
         return Ok(ResolvedEntity { id, name: None });
     }
 
@@ -207,17 +235,11 @@ fn one_match_or_ambiguity(
 
     let choices = matches
         .iter()
-        .map(|candidate| {
-            format!(
-                "{} ({})",
-                candidate.name.as_deref().unwrap_or("<unnamed>"),
-                candidate.id
-            )
-        })
+        .map(|candidate| format!("id:{}", candidate.id.simple()))
         .collect::<Vec<_>>()
         .join(", ");
     Err(PublicError::validation(format!(
-        "ambiguous {entity_kind} selector '{selector}' in {scope}; matches: {choices}; retry with id:<at-least-8-hex-digits>"
+        "ambiguous {entity_kind} selector '{selector}' in {scope}; matching IDs: {choices}; retry with one of these exact ID selectors"
     )))
 }
 
@@ -485,6 +507,50 @@ mod tests {
     }
 
     #[test]
+    fn candidate_and_resolved_debug_never_expose_plaintext() {
+        let id = Uuid::from_u128(7);
+        let secret = "customer-secret-project";
+        let candidate = EntityCandidate {
+            id,
+            name: Some(secret.to_string()),
+        };
+        let resolved = ResolvedEntity {
+            id,
+            name: Some(secret.to_string()),
+        };
+
+        for debug in [format!("{candidate:?}"), format!("{resolved:?}")] {
+            assert!(debug.contains(&id.to_string()));
+            assert!(debug.contains("name_present: true"));
+            assert!(!debug.contains(secret));
+        }
+    }
+
+    #[test]
+    fn full_explicit_id_selector_is_an_exact_fast_path() {
+        let id = Uuid::parse_str("01900000-0000-7000-8000-000000000001").expect("UUID");
+        for value in [
+            id.to_string(),
+            format!("id:{}", id.simple()),
+            format!("id:{id}"),
+        ] {
+            let selector = selector(&value);
+            assert_eq!(selector.exact_id(), Some(id));
+            let resolved = resolve_entity(
+                "task",
+                "project",
+                &selector,
+                Vec::new(),
+                "sealtask tasks list",
+            )
+            .expect("full ID selectors do not need candidates");
+            assert_eq!(resolved.id, id);
+        }
+
+        assert!(selector("id:01900000").exact_id().is_none());
+    }
+
+    #[test]
     fn names_use_exact_then_unicode_normalized_matching() {
         let candidates = vec![
             candidate("01900000-0000-7000-8000-000000000001", "Résumé"),
@@ -574,6 +640,13 @@ mod tests {
         )
         .expect_err("ambiguous");
         assert_eq!(error_a.to_string(), error_b.to_string());
+        assert!(!error_a.to_string().contains("Same"));
+        assert!(!error_a.to_string().contains("same"));
+        assert!(
+            error_a
+                .to_string()
+                .contains("id:01900000000070008000000000000001")
+        );
     }
 
     #[test]

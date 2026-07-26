@@ -264,6 +264,15 @@ fn command_examples(path: &[String]) -> Option<&'static str> {
         "auth logout" => "Examples:\n  sealtask auth logout",
         "auth status" => "Examples:\n  sealtask auth status\n  sealtask --json auth status",
         "me" => "Examples:\n  sealtask me\n  sealtask --json me",
+        "pick" => {
+            "Examples:\n  sealtask pick project\n  sealtask pick task --project \"Operations\""
+        }
+        "pick project" => {
+            "Examples:\n  sealtask projects get \"$(sealtask pick project)\"\n  sealtask pick project --include-archived"
+        }
+        "pick task" => {
+            "Examples:\n  sealtask tasks get \"$(sealtask pick task)\"\n  sealtask pick task --project \"Operations\""
+        }
         "projects" => {
             "Examples:\n  sealtask projects\n  sealtask projects --include-archived --verbose"
         }

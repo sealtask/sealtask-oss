@@ -2482,6 +2482,10 @@ fn cli_terminal_policies_are_explicit_machine_safe_and_quiet_when_requested() {
         parse_stdout_json(&json.stdout)["terminalPolicies"]["quietFlag"],
         "--quiet"
     );
+    assert_eq!(
+        parse_stdout_json(&json.stdout)["picker"]["selectorFormat"],
+        "id:<32-lowercase-hex>"
+    );
 
     let quiet = run_cli_exact(home.path(), &["--quiet", "auth", "logout"], None);
     assert!(
@@ -2569,6 +2573,93 @@ fn cli_terminal_policies_are_explicit_machine_safe_and_quiet_when_requested() {
         );
         assert!(!output.stderr.contains('\u{1b}'));
     }
+}
+
+#[test]
+fn cli_fuzzy_picker_is_raw_private_and_automation_safe() {
+    let home = TempDir::new().expect("temp home");
+
+    let help = run_cli_exact(home.path(), &["pick", "task", "--help"], None);
+    assert!(help.status.success(), "picker help failed: {}", help.stderr);
+    for expected in [
+        "Pick a task in the selected/current project",
+        "--include-completed",
+        "--include-archived",
+        "sealtask tasks get \"$(sealtask pick task)\"",
+    ] {
+        assert!(
+            help.stdout.contains(expected),
+            "missing {expected:?} in:\n{}",
+            help.stdout
+        );
+    }
+    assert!(!home.path().join(".sealtask").exists());
+
+    let non_interactive =
+        run_cli_exact(home.path(), &["--non-interactive", "pick", "project"], None);
+    assert_eq!(non_interactive.status.code(), Some(1));
+    assert!(non_interactive.stdout.is_empty());
+    assert!(
+        non_interactive
+            .stderr
+            .contains("requires an interactive controlling terminal")
+    );
+    assert!(!home.path().join(".sealtask").exists());
+
+    for args in [
+        &["--json", "pick", "project"][..],
+        &["--format", "json", "pick", "project"][..],
+        &["--format", "json-pretty", "pick", "task"][..],
+    ] {
+        let output = run_cli_exact(home.path(), args, None);
+        assert_eq!(output.status.code(), Some(1), "{args:?}: {}", output.stderr);
+        assert!(output.stdout.is_empty(), "{args:?}: {}", output.stdout);
+        let error = parse_stderr_json(&output.stderr);
+        assert_eq!(error["error"]["code"], "validation");
+        assert!(
+            error["error"]["message"]
+                .as_str()
+                .expect("picker error message")
+                .contains("one raw reusable selector")
+        );
+    }
+    assert!(!home.path().join(".sealtask").exists());
+
+    let schema = run_cli_exact(home.path(), &["--json", "schema", "pick", "task"], None);
+    assert!(
+        schema.status.success(),
+        "picker schema failed: {}",
+        schema.stderr
+    );
+    let schema = parse_stdout_json(&schema.stdout);
+    assert_eq!(schema["name"], "task");
+    assert!(
+        schema["arguments"]
+            .as_array()
+            .expect("picker arguments")
+            .iter()
+            .any(|argument| argument["long"] == "project")
+    );
+    assert!(!schema.to_string().contains("Fixture Work List"));
+
+    let argv_query = run_cli_exact(home.path(), &["pick", "project", "secret query"], None);
+    assert_eq!(argv_query.status.code(), Some(2));
+    assert!(argv_query.stdout.is_empty());
+    assert!(argv_query.stderr.contains("unexpected argument"));
+
+    let forced_pager = run_cli_exact(home.path(), &["--pager", "always", "pick", "project"], None);
+    assert_eq!(forced_pager.status.code(), Some(1));
+    assert!(forced_pager.stdout.is_empty());
+    assert!(
+        forced_pager
+            .stderr
+            .contains("paging is unavailable for this raw-output command")
+    );
+
+    let completion = run_cli_exact(home.path(), &["completion", "bash"], None);
+    assert!(completion.status.success());
+    assert!(completion.stdout.contains("pick"));
+    assert!(!completion.stdout.to_ascii_lowercase().contains("fzf"));
 }
 
 #[test]

@@ -1,19 +1,16 @@
 .ie \n(.g .ds Aq \(aq
 .el .ds Aq '
-.TH sealtask 1  "SealTask CLI 0.2.1" "SealTask Manual"
+.TH sealtask-pick 1  "SealTask CLI 0.2.1" "SealTask Manual"
 .SH NAME
-sealtask \- CLI for working with SealTask tasks, comments, notes, attachments, and decrypted workspace data
+sealtask\-pick \- Fuzzy\-pick an entity while printing only a reusable opaque selector
 .SH SYNOPSIS
-\fBsealtask\fR [\fB\-\-api\-url\fR] [\fB\-\-storage\-origin\fR] [\fB\-\-json\fR] [\fB\-\-format\fR] [\fB\-\-color\fR] [\fB\-\-pager\fR] [\fB\-\-no\-pager\fR] [\fB\-\-progress\fR] [\fB\-q\fR|\fB\-\-quiet\fR] [\fB\-\-non\-interactive\fR] [\fB\-v \fR]... [\fB\-\-debug\fR] [\fB\-\-connect\-timeout\fR] [\fB\-\-read\-timeout\fR] [\fB\-\-request\-timeout\fR] [\fB\-\-profile\fR] [\fB\-\-config\-dir\fR] [\fB\-h\fR|\fB\-\-help\fR] [\fB\-V\fR|\fB\-\-version\fR] [\fIsubcommands\fR]
+\fBsealtask pick\fR [\fB\-\-api\-url\fR] [\fB\-\-storage\-origin\fR] [\fB\-\-json\fR] [\fB\-\-format\fR] [\fB\-\-color\fR] [\fB\-\-pager\fR] [\fB\-\-no\-pager\fR] [\fB\-\-progress\fR] [\fB\-q\fR|\fB\-\-quiet\fR] [\fB\-\-non\-interactive\fR] [\fB\-v \fR]... [\fB\-\-debug\fR] [\fB\-\-connect\-timeout\fR] [\fB\-\-read\-timeout\fR] [\fB\-\-request\-timeout\fR] [\fB\-\-profile\fR] [\fB\-\-config\-dir\fR] [\fB\-h\fR|\fB\-\-help\fR] <\fIsubcommands\fR>
 .SH DESCRIPTION
-CLI for working with SealTask tasks, comments, notes, attachments, and decrypted workspace data
+Fuzzy\-pick an entity while printing only a reusable opaque selector
 .SH OPTIONS
 .TP
 \fB\-h\fR, \fB\-\-help\fR
-Print help
-.TP
-\fB\-V\fR, \fB\-\-version\fR
-Print version
+Print help (see a summary with \*(Aq\-h\*(Aq)
 .SH CONNECTION
 .TP
 \fB\-\-api\-url\fR \fI<API_URL>\fR [default: https://sealtask.com]
@@ -150,57 +147,12 @@ May also be specified with the \fBSEALTASK_CONFIG_DIR\fR environment variable.
 .RE
 .SH SUBCOMMANDS
 .TP
-sealtask\-completion(1)
-Generate a shell completion script without reading configuration or credentials
+sealtask\-pick\-project(1)
+Pick an accessible project
 .TP
-sealtask\-man(1)
-Render a manual page for the root command or a nested command path
-.TP
-sealtask\-info(1)
-Show machine\-readable CLI capabilities and contract versions
-.TP
-sealtask\-schema(1)
-Describe commands and arguments as human help or versioned JSON
-.TP
-sealtask\-auth(1)
-Authenticate, inspect the session, and manage local unlock state
-.TP
-sealtask\-me(1)
-Show the current authenticated user
-.TP
-sealtask\-pick(1)
-Fuzzy\-pick an entity while printing only a reusable opaque selector
-.TP
-sealtask\-projects(1)
-List, inspect, select, archive, or restore projects
-.TP
-sealtask\-tasks(1)
-List, inspect, create, update, move, or delete tasks
-.TP
-sealtask\-stats(1)
-Show current dashboard task counts
-.TP
-sealtask\-doctor(1)
-Diagnose local state, authentication, unlock, and API connectivity
-.TP
-sealtask\-config(1)
-Inspect resolved operator configuration
-.TP
-sealtask\-profile(1)
-List profiles or change the persisted default profile
-.TP
-sealtask\-comments(1)
-List, create, update, or delete task comments
-.TP
-sealtask\-notes(1)
-List, inspect, create, update, or delete encrypted notes
+sealtask\-pick\-task(1)
+Pick a task in the selected/current project
 .SH EXTRA
-Get started:
-  sealtask auth login
-  sealtask auth status
-  sealtask projects list
-  sealtask tasks list \-\-all
-
-Run \*(Aqsealtask help <command>\*(Aq for command\-specific help.
-.SH VERSION
-v0.2.1
+Examples:
+  sealtask pick project
+  sealtask pick task \-\-project "Operations"

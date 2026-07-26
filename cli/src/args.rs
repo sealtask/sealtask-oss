@@ -232,6 +232,11 @@ pub(crate) enum Command {
     },
     /// Show the current authenticated user.
     Me,
+    /// Fuzzy-pick an entity while printing only a reusable opaque selector.
+    Pick {
+        #[command(subcommand)]
+        command: PickCommand,
+    },
     /// List, inspect, select, archive, or restore projects.
     #[command(name = "projects", visible_alias = "lists")]
     Projects {
@@ -315,6 +320,37 @@ pub(crate) enum ProfileCommand {
         /// Profile name (letters, digits, '.', '_', and '-' only).
         #[arg(value_name = "NAME")]
         name: String,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub(crate) enum PickCommand {
+    /// Pick an accessible project.
+    Project {
+        /// Include archived projects.
+        #[arg(long)]
+        include_archived: bool,
+        /// Read the account password from stdin when no local unlock is available.
+        #[arg(long)]
+        password_stdin: bool,
+    },
+    /// Pick a task in the selected/current project.
+    Task {
+        /// Project name, UUID, or unique UUID prefix.
+        #[arg(long, conflicts_with = "work_list_id")]
+        project: Option<EntitySelector>,
+        /// Exact project UUID (legacy compatibility).
+        #[arg(long)]
+        work_list_id: Option<Uuid>,
+        /// Include completed tasks.
+        #[arg(long)]
+        include_completed: bool,
+        /// Include archived tasks.
+        #[arg(long)]
+        include_archived: bool,
+        /// Read the account password from stdin when no local unlock is available.
+        #[arg(long)]
+        password_stdin: bool,
     },
 }
 

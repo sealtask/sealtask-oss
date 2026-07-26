@@ -6,6 +6,7 @@ use crate::selectors::{
 use crate::terminal::with_progress;
 use sealtask_client_core::{PublicError, PublicResult};
 use sealtask_client_runtime::{AgentNote, AgentTaskSummary, AgentWorkListSummary, RuntimeClient};
+use std::fmt;
 use uuid::Uuid;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -24,10 +25,20 @@ pub(crate) enum TaskLifecycle {
     Completed,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub(crate) struct ResolvedProject {
     pub(crate) id: Uuid,
     pub(crate) title: Option<String>,
+}
+
+impl fmt::Debug for ResolvedProject {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("ResolvedProject")
+            .field("id", &self.id)
+            .field("title_present", &self.title.is_some())
+            .finish()
+    }
 }
 
 pub(crate) async fn resolve_project(
@@ -41,7 +52,7 @@ pub(crate) async fn resolve_project(
         return Ok(ResolvedProject { id, title: None });
     }
     if let Some(selector) = selector {
-        if let Ok(id) = Uuid::parse_str(selector.as_str()) {
+        if let Some(id) = selector.exact_id() {
             return Ok(ResolvedProject { id, title: None });
         }
         let projects = with_progress(
@@ -124,7 +135,7 @@ pub(crate) async fn resolve_task(
     let selector = selector.ok_or_else(|| {
         PublicError::validation("a task target is required; pass TASK or --task-id")
     })?;
-    if let Ok(id) = Uuid::parse_str(selector.as_str()) {
+    if let Some(id) = selector.exact_id() {
         return Ok(ResolvedEntity { id, name: None });
     }
     let tasks = with_progress(
@@ -161,7 +172,7 @@ pub(crate) async fn resolve_note(
     let selector = selector.ok_or_else(|| {
         PublicError::validation("a note target is required; pass NOTE or --note-id")
     })?;
-    if let Ok(id) = Uuid::parse_str(selector.as_str()) {
+    if let Some(id) = selector.exact_id() {
         return Ok(ResolvedEntity { id, name: None });
     }
     let notes = with_progress(
@@ -184,7 +195,7 @@ pub(crate) async fn resolve_section(
     selector: &EntitySelector,
     password_stdin: bool,
 ) -> PublicResult<ResolvedEntity> {
-    if let Ok(id) = Uuid::parse_str(selector.as_str()) {
+    if let Some(id) = selector.exact_id() {
         return Ok(ResolvedEntity { id, name: None });
     }
     let project = load_project(runtime, project_id, password_stdin).await?;

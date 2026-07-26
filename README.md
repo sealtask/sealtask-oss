@@ -208,10 +208,42 @@ directly—never through a shell. Decrypted output is passed only on pager stdin
 not in arguments or a temporary file. A user-configured pager therefore sees
 the same decrypted content that would otherwise be printed to the terminal.
 
+### Private fuzzy picking
+
+`pick` provides fuzzy discovery without sending decrypted names through a pipe,
+temporary file, shell completion, or external selector process:
+
+```bash
+project="$(sealtask pick project)"
+sealtask projects get "$project"
+
+task="$(sealtask pick task)"
+sealtask tasks get "$task"
+
+task="$(sealtask pick task --project "Operations")"
+sealtask tasks get "$task" --project "Operations"
+```
+
+The search interface reads and writes the controlling terminal, even while
+stdout is captured by command substitution. On success stdout contains exactly
+one reusable `id:<32-lowercase-hex>` selector and a newline; decrypted titles
+remain confined to the in-process picker and terminal display. `pick project`
+shows active projects by default, while `--include-archived` expands the set.
+`pick task` uses the saved current project unless `--project` is supplied, and
+offers `--include-completed` and `--include-archived`.
+
+Because that single-line selector is a raw composition protocol, `pick` rejects
+JSON output, `--non-interactive`, and forced paging before fetching candidates.
+It never discovers or invokes `fzf` (or another external chooser), and generated
+shell completion remains static so decrypted names are never fetched while the
+shell is completing a command. Pass an exact UUID, `id:<prefix>`, or exact name
+directly in automation.
+
 Selectors accept an exact UUID, an exact or Unicode-normalized name, or a
 unique UUID prefix of at least eight hexadecimal digits. Use `name:<value>` or
 `id:<prefix>` to make the intended selector form explicit. Ambiguous selectors
-fail with deterministic candidates instead of choosing silently:
+fail with deterministic, plaintext-free ID candidates instead of choosing
+silently:
 
 ```bash
 sealtask tasks get "Prepare release notes"

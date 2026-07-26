@@ -52,6 +52,9 @@ _sealtask() {
             sealtask,notes)
                 cmd="sealtask__subcmd__notes"
                 ;;
+            sealtask,pick)
+                cmd="sealtask__subcmd__pick"
+                ;;
             sealtask,profile)
                 cmd="sealtask__subcmd__profile"
                 ;;
@@ -208,6 +211,9 @@ _sealtask() {
             sealtask__subcmd__help,notes)
                 cmd="sealtask__subcmd__help__subcmd__notes"
                 ;;
+            sealtask__subcmd__help,pick)
+                cmd="sealtask__subcmd__help__subcmd__pick"
+                ;;
             sealtask__subcmd__help,profile)
                 cmd="sealtask__subcmd__help__subcmd__profile"
                 ;;
@@ -276,6 +282,12 @@ _sealtask() {
                 ;;
             sealtask__subcmd__help__subcmd__notes,update)
                 cmd="sealtask__subcmd__help__subcmd__notes__subcmd__update"
+                ;;
+            sealtask__subcmd__help__subcmd__pick,project)
+                cmd="sealtask__subcmd__help__subcmd__pick__subcmd__project"
+                ;;
+            sealtask__subcmd__help__subcmd__pick,task)
+                cmd="sealtask__subcmd__help__subcmd__pick__subcmd__task"
                 ;;
             sealtask__subcmd__help__subcmd__profile,list)
                 cmd="sealtask__subcmd__help__subcmd__profile__subcmd__list"
@@ -390,6 +402,24 @@ _sealtask() {
                 ;;
             sealtask__subcmd__notes__subcmd__help,update)
                 cmd="sealtask__subcmd__notes__subcmd__help__subcmd__update"
+                ;;
+            sealtask__subcmd__pick,help)
+                cmd="sealtask__subcmd__pick__subcmd__help"
+                ;;
+            sealtask__subcmd__pick,project)
+                cmd="sealtask__subcmd__pick__subcmd__project"
+                ;;
+            sealtask__subcmd__pick,task)
+                cmd="sealtask__subcmd__pick__subcmd__task"
+                ;;
+            sealtask__subcmd__pick__subcmd__help,help)
+                cmd="sealtask__subcmd__pick__subcmd__help__subcmd__help"
+                ;;
+            sealtask__subcmd__pick__subcmd__help,project)
+                cmd="sealtask__subcmd__pick__subcmd__help__subcmd__project"
+                ;;
+            sealtask__subcmd__pick__subcmd__help,task)
+                cmd="sealtask__subcmd__pick__subcmd__help__subcmd__task"
                 ;;
             sealtask__subcmd__profile,help)
                 cmd="sealtask__subcmd__profile__subcmd__help"
@@ -599,7 +629,7 @@ _sealtask() {
 
     case "${cmd}" in
         sealtask)
-            opts="-q -v -h -V --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --serve-unlock-daemon --help --version completion man info schema auth me projects lists tasks stats doctor config profile inspect comments notes help"
+            opts="-q -v -h -V --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --serve-unlock-daemon --help --version completion man info schema auth me pick projects lists tasks stats doctor config profile inspect comments notes help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 1 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -2115,7 +2145,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__help)
-            opts="completion man info schema auth me projects tasks stats doctor config profile inspect comments notes help"
+            opts="completion man info schema auth me pick projects tasks stats doctor config profile inspect comments notes help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -2521,6 +2551,48 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__help__subcmd__notes__subcmd__update)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        sealtask__subcmd__help__subcmd__pick)
+            opts="project task"
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        sealtask__subcmd__help__subcmd__pick__subcmd__project)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        sealtask__subcmd__help__subcmd__pick__subcmd__task)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -3680,6 +3752,244 @@ _sealtask() {
                     return 0
                     ;;
                 --input-file)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --api-url)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --storage-origin)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --format)
+                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    return 0
+                    ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --connect-timeout)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --read-timeout)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --request-timeout)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --profile)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --config-dir)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        sealtask__subcmd__pick)
+            opts="-q -v -h --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help project task help"
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                --api-url)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --storage-origin)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --format)
+                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    return 0
+                    ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --connect-timeout)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --read-timeout)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --request-timeout)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --profile)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --config-dir)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        sealtask__subcmd__pick__subcmd__help)
+            opts="project task help"
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        sealtask__subcmd__pick__subcmd__help__subcmd__help)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        sealtask__subcmd__pick__subcmd__help__subcmd__project)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        sealtask__subcmd__pick__subcmd__help__subcmd__task)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        sealtask__subcmd__pick__subcmd__project)
+            opts="-q -v -h --include-archived --password-stdin --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                --api-url)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --storage-origin)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --format)
+                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    return 0
+                    ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --connect-timeout)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --read-timeout)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --request-timeout)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --profile)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --config-dir)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        sealtask__subcmd__pick__subcmd__task)
+            opts="-q -v -h --project --work-list-id --include-completed --include-archived --password-stdin --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                --project)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --work-list-id)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;

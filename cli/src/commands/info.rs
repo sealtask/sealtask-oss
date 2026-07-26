@@ -16,6 +16,15 @@ pub(crate) fn run_info(runtime: &RuntimeClient, format: OutputFormat) -> CliResu
         "outputFormats": ["table", "json", "json-pretty"],
         "shellCompletions": ["bash", "zsh", "fish", "powershell"],
         "manualPages": true,
+        "picker": {
+            "command": "sealtask pick",
+            "entities": ["project", "task"],
+            "selectorFormat": "id:<32-lowercase-hex>",
+            "interactiveOnly": true,
+            "controllingTerminal": true,
+            "externalProcess": false,
+            "dynamicNameCompletion": false,
+        },
         "terminalPolicies": {
             "color": ["auto", "always", "never"],
             "pager": ["auto", "always", "never"],
@@ -47,6 +56,7 @@ pub(crate) fn run_info(runtime: &RuntimeClient, format: OutputFormat) -> CliResu
             println!("API: {}", runtime.api_url());
             println!("Profile: {}", active_profile()?);
             println!("Config: {}", config_dir()?.display());
+            println!("Picker: sealtask pick project|task");
             Ok(())
         }
         OutputFormat::Json | OutputFormat::JsonPretty => {
