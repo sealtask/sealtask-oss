@@ -1,4 +1,5 @@
 use crate::output::{CliResult, OutputFormat, write_stderr, write_stderr_line, write_to_stream};
+use crate::table::sanitize_cell;
 use sealtask_client_core::PublicError;
 use std::fs::OpenOptions;
 use std::io::{self, BufRead, IsTerminal, Write};
@@ -78,6 +79,7 @@ pub(crate) fn require_confirmation(
         return Ok(());
     }
 
+    let target = sanitize_cell(target);
     if non_interactive || format.is_json() || stdin_reserved || !io::stdin().is_terminal() {
         return Err(PublicError::validation(format!(
             "permanently deleting {target} requires --yes when prompting is unavailable"
@@ -85,10 +87,11 @@ pub(crate) fn require_confirmation(
         .into());
     }
 
-    confirm_from(io::stdin().lock(), io::stderr().lock(), target)
+    confirm_from(io::stdin().lock(), io::stderr().lock(), &target)
 }
 
 fn confirm_from(mut reader: impl BufRead, writer: impl Write, target: &str) -> CliResult<()> {
+    let target = sanitize_cell(target);
     write_to_stream(
         writer,
         format_args!("Permanently delete {target}? [y/N] "),
@@ -154,5 +157,23 @@ mod tests {
             );
             assert_eq!(prompt, b"Permanently delete task 123? [y/N] ");
         }
+    }
+
+    #[test]
+    fn confirmation_sanitizes_untrusted_targets_in_prompts_and_cancellation_errors() {
+        let target = "task safe\nforged\u{1b}[31m\u{202e}reversed\u{202c}";
+        let mut prompt = Vec::new();
+
+        let error = confirm_from(b"n\n".as_slice(), &mut prompt, target)
+            .expect_err("confirmation should be declined");
+
+        assert_eq!(
+            prompt,
+            b"Permanently delete task safe forged[31mreversed? [y/N] "
+        );
+        assert_eq!(
+            error.to_string(),
+            "permanent deletion of task safe forged[31mreversed was cancelled"
+        );
     }
 }

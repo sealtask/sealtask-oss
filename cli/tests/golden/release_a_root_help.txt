@@ -3,7 +3,7 @@ SealTask CLI — secure task management from your terminal
 Get started:
   sealtask auth login        Sign in to SealTask
   sealtask auth unlock       Unlock workspace data
-  sealtask lists             List projects
+  sealtask projects list     List projects
   sealtask tasks list --all  List your assigned tasks
 
 Discover:

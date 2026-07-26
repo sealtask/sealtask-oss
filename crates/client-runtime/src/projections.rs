@@ -24,6 +24,7 @@ struct TaskProjectionMetadata {
     id: Uuid,
     work_list_id: Uuid,
     work_list_title: Option<String>,
+    work_list_timezone: Option<String>,
     created_by_membership_id: Uuid,
     section_id: Option<Uuid>,
     priority: Option<i8>,
@@ -215,6 +216,7 @@ impl RuntimeClient {
                         .or_else(|| decode_text_fallback(&work_list.title_ciphertext));
                     WorkListContext {
                         work_list_title: title,
+                        work_list_timezone: work_list.timezone.clone(),
                         list_key: Some(list_key),
                         task_reference_schemes,
                         current_task_reference_scheme_revision: work_list
@@ -228,6 +230,7 @@ impl RuntimeClient {
                 }
                 Err(err) => WorkListContext {
                     work_list_title: decode_text_fallback(&work_list.title_ciphertext),
+                    work_list_timezone: work_list.timezone.clone(),
                     list_key: None,
                     task_reference_schemes: Vec::new(),
                     current_task_reference_scheme_revision: work_list
@@ -239,6 +242,7 @@ impl RuntimeClient {
             },
             None => WorkListContext {
                 work_list_title: decode_text_fallback(&work_list.title_ciphertext),
+                work_list_timezone: work_list.timezone.clone(),
                 list_key: None,
                 task_reference_schemes: Vec::new(),
                 current_task_reference_scheme_revision: work_list
@@ -358,6 +362,7 @@ impl RuntimeClient {
                 id: task.id,
                 work_list_id: task.work_list_id,
                 work_list_title: context.and_then(|item| item.work_list_title.clone()),
+                work_list_timezone: context.map(|item| item.work_list_timezone.clone()),
                 created_by_membership_id: task.created_by_membership_id,
                 section_id: task.section_id,
                 priority: task.priority,
@@ -405,6 +410,7 @@ impl RuntimeClient {
                 id: task.id,
                 work_list_id: task.work_list_id,
                 work_list_title,
+                work_list_timezone: context.map(|item| item.work_list_timezone.clone()),
                 created_by_membership_id: task.created_by_membership_id,
                 section_id: task.section_id,
                 priority: task.priority,
@@ -540,6 +546,7 @@ fn project_task(input: TaskProjectionInput<'_>) -> AgentTaskSummary {
                     id: metadata.id,
                     work_list_id: metadata.work_list_id,
                     work_list_title: metadata.work_list_title,
+                    work_list_timezone: metadata.work_list_timezone,
                     created_by_membership_id: metadata.created_by_membership_id,
                     section_id: metadata.section_id,
                     priority: metadata.priority,
@@ -576,6 +583,7 @@ fn project_task(input: TaskProjectionInput<'_>) -> AgentTaskSummary {
                 id: metadata.id,
                 work_list_id: metadata.work_list_id,
                 work_list_title: metadata.work_list_title,
+                work_list_timezone: metadata.work_list_timezone,
                 created_by_membership_id: metadata.created_by_membership_id,
                 section_id: metadata.section_id,
                 priority: metadata.priority,
@@ -611,6 +619,7 @@ fn project_task(input: TaskProjectionInput<'_>) -> AgentTaskSummary {
             id: metadata.id,
             work_list_id: metadata.work_list_id,
             work_list_title: metadata.work_list_title,
+            work_list_timezone: metadata.work_list_timezone,
             created_by_membership_id: metadata.created_by_membership_id,
             section_id: metadata.section_id,
             priority: metadata.priority,

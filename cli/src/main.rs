@@ -6,15 +6,20 @@ mod output;
 mod args;
 mod attachment_output;
 mod commands;
+mod human_input;
 mod input;
 mod interaction;
 mod output_models;
+mod project_context;
 mod render;
+mod resolver;
+mod selectors;
+mod table;
 
 use args::{Cli, Command};
 use clap::Parser;
 use commands::{
-    run_auth, run_comments, run_info, run_lists, run_lists_get, run_me, run_notes, run_schema,
+    run_auth, run_comments, run_info, run_lists_get, run_me, run_notes, run_projects, run_schema,
     run_stats, run_tasks,
 };
 use output::{CliError, CliResult, OutputFormat, print_clap_error, print_cli_error};
@@ -29,7 +34,7 @@ SealTask CLI — secure task management from your terminal
 Get started:
   sealtask auth login        Sign in to SealTask
   sealtask auth unlock       Unlock workspace data
-  sealtask lists             List projects
+  sealtask projects list     List projects
   sealtask tasks list --all  List your assigned tasks
 
 Discover:
@@ -96,14 +101,14 @@ async fn run(cli: Cli, format: OutputFormat) -> CliResult<()> {
         Command::Schema { command } => run_schema(format, &command),
         Command::Auth { command } => run_auth(&runtime, format, cli.non_interactive, command).await,
         Command::Me => run_me(&runtime, format).await,
-        Command::Lists {
+        Command::Projects {
             verbose,
             include_archived,
             password_stdin,
             raw,
             command,
         } => {
-            run_lists(
+            run_projects(
                 &runtime,
                 format,
                 verbose,

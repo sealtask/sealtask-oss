@@ -6,6 +6,10 @@ use crate::output_models::{
     TaskDetailV1, TaskSummaryV1, WorkListDetailV1, comments_v1, notes_v1, task_summaries_v1,
     work_list_summaries_v1,
 };
+use crate::selectors::ProjectSection;
+use crate::table::{Alignment, Column, Table, short_unique_ids};
+use chrono::{DateTime, Utc};
+use chrono_tz::Tz;
 use sealtask_client_api::{
     CurrentUserResponse, DashboardStatsResponse, TaskDetailResponse, TaskReferenceSchemeResponse,
     TaskResponse, WorkListDetailResponse, WorkListResponse,
@@ -15,7 +19,58 @@ use sealtask_client_runtime::{
     AgentWorkListDetail, AgentWorkListSummary, ReadableAttachment,
 };
 use serde_json::json;
+use std::collections::HashMap;
 use std::path::Path;
+
+pub(crate) fn print_project_sections(
+    sections: &[ProjectSection],
+    format: OutputFormat,
+) -> CliResult<()> {
+    match format {
+        OutputFormat::Json | OutputFormat::JsonPretty => print_json(
+            sections,
+            format,
+            "serializing project sections should succeed",
+        ),
+        OutputFormat::Table => {
+            let ids = selectable_short_ids(
+                &sections
+                    .iter()
+                    .map(|section| section.id)
+                    .collect::<Vec<_>>(),
+            );
+            let mut table = Table::new([
+                Column::required("ID", 11, 39).preserve(),
+                Column::required("Name", 12, 48).flex(4),
+                Column::optional("Position", 8, 8, 30).align(Alignment::Right),
+                Column::optional("WIP", 3, 8, 20).align(Alignment::Right),
+                Column::optional("Auto archive", 12, 18, 10),
+            ]);
+            for (section, id) in sections.iter().zip(ids) {
+                table.push_row([
+                    id,
+                    section.name.as_deref().unwrap_or("<unnamed>").to_string(),
+                    section.position.to_string(),
+                    section
+                        .wip_limit
+                        .map(|limit| limit.to_string())
+                        .unwrap_or_else(|| "-".to_string()),
+                    if section.auto_archive_enabled {
+                        section
+                            .auto_archive_after_days
+                            .map(|days| format!("{days} days"))
+                            .unwrap_or_else(|| "enabled".to_string())
+                    } else {
+                        "off".to_string()
+                    },
+                ]);
+            }
+            print!("{}", table.render());
+            println!("Total: {} section(s)", sections.len());
+            Ok(())
+        }
+    }
+}
 
 pub(crate) fn print_download_result(
     format: OutputFormat,
@@ -123,22 +178,23 @@ pub(crate) fn print_comments(comments: &[AgentComment], format: OutputFormat) ->
             )?;
         }
         OutputFormat::Table => {
-            println!("{:<36}  {:<16}  Comment", "ID", "Updated");
-            println!("{}", "-".repeat(96));
+            let mut table = Table::new([
+                Column::required("ID", 36, 36).preserve(),
+                Column::optional("Updated", 16, 16, 20),
+                Column::optional("Comment", 12, 64, 40).flex(4),
+            ]);
             for comment in comments {
-                println!(
-                    "{:<36}  {:<16}  {}",
-                    comment.id,
-                    comment.updated_at.format("%Y-%m-%d %H:%M"),
-                    truncate(
-                        comment
-                            .body_markdown
-                            .as_deref()
-                            .unwrap_or("<unreadable comment>"),
-                        40
-                    )
-                );
+                table.push_row([
+                    comment.id.to_string(),
+                    comment.updated_at.format("%Y-%m-%d %H:%M").to_string(),
+                    comment
+                        .body_markdown
+                        .as_deref()
+                        .unwrap_or("<unreadable comment>")
+                        .to_string(),
+                ]);
             }
+            print!("{}", table.render());
             println!("\nTotal: {} comment(s)", comments.len());
         }
     }
@@ -151,17 +207,29 @@ pub(crate) fn print_notes(notes: &[AgentNote], format: OutputFormat) -> CliResul
             print_json(&notes_v1(notes), format, "serializing notes should succeed")?
         }
         OutputFormat::Table => {
-            println!("{:<36}  {:<8}  {:<40}  Updated", "ID", "Privacy", "Title");
-            println!("{}", "-".repeat(108));
-            for note in notes {
-                println!(
-                    "{:<36}  {:<8}  {:<40}  {}",
-                    note.id,
-                    if note.is_private { "Private" } else { "Shared" },
-                    truncate(note.title.as_deref().unwrap_or("<unreadable note>"), 40),
-                    note.updated_at.format("%Y-%m-%d %H:%M")
-                );
+            let ids = selectable_short_ids(&notes.iter().map(|note| note.id).collect::<Vec<_>>());
+            let mut table = Table::new([
+                Column::required("ID", 11, 39).preserve(),
+                Column::optional("Privacy", 7, 7, 30),
+                Column::required("Title", 12, 56).flex(4),
+                Column::optional("Updated", 16, 16, 20),
+            ]);
+            for (note, id) in notes.iter().zip(ids) {
+                table.push_row([
+                    id,
+                    if note.is_private {
+                        "Private".to_string()
+                    } else {
+                        "Shared".to_string()
+                    },
+                    note.title
+                        .as_deref()
+                        .unwrap_or("<unreadable note>")
+                        .to_string(),
+                    note.updated_at.format("%Y-%m-%d %H:%M").to_string(),
+                ]);
             }
+            print!("{}", table.render());
             println!("\nTotal: {} note(s)", notes.len());
         }
     }
@@ -179,7 +247,7 @@ pub(crate) fn print_note(note: &AgentNote, format: OutputFormat) -> CliResult<()
             println!("Note");
             println!("{}", "=".repeat(60));
             println!("ID:        {}", note.id);
-            println!("Work List: {}", note.work_list_id);
+            println!("Project:   {}", note.work_list_id);
             println!(
                 "Privacy:  {}",
                 if note.is_private { "Private" } else { "Shared" }
@@ -329,7 +397,7 @@ pub(crate) fn print_work_lists(
             print_json(
                 &work_list_summaries_v1(lists),
                 format,
-                "serializing work lists should succeed",
+                "serializing projects should succeed",
             )?;
         }
         OutputFormat::Table => {
@@ -338,7 +406,7 @@ pub(crate) fn print_work_lists(
                     if index > 0 {
                         println!();
                     }
-                    println!("Work List: {}", list.id);
+                    println!("Project: {}", list.id);
                     println!("{}", "-".repeat(50));
                     println!(
                         "  Title:         {}",
@@ -365,24 +433,28 @@ pub(crate) fn print_work_lists(
                         list.updated_at.format("%Y-%m-%d %H:%M:%S UTC")
                     );
                 }
-                println!("\nTotal: {} work list(s)", lists.len());
+                println!("\nTotal: {} project(s)", lists.len());
             } else {
-                println!(
-                    "{:<36}  {:<24}  {:<10}  {:<9}  Updated",
-                    "ID", "Title", "Role", "Lifecycle"
-                );
-                println!("{}", "-".repeat(104));
-                for list in lists {
-                    println!(
-                        "{:<36}  {:<24}  {:<10}  {:<9}  {}",
-                        list.id,
-                        truncate(list.title.as_deref().unwrap_or("-"), 24),
-                        list.membership.role,
-                        lifecycle_label(list.archived_at.is_some()),
-                        list.updated_at.format("%Y-%m-%d %H:%M")
-                    );
+                let ids =
+                    selectable_short_ids(&lists.iter().map(|list| list.id).collect::<Vec<_>>());
+                let mut table = Table::new([
+                    Column::required("ID", 11, 39).preserve(),
+                    Column::required("Title", 12, 56).flex(4),
+                    Column::optional("Role", 6, 12, 30),
+                    Column::required("Lifecycle", 9, 9),
+                    Column::optional("Updated", 16, 16, 20),
+                ]);
+                for (list, id) in lists.iter().zip(ids) {
+                    table.push_row([
+                        id,
+                        list.title.as_deref().unwrap_or("-").to_string(),
+                        list.membership.role.clone(),
+                        lifecycle_label(list.archived_at.is_some()).to_string(),
+                        list.updated_at.format("%Y-%m-%d %H:%M").to_string(),
+                    ]);
                 }
-                println!("\nTotal: {} work list(s)", lists.len());
+                print!("{}", table.render());
+                println!("\nTotal: {} project(s)", lists.len());
             }
         }
     }
@@ -398,11 +470,11 @@ pub(crate) fn print_work_list_detail(
             print_json(
                 &WorkListDetailV1::from(detail),
                 format,
-                "serializing work list detail should succeed",
+                "serializing project detail should succeed",
             )?;
         }
         OutputFormat::Table => {
-            println!("Work List");
+            println!("Project");
             println!("{}", "=".repeat(60));
             println!("ID:          {}", detail.work_list.id);
             println!(
@@ -464,6 +536,9 @@ pub(crate) fn print_task(task: &AgentTaskSummary, format: OutputFormat) -> CliRe
                     "Active"
                 }
             );
+            if let Some(due) = task_due_detail(task) {
+                println!("Due:    {due}");
+            }
             Ok(())
         }
     }
@@ -479,20 +554,18 @@ pub(crate) fn print_tasks(tasks: &[AgentTaskSummary], format: OutputFormat) -> C
             )?;
         }
         OutputFormat::Table => {
-            println!(
-                "{:<14}  {:<36}  {:<32}  {:<3}  {:<10}  Status",
-                "Reference", "ID", "Title", "Pri", "Due"
-            );
-            println!("{}", "-".repeat(120));
-            for task in tasks {
-                let priority = task
-                    .priority
-                    .map(|value| value.to_string())
-                    .unwrap_or_default();
-                let due = task
-                    .due_at
-                    .map(|value| value.format("%Y-%m-%d").to_string())
-                    .unwrap_or_else(|| "-".to_string());
+            let ids = selectable_short_ids(&tasks.iter().map(|task| task.id).collect::<Vec<_>>());
+            let mut table = Table::new([
+                Column::required("Reference", 11, 32).preserve(),
+                Column::optional("ID", 11, 39, 35).preserve(),
+                Column::required("Title", 12, 60).flex(4),
+                Column::optional("Pri", 3, 3, 40).align(Alignment::Right),
+                Column::optional("Due", 10, 10, 30),
+                Column::required("Status", 6, 10),
+            ]);
+            for (task, id) in tasks.iter().zip(ids) {
+                let priority = priority_label(task.priority);
+                let due = task_due_date(task);
                 let status = if task.is_completed {
                     "Done"
                 } else if task.archived_at.is_some() {
@@ -500,25 +573,25 @@ pub(crate) fn print_tasks(tasks: &[AgentTaskSummary], format: OutputFormat) -> C
                 } else {
                     "Active"
                 };
-                println!(
-                    "{:<14}  {:<36}  {:<32}  {:<3}  {:<10}  {}",
-                    truncate(
-                        task.reference.as_deref().unwrap_or_else(|| {
+                table.push_row([
+                    task.reference
+                        .as_deref()
+                        .unwrap_or_else(|| {
                             if task.reference_number.is_some() {
                                 "<reference unavailable>"
                             } else {
                                 "-"
                             }
-                        }),
-                        14
-                    ),
-                    task.id,
-                    truncate(task.title.as_deref().unwrap_or("-"), 32),
+                        })
+                        .to_string(),
+                    id,
+                    task.title.as_deref().unwrap_or("-").to_string(),
                     priority,
                     due,
-                    status
-                );
+                    status.to_string(),
+                ]);
             }
+            print!("{}", table.render());
             println!("\nTotal: {} task(s)", tasks.len());
         }
     }
@@ -548,14 +621,17 @@ pub(crate) fn print_task_detail(detail: &AgentTaskDetail, format: OutputFormat) 
                 "Title:       {}",
                 terminal_line(task.title.as_deref().unwrap_or("-"))
             );
-            println!("Work List:   {}", task.work_list_id);
+            println!("Project:     {}", task.work_list_id);
             if let Some(work_list_title) = task.work_list_title.as_deref() {
-                println!("List Title:  {}", terminal_line(work_list_title));
+                println!("Project Title: {}", terminal_line(work_list_title));
             }
             println!(
                 "Status:      {}",
                 if task.is_completed { "Done" } else { "Active" }
             );
+            if let Some(due) = task_due_detail(task) {
+                println!("Due:         {due}");
+            }
             if let Some(body) = task.body_markdown.as_deref() {
                 println!();
                 println!("Body");
@@ -572,17 +648,21 @@ pub(crate) fn print_task_detail(detail: &AgentTaskDetail, format: OutputFormat) 
                 println!();
                 println!("Attachments");
                 println!("{}", "-".repeat(60));
-                println!("{:<36}  {:<24}  Type / Size", "ID", "File");
-                println!("{}", "-".repeat(96));
+                let mut table = Table::new([
+                    Column::required("ID", 36, 36).preserve(),
+                    Column::optional("File", 12, 56, 40).flex(4),
+                    Column::optional("Type", 12, 32, 30).flex(2),
+                    Column::optional("Size", 6, 12, 20).align(Alignment::Right),
+                ]);
                 for attachment in attachments {
-                    println!(
-                        "{:<36}  {:<24}  {} / {} B",
-                        attachment.id,
-                        truncate(&attachment.file_name, 24),
-                        terminal_line(&attachment.content_type),
-                        attachment.size_bytes
-                    );
+                    table.push_row([
+                        attachment.id.to_string(),
+                        attachment.file_name.clone(),
+                        attachment.content_type.clone(),
+                        format!("{} B", attachment.size_bytes),
+                    ]);
                 }
+                print!("{}", table.render());
             }
             if !detail.comments.is_empty() {
                 println!();
@@ -633,7 +713,7 @@ pub(crate) fn print_raw_work_lists(
 ) -> CliResult<()> {
     match format {
         OutputFormat::Json | OutputFormat::JsonPretty => {
-            print_json(lists, format, "serializing work lists should succeed")?;
+            print_json(lists, format, "serializing projects should succeed")?;
         }
         OutputFormat::Table => {
             if verbose {
@@ -641,7 +721,7 @@ pub(crate) fn print_raw_work_lists(
                     if index > 0 {
                         println!();
                     }
-                    println!("Work List: {}", list.id);
+                    println!("Project: {}", list.id);
                     println!("{}", "-".repeat(50));
                     println!("  Workspace:     {}", list.workspace_id);
                     println!("  Owner:         {}", list.owner_user_id);
@@ -657,24 +737,28 @@ pub(crate) fn print_raw_work_lists(
                         terminal_line(&list.membership.status)
                     );
                 }
-                println!("\nTotal: {} work list(s)", lists.len());
+                println!("\nTotal: {} project(s)", lists.len());
             } else {
-                println!(
-                    "{:<36}  {:<10}  {:<8}  {:<9}  Updated",
-                    "ID", "Role", "Sections", "Lifecycle"
-                );
-                println!("{}", "-".repeat(92));
-                for list in lists {
-                    println!(
-                        "{:<36}  {:<10}  {:<8}  {:<9}  {}",
-                        list.id,
-                        list.membership.role,
-                        list.section_snapshots.len(),
-                        lifecycle_label(list.archived_at.is_some()),
-                        list.updated_at.format("%Y-%m-%d %H:%M")
-                    );
+                let ids =
+                    selectable_short_ids(&lists.iter().map(|list| list.id).collect::<Vec<_>>());
+                let mut table = Table::new([
+                    Column::required("ID", 11, 39).preserve(),
+                    Column::optional("Role", 6, 12, 30),
+                    Column::optional("Sections", 8, 8, 20).align(Alignment::Right),
+                    Column::required("Lifecycle", 9, 9),
+                    Column::optional("Updated", 16, 16, 10),
+                ]);
+                for (list, id) in lists.iter().zip(ids) {
+                    table.push_row([
+                        id,
+                        list.membership.role.clone(),
+                        list.section_snapshots.len().to_string(),
+                        lifecycle_label(list.archived_at.is_some()).to_string(),
+                        list.updated_at.format("%Y-%m-%d %H:%M").to_string(),
+                    ]);
                 }
-                println!("\nTotal: {} work list(s)", lists.len());
+                print!("{}", table.render());
+                println!("\nTotal: {} project(s)", lists.len());
             }
         }
     }
@@ -690,11 +774,11 @@ pub(crate) fn print_raw_work_list_detail(
             print_json(
                 detail,
                 format,
-                "serializing raw work list detail should succeed",
+                "serializing raw project detail should succeed",
             )?;
         }
         OutputFormat::Table => {
-            println!("Raw Work List");
+            println!("Raw Project");
             println!("{}", "=".repeat(60));
             println!("ID:          {}", detail.work_list.id);
             println!("Workspace:   {}", detail.work_list.workspace_id);
@@ -713,26 +797,80 @@ fn lifecycle_label(is_archived: bool) -> &'static str {
     if is_archived { "Archived" } else { "Active" }
 }
 
+fn priority_label(priority: Option<i8>) -> String {
+    match priority {
+        Some(8) => "P1".to_string(),
+        Some(5) => "P2".to_string(),
+        Some(3) => "P3".to_string(),
+        Some(1) => "P4".to_string(),
+        Some(value) => value.to_string(),
+        None => String::new(),
+    }
+}
+
+fn task_due_date(task: &AgentTaskSummary) -> String {
+    format_due_date(task.due_at, task.work_list_timezone.as_deref())
+}
+
+fn task_due_detail(task: &AgentTaskSummary) -> Option<String> {
+    let due_at = task.due_at?;
+    match task
+        .work_list_timezone
+        .as_deref()
+        .and_then(|value| value.parse::<Tz>().ok())
+    {
+        Some(timezone) => Some(format!(
+            "{} {}",
+            due_at.with_timezone(&timezone).format("%Y-%m-%d %H:%M"),
+            timezone
+        )),
+        None => Some(due_at.format("%Y-%m-%d %H:%M UTC").to_string()),
+    }
+}
+
+fn format_due_date(due_at: Option<DateTime<Utc>>, timezone: Option<&str>) -> String {
+    let Some(due_at) = due_at else {
+        return "-".to_string();
+    };
+    match timezone.and_then(|value| value.parse::<Tz>().ok()) {
+        Some(timezone) => due_at
+            .with_timezone(&timezone)
+            .format("%Y-%m-%d")
+            .to_string(),
+        None => due_at.format("%Y-%m-%d UTC").to_string(),
+    }
+}
+
+fn format_utc_due_date(due_at: Option<DateTime<Utc>>) -> String {
+    due_at
+        .map(|value| value.format("%Y-%m-%d").to_string())
+        .unwrap_or_else(|| "-".to_string())
+}
+
+fn selectable_short_ids(ids: &[uuid::Uuid]) -> Vec<String> {
+    short_unique_ids(ids)
+        .into_iter()
+        .map(|id| format!("id:{id}"))
+        .collect()
+}
+
 pub(crate) fn print_raw_tasks(tasks: &[TaskResponse], format: OutputFormat) -> CliResult<()> {
     match format {
         OutputFormat::Json | OutputFormat::JsonPretty => {
             print_json(tasks, format, "serializing tasks should succeed")?;
         }
         OutputFormat::Table => {
-            println!(
-                "{:<36}  {:<3}  {:<10}  {:<10}  Comments",
-                "ID", "Pri", "Due", "Status"
-            );
-            println!("{}", "-".repeat(80));
-            for task in tasks {
-                let priority = task
-                    .priority
-                    .map(|value| value.to_string())
-                    .unwrap_or_default();
-                let due = task
-                    .due_at
-                    .map(|value| value.format("%Y-%m-%d").to_string())
-                    .unwrap_or_else(|| "-".to_string());
+            let ids = selectable_short_ids(&tasks.iter().map(|task| task.id).collect::<Vec<_>>());
+            let mut table = Table::new([
+                Column::required("ID", 11, 39).preserve(),
+                Column::optional("Pri", 3, 3, 40).align(Alignment::Right),
+                Column::optional("Due (UTC)", 10, 10, 30),
+                Column::required("Status", 6, 10),
+                Column::optional("Comments", 8, 8, 20).align(Alignment::Right),
+            ]);
+            for (task, id) in tasks.iter().zip(ids) {
+                let priority = priority_label(task.priority);
+                let due = format_utc_due_date(task.due_at);
                 let status = if task.is_completed {
                     "Done"
                 } else if task.archived_at.is_some() {
@@ -740,11 +878,15 @@ pub(crate) fn print_raw_tasks(tasks: &[TaskResponse], format: OutputFormat) -> C
                 } else {
                     "Active"
                 };
-                println!(
-                    "{:<36}  {:<3}  {:<10}  {:<10}  {}",
-                    task.id, priority, due, status, task.comment_count
-                );
+                table.push_row([
+                    id,
+                    priority,
+                    due,
+                    status.to_string(),
+                    task.comment_count.to_string(),
+                ]);
             }
+            print!("{}", table.render());
             println!("\nTotal: {} task(s)", tasks.len());
         }
     }
@@ -760,26 +902,37 @@ pub(crate) fn print_raw_my_tasks(
             print_json(tasks, format, "serializing my tasks should succeed")?;
         }
         OutputFormat::Table => {
-            println!(
-                "{:<36}  {:<36}  {:<3}  {:<10}  Status",
-                "Task ID", "Work List ID", "Pri", "Due"
-            );
-            println!("{}", "-".repeat(100));
-            for task in tasks {
-                let priority = task
-                    .priority
-                    .map(|value| value.to_string())
-                    .unwrap_or_default();
-                let due = task
-                    .due_at
-                    .map(|value| value.format("%Y-%m-%d").to_string())
-                    .unwrap_or_else(|| "-".to_string());
+            let task_ids =
+                selectable_short_ids(&tasks.iter().map(|task| task.id).collect::<Vec<_>>());
+            let mut distinct_project_ids = tasks
+                .iter()
+                .map(|task| task.work_list_id)
+                .collect::<Vec<_>>();
+            distinct_project_ids.sort_unstable();
+            distinct_project_ids.dedup();
+            let project_ids = distinct_project_ids
+                .iter()
+                .copied()
+                .zip(selectable_short_ids(&distinct_project_ids))
+                .collect::<HashMap<_, _>>();
+            let mut table = Table::new([
+                Column::required("Task ID", 11, 39).preserve(),
+                Column::required("Project ID", 11, 39).preserve(),
+                Column::optional("Pri", 3, 3, 40).align(Alignment::Right),
+                Column::optional("Due (UTC)", 10, 10, 30),
+                Column::required("Status", 6, 10),
+            ]);
+            for (task, task_id) in tasks.iter().zip(task_ids) {
+                let project_id = project_ids
+                    .get(&task.work_list_id)
+                    .cloned()
+                    .unwrap_or_else(|| task.work_list_id.to_string());
+                let priority = priority_label(task.priority);
+                let due = format_utc_due_date(task.due_at);
                 let status = if task.is_completed { "Done" } else { "Active" };
-                println!(
-                    "{:<36}  {:<36}  {:<3}  {:<10}  {}",
-                    task.id, task.work_list_id, priority, due, status
-                );
+                table.push_row([task_id, project_id, priority, due, status.to_string()]);
             }
+            print!("{}", table.render());
             println!("\nTotal: {} task(s)", tasks.len());
         }
     }
@@ -798,22 +951,14 @@ pub(crate) fn print_raw_task_detail(
             println!("Raw Task");
             println!("{}", "=".repeat(60));
             println!("ID:          {}", detail.task.id);
-            println!("Work List:   {}", detail.task.work_list_id);
+            println!("Project:     {}", detail.task.work_list_id);
+            if let Some(due_at) = detail.task.due_at {
+                println!("Due (UTC):   {}", due_at.format("%Y-%m-%d %H:%M UTC"));
+            }
             println!("Comments:    {}", detail.comments.len());
         }
     }
     Ok(())
-}
-
-fn truncate(value: &str, width: usize) -> String {
-    let sanitized = terminal_line(value);
-    let mut chars = sanitized.chars();
-    let truncated: String = chars.by_ref().take(width).collect();
-    if chars.next().is_some() {
-        truncated
-    } else {
-        sanitized
-    }
 }
 
 #[cfg(test)]
@@ -821,8 +966,36 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_should_prevent_terminal_lines_from_injecting_controls_or_extra_rows() {
-        assert_eq!(truncate("a\nb\u{1b}[2J", 4), "a b[");
+    fn human_priority_labels_match_accepted_p_aliases() {
+        assert_eq!(priority_label(Some(8)), "P1");
+        assert_eq!(priority_label(Some(5)), "P2");
+        assert_eq!(priority_label(Some(3)), "P3");
+        assert_eq!(priority_label(Some(1)), "P4");
+        assert_eq!(priority_label(Some(7)), "7");
+        assert_eq!(priority_label(None), "");
+    }
+
+    #[test]
+    fn due_dates_use_the_project_timezone_and_label_utc_fallbacks() {
+        let due_at = DateTime::parse_from_rfc3339("2026-07-25T22:00:00Z")
+            .expect("RFC 3339")
+            .with_timezone(&Utc);
+
+        assert_eq!(
+            format_due_date(Some(due_at), Some("Europe/Prague")),
+            "2026-07-26"
+        );
+        assert_eq!(
+            format_due_date(Some(due_at), Some("not-a-timezone")),
+            "2026-07-25 UTC"
+        );
+        assert_eq!(format_due_date(None, Some("Europe/Prague")), "-");
+    }
+
+    #[test]
+    fn displayed_short_ids_force_id_selector_semantics() {
+        let id = uuid::Uuid::parse_str("01900000-0000-7000-8000-000000000001").expect("UUID");
+        assert_eq!(selectable_short_ids(&[id]), ["id:01900000"]);
     }
 
     #[test]

@@ -22,6 +22,7 @@ base64 = "0.22.1"
 cap-fs-ext = "4.0.2"
 cap-std = "4.0.2"
 chrono = { version = "0.4.38", features = ["serde"] }
+chrono-tz = "0.10.4"
 clap = { version = "4.5", features = ["derive", "env"] }
 dirs = "5.0"
 flate2 = "1.1"
@@ -44,8 +45,12 @@ socket2 = { version = "0.5.10", features = ["all"] }
 strong-box = "0.5.1"
 thiserror = "2.0.17"
 tempfile = "3.14"
+terminal_size = "0.4.3"
 tokio = { version = "1.48.0", features = ["full"] }
 undocx = "0.5.2"
+unicode-normalization = "0.1.24"
+unicode-segmentation = "1.12.0"
+unicode-width = "0.2.0"
 uuid = { version = "1.18.1", features = ["serde", "v7"] }
 zeroize = { version = "1.8", features = ["zeroize_derive"] }
 zip = { version = "2.4.2", default-features = false, features = ["deflate"] }

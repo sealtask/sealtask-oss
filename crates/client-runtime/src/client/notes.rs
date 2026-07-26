@@ -522,6 +522,7 @@ mod tests {
         UnlockedWorkListContext {
             work_list: WorkListContext {
                 work_list_title: None,
+                work_list_timezone: "UTC".to_string(),
                 list_key: Some(list_key),
                 task_reference_schemes: Vec::new(),
                 current_task_reference_scheme_revision: None,
@@ -1892,6 +1893,7 @@ mod tests {
         let context = UnlockedWorkListContext {
             work_list: WorkListContext {
                 work_list_title: None,
+                work_list_timezone: "UTC".to_string(),
                 list_key: Some(list_key),
                 task_reference_schemes: Vec::new(),
                 current_task_reference_scheme_revision: None,

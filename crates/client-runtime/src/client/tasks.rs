@@ -41,6 +41,12 @@ impl RuntimeClient {
         all: bool,
         password_stdin: bool,
     ) -> PublicResult<Vec<AgentTaskSummary>> {
+        if !all && let Some(work_list_id) = work_list_id {
+            return self
+                .list_project_tasks(work_list_id, include_completed, false, password_stdin)
+                .await;
+        }
+
         let mut credentials = self.require_logged_in_credentials()?;
         let data_key = self
             .load_data_key(
@@ -52,35 +58,51 @@ impl RuntimeClient {
         let mut client =
             sealtask_client_api::PublicApiClient::with_credentials(&self.api_url, credentials)?;
 
-        if all || work_list_id.is_none() {
-            let work_lists = client.list_work_lists().await?;
-            let mut scheme_histories = HashMap::new();
-            for work_list in &work_lists {
-                let history = load_task_reference_scheme_history(&mut client, work_list).await;
-                if !history.is_empty() {
-                    scheme_histories.insert(work_list.id, history);
-                }
+        let work_lists = client.list_work_lists().await?;
+        let mut scheme_histories = HashMap::new();
+        for work_list in &work_lists {
+            let history = load_task_reference_scheme_history(&mut client, work_list).await;
+            if !history.is_empty() {
+                scheme_histories.insert(work_list.id, history);
             }
-            let contexts =
-                self.build_work_list_contexts(&work_lists, &scheme_histories, Some(&data_key));
-            let tasks = client.get_all_my_tasks(include_completed).await?;
-
-            return Ok(tasks
-                .into_iter()
-                .map(|task| {
-                    let context = contexts.get(&task.work_list_id);
-                    self.project_my_task_summary(task, context)
-                })
-                .collect());
         }
+        let contexts =
+            self.build_work_list_contexts(&work_lists, &scheme_histories, Some(&data_key));
+        let tasks = client.get_all_my_tasks(include_completed).await?;
 
-        let work_list_id = work_list_id.expect("validated work list id");
+        Ok(tasks
+            .into_iter()
+            .map(|task| {
+                let context = contexts.get(&task.work_list_id);
+                self.project_my_task_summary(task, context)
+            })
+            .collect())
+    }
+
+    /// List tasks from one project, with independent completed and archived filters.
+    pub async fn list_project_tasks(
+        &self,
+        work_list_id: Uuid,
+        include_completed: bool,
+        include_archived: bool,
+        password_stdin: bool,
+    ) -> PublicResult<Vec<AgentTaskSummary>> {
+        let mut credentials = self.require_logged_in_credentials()?;
+        let data_key = self
+            .load_data_key(
+                &mut credentials,
+                password_stdin,
+                "Password required to decrypt task data.",
+            )
+            .await?;
+        let mut client =
+            sealtask_client_api::PublicApiClient::with_credentials(&self.api_url, credentials)?;
         let work_list = client.get_work_list(work_list_id).await?;
         let scheme_history =
             load_task_reference_scheme_history(&mut client, &work_list.work_list).await;
         let context =
             self.context_from_work_list_detail(&work_list, &scheme_history, Some(&data_key));
-        let response = client.get_tasks(work_list_id, false).await?;
+        let response = client.get_tasks(work_list_id, include_archived).await?;
         let tasks = if include_completed {
             response.tasks
         } else {

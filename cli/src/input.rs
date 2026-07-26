@@ -279,7 +279,8 @@ mod tests {
     #[test]
     fn note_create_requires_a_process_recoverable_idempotency_key() {
         let args = NoteCreateArgsCli {
-            work_list_id: Uuid::now_v7(),
+            project: None,
+            work_list_id: Some(Uuid::now_v7()),
             title: Some("Retry-safe note".to_string()),
             body: None,
             is_private: false,

@@ -27,6 +27,7 @@ use sealtask_client_crypto::{
     DataKeyCiphertextVersion, SymmetricKey, TaskReferenceSchemeV1, data_key_ciphertext_version,
     decrypt_user_data_key, decrypt_user_data_key_with_opaque_export_key,
 };
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use uuid::Uuid;
 use zeroize::Zeroizing;
@@ -37,8 +38,6 @@ use crate::models::AgentAttachment;
 use std::future::Future;
 #[cfg(test)]
 use std::pin::Pin;
-#[cfg(test)]
-use std::sync::Arc;
 
 #[cfg(test)]
 type TestUploadFuture =
@@ -71,11 +70,18 @@ impl std::fmt::Debug for TestUploadWorkflow {
 }
 
 #[derive(Debug, Clone)]
+struct CachedDataKey {
+    session_key: SessionKey,
+    data_key: SymmetricKey,
+}
+
+#[derive(Debug, Clone)]
 pub struct RuntimeClient {
     pub(crate) api_url: String,
     pub(crate) storage_policy: StorageTransferPolicy,
     pub(crate) blocking_crypto: BlockingCryptoAdmission,
     pub(crate) upload_lifecycle: UploadLifecycleManager,
+    command_data_key: Arc<Mutex<Option<CachedDataKey>>>,
     #[cfg(test)]
     pub(crate) upload_test_workflow: Option<TestUploadWorkflow>,
 }
@@ -83,6 +89,7 @@ pub struct RuntimeClient {
 #[derive(Debug, Clone)]
 pub(crate) struct WorkListContext {
     pub(crate) work_list_title: Option<String>,
+    pub(crate) work_list_timezone: String,
     pub(crate) list_key: Option<SymmetricKey>,
     pub(crate) task_reference_schemes: Vec<TaskReferenceSchemeV1>,
     pub(crate) current_task_reference_scheme_revision: Option<i64>,
@@ -148,6 +155,7 @@ impl RuntimeClient {
             storage_policy,
             blocking_crypto: BlockingCryptoAdmission::default(),
             upload_lifecycle: UploadLifecycleManager::default(),
+            command_data_key: Arc::new(Mutex::new(None)),
             #[cfg(test)]
             upload_test_workflow: None,
         })
@@ -245,12 +253,16 @@ impl RuntimeClient {
         let mut credentials = self.require_logged_in_credentials()?;
         let data_key = match password {
             Some(password) => {
-                self.decrypt_data_key_for_attachment_upload(
-                    &mut credentials,
-                    password,
-                    cancellation,
-                )
-                .await?
+                let data_key = self
+                    .decrypt_data_key_for_attachment_upload(
+                        &mut credentials,
+                        password,
+                        cancellation,
+                    )
+                    .await?;
+                let session_key = self.current_session_key(&credentials)?;
+                self.cache_data_key(session_key, data_key.clone())?;
+                data_key
             }
             None => {
                 self.load_data_key(&mut credentials, false, prompt_message)
@@ -326,11 +338,18 @@ impl RuntimeClient {
         prompt_message: &str,
     ) -> PublicResult<SymmetricKey> {
         let session_key = self.current_session_key(credentials)?;
+        if let Some(data_key) = self.cached_data_key(&session_key)? {
+            return Ok(data_key);
+        }
+
         if password_stdin {
             let password = Zeroizing::new(read_required_password(true, Some(prompt_message))?);
-            return self
+            let data_key = self
                 .decrypt_data_key_with_password(credentials, &password)
-                .await;
+                .await?;
+            let current_session_key = self.current_session_key(credentials)?;
+            self.cache_data_key(current_session_key, data_key.clone())?;
+            return Ok(data_key);
         }
 
         if let Some(data_key) =
@@ -400,6 +419,29 @@ impl RuntimeClient {
             Ok(Some(data_key))
         })
     }
+
+    fn cached_data_key(&self, session_key: &SessionKey) -> PublicResult<Option<SymmetricKey>> {
+        let cached = self
+            .command_data_key
+            .lock()
+            .map_err(|_| PublicError::unexpected("command data-key cache lock is unavailable"))?;
+        Ok(cached
+            .as_ref()
+            .filter(|cached| cached.session_key == *session_key)
+            .map(|cached| cached.data_key.clone()))
+    }
+
+    fn cache_data_key(&self, session_key: SessionKey, data_key: SymmetricKey) -> PublicResult<()> {
+        let mut cached = self
+            .command_data_key
+            .lock()
+            .map_err(|_| PublicError::unexpected("command data-key cache lock is unavailable"))?;
+        *cached = Some(CachedDataKey {
+            session_key,
+            data_key,
+        });
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -440,6 +482,78 @@ mod tests {
             .await
             .expect("legacy KDF caller joins")
             .expect_err("intentionally malformed sealed key fails after KDF");
+    }
+
+    #[tokio::test]
+    async fn command_data_key_cache_is_shared_and_precedes_password_stdin() {
+        let runtime = RuntimeClient::new("http://127.0.0.1:9").expect("runtime");
+        let runtime_clone = runtime.clone();
+        let mut credentials = test_legacy_credentials();
+        let session_key = runtime
+            .current_session_key(&credentials)
+            .expect("session key");
+        let data_key = SymmetricKey::new([0x2a; 32]);
+        runtime
+            .cache_data_key(session_key, data_key.clone())
+            .expect("cache data key");
+
+        let loaded = runtime_clone
+            .load_data_key(
+                &mut credentials,
+                true,
+                "The cache should avoid reading stdin.",
+            )
+            .await
+            .expect("load cached data key");
+
+        assert_eq!(loaded, data_key);
+    }
+
+    #[test]
+    fn command_data_key_cache_is_scoped_to_the_complete_session_key() {
+        let runtime = RuntimeClient::new("http://127.0.0.1:9").expect("runtime");
+        let credentials = test_legacy_credentials();
+        let session_key = runtime
+            .current_session_key(&credentials)
+            .expect("session key");
+        let data_key = SymmetricKey::new([0x2a; 32]);
+        runtime
+            .cache_data_key(session_key.clone(), data_key.clone())
+            .expect("cache data key");
+
+        assert_eq!(
+            runtime
+                .cached_data_key(&session_key)
+                .expect("read matching cache"),
+            Some(data_key)
+        );
+
+        let mut mismatched_session_keys = Vec::new();
+        let mut other_api = session_key.clone();
+        other_api.api_url = "https://other.example".to_string();
+        mismatched_session_keys.push(other_api);
+        let mut other_user = session_key.clone();
+        other_user.user_id = Uuid::now_v7();
+        mismatched_session_keys.push(other_user);
+        let mut other_fingerprint = session_key.clone();
+        other_fingerprint.data_key_fingerprint = "other-fingerprint".to_string();
+        mismatched_session_keys.push(other_fingerprint);
+        for mismatched_session_key in mismatched_session_keys {
+            assert!(
+                runtime
+                    .cached_data_key(&mismatched_session_key)
+                    .expect("read mismatched cache")
+                    .is_none()
+            );
+        }
+
+        let fresh_runtime = RuntimeClient::new("http://127.0.0.1:9").expect("fresh runtime");
+        assert!(
+            fresh_runtime
+                .cached_data_key(&session_key)
+                .expect("read fresh cache")
+                .is_none()
+        );
     }
 
     fn test_legacy_credentials() -> Credentials {

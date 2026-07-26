@@ -1,15 +1,31 @@
+use crate::human_input::parse_priority;
+use crate::selectors::EntitySelector;
 use chrono::{DateTime, Utc};
-use clap::{Args, Parser, Subcommand, ValueEnum};
+use clap::{ArgGroup, Args, Parser, Subcommand, ValueEnum};
 use std::fmt;
 use std::path::PathBuf;
 use uuid::Uuid;
+
+fn task_target_group() -> ArgGroup {
+    ArgGroup::new("task_target")
+        .required(true)
+        .multiple(false)
+        .args(["task", "task_id"])
+}
+
+fn note_target_group() -> ArgGroup {
+    ArgGroup::new("note_target")
+        .required(true)
+        .multiple(false)
+        .args(["note", "note_id"])
+}
 
 #[derive(Parser, Debug)]
 #[command(
     name = "sealtask",
     version,
     about = "CLI for working with SealTask tasks, comments, notes, attachments, and decrypted workspace data",
-    after_help = "Get started:\n  sealtask auth login\n  sealtask auth status\n  sealtask lists\n  sealtask tasks list --all\n\nRun 'sealtask help <command>' for command-specific help."
+    after_help = "Get started:\n  sealtask auth login\n  sealtask auth status\n  sealtask projects list\n  sealtask tasks list --all\n\nRun 'sealtask help <command>' for command-specific help."
 )]
 pub(crate) struct Cli {
     /// SealTask API base URL.
@@ -87,12 +103,13 @@ pub(crate) enum Command {
     },
     /// Show the current authenticated user.
     Me,
-    /// List, inspect, archive, or restore work lists.
-    Lists {
-        /// Print expanded human-readable work-list details.
+    /// List, inspect, select, archive, or restore projects.
+    #[command(name = "projects", visible_alias = "lists")]
+    Projects {
+        /// Print expanded human-readable project details.
         #[arg(long)]
         verbose: bool,
-        /// Include archived work lists.
+        /// Include archived projects.
         #[arg(long)]
         include_archived: bool,
         /// Read the account password from stdin when no local unlock is available.
@@ -101,7 +118,7 @@ pub(crate) enum Command {
         #[arg(long, hide = true)]
         raw: bool,
         #[command(subcommand)]
-        command: Option<ListsCommand>,
+        command: Option<ProjectsCommand>,
     },
     /// List, inspect, create, update, move, or delete tasks.
     Tasks {
@@ -129,51 +146,104 @@ pub(crate) enum Command {
 }
 
 #[derive(Subcommand, Debug)]
-pub(crate) enum ListsCommand {
-    /// Show one decrypted work list.
+pub(crate) enum ProjectsCommand {
+    /// List accessible projects.
+    List {
+        /// Print expanded human-readable project details.
+        #[arg(long)]
+        verbose: bool,
+        /// Include archived projects.
+        #[arg(long)]
+        include_archived: bool,
+        /// Read the account password from stdin when no local unlock is available.
+        #[arg(long)]
+        password_stdin: bool,
+        #[arg(long, hide = true)]
+        raw: bool,
+    },
+    /// Show one decrypted project.
     Get {
-        /// Work-list UUID.
-        work_list_id: Uuid,
+        /// Project name, UUID, or unique UUID prefix.
+        project: EntitySelector,
         /// Read the account password from stdin when no local unlock is available.
         #[arg(long)]
         password_stdin: bool,
         #[arg(long, hide = true)]
         raw: bool,
     },
-    /// Archive a work list and make it read-only.
+    /// Archive a project and make it read-only.
     Archive {
-        /// Work-list UUID.
-        work_list_id: Uuid,
+        /// Project name, UUID, or unique UUID prefix.
+        project: EntitySelector,
         /// Read the account password from stdin when no local unlock is available.
         #[arg(long)]
         password_stdin: bool,
         #[arg(long, hide = true)]
         raw: bool,
     },
-    /// Restore an archived work list.
+    /// Restore an archived project.
     Unarchive {
-        /// Work-list UUID.
-        work_list_id: Uuid,
+        /// Project name, UUID, or unique UUID prefix.
+        project: EntitySelector,
         /// Read the account password from stdin when no local unlock is available.
         #[arg(long)]
         password_stdin: bool,
         #[arg(long, hide = true)]
         raw: bool,
+    },
+    /// Save a project as the current project for this profile.
+    Use {
+        /// Active project name, UUID, or unique UUID prefix.
+        project: EntitySelector,
+        /// Read the account password from stdin when no local unlock is available.
+        #[arg(long)]
+        password_stdin: bool,
+    },
+    /// Show the saved current project without accessing the network.
+    Current,
+    /// Clear the saved current project.
+    Clear,
+    /// Discover sections in a project.
+    Sections {
+        #[command(subcommand)]
+        command: ProjectSectionsCommand,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub(crate) enum ProjectSectionsCommand {
+    /// List normalized project sections and their IDs.
+    List {
+        /// Project name, UUID, or unique UUID prefix.
+        #[arg(long, conflicts_with = "work_list_id")]
+        project: Option<EntitySelector>,
+        /// Exact project UUID (legacy compatibility).
+        #[arg(long)]
+        work_list_id: Option<Uuid>,
+        /// Read the account password from stdin when no local unlock is available.
+        #[arg(long)]
+        password_stdin: bool,
     },
 }
 
 #[derive(Subcommand, Debug)]
 pub(crate) enum TasksCommand {
-    /// List decrypted tasks assigned to the current user or in one work list.
+    /// List tasks in the selected/current project, or assigned tasks when none is selected.
     List {
-        /// Restrict results to one work-list UUID.
+        /// Restrict results to a project name, UUID, or unique UUID prefix.
+        #[arg(long, conflicts_with = "work_list_id")]
+        project: Option<EntitySelector>,
+        /// Restrict results to one exact project UUID (legacy compatibility).
         #[arg(long)]
         work_list_id: Option<Uuid>,
         /// Include tasks in completed sections.
         #[arg(long)]
         include_completed: bool,
-        /// List assigned tasks across all accessible work lists.
-        #[arg(long)]
+        /// Include archived tasks from the selected/current project.
+        #[arg(long, conflicts_with = "all")]
+        include_archived: bool,
+        /// List assigned tasks across all accessible projects.
+        #[arg(long, conflicts_with_all = ["project", "work_list_id"])]
         all: bool,
         /// Read the account password from stdin when no local unlock is available.
         #[arg(long)]
@@ -182,13 +252,20 @@ pub(crate) enum TasksCommand {
         raw: bool,
     },
     /// Show one decrypted task, including comments and attachment metadata.
+    #[command(group(task_target_group()))]
     Get {
-        /// Work-list UUID containing the task.
+        /// Task title, UUID, or unique UUID prefix.
+        #[arg(value_name = "TASK", conflicts_with = "task_id")]
+        task: Option<EntitySelector>,
+        /// Exact task UUID (legacy compatibility).
         #[arg(long)]
-        work_list_id: Uuid,
-        /// Task UUID.
+        task_id: Option<Uuid>,
+        /// Project name, UUID, or unique UUID prefix.
+        #[arg(long, conflicts_with = "work_list_id")]
+        project: Option<EntitySelector>,
+        /// Exact project UUID (legacy compatibility).
         #[arg(long)]
-        task_id: Uuid,
+        work_list_id: Option<Uuid>,
         /// Read the account password from stdin when no local unlock is available.
         #[arg(long)]
         password_stdin: bool,
@@ -327,23 +404,33 @@ pub(crate) enum TaskAttachmentsCommand {
 
 #[derive(Subcommand, Debug)]
 pub(crate) enum NotesCommand {
-    /// List decrypted notes in a work list.
+    /// List decrypted notes in a project.
     List {
-        /// Work-list UUID.
+        /// Project name, UUID, or unique UUID prefix.
+        #[arg(long, conflicts_with = "work_list_id")]
+        project: Option<EntitySelector>,
+        /// Exact project UUID (legacy compatibility).
         #[arg(long)]
-        work_list_id: Uuid,
+        work_list_id: Option<Uuid>,
         /// Read the account password from stdin when no local unlock is available.
         #[arg(long)]
         password_stdin: bool,
     },
     /// Show one decrypted note.
+    #[command(group(note_target_group()))]
     Get {
-        /// Work-list UUID.
+        /// Note title, UUID, or unique UUID prefix.
+        #[arg(value_name = "NOTE", conflicts_with = "note_id")]
+        note: Option<EntitySelector>,
+        /// Exact note UUID (legacy compatibility).
         #[arg(long)]
-        work_list_id: Uuid,
-        /// Note UUID.
+        note_id: Option<Uuid>,
+        /// Project name, UUID, or unique UUID prefix.
+        #[arg(long, conflicts_with = "work_list_id")]
+        project: Option<EntitySelector>,
+        /// Exact project UUID (legacy compatibility).
         #[arg(long)]
-        note_id: Uuid,
+        work_list_id: Option<Uuid>,
         /// Read the account password from stdin when no local unlock is available.
         #[arg(long)]
         password_stdin: bool,
@@ -359,13 +446,20 @@ pub(crate) enum NotesCommand {
 #[derive(Subcommand, Debug)]
 pub(crate) enum CommentsCommand {
     /// List decrypted comments on a task.
+    #[command(group(task_target_group()))]
     List {
-        /// Work-list UUID containing the task.
+        /// Project name, UUID, or unique UUID prefix.
+        #[arg(long, conflicts_with = "work_list_id")]
+        project: Option<EntitySelector>,
+        /// Exact project UUID (legacy compatibility).
         #[arg(long)]
-        work_list_id: Uuid,
-        /// Task UUID.
+        work_list_id: Option<Uuid>,
+        /// Task title, UUID, or unique UUID prefix.
+        #[arg(value_name = "TASK", conflicts_with = "task_id")]
+        task: Option<EntitySelector>,
+        /// Exact task UUID (legacy compatibility).
         #[arg(long)]
-        task_id: Uuid,
+        task_id: Option<Uuid>,
         /// Read the account password from stdin when no local unlock is available.
         #[arg(long)]
         password_stdin: bool,
@@ -378,29 +472,38 @@ pub(crate) enum CommentsCommand {
     Delete(CommentDeleteArgsCli),
 }
 
-#[derive(Args, Debug)]
+#[derive(Args)]
 pub(crate) struct TaskCreateArgsCli {
-    /// Work-list UUID that will own the task.
+    /// Project name, UUID, or unique UUID prefix.
+    #[arg(long, conflicts_with = "work_list_id")]
+    pub(crate) project: Option<EntitySelector>,
+    /// Exact project UUID (legacy compatibility).
     #[arg(long)]
-    pub(crate) work_list_id: Uuid,
+    pub(crate) work_list_id: Option<Uuid>,
     /// Plaintext task title.
     #[arg(long)]
     pub(crate) title: Option<String>,
     /// Plaintext Markdown task body.
     #[arg(long)]
     pub(crate) body: Option<String>,
-    /// Task priority: 1 (low), 3 (medium), 5 (high), or 8 (urgent).
+    /// Task priority: low/p4/1, medium/p3/3, high/p2/5, or urgent/p1/8.
     #[arg(long, value_parser = parse_priority)]
     pub(crate) priority: Option<i8>,
     /// Due time as an RFC 3339 timestamp.
-    #[arg(long)]
+    #[arg(long, conflicts_with = "due")]
     pub(crate) due_at: Option<DateTime<Utc>>,
+    /// Human due date in the project's timezone (for example tomorrow or 2026-08-10).
+    #[arg(long, conflicts_with = "due_at")]
+    pub(crate) due: Option<String>,
     /// Start time as an RFC 3339 timestamp.
     #[arg(long)]
     pub(crate) start_at: Option<DateTime<Utc>>,
     /// Initial section UUID.
-    #[arg(long)]
+    #[arg(long, conflicts_with = "section")]
     pub(crate) section_id: Option<Uuid>,
+    /// Initial section name, UUID, or unique UUID prefix.
+    #[arg(long, conflicts_with = "section_id")]
+    pub(crate) section: Option<EntitySelector>,
     /// Stable retry key containing at most 128 ASCII letters, digits, '.', '_', '-', or ':'.
     #[arg(long)]
     pub(crate) idempotency_key: Option<String>,
@@ -414,8 +517,10 @@ pub(crate) struct TaskCreateArgsCli {
             "body",
             "priority",
             "due_at",
+            "due",
             "start_at",
             "section_id",
+            "section",
             "idempotency_key"
         ]
     )]
@@ -430,8 +535,10 @@ pub(crate) struct TaskCreateArgsCli {
             "body",
             "priority",
             "due_at",
+            "due",
             "start_at",
             "section_id",
+            "section",
             "idempotency_key"
         ]
     )]
@@ -441,14 +548,43 @@ pub(crate) struct TaskCreateArgsCli {
     pub(crate) password_stdin: bool,
 }
 
-#[derive(Args, Debug)]
+impl fmt::Debug for TaskCreateArgsCli {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("TaskCreateArgsCli")
+            .field("project", &self.project)
+            .field("work_list_id", &self.work_list_id)
+            .field("title_present", &self.title.is_some())
+            .field("body_present", &self.body.is_some())
+            .field("priority_present", &self.priority.is_some())
+            .field("due_at_present", &self.due_at.is_some())
+            .field("due_present", &self.due.is_some())
+            .field("start_at_present", &self.start_at.is_some())
+            .field("section_id_present", &self.section_id.is_some())
+            .field("section", &self.section)
+            .field("idempotency_key_present", &self.idempotency_key.is_some())
+            .field("input_file_present", &self.input_file.is_some())
+            .field("input_stdin", &self.input_stdin)
+            .field("password_stdin", &self.password_stdin)
+            .finish()
+    }
+}
+
+#[derive(Args)]
+#[command(group(task_target_group()))]
 pub(crate) struct TaskUpdateArgsCli {
-    /// Work-list UUID containing the task.
+    /// Task title, UUID, or unique UUID prefix.
+    #[arg(value_name = "TASK", conflicts_with = "task_id")]
+    pub(crate) task: Option<EntitySelector>,
+    /// Exact task UUID (legacy compatibility).
     #[arg(long)]
-    pub(crate) work_list_id: Uuid,
-    /// Task UUID.
+    pub(crate) task_id: Option<Uuid>,
+    /// Project name, UUID, or unique UUID prefix.
+    #[arg(long, conflicts_with = "work_list_id")]
+    pub(crate) project: Option<EntitySelector>,
+    /// Exact project UUID (legacy compatibility).
     #[arg(long)]
-    pub(crate) task_id: Uuid,
+    pub(crate) work_list_id: Option<Uuid>,
     /// Replace the task title.
     #[arg(long)]
     pub(crate) title: Option<String>,
@@ -458,7 +594,7 @@ pub(crate) struct TaskUpdateArgsCli {
     /// Remove the task body.
     #[arg(long)]
     pub(crate) clear_body: bool,
-    /// Set priority to 1 (low), 3 (medium), 5 (high), or 8 (urgent).
+    /// Set priority to low/p4/1, medium/p3/3, high/p2/5, or urgent/p1/8.
     #[arg(
         long,
         conflicts_with = "clear_priority",
@@ -469,8 +605,11 @@ pub(crate) struct TaskUpdateArgsCli {
     #[arg(long)]
     pub(crate) clear_priority: bool,
     /// Set the due time as an RFC 3339 timestamp.
-    #[arg(long, conflicts_with = "clear_due_at")]
+    #[arg(long, conflicts_with_all = ["clear_due_at", "due"])]
     pub(crate) due_at: Option<DateTime<Utc>>,
+    /// Set a human due date in the project's timezone.
+    #[arg(long, conflicts_with_all = ["due_at", "clear_due_at"])]
+    pub(crate) due: Option<String>,
     /// Remove the due time.
     #[arg(long)]
     pub(crate) clear_due_at: bool,
@@ -481,8 +620,11 @@ pub(crate) struct TaskUpdateArgsCli {
     #[arg(long)]
     pub(crate) clear_start_at: bool,
     /// Move the task to this section UUID.
-    #[arg(long, conflicts_with = "clear_section")]
+    #[arg(long, conflicts_with_all = ["clear_section", "section"])]
     pub(crate) section_id: Option<Uuid>,
+    /// Move the task to a section name, UUID, or unique UUID prefix.
+    #[arg(long, conflicts_with_all = ["section_id", "clear_section"])]
+    pub(crate) section: Option<EntitySelector>,
     /// Remove the explicit section assignment.
     #[arg(long)]
     pub(crate) clear_section: bool,
@@ -498,10 +640,12 @@ pub(crate) struct TaskUpdateArgsCli {
             "priority",
             "clear_priority",
             "due_at",
+            "due",
             "clear_due_at",
             "start_at",
             "clear_start_at",
             "section_id",
+            "section",
             "clear_section"
         ]
     )]
@@ -518,10 +662,12 @@ pub(crate) struct TaskUpdateArgsCli {
             "priority",
             "clear_priority",
             "due_at",
+            "due",
             "clear_due_at",
             "start_at",
             "clear_start_at",
             "section_id",
+            "section",
             "clear_section"
         ]
     )]
@@ -531,91 +677,170 @@ pub(crate) struct TaskUpdateArgsCli {
     pub(crate) password_stdin: bool,
 }
 
+impl fmt::Debug for TaskUpdateArgsCli {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("TaskUpdateArgsCli")
+            .field("task", &self.task)
+            .field("task_id", &self.task_id)
+            .field("project", &self.project)
+            .field("work_list_id", &self.work_list_id)
+            .field("title_present", &self.title.is_some())
+            .field("body_present", &self.body.is_some())
+            .field("clear_body", &self.clear_body)
+            .field("priority_present", &self.priority.is_some())
+            .field("clear_priority", &self.clear_priority)
+            .field("due_at_present", &self.due_at.is_some())
+            .field("due_present", &self.due.is_some())
+            .field("clear_due_at", &self.clear_due_at)
+            .field("start_at_present", &self.start_at.is_some())
+            .field("clear_start_at", &self.clear_start_at)
+            .field("section_id_present", &self.section_id.is_some())
+            .field("section", &self.section)
+            .field("clear_section", &self.clear_section)
+            .field("input_file_present", &self.input_file.is_some())
+            .field("input_stdin", &self.input_stdin)
+            .field("password_stdin", &self.password_stdin)
+            .finish()
+    }
+}
+
 #[derive(Args, Debug)]
+#[command(group(task_target_group()))]
 pub(crate) struct TaskMoveArgsCli {
-    /// Work-list UUID containing the task.
+    /// Task title, UUID, or unique UUID prefix.
+    #[arg(value_name = "TASK", conflicts_with = "task_id")]
+    pub(crate) task: Option<EntitySelector>,
+    /// Exact task UUID (legacy compatibility).
     #[arg(long)]
-    pub(crate) work_list_id: Uuid,
-    /// Task UUID.
+    pub(crate) task_id: Option<Uuid>,
+    /// Project name, UUID, or unique UUID prefix.
+    #[arg(long, conflicts_with = "work_list_id")]
+    pub(crate) project: Option<EntitySelector>,
+    /// Exact project UUID (legacy compatibility).
     #[arg(long)]
-    pub(crate) task_id: Uuid,
+    pub(crate) work_list_id: Option<Uuid>,
     /// Destination section UUID.
-    #[arg(long)]
+    #[arg(long, conflicts_with = "section")]
     pub(crate) section_id: Option<Uuid>,
+    /// Destination section name, UUID, or unique UUID prefix.
+    #[arg(long, conflicts_with = "section_id")]
+    pub(crate) section: Option<EntitySelector>,
     /// Place the task immediately before this task UUID.
-    #[arg(long)]
+    #[arg(long, conflicts_with = "before")]
     pub(crate) insert_before_task_id: Option<Uuid>,
+    /// Place the task immediately before this task title, UUID, or unique UUID prefix.
+    #[arg(long, conflicts_with = "insert_before_task_id")]
+    pub(crate) before: Option<EntitySelector>,
     /// Read the account password from stdin when no local unlock is available.
     #[arg(long)]
     pub(crate) password_stdin: bool,
 }
 
 #[derive(Args, Debug)]
+#[command(group(task_target_group()))]
 pub(crate) struct TaskCompletionArgsCli {
-    /// Work-list UUID containing the task.
+    /// Task title, UUID, or unique UUID prefix.
+    #[arg(value_name = "TASK", conflicts_with = "task_id")]
+    pub(crate) task: Option<EntitySelector>,
+    /// Exact task UUID (legacy compatibility).
     #[arg(long)]
-    pub(crate) work_list_id: Uuid,
-    /// Task UUID.
+    pub(crate) task_id: Option<Uuid>,
+    /// Project name, UUID, or unique UUID prefix.
+    #[arg(long, conflicts_with = "work_list_id")]
+    pub(crate) project: Option<EntitySelector>,
+    /// Exact project UUID (legacy compatibility).
     #[arg(long)]
-    pub(crate) task_id: Uuid,
+    pub(crate) work_list_id: Option<Uuid>,
     /// Read the account password from stdin when no local unlock is available.
     #[arg(long)]
     pub(crate) password_stdin: bool,
 }
 
 #[derive(Args, Debug)]
+#[command(group(task_target_group()))]
 pub(crate) struct TaskArchiveArgsCli {
-    /// Work-list UUID containing the task.
+    /// Task title, UUID, or unique UUID prefix.
+    #[arg(value_name = "TASK", conflicts_with = "task_id")]
+    pub(crate) task: Option<EntitySelector>,
+    /// Exact task UUID (legacy compatibility).
     #[arg(long)]
-    pub(crate) work_list_id: Uuid,
-    /// Task UUID.
+    pub(crate) task_id: Option<Uuid>,
+    /// Project name, UUID, or unique UUID prefix.
+    #[arg(long, conflicts_with = "work_list_id")]
+    pub(crate) project: Option<EntitySelector>,
+    /// Exact project UUID (legacy compatibility).
     #[arg(long)]
-    pub(crate) task_id: Uuid,
+    pub(crate) work_list_id: Option<Uuid>,
     /// Read the account password from stdin when no local unlock is available.
     #[arg(long)]
     pub(crate) password_stdin: bool,
 }
 
 #[derive(Args, Debug)]
+#[command(group(task_target_group()))]
 pub(crate) struct TaskUnarchiveArgsCli {
-    /// Work-list UUID containing the task.
+    /// Task title, UUID, or unique UUID prefix.
+    #[arg(value_name = "TASK", conflicts_with = "task_id")]
+    pub(crate) task: Option<EntitySelector>,
+    /// Exact task UUID (legacy compatibility).
     #[arg(long)]
-    pub(crate) work_list_id: Uuid,
-    /// Task UUID.
+    pub(crate) task_id: Option<Uuid>,
+    /// Project name, UUID, or unique UUID prefix.
+    #[arg(long, conflicts_with = "work_list_id")]
+    pub(crate) project: Option<EntitySelector>,
+    /// Exact project UUID (legacy compatibility).
     #[arg(long)]
-    pub(crate) task_id: Uuid,
+    pub(crate) work_list_id: Option<Uuid>,
     /// Read the account password from stdin when no local unlock is available.
     #[arg(long)]
     pub(crate) password_stdin: bool,
 }
 
 #[derive(Args, Debug)]
+#[command(group(task_target_group()))]
 pub(crate) struct TaskDeleteArgsCli {
-    /// Work-list UUID containing the task.
+    /// Task title, UUID, or unique UUID prefix.
+    #[arg(value_name = "TASK", conflicts_with = "task_id")]
+    pub(crate) task: Option<EntitySelector>,
+    /// Exact task UUID (legacy compatibility).
     #[arg(long)]
-    pub(crate) work_list_id: Uuid,
-    /// Task UUID.
+    pub(crate) task_id: Option<Uuid>,
+    /// Project name, UUID, or unique UUID prefix.
+    #[arg(long, conflicts_with = "work_list_id")]
+    pub(crate) project: Option<EntitySelector>,
+    /// Exact project UUID (legacy compatibility).
     #[arg(long)]
-    pub(crate) task_id: Uuid,
+    pub(crate) work_list_id: Option<Uuid>,
     /// Read an optional audit patch from a UTF-8 JSON file.
     #[arg(long, value_name = "PATH", conflicts_with = "input_stdin")]
     pub(crate) input_file: Option<PathBuf>,
     /// Read an optional audit patch from stdin.
     #[arg(long, conflicts_with = "input_file")]
     pub(crate) input_stdin: bool,
+    /// Read the account password from stdin while resolving human selectors.
+    #[arg(long, conflicts_with = "input_stdin")]
+    pub(crate) password_stdin: bool,
     /// Confirm permanent deletion without prompting.
     #[arg(long)]
     pub(crate) yes: bool,
 }
 
-#[derive(Args, Debug)]
+#[derive(Args)]
+#[command(group(task_target_group()))]
 pub(crate) struct CommentCreateArgsCli {
-    /// Work-list UUID containing the task.
+    /// Task title, UUID, or unique UUID prefix.
+    #[arg(value_name = "TASK", conflicts_with = "task_id")]
+    pub(crate) task: Option<EntitySelector>,
+    /// Exact task UUID (legacy compatibility).
     #[arg(long)]
-    pub(crate) work_list_id: Uuid,
-    /// Task UUID.
+    pub(crate) task_id: Option<Uuid>,
+    /// Project name, UUID, or unique UUID prefix.
+    #[arg(long, conflicts_with = "work_list_id")]
+    pub(crate) project: Option<EntitySelector>,
+    /// Exact project UUID (legacy compatibility).
     #[arg(long)]
-    pub(crate) task_id: Uuid,
+    pub(crate) work_list_id: Option<Uuid>,
     /// Plaintext Markdown comment body.
     #[arg(long)]
     pub(crate) body: Option<String>,
@@ -637,14 +862,37 @@ pub(crate) struct CommentCreateArgsCli {
     pub(crate) password_stdin: bool,
 }
 
-#[derive(Args, Debug)]
+impl fmt::Debug for CommentCreateArgsCli {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("CommentCreateArgsCli")
+            .field("task", &self.task)
+            .field("task_id", &self.task_id)
+            .field("project", &self.project)
+            .field("work_list_id", &self.work_list_id)
+            .field("body_present", &self.body.is_some())
+            .field("input_file_present", &self.input_file.is_some())
+            .field("input_stdin", &self.input_stdin)
+            .field("password_stdin", &self.password_stdin)
+            .finish()
+    }
+}
+
+#[derive(Args)]
+#[command(group(task_target_group()))]
 pub(crate) struct CommentUpdateArgsCli {
-    /// Work-list UUID containing the task.
+    /// Task title, UUID, or unique UUID prefix.
+    #[arg(value_name = "TASK", conflicts_with = "task_id")]
+    pub(crate) task: Option<EntitySelector>,
+    /// Exact task UUID (legacy compatibility).
     #[arg(long)]
-    pub(crate) work_list_id: Uuid,
-    /// Task UUID.
+    pub(crate) task_id: Option<Uuid>,
+    /// Project name, UUID, or unique UUID prefix.
+    #[arg(long, conflicts_with = "work_list_id")]
+    pub(crate) project: Option<EntitySelector>,
+    /// Exact project UUID (legacy compatibility).
     #[arg(long)]
-    pub(crate) task_id: Uuid,
+    pub(crate) work_list_id: Option<Uuid>,
     /// Comment UUID.
     #[arg(long)]
     pub(crate) comment_id: Uuid,
@@ -669,14 +917,38 @@ pub(crate) struct CommentUpdateArgsCli {
     pub(crate) password_stdin: bool,
 }
 
+impl fmt::Debug for CommentUpdateArgsCli {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("CommentUpdateArgsCli")
+            .field("task", &self.task)
+            .field("task_id", &self.task_id)
+            .field("project", &self.project)
+            .field("work_list_id", &self.work_list_id)
+            .field("comment_id", &self.comment_id)
+            .field("body_present", &self.body.is_some())
+            .field("input_file_present", &self.input_file.is_some())
+            .field("input_stdin", &self.input_stdin)
+            .field("password_stdin", &self.password_stdin)
+            .finish()
+    }
+}
+
 #[derive(Args, Debug)]
+#[command(group(task_target_group()))]
 pub(crate) struct CommentDeleteArgsCli {
-    /// Work-list UUID containing the task.
+    /// Task title, UUID, or unique UUID prefix.
+    #[arg(value_name = "TASK", conflicts_with = "task_id")]
+    pub(crate) task: Option<EntitySelector>,
+    /// Exact task UUID (legacy compatibility).
     #[arg(long)]
-    pub(crate) work_list_id: Uuid,
-    /// Task UUID.
+    pub(crate) task_id: Option<Uuid>,
+    /// Project name, UUID, or unique UUID prefix.
+    #[arg(long, conflicts_with = "work_list_id")]
+    pub(crate) project: Option<EntitySelector>,
+    /// Exact project UUID (legacy compatibility).
     #[arg(long)]
-    pub(crate) task_id: Uuid,
+    pub(crate) work_list_id: Option<Uuid>,
     /// Comment UUID.
     #[arg(long)]
     pub(crate) comment_id: Uuid,
@@ -686,6 +958,9 @@ pub(crate) struct CommentDeleteArgsCli {
     /// Read an optional audit patch from stdin.
     #[arg(long, conflicts_with = "input_file")]
     pub(crate) input_stdin: bool,
+    /// Read the account password from stdin while resolving human selectors.
+    #[arg(long, conflicts_with = "input_stdin")]
+    pub(crate) password_stdin: bool,
     /// Confirm permanent deletion without prompting.
     #[arg(long)]
     pub(crate) yes: bool,
@@ -693,9 +968,12 @@ pub(crate) struct CommentDeleteArgsCli {
 
 #[derive(Args)]
 pub(crate) struct NoteCreateArgsCli {
-    /// Work-list UUID that will own the note.
+    /// Project name, UUID, or unique UUID prefix.
+    #[arg(long, conflicts_with = "work_list_id")]
+    pub(crate) project: Option<EntitySelector>,
+    /// Exact project UUID (legacy compatibility).
     #[arg(long)]
-    pub(crate) work_list_id: Uuid,
+    pub(crate) work_list_id: Option<Uuid>,
     /// Plaintext note title.
     #[arg(long)]
     pub(crate) title: Option<String>,
@@ -755,13 +1033,20 @@ impl fmt::Debug for NoteCreateArgsCli {
 }
 
 #[derive(Args)]
+#[command(group(note_target_group()))]
 pub(crate) struct NoteUpdateArgsCli {
-    /// Work-list UUID containing the note.
+    /// Note title, UUID, or unique UUID prefix.
+    #[arg(value_name = "NOTE", conflicts_with = "note_id")]
+    pub(crate) note: Option<EntitySelector>,
+    /// Exact note UUID (legacy compatibility).
     #[arg(long)]
-    pub(crate) work_list_id: Uuid,
-    /// Note UUID.
+    pub(crate) note_id: Option<Uuid>,
+    /// Project name, UUID, or unique UUID prefix.
+    #[arg(long, conflicts_with = "work_list_id")]
+    pub(crate) project: Option<EntitySelector>,
+    /// Exact project UUID (legacy compatibility).
     #[arg(long)]
-    pub(crate) note_id: Uuid,
+    pub(crate) work_list_id: Option<Uuid>,
     /// Replace the note title.
     #[arg(long)]
     pub(crate) title: Option<String>,
@@ -801,32 +1086,49 @@ impl fmt::Debug for NoteUpdateArgsCli {
 }
 
 #[derive(Args, Debug)]
+#[command(group(note_target_group()))]
 pub(crate) struct NoteDeleteArgsCli {
-    /// Work-list UUID containing the note.
+    /// Note title, UUID, or unique UUID prefix.
+    #[arg(value_name = "NOTE", conflicts_with = "note_id")]
+    pub(crate) note: Option<EntitySelector>,
+    /// Exact note UUID (legacy compatibility).
     #[arg(long)]
-    pub(crate) work_list_id: Uuid,
-    /// Note UUID.
+    pub(crate) note_id: Option<Uuid>,
+    /// Project name, UUID, or unique UUID prefix.
+    #[arg(long, conflicts_with = "work_list_id")]
+    pub(crate) project: Option<EntitySelector>,
+    /// Exact project UUID (legacy compatibility).
     #[arg(long)]
-    pub(crate) note_id: Uuid,
+    pub(crate) work_list_id: Option<Uuid>,
     /// Read an optional audit patch from a UTF-8 JSON file.
     #[arg(long, value_name = "PATH", conflicts_with = "input_stdin")]
     pub(crate) input_file: Option<PathBuf>,
     /// Read an optional audit patch from stdin.
     #[arg(long, conflicts_with = "input_file")]
     pub(crate) input_stdin: bool,
+    /// Read the account password from stdin while resolving human selectors.
+    #[arg(long, conflicts_with = "input_stdin")]
+    pub(crate) password_stdin: bool,
     /// Confirm permanent deletion without prompting.
     #[arg(long)]
     pub(crate) yes: bool,
 }
 
 #[derive(Args, Debug)]
+#[command(group(task_target_group()))]
 pub(crate) struct TaskAttachmentUploadArgsCli {
-    /// Work-list UUID containing the task.
+    /// Task title, UUID, or unique UUID prefix.
+    #[arg(value_name = "TASK", conflicts_with = "task_id")]
+    pub(crate) task: Option<EntitySelector>,
+    /// Exact task UUID (legacy compatibility).
     #[arg(long)]
-    pub(crate) work_list_id: Uuid,
-    /// Task UUID.
+    pub(crate) task_id: Option<Uuid>,
+    /// Project name, UUID, or unique UUID prefix.
+    #[arg(long, conflicts_with = "work_list_id")]
+    pub(crate) project: Option<EntitySelector>,
+    /// Exact project UUID (legacy compatibility).
     #[arg(long)]
-    pub(crate) task_id: Uuid,
+    pub(crate) work_list_id: Option<Uuid>,
     #[arg(
         long,
         help = "Current-working-directory-relative regular file to upload (absolute paths, parent traversal, and symlinks are rejected)"
@@ -844,13 +1146,20 @@ pub(crate) struct TaskAttachmentUploadArgsCli {
 }
 
 #[derive(Args, Debug)]
+#[command(group(task_target_group()))]
 pub(crate) struct TaskAttachmentDeleteArgsCli {
-    /// Work-list UUID containing the task.
+    /// Task title, UUID, or unique UUID prefix.
+    #[arg(value_name = "TASK", conflicts_with = "task_id")]
+    pub(crate) task: Option<EntitySelector>,
+    /// Exact task UUID (legacy compatibility).
     #[arg(long)]
-    pub(crate) work_list_id: Uuid,
-    /// Task UUID.
+    pub(crate) task_id: Option<Uuid>,
+    /// Project name, UUID, or unique UUID prefix.
+    #[arg(long, conflicts_with = "work_list_id")]
+    pub(crate) project: Option<EntitySelector>,
+    /// Exact project UUID (legacy compatibility).
     #[arg(long)]
-    pub(crate) task_id: Uuid,
+    pub(crate) work_list_id: Option<Uuid>,
     /// Attachment UUID.
     #[arg(long)]
     pub(crate) attachment_id: Uuid,
@@ -863,13 +1172,20 @@ pub(crate) struct TaskAttachmentDeleteArgsCli {
 }
 
 #[derive(Args, Debug)]
+#[command(group(task_target_group()))]
 pub(crate) struct TaskAttachmentReadArgsCli {
-    /// Work-list UUID containing the task.
+    /// Task title, UUID, or unique UUID prefix.
+    #[arg(value_name = "TASK", conflicts_with = "task_id")]
+    pub(crate) task: Option<EntitySelector>,
+    /// Exact task UUID (legacy compatibility).
     #[arg(long)]
-    pub(crate) work_list_id: Uuid,
-    /// Task UUID.
+    pub(crate) task_id: Option<Uuid>,
+    /// Project name, UUID, or unique UUID prefix.
+    #[arg(long, conflicts_with = "work_list_id")]
+    pub(crate) project: Option<EntitySelector>,
+    /// Exact project UUID (legacy compatibility).
     #[arg(long)]
-    pub(crate) task_id: Uuid,
+    pub(crate) work_list_id: Option<Uuid>,
     /// Attachment UUID.
     #[arg(long)]
     pub(crate) attachment_id: Uuid,
@@ -879,13 +1195,20 @@ pub(crate) struct TaskAttachmentReadArgsCli {
 }
 
 #[derive(Args, Debug)]
+#[command(group(task_target_group()))]
 pub(crate) struct TaskAttachmentDownloadArgsCli {
-    /// Work-list UUID containing the task.
+    /// Task title, UUID, or unique UUID prefix.
+    #[arg(value_name = "TASK", conflicts_with = "task_id")]
+    pub(crate) task: Option<EntitySelector>,
+    /// Exact task UUID (legacy compatibility).
     #[arg(long)]
-    pub(crate) work_list_id: Uuid,
-    /// Task UUID.
+    pub(crate) task_id: Option<Uuid>,
+    /// Project name, UUID, or unique UUID prefix.
+    #[arg(long, conflicts_with = "work_list_id")]
+    pub(crate) project: Option<EntitySelector>,
+    /// Exact project UUID (legacy compatibility).
     #[arg(long)]
-    pub(crate) task_id: Uuid,
+    pub(crate) work_list_id: Option<Uuid>,
     /// Attachment UUID.
     #[arg(long)]
     pub(crate) attachment_id: Uuid,
@@ -917,9 +1240,12 @@ pub(crate) enum AuthCommand {
     },
     /// Unlock workspace data in memory for a bounded session.
     Unlock {
-        /// Number of seconds before the memory-only unlock expires.
-        #[arg(long, default_value_t = 8 * 60 * 60)]
-        ttl_seconds: u64,
+        /// Human duration before the memory-only unlock expires (for example 30m or 8h).
+        #[arg(long, conflicts_with = "ttl_seconds")]
+        ttl: Option<String>,
+        /// Number of seconds before the memory-only unlock expires (legacy compatibility).
+        #[arg(long, conflicts_with = "ttl")]
+        ttl_seconds: Option<u64>,
         /// Read the account password from stdin.
         #[arg(long)]
         password_stdin: bool,
@@ -949,16 +1275,6 @@ pub(crate) enum KeychainCommand {
     Clear,
 }
 
-fn parse_priority(value: &str) -> Result<i8, String> {
-    match value {
-        "1" => Ok(1),
-        "3" => Ok(3),
-        "5" => Ok(5),
-        "8" => Ok(8),
-        _ => Err("priority must be one of 1, 3, 5, or 8".to_string()),
-    }
-}
-
 fn parse_canonical_uuid(value: &str) -> Result<Uuid, String> {
     let parsed = Uuid::parse_str(value).map_err(|_| "must be a UUID".to_string())?;
     if parsed.to_string() != value {
@@ -972,7 +1288,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn top_level_cli_debug_redacts_note_plaintext() {
+    fn top_level_cli_debug_redacts_plaintext_mutation_fields() {
         let create_title = "canary-create-title-secret";
         let create_body = "canary-create-body-secret";
         let create = Cli::try_parse_from([
@@ -1015,6 +1331,64 @@ mod tests {
         assert!(!update_debug.contains(update_body));
         assert!(update_debug.contains("title_present: true"));
         assert!(update_debug.contains("body_present: true"));
+
+        for args in [
+            vec![
+                "sealtask",
+                "tasks",
+                "create",
+                "--work-list-id",
+                "018f4a76-c9f2-7f38-a09a-2ac748db8ee8",
+                "--title",
+                "canary-task-title-secret",
+                "--body",
+                "canary-task-body-secret",
+            ],
+            vec![
+                "sealtask",
+                "comments",
+                "create",
+                "--work-list-id",
+                "018f4a76-c9f2-7f38-a09a-2ac748db8ee8",
+                "--task-id",
+                "018f4a76-c9f2-7f38-a09a-2ac748db8ee9",
+                "--body",
+                "canary-comment-body-secret",
+            ],
+            vec![
+                "sealtask",
+                "tasks",
+                "update",
+                "--work-list-id",
+                "018f4a76-c9f2-7f38-a09a-2ac748db8ee8",
+                "--task-id",
+                "018f4a76-c9f2-7f38-a09a-2ac748db8ee9",
+                "--title",
+                "canary-task-update-title-secret",
+                "--body",
+                "canary-task-update-body-secret",
+            ],
+            vec![
+                "sealtask",
+                "comments",
+                "update",
+                "--work-list-id",
+                "018f4a76-c9f2-7f38-a09a-2ac748db8ee8",
+                "--task-id",
+                "018f4a76-c9f2-7f38-a09a-2ac748db8ee9",
+                "--comment-id",
+                "018f4a76-c9f2-7f38-a09a-2ac748db8ee7",
+                "--body",
+                "canary-comment-update-body-secret",
+            ],
+        ] {
+            let parsed = Cli::try_parse_from(args.clone()).expect("parse plaintext mutation");
+            let debug = format!("{parsed:?}");
+            for canary in args.iter().filter(|argument| argument.contains("canary-")) {
+                assert!(!debug.contains(canary), "debug leaked {canary}");
+            }
+            assert!(debug.contains("body_present: true"));
+        }
     }
 
     #[test]

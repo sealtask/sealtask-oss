@@ -445,6 +445,7 @@ mod tests {
             id: Uuid::now_v7(),
             work_list_id: Uuid::now_v7(),
             work_list_title: Some("Project".to_string()),
+            work_list_timezone: Some("UTC".to_string()),
             created_by_membership_id: Uuid::now_v7(),
             section_id: Some(Uuid::now_v7()),
             priority: Some(5),

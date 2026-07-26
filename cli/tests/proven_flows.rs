@@ -469,6 +469,691 @@ async fn cli_proven_flows_round_trip_through_mock_api() {
     );
 }
 
+#[test]
+fn cli_schema_canonicalizes_lists_alias_to_projects() {
+    let home = TempDir::new().expect("temp home");
+    let projects = run_cli_exact(home.path(), &["--json", "schema", "projects"], None);
+    let lists = run_cli_exact(home.path(), &["--json", "schema", "lists"], None);
+
+    assert!(
+        projects.status.success(),
+        "projects schema failed: {}",
+        projects.stderr
+    );
+    assert!(
+        lists.status.success(),
+        "lists schema failed: {}",
+        lists.stderr
+    );
+    let projects_schema = parse_stdout_json(&projects.stdout);
+    let lists_schema = parse_stdout_json(&lists.stdout);
+    assert_eq!(projects_schema, lists_schema);
+    assert_eq!(projects_schema["name"], "projects");
+    assert!(
+        projects_schema["usage"]
+            .as_str()
+            .expect("schema usage")
+            .starts_with("Usage: sealtask projects")
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn cli_projects_alias_context_profiles_and_sections_are_operator_friendly() {
+    let fixture = TestFixture::new();
+    let state = Arc::new(Mutex::new(TestState::new(fixture.clone())));
+    let server = spawn_server(state).await;
+    let home = TempDir::new().expect("temp home");
+    seed_credentials(home.path(), &fixture, &server.base_url);
+    copy_credentials_to_profile(home.path(), "isolated");
+
+    let canonical = run_cli(
+        home.path(),
+        &server.base_url,
+        &["--json", "projects", "list", "--password-stdin"],
+        Some(&fixture.password),
+    );
+    let alias = run_cli(
+        home.path(),
+        &server.base_url,
+        &["--json", "lists", "list", "--password-stdin"],
+        Some(&fixture.password),
+    );
+    let bare_alias = run_cli(
+        home.path(),
+        &server.base_url,
+        &["lists", "--json", "--password-stdin"],
+        Some(&fixture.password),
+    );
+    let parent_scoped_flag = run_cli(
+        home.path(),
+        &server.base_url,
+        &["--json", "projects", "--password-stdin", "list"],
+        Some(&fixture.password),
+    );
+    assert!(
+        canonical.status.success(),
+        "projects list failed: {}",
+        canonical.stderr
+    );
+    assert!(
+        alias.status.success(),
+        "lists list failed: {}",
+        alias.stderr
+    );
+    assert!(
+        bare_alias.status.success(),
+        "bare lists failed: {}",
+        bare_alias.stderr
+    );
+    assert!(
+        parent_scoped_flag.status.success(),
+        "parent-scoped projects flag failed: {}",
+        parent_scoped_flag.stderr
+    );
+    for output in [&canonical, &alias, &bare_alias, &parent_scoped_flag] {
+        let projects = parse_stdout_json(&output.stdout);
+        assert_eq!(projects.as_array().expect("projects array").len(), 1);
+        assert_eq!(projects[0]["id"], fixture.work_list_id.to_string());
+        assert_eq!(projects[0]["title"], "Fixture Work List");
+        assert!(projects[0].get("titleCiphertext").is_none());
+    }
+
+    let legacy_unscoped_tasks = run_cli(
+        home.path(),
+        &server.base_url,
+        &["--json", "tasks", "list", "--password-stdin"],
+        Some(&fixture.password),
+    );
+    assert!(
+        legacy_unscoped_tasks.status.success(),
+        "legacy unscoped task listing failed: {}",
+        legacy_unscoped_tasks.stderr
+    );
+    assert_eq!(
+        parse_stdout_json(&legacy_unscoped_tasks.stdout)
+            .as_array()
+            .expect("legacy unscoped tasks")
+            .len(),
+        1
+    );
+
+    let parent_scoped_get = run_cli(
+        home.path(),
+        &server.base_url,
+        &[
+            "--json",
+            "projects",
+            "--password-stdin",
+            "get",
+            "Fixture Work List",
+        ],
+        Some(&fixture.password),
+    );
+    assert!(
+        parent_scoped_get.status.success(),
+        "parent-scoped password flag was not applied to get: {}",
+        parent_scoped_get.stderr
+    );
+    assert_eq!(
+        parse_stdout_json(&parent_scoped_get.stdout)["id"],
+        fixture.work_list_id.to_string()
+    );
+
+    let select = run_cli(
+        home.path(),
+        &server.base_url,
+        &[
+            "--json",
+            "projects",
+            "use",
+            "Fixture Work List",
+            "--password-stdin",
+        ],
+        Some(&fixture.password),
+    );
+    assert!(
+        select.status.success(),
+        "projects use failed: {}",
+        select.stderr
+    );
+    let selected = parse_stdout_json(&select.stdout);
+    assert_eq!(selected["projectId"], fixture.work_list_id.to_string());
+    assert_eq!(selected["changed"], true);
+
+    let current = run_cli(
+        home.path(),
+        &server.base_url,
+        &["--json", "projects", "current"],
+        None,
+    );
+    assert!(
+        current.status.success(),
+        "projects current failed: {}",
+        current.stderr
+    );
+    let current = parse_stdout_json(&current.stdout);
+    assert_eq!(current["schemaVersion"], 1);
+    assert_eq!(current["projectId"], fixture.work_list_id.to_string());
+    assert_eq!(current["profile"], "default");
+
+    let tasks_in_current_project = run_cli(
+        home.path(),
+        &server.base_url,
+        &["--json", "tasks", "list", "--password-stdin"],
+        Some(&fixture.password),
+    );
+    assert!(
+        tasks_in_current_project.status.success(),
+        "current-project task list failed: {}",
+        tasks_in_current_project.stderr
+    );
+    let tasks_in_current_project = parse_stdout_json(&tasks_in_current_project.stdout);
+    assert_eq!(
+        tasks_in_current_project
+            .as_array()
+            .expect("current-project tasks")
+            .len(),
+        1
+    );
+    assert_eq!(
+        tasks_in_current_project[0]["workListId"],
+        fixture.work_list_id.to_string()
+    );
+    assert_eq!(tasks_in_current_project[0]["title"], "Existing task");
+
+    let isolated = run_cli(
+        home.path(),
+        &server.base_url,
+        &["--json", "--profile", "isolated", "projects", "current"],
+        None,
+    );
+    assert!(
+        isolated.status.success(),
+        "isolated projects current failed: {}",
+        isolated.stderr
+    );
+    let isolated = parse_stdout_json(&isolated.stdout);
+    assert_eq!(isolated["profile"], "isolated");
+    assert!(isolated["projectId"].is_null());
+
+    let sections = run_cli(
+        home.path(),
+        &server.base_url,
+        &[
+            "--json",
+            "projects",
+            "sections",
+            "list",
+            "--project",
+            "Fixture Work List",
+            "--password-stdin",
+        ],
+        Some(&fixture.password),
+    );
+    assert!(
+        sections.status.success(),
+        "section listing failed: {}",
+        sections.stderr
+    );
+    let sections = parse_stdout_json(&sections.stdout);
+    assert_eq!(sections.as_array().expect("sections array").len(), 2);
+    assert_eq!(sections[0]["id"], fixture.first_section_id.to_string());
+    assert_eq!(sections[0]["name"], "Planning");
+    assert_eq!(sections[0]["position"], 0);
+    assert_eq!(sections[1]["id"], fixture.done_section_id.to_string());
+    assert_eq!(sections[1]["name"], "Done");
+    assert_eq!(sections[1]["position"], 1);
+
+    let clear = run_cli(
+        home.path(),
+        &server.base_url,
+        &["--json", "projects", "clear"],
+        None,
+    );
+    assert!(
+        clear.status.success(),
+        "projects clear failed: {}",
+        clear.stderr
+    );
+    let clear = parse_stdout_json(&clear.stdout);
+    assert_eq!(clear["changed"], true);
+    assert!(clear["projectId"].is_null());
+
+    let cleared = run_cli(
+        home.path(),
+        &server.base_url,
+        &["--json", "projects", "current"],
+        None,
+    );
+    assert!(
+        cleared.status.success(),
+        "cleared projects current failed: {}",
+        cleared.stderr
+    );
+    assert!(parse_stdout_json(&cleared.stdout)["projectId"].is_null());
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn cli_project_task_lists_include_archived_only_with_a_project_scope() {
+    let fixture = TestFixture::new();
+    let state = Arc::new(Mutex::new(TestState::new(fixture.clone())));
+    state.lock().expect("state lock").task_archived_at = Some(Utc::now());
+    let server = spawn_server(state.clone()).await;
+    let home = TempDir::new().expect("temp home");
+    seed_credentials(home.path(), &fixture, &server.base_url);
+
+    let missing_scope = run_cli(
+        home.path(),
+        &server.base_url,
+        &["--json", "tasks", "list", "--include-archived"],
+        None,
+    );
+    assert_eq!(missing_scope.status.code(), Some(1));
+    assert_json_error_contains(
+        &missing_scope.stderr,
+        "--include-archived requires --project, --work-list-id, or a current project",
+    );
+
+    let default_list = run_cli(
+        home.path(),
+        &server.base_url,
+        &[
+            "--json",
+            "tasks",
+            "list",
+            "--work-list-id",
+            &fixture.work_list_id.to_string(),
+            "--password-stdin",
+        ],
+        Some(&fixture.password),
+    );
+    assert!(
+        default_list.status.success(),
+        "default project task list failed: {}",
+        default_list.stderr
+    );
+    assert_eq!(parse_stdout_json(&default_list.stdout), json!([]));
+
+    let decrypted = run_cli(
+        home.path(),
+        &server.base_url,
+        &[
+            "--json",
+            "tasks",
+            "list",
+            "--work-list-id",
+            &fixture.work_list_id.to_string(),
+            "--include-archived",
+            "--password-stdin",
+        ],
+        Some(&fixture.password),
+    );
+    assert!(
+        decrypted.status.success(),
+        "archived decrypted task list failed: {}",
+        decrypted.stderr
+    );
+    let decrypted = parse_stdout_json(&decrypted.stdout);
+    assert_eq!(decrypted.as_array().expect("decrypted tasks").len(), 1);
+    assert!(decrypted[0]["archivedAt"].is_string());
+
+    let raw = run_cli(
+        home.path(),
+        &server.base_url,
+        &[
+            "--json",
+            "tasks",
+            "list",
+            "--work-list-id",
+            &fixture.work_list_id.to_string(),
+            "--include-archived",
+            "--raw",
+        ],
+        None,
+    );
+    assert!(
+        raw.status.success(),
+        "archived raw task list failed: {}",
+        raw.stderr
+    );
+    let raw = parse_stdout_json(&raw.stdout);
+    assert_eq!(raw.as_array().expect("raw tasks").len(), 1);
+    assert!(raw[0]["archivedAt"].is_string());
+
+    let select = run_cli(
+        home.path(),
+        &server.base_url,
+        &[
+            "--json",
+            "projects",
+            "use",
+            "Fixture Work List",
+            "--password-stdin",
+        ],
+        Some(&fixture.password),
+    );
+    assert!(
+        select.status.success(),
+        "selecting current project failed: {}",
+        select.stderr
+    );
+    let current = run_cli(
+        home.path(),
+        &server.base_url,
+        &[
+            "--json",
+            "tasks",
+            "list",
+            "--include-archived",
+            "--password-stdin",
+        ],
+        Some(&fixture.password),
+    );
+    assert!(
+        current.status.success(),
+        "current-project archived task list failed: {}",
+        current.stderr
+    );
+    assert_eq!(
+        parse_stdout_json(&current.stdout)
+            .as_array()
+            .expect("current-project tasks")
+            .len(),
+        1
+    );
+
+    let missing_task = run_cli(
+        home.path(),
+        &server.base_url,
+        &[
+            "--json",
+            "tasks",
+            "get",
+            "Missing task",
+            "--work-list-id",
+            &fixture.work_list_id.to_string(),
+            "--password-stdin",
+        ],
+        Some(&fixture.password),
+    );
+    assert_eq!(missing_task.status.code(), Some(1));
+    assert_json_error_contains(
+        &missing_task.stderr,
+        "--include-completed --include-archived",
+    );
+
+    let all_conflict = run_cli(
+        home.path(),
+        &server.base_url,
+        &["--json", "tasks", "list", "--all", "--include-archived"],
+        None,
+    );
+    assert_eq!(all_conflict.status.code(), Some(2));
+    assert_json_error_contains(&all_conflict.stderr, "--include-archived");
+    assert_json_error_contains(&all_conflict.stderr, "--all");
+
+    assert_eq!(
+        state.lock().expect("state lock").list_task_include_archived,
+        [false, true, true, true, true]
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn cli_task_selectors_natural_inputs_and_single_password_read_work_together() {
+    let fixture = TestFixture::new();
+    let state = Arc::new(Mutex::new(TestState::new(fixture.clone())));
+    let server = spawn_server(state.clone()).await;
+    let home = TempDir::new().expect("temp home");
+    seed_credentials(home.path(), &fixture, &server.base_url);
+
+    let by_name = run_cli(
+        home.path(),
+        &server.base_url,
+        &[
+            "--json",
+            "tasks",
+            "get",
+            "Existing task",
+            "--project",
+            "Fixture Work List",
+            "--password-stdin",
+        ],
+        Some(&fixture.password),
+    );
+    assert!(
+        by_name.status.success(),
+        "task name selector failed: {}",
+        by_name.stderr
+    );
+    let by_name = parse_stdout_json(&by_name.stdout);
+    assert_eq!(by_name["id"], fixture.task_id.to_string());
+    assert_eq!(by_name["title"], "Existing task");
+
+    let task_id_prefix = fixture
+        .task_id
+        .simple()
+        .to_string()
+        .chars()
+        .take(8)
+        .collect::<String>();
+    let by_prefix = run_cli(
+        home.path(),
+        &server.base_url,
+        &[
+            "--json",
+            "tasks",
+            "get",
+            &task_id_prefix,
+            "--work-list-id",
+            &fixture.work_list_id.to_string(),
+            "--password-stdin",
+        ],
+        Some(&fixture.password),
+    );
+    assert!(
+        by_prefix.status.success(),
+        "task ID-prefix selector failed: {}",
+        by_prefix.stderr
+    );
+    assert_eq!(
+        parse_stdout_json(&by_prefix.stdout)["id"],
+        fixture.task_id.to_string()
+    );
+
+    let before_create = Utc::now().date_naive();
+    let create = run_cli(
+        home.path(),
+        &server.base_url,
+        &[
+            "--json",
+            "tasks",
+            "create",
+            "--project",
+            "Fixture Work List",
+            "--title",
+            "Natural input task",
+            "--priority",
+            "p1",
+            "--due",
+            "tomorrow",
+            "--section",
+            "Planning",
+            "--idempotency-key",
+            "operator:natural-inputs",
+            "--password-stdin",
+        ],
+        Some(&fixture.password),
+    );
+    let after_create = Utc::now().date_naive();
+    assert!(
+        create.status.success(),
+        "natural task create failed: {}",
+        create.stderr
+    );
+    let created = parse_stdout_json(&create.stdout);
+    assert_eq!(created["title"], "Natural input task");
+    assert_eq!(created["priority"], 8);
+    assert_eq!(created["sectionId"], fixture.first_section_id.to_string());
+    let due_at = DateTime::parse_from_rfc3339(
+        created["dueAt"]
+            .as_str()
+            .expect("created task due timestamp"),
+    )
+    .expect("valid due timestamp")
+    .with_timezone(&Utc);
+    assert_eq!(due_at.time(), chrono::NaiveTime::MIN);
+    assert!(
+        due_at.date_naive() == before_create + Duration::days(1)
+            || due_at.date_naive() == after_create + Duration::days(1)
+    );
+    {
+        let state = state.lock().expect("state lock");
+        let request = state
+            .created_task_request
+            .as_ref()
+            .expect("create request captured");
+        assert_eq!(request["priority"], 8);
+        assert_eq!(request["sectionId"], fixture.first_section_id.to_string());
+        assert_eq!(request["idempotencyKey"], "operator:natural-inputs");
+        assert_eq!(
+            state
+                .created_task_body
+                .as_ref()
+                .expect("created task body")
+                .title,
+            "Natural input task"
+        );
+    }
+
+    let update = run_cli(
+        home.path(),
+        &server.base_url,
+        &[
+            "--json",
+            "tasks",
+            "update",
+            "Existing task",
+            "--project",
+            "Fixture Work List",
+            "--title",
+            "Updated through selectors",
+            "--password-stdin",
+        ],
+        Some(&fixture.password),
+    );
+    assert!(
+        update.status.success(),
+        "selector mutation did not reuse its single password input: {}",
+        update.stderr
+    );
+    assert_eq!(
+        parse_stdout_json(&update.stdout)["title"],
+        "Updated through selectors"
+    );
+    assert_eq!(
+        state
+            .lock()
+            .expect("state lock")
+            .updated_task_body
+            .as_ref()
+            .expect("updated task body")
+            .title,
+        "Updated through selectors"
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn cli_destructive_task_selector_requires_explicit_confirmation() {
+    let fixture = TestFixture::new();
+    let state = Arc::new(Mutex::new(TestState::new(fixture.clone())));
+    let server = spawn_server(state.clone()).await;
+    let home = TempDir::new().expect("temp home");
+    seed_credentials(home.path(), &fixture, &server.base_url);
+
+    let unconfirmed = run_cli(
+        home.path(),
+        &server.base_url,
+        &[
+            "--json",
+            "tasks",
+            "delete",
+            "Existing task",
+            "--project",
+            "Fixture Work List",
+            "--password-stdin",
+        ],
+        Some(&fixture.password),
+    );
+    assert_eq!(unconfirmed.status.code(), Some(1));
+    assert!(unconfirmed.stdout.is_empty());
+    assert_json_error_contains(&unconfirmed.stderr, "requires --yes");
+    assert_json_error_contains(&unconfirmed.stderr, "Existing task");
+    assert!(state.lock().expect("state lock").deleted_task_id.is_none());
+
+    let confirmed = run_cli(
+        home.path(),
+        &server.base_url,
+        &[
+            "--json",
+            "tasks",
+            "delete",
+            "Existing task",
+            "--project",
+            "Fixture Work List",
+            "--password-stdin",
+            "--yes",
+        ],
+        Some(&fixture.password),
+    );
+    assert!(
+        confirmed.status.success(),
+        "confirmed selector delete failed: {}",
+        confirmed.stderr
+    );
+    let confirmed = parse_stdout_json(&confirmed.stdout);
+    assert_eq!(confirmed["deleted"], true);
+    assert_eq!(confirmed["taskId"], fixture.task_id.to_string());
+    assert_eq!(
+        state.lock().expect("state lock").deleted_task_id,
+        Some(fixture.task_id)
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn cli_unlock_accepts_compound_human_ttl() {
+    let fixture = TestFixture::new();
+    let state = Arc::new(Mutex::new(TestState::new(fixture.clone())));
+    let server = spawn_server(state).await;
+    let home = TempDir::new().expect("temp home");
+    seed_credentials(home.path(), &fixture, &server.base_url);
+
+    let unlock = run_cli(
+        home.path(),
+        &server.base_url,
+        &[
+            "--json",
+            "auth",
+            "unlock",
+            "--ttl",
+            "1h30m",
+            "--password-stdin",
+        ],
+        Some(&fixture.password),
+    );
+    assert!(
+        unlock.status.success(),
+        "compound TTL unlock failed: {}",
+        unlock.stderr
+    );
+    let unlock = parse_stdout_json(&unlock.stdout);
+    assert_eq!(unlock["unlocked"], true);
+    assert_eq!(unlock["mode"], "daemon");
+    assert_eq!(unlock["ttlSeconds"], 5_400);
+
+    let lock = run_cli(home.path(), &server.base_url, &["auth", "lock"], None);
+    assert!(lock.status.success(), "lock failed: {}", lock.stderr);
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_should_round_trip_shared_and_private_notes_through_encrypted_api_contract() {
     let fixture = TestFixture::new();
@@ -1208,6 +1893,24 @@ async fn cli_work_list_archive_lifecycle_preserves_active_only_defaults() {
     let archived: Value = parse_stdout_json(&archive_output.stdout);
     assert!(archived[0]["archivedAt"].is_string());
 
+    let select_archived = run_cli(
+        home.path(),
+        &server.base_url,
+        &[
+            "--json",
+            "projects",
+            "use",
+            &fixture.work_list_id.to_string(),
+        ],
+        None,
+    );
+    assert_eq!(select_archived.status.code(), Some(1));
+    assert!(select_archived.stdout.is_empty());
+    assert_json_error_contains(
+        &select_archived.stderr,
+        "archived project cannot be selected",
+    );
+
     let active_lists_output = run_cli(
         home.path(),
         &server.base_url,
@@ -1689,7 +2392,7 @@ async fn cli_tasks_help_uses_explicit_verbs() {
     assert!(create_help.status.success());
     for description in [
         "Create an encrypted task",
-        "Task priority: 1 (low), 3 (medium), 5 (high), or 8 (urgent)",
+        "Task priority: low/p4/1, medium/p3/3, high/p2/5, or urgent/p1/8",
         "Read the complete camelCase task input object",
         "Never prompt",
     ] {
@@ -2195,10 +2898,18 @@ async fn cli_task_detail_table_lists_attachments() {
         output.stderr
     );
     assert!(output.stdout.contains("Attachments"));
+    let attachment_id_prefix = fixture
+        .text_attachment
+        .id
+        .simple()
+        .to_string()
+        .chars()
+        .take(8)
+        .collect::<String>();
     assert!(
-        output
-            .stdout
-            .contains(&fixture.text_attachment.id.to_string())
+        output.stdout.contains(&attachment_id_prefix),
+        "attachment table did not include the selectable ID prefix: {}",
+        output.stdout
     );
     assert!(output.stdout.contains("notes.md"));
     assert!(output.stdout.contains("spec.pdf"));
@@ -2860,6 +3571,50 @@ async fn cli_v2_single_command_unlock_derives_the_opaque_export_key() {
     let credentials = std::fs::read_to_string(home.path().join(".sealtask/credentials.json"))
         .expect("read credentials");
     assert!(!credentials.contains(&STANDARD_NO_PAD.encode(fixture.opaque_export_key)));
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn cli_v2_selector_mutation_reuses_one_password_derived_key() {
+    let fixture = TestFixture::new_v2();
+    let state = Arc::new(Mutex::new(TestState::new(fixture.clone())));
+    let server = spawn_server(state.clone()).await;
+    let home = TempDir::new().expect("temp home");
+    seed_credentials(home.path(), &fixture, &server.base_url);
+
+    let output = run_cli(
+        home.path(),
+        &server.base_url,
+        &[
+            "--json",
+            "tasks",
+            "update",
+            "Existing task",
+            "--project",
+            "Fixture Work List",
+            "--section",
+            "Planning",
+            "--title",
+            "V2 selector update",
+            "--password-stdin",
+        ],
+        Some(&fixture.password),
+    );
+    assert!(
+        output.status.success(),
+        "v2 selector mutation failed: {}",
+        output.stderr
+    );
+    let output = parse_stdout_json(&output.stdout);
+    assert_eq!(output["title"], "V2 selector update");
+    assert_eq!(output["sectionId"], fixture.first_section_id.to_string());
+    assert_eq!(
+        state
+            .lock()
+            .expect("state lock")
+            .opaque_export_key_start_count,
+        1,
+        "project, task, section, and mutation discovery must share one command key"
+    );
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -4548,11 +5303,13 @@ struct TestState {
     task_section_id: Option<Uuid>,
     task_is_completed: bool,
     task_completed_at: Option<DateTime<Utc>>,
+    task_archived_at: Option<DateTime<Utc>>,
     task_updated_at: DateTime<Utc>,
     reject_next_task_update_as_conflict: bool,
     tasks_empty: bool,
     my_tasks_count: usize,
     my_tasks_queries: Vec<(i64, bool)>,
+    list_task_include_archived: Vec<bool>,
     single_section: bool,
     work_list_archived_at: Option<DateTime<Utc>>,
     archive_work_list_count: usize,
@@ -4613,11 +5370,13 @@ impl TestState {
             task_section_id: None,
             task_is_completed: false,
             task_completed_at: None,
+            task_archived_at: None,
             task_updated_at: Utc::now(),
             reject_next_task_update_as_conflict: false,
             tasks_empty: false,
             my_tasks_count: 1,
             my_tasks_queries: Vec::new(),
+            list_task_include_archived: Vec::new(),
             single_section: false,
             work_list_archived_at: None,
             archive_work_list_count: 0,
@@ -4690,7 +5449,8 @@ impl TestFixture {
         let work_list_key_ciphertext =
             encode_membership_key_ciphertext(&data_key, &list_key).expect("membership key");
         let work_list_payload_ciphertext =
-            encode_work_list_payload_ciphertext(&list_key).expect("work list payload");
+            encode_work_list_payload_ciphertext(&list_key, first_section_id, done_section_id)
+                .expect("work list payload");
         let text_attachment = make_attachment_fixture(
             &list_key,
             Uuid::now_v7(),
@@ -5549,11 +6309,12 @@ async fn list_tasks(
     headers: HeaderMap,
 ) -> (StatusCode, Json<serde_json::Value>) {
     authorize(&state, &headers);
-    let _ = query.include_archived;
-    let state = state.lock().expect("state lock");
+    let include_archived = query.include_archived.unwrap_or(false);
+    let mut state = state.lock().expect("state lock");
     assert_eq!(work_list_id, state.fixture.work_list_id);
+    state.list_task_include_archived.push(include_archived);
 
-    let tasks = if state.tasks_empty {
+    let tasks = if state.tasks_empty || (state.task_archived_at.is_some() && !include_archived) {
         Vec::new()
     } else {
         vec![task_response_json(&state)]
@@ -5662,7 +6423,7 @@ async fn get_task(
         "dueAt": null,
         "startAt": null,
         "completedAt": state.task_completed_at,
-        "archivedAt": null,
+        "archivedAt": state.task_archived_at,
         "isCompleted": state.task_is_completed,
         "recurrenceId": null,
         "recurrenceSchedule": null,
@@ -5929,6 +6690,8 @@ async fn archive_task(
     assert_eq!(work_list_id, state.fixture.work_list_id);
     assert_eq!(task_id, state.fixture.task_id);
     state.archive_task_count += 1;
+    let archived_at = Utc::now();
+    state.task_archived_at = Some(archived_at);
 
     let response = json!({
         "id": state.fixture.task_id,
@@ -5942,7 +6705,7 @@ async fn archive_task(
         "dueAt": null,
         "startAt": null,
         "completedAt": null,
-        "archivedAt": Utc::now(),
+        "archivedAt": archived_at,
         "isCompleted": false,
         "recurrenceId": null,
         "recurrenceSchedule": null,
@@ -5968,6 +6731,7 @@ async fn unarchive_task(
     assert_eq!(work_list_id, state.fixture.work_list_id);
     assert_eq!(task_id, state.fixture.task_id);
     state.unarchive_task_count += 1;
+    state.task_archived_at = None;
 
     let response = json!({
         "id": state.fixture.task_id,
@@ -5981,7 +6745,7 @@ async fn unarchive_task(
         "dueAt": null,
         "startAt": null,
         "completedAt": null,
-        "archivedAt": null,
+        "archivedAt": state.task_archived_at,
         "isCompleted": false,
         "recurrenceId": null,
         "recurrenceSchedule": null,
@@ -6333,6 +7097,14 @@ fn seed_credentials(home: &std::path::Path, fixture: &TestFixture, api_url: &str
     );
 }
 
+fn copy_credentials_to_profile(home: &FsPath, profile: &str) {
+    let default_credentials = home.join(".sealtask/credentials.json");
+    let profile_dir = home.join(".sealtask/profiles").join(profile);
+    std::fs::create_dir_all(&profile_dir).expect("create profile config dir");
+    std::fs::copy(default_credentials, profile_dir.join("credentials.json"))
+        .expect("copy credentials into profile");
+}
+
 fn seed_credentials_with_expiry(
     home: &std::path::Path,
     fixture: &TestFixture,
@@ -6482,6 +7254,8 @@ fn encode_membership_key_ciphertext(
 
 fn encode_work_list_payload_ciphertext(
     list_key: &SymmetricKey,
+    first_section_id: Uuid,
+    done_section_id: Uuid,
 ) -> sealtask_client_core::PublicResult<String> {
     let plaintext = serialize_to_cbor(&json!({
         "kind": "work_list",
@@ -6489,7 +7263,16 @@ fn encode_work_list_payload_ciphertext(
         "body": {
             "title": "Fixture Work List",
             "description": null,
-            "sections": [],
+            "sections": [
+                {
+                    "id": first_section_id.as_bytes(),
+                    "name": "Planning"
+                },
+                {
+                    "id": done_section_id.as_bytes(),
+                    "name": "Done"
+                }
+            ],
             "client_meta": {
                 "web.view": {
                     "layout": "kanban"
@@ -6518,7 +7301,7 @@ fn task_response_json(state: &TestState) -> serde_json::Value {
         "dueAt": null,
         "startAt": null,
         "completedAt": state.task_completed_at,
-        "archivedAt": null,
+        "archivedAt": state.task_archived_at,
         "isCompleted": state.task_is_completed,
         "recurrenceId": null,
         "recurrenceSchedule": null,

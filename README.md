@@ -6,7 +6,7 @@ the browser cryptography engine. The canonical repository is
 
 This repository contains the early public client surface for SealTask:
 
-- `sealtask`: command-line client for authenticating and working with decrypted work lists, tasks, comments, notes, and task attachments
+- `sealtask`: command-line client for authenticating and working with decrypted projects, tasks, comments, notes, and task attachments
 - `sealtask-client-core`: shared public types and error handling
 - `sealtask-client-auth`: local credential storage and authentication helpers
 - `sealtask-client-api`: typed HTTP client for the SealTask API
@@ -114,11 +114,56 @@ cargo audit --deny warnings --file Cargo.lock
 cargo run -p sealtask -- --help
 cargo run -p sealtask -- auth unlock --password-stdin
 cargo run -p sealtask -- auth keychain store --password-stdin
-cargo run -p sealtask -- --json tasks get --work-list-id <list-id> --task-id <task-id>
-cargo run -p sealtask -- --json tasks attachments read --work-list-id <list-id> --task-id <task-id> --attachment-id <attachment-id>
-cargo run -p sealtask -- --json tasks attachments download --work-list-id <list-id> --task-id <task-id> --attachment-id <attachment-id>
-cargo run -p sealtask -- --json notes list --work-list-id <list-id>
+cargo run -p sealtask -- projects list
+cargo run -p sealtask -- projects use "Release Engineering"
+cargo run -p sealtask -- tasks get "Prepare release notes"
+cargo run -p sealtask -- --json tasks list --all
 ```
+
+## Operator-friendly CLI workflows
+
+`projects` is the canonical command name. The historical `lists` spelling
+remains a visible compatibility alias, and existing API/JSON fields such as
+`workListId` remain stable. Select a profile-local current project once to omit
+the project scope from subsequent task, note, comment, and attachment commands:
+
+```bash
+sealtask projects list
+sealtask projects use "Release Engineering"
+sealtask projects current
+sealtask tasks list
+sealtask projects clear
+```
+
+Selectors accept an exact UUID, an exact or Unicode-normalized name, or a
+unique UUID prefix of at least eight hexadecimal digits. Use `name:<value>` or
+`id:<prefix>` to make the intended selector form explicit. Ambiguous selectors
+fail with deterministic candidates instead of choosing silently:
+
+```bash
+sealtask tasks get "Prepare release notes"
+sealtask tasks get id:019f42ab
+sealtask notes get name:"Release checklist"
+```
+
+Discover section names before creating or moving a task:
+
+```bash
+sealtask projects sections list
+sealtask tasks create --title "Ship 0.3" --section "In progress" \
+  --priority p1 --due tomorrow
+```
+
+Priority aliases are `low`/`p4`/`1`, `medium`/`p3`/`3`,
+`high`/`p2`/`5`, and `urgent`/`p1`/`8`. Human due dates such as `today`,
+`tomorrow`, `YYYY-MM-DD`, and `YYYY-MM-DDTHH:MM` use the selected project's
+timezone. Local times repeated during a daylight-saving transition are rejected;
+use `--due-at` with an explicit RFC 3339 offset to choose the intended instant.
+Archived tasks are discoverable with
+`sealtask tasks list --include-completed --include-archived` in a selected
+project.
+Unlock durations accept compound values such as `30m`, `8h`, `1h30m`, and
+`2d`.
 
 ## Browser WASM provenance
 
@@ -171,23 +216,24 @@ printf '%s\n' "$SEALTASK_PASSWORD" \
 
 printf '%s\n' "$SEALTASK_PASSWORD" \
   | cargo run -p sealtask -- --json --non-interactive auth unlock \
-      --ttl-seconds 28800 --password-stdin
+      --ttl 8h --password-stdin
 ```
 
 Create a task with the native lifecycle fields and a retry key:
 
 ```bash
 cargo run -p sealtask -- --json --non-interactive tasks create \
-  --work-list-id <list-id> \
+  --project "Release Engineering" \
   --title 'Prepare release notes' \
-  --priority 5 \
+  --priority high \
   --start-at 2026-08-09T08:00:00Z \
-  --due-at 2026-08-10T09:30:00Z \
-  --section-id <section-id> \
+  --due '2026-08-10T09:30' \
+  --section 'In progress' \
   --idempotency-key 'agent:run-42:release-notes'
 ```
 
-Priorities are `1`, `3`, `5`, or `8`; date arguments are RFC 3339 timestamps.
+Numeric priorities remain `1`, `3`, `5`, or `8`, and `--due-at` remains the
+RFC 3339 form for automation that already computes an exact instant.
 An idempotency key is scoped to the user and should remain stable for retries of
 one logical create. A retry with the same readable task semantics returns the
 original task even though encryption uses a fresh nonce. Reusing the key for

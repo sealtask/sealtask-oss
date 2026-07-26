@@ -6,6 +6,7 @@ use std::future::Future;
 use std::time::Duration;
 
 use crate::args::AuthCommand;
+use crate::human_input::resolve_unlock_ttl;
 use crate::output::{CliResult, OutputFormat};
 use sealtask_client_core::{PublicError, PublicResult};
 use sealtask_client_runtime::RuntimeClient;
@@ -57,9 +58,11 @@ pub(crate) async fn run_auth(
             .await
         }
         AuthCommand::Unlock {
+            ttl,
             ttl_seconds,
             password_stdin,
         } => {
+            let ttl_seconds = resolve_unlock_ttl(ttl.as_deref(), ttl_seconds)?;
             session::unlock(
                 format,
                 runtime,

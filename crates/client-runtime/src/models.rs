@@ -131,6 +131,8 @@ pub struct AgentTaskSummary {
     pub id: Uuid,
     pub work_list_id: Uuid,
     pub work_list_title: Option<String>,
+    #[serde(skip)]
+    pub work_list_timezone: Option<String>,
     pub created_by_membership_id: Uuid,
     pub section_id: Option<Uuid>,
     pub priority: Option<i8>,
