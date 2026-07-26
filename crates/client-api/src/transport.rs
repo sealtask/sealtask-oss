@@ -654,19 +654,46 @@ fn validate_timeout(name: &str, timeout: Duration) -> PublicResult<()> {
 pub fn build_control_plane_http_client(
     transport_options: ApiTransportOptions,
 ) -> PublicResult<reqwest::Client> {
-    let mut default_headers = reqwest::header::HeaderMap::new();
-    let request_id = transport_options.request_id().unwrap_or_else(Uuid::now_v7);
-    default_headers.insert(REQUEST_ID_HEADER, request_id_header_value(request_id)?);
-
     reqwest::Client::builder()
         .no_hickory_dns()
         .user_agent(CONTROL_PLANE_USER_AGENT)
-        .default_headers(default_headers)
+        .default_headers(control_plane_default_headers(transport_options)?)
         .connect_timeout(transport_options.connect_timeout())
         .read_timeout(transport_options.read_timeout())
         .timeout(transport_options.request_timeout())
         .build()
         .map_err(|err| PublicError::unexpected(format!("failed to configure API client: {err}")))
+}
+
+/// Builds the dedicated client used by a long-lived control-plane event stream.
+///
+/// Unlike ordinary API requests, this client deliberately has no overall request timeout. The
+/// read timeout still bounds how long a silent connection can remain stuck, and redirects are
+/// disabled so the query-string stream credential cannot be forwarded to another origin.
+pub(crate) fn build_control_plane_stream_http_client(
+    transport_options: ApiTransportOptions,
+    idle_read_timeout: Duration,
+) -> PublicResult<reqwest::Client> {
+    validate_timeout("event stream idle read", idle_read_timeout)?;
+
+    reqwest::Client::builder()
+        .no_hickory_dns()
+        .user_agent(CONTROL_PLANE_USER_AGENT)
+        .default_headers(control_plane_default_headers(transport_options)?)
+        .connect_timeout(transport_options.connect_timeout())
+        .read_timeout(idle_read_timeout)
+        .redirect(reqwest::redirect::Policy::none())
+        .build()
+        .map_err(|_| PublicError::unexpected("failed to configure API event stream client"))
+}
+
+fn control_plane_default_headers(
+    transport_options: ApiTransportOptions,
+) -> PublicResult<reqwest::header::HeaderMap> {
+    let mut default_headers = reqwest::header::HeaderMap::new();
+    let request_id = transport_options.request_id().unwrap_or_else(Uuid::now_v7);
+    default_headers.insert(REQUEST_ID_HEADER, request_id_header_value(request_id)?);
+    Ok(default_headers)
 }
 
 fn request_id_header_value(request_id: Uuid) -> PublicResult<reqwest::header::HeaderValue> {

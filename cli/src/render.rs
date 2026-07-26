@@ -28,7 +28,7 @@ pub(crate) fn print_project_sections(
     format: OutputFormat,
 ) -> CliResult<()> {
     match format {
-        OutputFormat::Json | OutputFormat::JsonPretty => print_json(
+        OutputFormat::Json | OutputFormat::JsonPretty | OutputFormat::Jsonl => print_json(
             sections,
             format,
             "serializing project sections should succeed",
@@ -79,7 +79,7 @@ pub(crate) fn print_download_result(
     output_path: &Path,
 ) -> CliResult<()> {
     match format {
-        OutputFormat::Json | OutputFormat::JsonPretty => print_json(
+        OutputFormat::Json | OutputFormat::JsonPretty | OutputFormat::Jsonl => print_json(
             &json!({
                 "fileName": file_name,
                 "outputPath": output_path.display().to_string(),
@@ -104,7 +104,7 @@ pub(crate) fn print_readable_attachment(
     format: OutputFormat,
 ) -> CliResult<()> {
     match format {
-        OutputFormat::Json | OutputFormat::JsonPretty => {
+        OutputFormat::Json | OutputFormat::JsonPretty | OutputFormat::Jsonl => {
             print_json(
                 &ReadableAttachmentV1::from(attachment),
                 format,
@@ -131,7 +131,7 @@ pub(crate) fn print_attachment(
     format: OutputFormat,
 ) -> CliResult<()> {
     match format {
-        OutputFormat::Json | OutputFormat::JsonPretty => print_json(
+        OutputFormat::Json | OutputFormat::JsonPretty | OutputFormat::Jsonl => print_json(
             &AttachmentV1::from(attachment),
             format,
             "serializing attachment should succeed",
@@ -152,7 +152,7 @@ pub(crate) fn print_attachment(
 
 pub(crate) fn print_comment(comment: &AgentComment, format: OutputFormat) -> CliResult<()> {
     match format {
-        OutputFormat::Json | OutputFormat::JsonPretty => print_json(
+        OutputFormat::Json | OutputFormat::JsonPretty | OutputFormat::Jsonl => print_json(
             &CommentV1::from(comment),
             format,
             "serializing comment should succeed",
@@ -177,7 +177,7 @@ pub(crate) fn print_comment(comment: &AgentComment, format: OutputFormat) -> Cli
 
 pub(crate) fn print_comments(comments: &[AgentComment], format: OutputFormat) -> CliResult<()> {
     match format {
-        OutputFormat::Json | OutputFormat::JsonPretty => {
+        OutputFormat::Json | OutputFormat::JsonPretty | OutputFormat::Jsonl => {
             print_json(
                 &comments_v1(comments),
                 format,
@@ -216,7 +216,7 @@ pub(crate) fn print_comments(comments: &[AgentComment], format: OutputFormat) ->
 
 pub(crate) fn print_notes(notes: &[AgentNote], format: OutputFormat) -> CliResult<()> {
     match format {
-        OutputFormat::Json | OutputFormat::JsonPretty => {
+        OutputFormat::Json | OutputFormat::JsonPretty | OutputFormat::Jsonl => {
             print_json(&notes_v1(notes), format, "serializing notes should succeed")?
         }
         OutputFormat::Table => {
@@ -251,7 +251,7 @@ pub(crate) fn print_notes(notes: &[AgentNote], format: OutputFormat) -> CliResul
 
 pub(crate) fn print_note(note: &AgentNote, format: OutputFormat) -> CliResult<()> {
     match format {
-        OutputFormat::Json | OutputFormat::JsonPretty => print_json(
+        OutputFormat::Json | OutputFormat::JsonPretty | OutputFormat::Jsonl => print_json(
             &NoteV1::from(note),
             format,
             "serializing note should succeed",
@@ -325,7 +325,7 @@ pub(crate) fn print_task_reference_history_status(
     format: OutputFormat,
 ) -> CliResult<()> {
     match format {
-        OutputFormat::Json | OutputFormat::JsonPretty => print_json(
+        OutputFormat::Json | OutputFormat::JsonPretty | OutputFormat::Jsonl => print_json(
             status,
             format,
             "serializing task-reference history status should succeed",
@@ -364,7 +364,7 @@ pub(crate) fn print_task_reference_history_status(
 
 pub(crate) fn print_empty_collection(format: OutputFormat, table_message: &str) -> CliResult<()> {
     match format {
-        OutputFormat::Json | OutputFormat::JsonPretty => print_json(
+        OutputFormat::Json | OutputFormat::JsonPretty | OutputFormat::Jsonl => print_json(
             &Vec::<serde_json::Value>::new(),
             format,
             "serializing empty collection should succeed",
@@ -378,7 +378,7 @@ pub(crate) fn print_empty_collection(format: OutputFormat, table_message: &str) 
 
 pub(crate) fn print_user(user: &CurrentUserResponse, format: OutputFormat) -> CliResult<()> {
     match format {
-        OutputFormat::Json | OutputFormat::JsonPretty => print_json(
+        OutputFormat::Json | OutputFormat::JsonPretty | OutputFormat::Jsonl => print_json(
             &CurrentUserV1::from(user),
             format,
             "serializing user should succeed",
@@ -406,7 +406,7 @@ pub(crate) fn print_work_lists(
     verbose: bool,
 ) -> CliResult<()> {
     match format {
-        OutputFormat::Json | OutputFormat::JsonPretty => {
+        OutputFormat::Json | OutputFormat::JsonPretty | OutputFormat::Jsonl => {
             print_json(
                 &work_list_summaries_v1(lists),
                 format,
@@ -479,7 +479,7 @@ pub(crate) fn print_work_list_detail(
     format: OutputFormat,
 ) -> CliResult<()> {
     match format {
-        OutputFormat::Json | OutputFormat::JsonPretty => {
+        OutputFormat::Json | OutputFormat::JsonPretty | OutputFormat::Jsonl => {
             print_json(
                 &WorkListDetailV1::from(detail),
                 format,
@@ -523,7 +523,7 @@ pub(crate) fn print_work_list_detail(
 
 pub(crate) fn print_task(task: &AgentTaskSummary, format: OutputFormat) -> CliResult<()> {
     match format {
-        OutputFormat::Json | OutputFormat::JsonPretty => print_json(
+        OutputFormat::Json | OutputFormat::JsonPretty | OutputFormat::Jsonl => print_json(
             &TaskSummaryV1::from(task),
             format,
             "serializing task should succeed",
@@ -561,7 +561,7 @@ pub(crate) fn print_task(task: &AgentTaskSummary, format: OutputFormat) -> CliRe
 
 pub(crate) fn print_tasks(tasks: &[AgentTaskSummary], format: OutputFormat) -> CliResult<()> {
     match format {
-        OutputFormat::Json | OutputFormat::JsonPretty => {
+        OutputFormat::Json | OutputFormat::JsonPretty | OutputFormat::Jsonl => {
             print_json(
                 &task_summaries_v1(tasks),
                 format,
@@ -617,7 +617,7 @@ pub(crate) fn print_tasks(tasks: &[AgentTaskSummary], format: OutputFormat) -> C
 
 pub(crate) fn print_task_detail(detail: &AgentTaskDetail, format: OutputFormat) -> CliResult<()> {
     match format {
-        OutputFormat::Json | OutputFormat::JsonPretty => {
+        OutputFormat::Json | OutputFormat::JsonPretty | OutputFormat::Jsonl => {
             print_json(
                 &TaskDetailV1::from(detail),
                 format,
@@ -710,7 +710,7 @@ pub(crate) fn print_task_detail(detail: &AgentTaskDetail, format: OutputFormat) 
 
 pub(crate) fn print_stats(stats: &DashboardStatsResponse, format: OutputFormat) -> CliResult<()> {
     match format {
-        OutputFormat::Json | OutputFormat::JsonPretty => {
+        OutputFormat::Json | OutputFormat::JsonPretty | OutputFormat::Jsonl => {
             print_json(
                 &DashboardStatsV1::from(stats),
                 format,
@@ -735,7 +735,7 @@ pub(crate) fn print_raw_work_lists(
     verbose: bool,
 ) -> CliResult<()> {
     match format {
-        OutputFormat::Json | OutputFormat::JsonPretty => {
+        OutputFormat::Json | OutputFormat::JsonPretty | OutputFormat::Jsonl => {
             print_json(lists, format, "serializing projects should succeed")?;
         }
         OutputFormat::Table => {
@@ -793,7 +793,7 @@ pub(crate) fn print_raw_work_list_detail(
     format: OutputFormat,
 ) -> CliResult<()> {
     match format {
-        OutputFormat::Json | OutputFormat::JsonPretty => {
+        OutputFormat::Json | OutputFormat::JsonPretty | OutputFormat::Jsonl => {
             print_json(
                 detail,
                 format,
@@ -879,7 +879,7 @@ fn selectable_short_ids(ids: &[uuid::Uuid]) -> Vec<String> {
 
 pub(crate) fn print_raw_tasks(tasks: &[TaskResponse], format: OutputFormat) -> CliResult<()> {
     match format {
-        OutputFormat::Json | OutputFormat::JsonPretty => {
+        OutputFormat::Json | OutputFormat::JsonPretty | OutputFormat::Jsonl => {
             print_json(tasks, format, "serializing tasks should succeed")?;
         }
         OutputFormat::Table => {
@@ -923,7 +923,7 @@ pub(crate) fn print_raw_my_tasks(
     format: OutputFormat,
 ) -> CliResult<()> {
     match format {
-        OutputFormat::Json | OutputFormat::JsonPretty => {
+        OutputFormat::Json | OutputFormat::JsonPretty | OutputFormat::Jsonl => {
             print_json(tasks, format, "serializing my tasks should succeed")?;
         }
         OutputFormat::Table => {
@@ -971,7 +971,7 @@ pub(crate) fn print_raw_task_detail(
     format: OutputFormat,
 ) -> CliResult<()> {
     match format {
-        OutputFormat::Json | OutputFormat::JsonPretty => {
+        OutputFormat::Json | OutputFormat::JsonPretty | OutputFormat::Jsonl => {
             print_json(detail, format, "serializing raw task detail should succeed")?;
         }
         OutputFormat::Table => {

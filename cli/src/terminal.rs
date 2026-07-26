@@ -527,6 +527,13 @@ pub(crate) fn stdout_is_terminal() -> bool {
     )
 }
 
+pub(crate) fn stdout_supports_live_updates() -> bool {
+    stdout_is_terminal()
+        && !std::env::var("TERM")
+            .ok()
+            .is_some_and(|value| value.eq_ignore_ascii_case("dumb"))
+}
+
 pub(crate) fn write_buffered_stdout(
     args: std::fmt::Arguments<'_>,
     newline: bool,
@@ -629,6 +636,13 @@ fn rendered_terminal_rows(output: &str, terminal_width: usize) -> usize {
                 .div_ceil(terminal_width)
         })
         .sum()
+}
+
+pub(crate) fn stdout_rendered_terminal_rows(output: &str) -> usize {
+    let terminal_width = RUNTIME
+        .get()
+        .map_or(80, |runtime| runtime.policy.terminal_width);
+    rendered_terminal_rows(output, terminal_width)
 }
 
 fn strip_csi_sequences(value: &str) -> String {
@@ -1108,6 +1122,16 @@ mod tests {
         assert_eq!(
             style_text_with("Active", style_for(StyleRole::Active), false),
             "Active"
+        );
+    }
+
+    #[test]
+    fn rendered_rows_account_for_wrapping_unicode_and_styles() {
+        assert_eq!(rendered_terminal_rows("123456789\n", 4), 3);
+        assert_eq!(rendered_terminal_rows("界界界\n", 4), 2);
+        assert_eq!(
+            rendered_terminal_rows("\u{1b}[32m12345\u{1b}[0m\nnext\n", 4),
+            3
         );
     }
 

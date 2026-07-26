@@ -26,9 +26,10 @@ end
 
 complete -c sealtask -n "__fish_sealtask_needs_command" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_needs_command" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_needs_command" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_needs_command" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_needs_command" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -63,6 +64,7 @@ complete -c sealtask -n "__fish_sealtask_needs_command" -f -a "projects" -d 'Lis
 complete -c sealtask -n "__fish_sealtask_needs_command" -f -a "lists" -d 'List, inspect, select, archive, or restore projects'
 complete -c sealtask -n "__fish_sealtask_needs_command" -f -a "tasks" -d 'List, inspect, create, update, move, or delete tasks'
 complete -c sealtask -n "__fish_sealtask_needs_command" -f -a "stats" -d 'Show current dashboard task counts'
+complete -c sealtask -n "__fish_sealtask_needs_command" -f -a "activity" -d 'Inspect or continuously follow recent account activity'
 complete -c sealtask -n "__fish_sealtask_needs_command" -f -a "doctor" -d 'Diagnose local state, authentication, unlock, and API connectivity'
 complete -c sealtask -n "__fish_sealtask_needs_command" -f -a "config" -d 'Inspect resolved operator configuration'
 complete -c sealtask -n "__fish_sealtask_needs_command" -f -a "profile" -d 'List profiles or change the persisted default profile'
@@ -72,9 +74,10 @@ complete -c sealtask -n "__fish_sealtask_needs_command" -f -a "notes" -d 'List, 
 complete -c sealtask -n "__fish_sealtask_needs_command" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
 complete -c sealtask -n "__fish_sealtask_using_subcommand completion" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand completion" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand completion" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand completion" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand completion" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -99,9 +102,10 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand completion" -s h -l he
 complete -c sealtask -n "__fish_sealtask_using_subcommand man" -l output-dir -d 'Generate the root and every visible subcommand manual beneath this directory' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand man" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand man" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand man" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand man" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand man" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -125,9 +129,10 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand man" -l debug -d 'Emit
 complete -c sealtask -n "__fish_sealtask_using_subcommand man" -s h -l help -d 'Print help (see more with \'--help\')'
 complete -c sealtask -n "__fish_sealtask_using_subcommand info" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand info" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand info" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand info" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand info" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -151,9 +156,10 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand info" -l debug -d 'Emi
 complete -c sealtask -n "__fish_sealtask_using_subcommand info" -s h -l help -d 'Print help (see more with \'--help\')'
 complete -c sealtask -n "__fish_sealtask_using_subcommand schema" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand schema" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand schema" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand schema" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand schema" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -177,9 +183,10 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand schema" -l debug -d 'E
 complete -c sealtask -n "__fish_sealtask_using_subcommand schema" -s h -l help -d 'Print help (see more with \'--help\')'
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and not __fish_seen_subcommand_from login unlock lock keychain logout status help" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and not __fish_seen_subcommand_from login unlock lock keychain logout status help" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and not __fish_seen_subcommand_from login unlock lock keychain logout status help" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and not __fish_seen_subcommand_from login unlock lock keychain logout status help" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and not __fish_seen_subcommand_from login unlock lock keychain logout status help" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -211,9 +218,10 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and not __fish_s
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from login" -l email -d 'Account email. Required with --non-interactive' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from login" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from login" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from login" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from login" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from login" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -240,9 +248,10 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from unlock" -l ttl-seconds -d 'Number of seconds before the memory-only unlock expires (legacy compatibility)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from unlock" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from unlock" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from unlock" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from unlock" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from unlock" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -267,9 +276,10 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from unlock" -s h -l help -d 'Print help (see more with \'--help\')'
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from lock" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from lock" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from lock" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from lock" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from lock" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -293,9 +303,10 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from lock" -s h -l help -d 'Print help (see more with \'--help\')'
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from keychain" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from keychain" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from keychain" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from keychain" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from keychain" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -322,9 +333,10 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from keychain" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from logout" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from logout" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from logout" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from logout" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from logout" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -348,9 +360,10 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from logout" -s h -l help -d 'Print help (see more with \'--help\')'
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from status" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from status" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from status" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from status" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from status" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -381,9 +394,10 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
 complete -c sealtask -n "__fish_sealtask_using_subcommand me" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand me" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand me" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand me" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand me" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -407,9 +421,10 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand me" -l debug -d 'Emit 
 complete -c sealtask -n "__fish_sealtask_using_subcommand me" -s h -l help -d 'Print help (see more with \'--help\')'
 complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and not __fish_seen_subcommand_from project task help" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and not __fish_seen_subcommand_from project task help" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and not __fish_seen_subcommand_from project task help" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and not __fish_seen_subcommand_from project task help" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and not __fish_seen_subcommand_from project task help" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -436,9 +451,10 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and not __fish_s
 complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and not __fish_seen_subcommand_from project task help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
 complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from project" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from project" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from project" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from project" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from project" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -466,9 +482,10 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_
 complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from task" -l work-list-id -d 'Exact project UUID (legacy compatibility)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from task" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from task" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from task" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from task" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from task" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -496,50 +513,53 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_
 complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from help" -f -a "project" -d 'Pick an accessible project'
 complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from help" -f -a "task" -d 'Pick a task in the selected/current project'
 complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l api-url -d 'SealTask API base URL' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l api-url -d 'SealTask API base URL' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+json-pretty\t''
+jsonl\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
 always\t''
 never\t''"
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l verbose
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l include-archived -d 'Include archived projects'
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l raw
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l json -d 'Emit compact JSON instead of human-readable output'
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l no-pager -d 'Disable paging (equivalent to --pager never)'
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -s h -l help -d 'Print help (see more with \'--help\')'
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -f -a "list" -d 'List accessible projects'
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -f -a "get" -d 'Show one decrypted project'
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -f -a "archive" -d 'Archive a project and make it read-only'
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -f -a "unarchive" -d 'Restore an archived project'
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -f -a "use" -d 'Save a project as the current project for this profile'
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -f -a "current" -d 'Show the saved current project without accessing the network'
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -f -a "clear" -d 'Clear the saved current project'
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -f -a "sections" -d 'Discover sections in a project'
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l verbose
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l include-archived -d 'Include archived projects'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l raw
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -s h -l help -d 'Print help (see more with \'--help\')'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -f -a "list" -d 'List accessible projects'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -f -a "get" -d 'Show one decrypted project'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -f -a "archive" -d 'Archive a project and make it read-only'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -f -a "unarchive" -d 'Restore an archived project'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -f -a "use" -d 'Save a project as the current project for this profile'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -f -a "current" -d 'Show the saved current project without accessing the network'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -f -a "clear" -d 'Clear the saved current project'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -f -a "sections" -d 'Discover sections in a project'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -f -a "audit" -d 'Show a bounded page of safe project audit metadata'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from list" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from list" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from list" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from list" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from list" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -567,9 +587,10 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_s
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from list" -s h -l help -d 'Print help (see more with \'--help\')'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from get" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from get" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from get" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from get" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from get" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -595,9 +616,10 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_s
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from get" -s h -l help -d 'Print help (see more with \'--help\')'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from archive" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from archive" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from archive" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from archive" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from archive" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -623,9 +645,10 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_s
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from archive" -s h -l help -d 'Print help (see more with \'--help\')'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from unarchive" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from unarchive" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from unarchive" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from unarchive" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from unarchive" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -651,9 +674,10 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_s
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from unarchive" -s h -l help -d 'Print help (see more with \'--help\')'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from use" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from use" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from use" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from use" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from use" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -678,9 +702,10 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_s
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from use" -s h -l help -d 'Print help (see more with \'--help\')'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from current" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from current" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from current" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from current" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from current" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -704,9 +729,10 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_s
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from current" -s h -l help -d 'Print help (see more with \'--help\')'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from clear" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from clear" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from clear" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from clear" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from clear" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -730,9 +756,10 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_s
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from clear" -s h -l help -d 'Print help (see more with \'--help\')'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from sections" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from sections" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from sections" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from sections" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from sections" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -756,6 +783,37 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_s
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from sections" -s h -l help -d 'Print help (see more with \'--help\')'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from sections" -f -a "list" -d 'List normalized project sections and their IDs'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from sections" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from audit" -l work-list-id -d 'Exact project UUID (legacy compatibility)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from audit" -l cursor -d 'Fetch entries older than this audit-event UUID' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from audit" -l limit -d 'Maximum number of audit entries to return' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from audit" -l api-url -d 'SealTask API base URL' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from audit" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from audit" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
+json\t''
+json-pretty\t''
+jsonl\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from audit" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from audit" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from audit" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from audit" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from audit" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from audit" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from audit" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from audit" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from audit" -l password-stdin -d 'Read the account password from stdin when project-name resolution needs an unlock'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from audit" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from audit" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from audit" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from audit" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from audit" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from audit" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from audit" -s h -l help -d 'Print help (see more with \'--help\')'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from help" -f -a "list" -d 'List accessible projects'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from help" -f -a "get" -d 'Show one decrypted project'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from help" -f -a "archive" -d 'Archive a project and make it read-only'
@@ -764,51 +822,55 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_s
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from help" -f -a "current" -d 'Show the saved current project without accessing the network'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from help" -f -a "clear" -d 'Clear the saved current project'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from help" -f -a "sections" -d 'Discover sections in a project'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from help" -f -a "audit" -d 'Show a bounded page of safe project audit metadata'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l api-url -d 'SealTask API base URL' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l api-url -d 'SealTask API base URL' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+json-pretty\t''
+jsonl\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
 always\t''
 never\t''"
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l verbose
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l include-archived -d 'Include archived projects'
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l raw
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l json -d 'Emit compact JSON instead of human-readable output'
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l no-pager -d 'Disable paging (equivalent to --pager never)'
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -s h -l help -d 'Print help (see more with \'--help\')'
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -f -a "list" -d 'List accessible projects'
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -f -a "get" -d 'Show one decrypted project'
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -f -a "archive" -d 'Archive a project and make it read-only'
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -f -a "unarchive" -d 'Restore an archived project'
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -f -a "use" -d 'Save a project as the current project for this profile'
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -f -a "current" -d 'Show the saved current project without accessing the network'
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -f -a "clear" -d 'Clear the saved current project'
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -f -a "sections" -d 'Discover sections in a project'
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l verbose
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l include-archived -d 'Include archived projects'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l raw
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -s h -l help -d 'Print help (see more with \'--help\')'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -f -a "list" -d 'List accessible projects'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -f -a "get" -d 'Show one decrypted project'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -f -a "archive" -d 'Archive a project and make it read-only'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -f -a "unarchive" -d 'Restore an archived project'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -f -a "use" -d 'Save a project as the current project for this profile'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -f -a "current" -d 'Show the saved current project without accessing the network'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -f -a "clear" -d 'Clear the saved current project'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -f -a "sections" -d 'Discover sections in a project'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -f -a "audit" -d 'Show a bounded page of safe project audit metadata'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from list" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from list" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from list" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from list" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from list" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -836,9 +898,10 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from list" -s h -l help -d 'Print help (see more with \'--help\')'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from get" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from get" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from get" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from get" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from get" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -864,9 +927,10 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from get" -s h -l help -d 'Print help (see more with \'--help\')'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from archive" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from archive" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from archive" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from archive" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from archive" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -892,9 +956,10 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from archive" -s h -l help -d 'Print help (see more with \'--help\')'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from unarchive" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from unarchive" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from unarchive" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from unarchive" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from unarchive" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -920,9 +985,10 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from unarchive" -s h -l help -d 'Print help (see more with \'--help\')'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from use" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from use" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from use" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from use" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from use" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -947,9 +1013,10 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from use" -s h -l help -d 'Print help (see more with \'--help\')'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from current" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from current" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from current" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from current" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from current" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -973,9 +1040,10 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from current" -s h -l help -d 'Print help (see more with \'--help\')'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from clear" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from clear" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from clear" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from clear" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from clear" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -999,9 +1067,10 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from clear" -s h -l help -d 'Print help (see more with \'--help\')'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from sections" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from sections" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from sections" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from sections" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from sections" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -1025,6 +1094,37 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from sections" -s h -l help -d 'Print help (see more with \'--help\')'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from sections" -f -a "list" -d 'List normalized project sections and their IDs'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from sections" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from audit" -l work-list-id -d 'Exact project UUID (legacy compatibility)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from audit" -l cursor -d 'Fetch entries older than this audit-event UUID' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from audit" -l limit -d 'Maximum number of audit entries to return' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from audit" -l api-url -d 'SealTask API base URL' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from audit" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from audit" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
+json\t''
+json-pretty\t''
+jsonl\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from audit" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from audit" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from audit" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from audit" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from audit" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from audit" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from audit" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from audit" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from audit" -l password-stdin -d 'Read the account password from stdin when project-name resolution needs an unlock'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from audit" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from audit" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from audit" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from audit" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from audit" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from audit" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from audit" -s h -l help -d 'Print help (see more with \'--help\')'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from help" -f -a "list" -d 'List accessible projects'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from help" -f -a "get" -d 'Show one decrypted project'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from help" -f -a "archive" -d 'Archive a project and make it read-only'
@@ -1033,46 +1133,49 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from help" -f -a "current" -d 'Show the saved current project without accessing the network'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from help" -f -a "clear" -d 'Clear the saved current project'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from help" -f -a "sections" -d 'Discover sections in a project'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from help" -f -a "audit" -d 'Show a bounded page of safe project audit metadata'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -l api-url -d 'SealTask API base URL' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -l api-url -d 'SealTask API base URL' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+json-pretty\t''
+jsonl\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
 always\t''
 never\t''"
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -l json -d 'Emit compact JSON instead of human-readable output'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -l no-pager -d 'Disable paging (equivalent to --pager never)'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -s h -l help -d 'Print help (see more with \'--help\')'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -f -a "list" -d 'List tasks in the selected/current project, or assigned tasks when none is selected'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -f -a "get" -d 'Show one decrypted task, including comments and attachment metadata'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -f -a "create" -d 'Create an encrypted task'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -f -a "edit" -d 'Edit a task\'s title and Markdown body in your configured editor'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -f -a "update" -d 'Patch an encrypted task; omitted fields remain unchanged'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -f -a "move" -d 'Move a task to a section or relative position'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -f -a "complete" -d 'Move a task to the final section'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -f -a "reopen" -d 'Move a task to the first section'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -f -a "archive" -d 'Archive a task'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -f -a "unarchive" -d 'Restore an archived task'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -f -a "delete" -d 'Permanently delete a task'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -f -a "attachments" -d 'Upload, delete, read, or download encrypted task attachments'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -s h -l help -d 'Print help (see more with \'--help\')'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -f -a "list" -d 'List tasks in the selected/current project, or assigned tasks when none is selected'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -f -a "get" -d 'Show one decrypted task, including comments and attachment metadata'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -f -a "watch" -d 'Follow authoritative task changes in one project until interrupted'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -f -a "create" -d 'Create an encrypted task'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -f -a "edit" -d 'Edit a task\'s title and Markdown body in your configured editor'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -f -a "update" -d 'Patch an encrypted task; omitted fields remain unchanged'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -f -a "move" -d 'Move a task to a section or relative position'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -f -a "complete" -d 'Move a task to the final section'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -f -a "reopen" -d 'Move a task to the first section'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -f -a "archive" -d 'Archive a task'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -f -a "unarchive" -d 'Restore an archived task'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -f -a "delete" -d 'Permanently delete a task'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -f -a "attachments" -d 'Upload, delete, read, or download encrypted task attachments'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from list" -l project -d 'Restrict results to a project name, UUID, or unique UUID prefix' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from list" -l work-list-id -d 'Restrict results to one exact project UUID (legacy compatibility)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from list" -l columns -d 'Select and order human table columns (comma-separated or repeatable)' -r -f -a "id\t''
@@ -1099,9 +1202,10 @@ url\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from list" -l web-url -d 'Browser application origin; valid only with --field url (defaults to the API origin)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from list" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from list" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from list" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from list" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from list" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -1133,9 +1237,10 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from get" -l work-list-id -d 'Exact project UUID (legacy compatibility)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from get" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from get" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from get" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from get" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from get" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -1159,6 +1264,38 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from get" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from get" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from get" -s h -l help -d 'Print help (see more with \'--help\')'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from watch" -l project -d 'Restrict results to a project name, UUID, or unique UUID prefix' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from watch" -l work-list-id -d 'Restrict results to one exact project UUID (legacy compatibility)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from watch" -l api-url -d 'SealTask API base URL' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from watch" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from watch" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
+json\t''
+json-pretty\t''
+jsonl\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from watch" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from watch" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from watch" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from watch" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from watch" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from watch" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from watch" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from watch" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from watch" -l include-completed -d 'Include completed tasks'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from watch" -l include-archived -d 'Include archived tasks'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from watch" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from watch" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from watch" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from watch" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from watch" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from watch" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from watch" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from watch" -s h -l help -d 'Print help (see more with \'--help\')'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from create" -l project -d 'Project name, UUID, or unique UUID prefix' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from create" -l work-list-id -d 'Exact project UUID (legacy compatibility)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from create" -l title -d 'Plaintext task title' -r
@@ -1174,9 +1311,10 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from create" -l input-file -d 'Read the complete camelCase task input object from a UTF-8 JSON file' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from create" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from create" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from create" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from create" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from create" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -1206,9 +1344,10 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from edit" -l work-list-id -d 'Exact project UUID (legacy compatibility)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from edit" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from edit" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from edit" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from edit" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from edit" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -1246,9 +1385,10 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from update" -l input-file -d 'Read the complete camelCase patch object from a UTF-8 JSON file' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from update" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from update" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from update" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from update" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from update" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -1286,9 +1426,10 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from move" -l before -d 'Place the task immediately before this task title, UUID, or unique UUID prefix' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from move" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from move" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from move" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from move" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from move" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -1316,9 +1457,10 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from complete" -l work-list-id -d 'Exact project UUID (legacy compatibility)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from complete" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from complete" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from complete" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from complete" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from complete" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -1346,9 +1488,10 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from reopen" -l work-list-id -d 'Exact project UUID (legacy compatibility)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from reopen" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from reopen" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from reopen" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from reopen" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from reopen" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -1376,9 +1519,10 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from archive" -l work-list-id -d 'Exact project UUID (legacy compatibility)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from archive" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from archive" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from archive" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from archive" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from archive" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -1406,9 +1550,10 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from unarchive" -l work-list-id -d 'Exact project UUID (legacy compatibility)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from unarchive" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from unarchive" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from unarchive" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from unarchive" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from unarchive" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -1437,9 +1582,10 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from delete" -l input-file -d 'Read an optional audit patch from a UTF-8 JSON file' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from delete" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from delete" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from delete" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from delete" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from delete" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -1466,9 +1612,10 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from delete" -s h -l help -d 'Print help (see more with \'--help\')'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from attachments" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from attachments" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from attachments" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from attachments" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from attachments" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -1497,6 +1644,7 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from attachments" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from help" -f -a "list" -d 'List tasks in the selected/current project, or assigned tasks when none is selected'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from help" -f -a "get" -d 'Show one decrypted task, including comments and attachment metadata'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from help" -f -a "watch" -d 'Follow authoritative task changes in one project until interrupted'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from help" -f -a "create" -d 'Create an encrypted task'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from help" -f -a "edit" -d 'Edit a task\'s title and Markdown body in your configured editor'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from help" -f -a "update" -d 'Patch an encrypted task; omitted fields remain unchanged'
@@ -1510,9 +1658,10 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
 complete -c sealtask -n "__fish_sealtask_using_subcommand stats" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand stats" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand stats" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand stats" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand stats" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -1534,11 +1683,72 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand stats" -l non-interact
 complete -c sealtask -n "__fish_sealtask_using_subcommand stats" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand stats" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
 complete -c sealtask -n "__fish_sealtask_using_subcommand stats" -s h -l help -d 'Print help (see more with \'--help\')'
+complete -c sealtask -n "__fish_sealtask_using_subcommand activity; and not __fish_seen_subcommand_from follow help" -l api-url -d 'SealTask API base URL' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand activity; and not __fish_seen_subcommand_from follow help" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand activity; and not __fish_seen_subcommand_from follow help" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
+json\t''
+json-pretty\t''
+jsonl\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand activity; and not __fish_seen_subcommand_from follow help" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand activity; and not __fish_seen_subcommand_from follow help" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand activity; and not __fish_seen_subcommand_from follow help" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand activity; and not __fish_seen_subcommand_from follow help" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand activity; and not __fish_seen_subcommand_from follow help" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand activity; and not __fish_seen_subcommand_from follow help" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand activity; and not __fish_seen_subcommand_from follow help" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand activity; and not __fish_seen_subcommand_from follow help" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
+complete -c sealtask -n "__fish_sealtask_using_subcommand activity; and not __fish_seen_subcommand_from follow help" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand activity; and not __fish_seen_subcommand_from follow help" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand activity; and not __fish_seen_subcommand_from follow help" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
+complete -c sealtask -n "__fish_sealtask_using_subcommand activity; and not __fish_seen_subcommand_from follow help" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
+complete -c sealtask -n "__fish_sealtask_using_subcommand activity; and not __fish_seen_subcommand_from follow help" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
+complete -c sealtask -n "__fish_sealtask_using_subcommand activity; and not __fish_seen_subcommand_from follow help" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
+complete -c sealtask -n "__fish_sealtask_using_subcommand activity; and not __fish_seen_subcommand_from follow help" -s h -l help -d 'Print help'
+complete -c sealtask -n "__fish_sealtask_using_subcommand activity; and not __fish_seen_subcommand_from follow help" -f -a "follow" -d 'Follow new activity using bounded cursor catch-up polling'
+complete -c sealtask -n "__fish_sealtask_using_subcommand activity; and not __fish_seen_subcommand_from follow help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand activity; and __fish_seen_subcommand_from follow" -l interval -d 'Delay between activity polls (for example 2s or 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand activity; and __fish_seen_subcommand_from follow" -l since -d 'Emit recent history from this window before following new events' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand activity; and __fish_seen_subcommand_from follow" -l api-url -d 'SealTask API base URL' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand activity; and __fish_seen_subcommand_from follow" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand activity; and __fish_seen_subcommand_from follow" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
+json\t''
+json-pretty\t''
+jsonl\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand activity; and __fish_seen_subcommand_from follow" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand activity; and __fish_seen_subcommand_from follow" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand activity; and __fish_seen_subcommand_from follow" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand activity; and __fish_seen_subcommand_from follow" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand activity; and __fish_seen_subcommand_from follow" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand activity; and __fish_seen_subcommand_from follow" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand activity; and __fish_seen_subcommand_from follow" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand activity; and __fish_seen_subcommand_from follow" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
+complete -c sealtask -n "__fish_sealtask_using_subcommand activity; and __fish_seen_subcommand_from follow" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand activity; and __fish_seen_subcommand_from follow" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand activity; and __fish_seen_subcommand_from follow" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
+complete -c sealtask -n "__fish_sealtask_using_subcommand activity; and __fish_seen_subcommand_from follow" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
+complete -c sealtask -n "__fish_sealtask_using_subcommand activity; and __fish_seen_subcommand_from follow" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
+complete -c sealtask -n "__fish_sealtask_using_subcommand activity; and __fish_seen_subcommand_from follow" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
+complete -c sealtask -n "__fish_sealtask_using_subcommand activity; and __fish_seen_subcommand_from follow" -s h -l help -d 'Print help (see more with \'--help\')'
+complete -c sealtask -n "__fish_sealtask_using_subcommand activity; and __fish_seen_subcommand_from help" -f -a "follow" -d 'Follow new activity using bounded cursor catch-up polling'
+complete -c sealtask -n "__fish_sealtask_using_subcommand activity; and __fish_seen_subcommand_from help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
 complete -c sealtask -n "__fish_sealtask_using_subcommand doctor" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand doctor" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand doctor" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand doctor" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand doctor" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -1565,9 +1775,10 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand doctor" -l debug -d 'E
 complete -c sealtask -n "__fish_sealtask_using_subcommand doctor" -s h -l help -d 'Print help (see more with \'--help\')'
 complete -c sealtask -n "__fish_sealtask_using_subcommand config; and not __fish_seen_subcommand_from show help" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand config; and not __fish_seen_subcommand_from show help" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand config; and not __fish_seen_subcommand_from show help" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand config; and not __fish_seen_subcommand_from show help" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand config; and not __fish_seen_subcommand_from show help" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -1593,9 +1804,10 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand config; and not __fish
 complete -c sealtask -n "__fish_sealtask_using_subcommand config; and not __fish_seen_subcommand_from show help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
 complete -c sealtask -n "__fish_sealtask_using_subcommand config; and __fish_seen_subcommand_from show" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand config; and __fish_seen_subcommand_from show" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand config; and __fish_seen_subcommand_from show" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand config; and __fish_seen_subcommand_from show" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand config; and __fish_seen_subcommand_from show" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -1622,9 +1834,10 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand config; and __fish_see
 complete -c sealtask -n "__fish_sealtask_using_subcommand config; and __fish_seen_subcommand_from help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
 complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and not __fish_seen_subcommand_from list use help" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and not __fish_seen_subcommand_from list use help" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and not __fish_seen_subcommand_from list use help" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and not __fish_seen_subcommand_from list use help" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and not __fish_seen_subcommand_from list use help" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -1651,9 +1864,10 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and not __fis
 complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and not __fish_seen_subcommand_from list use help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
 complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and __fish_seen_subcommand_from list" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and __fish_seen_subcommand_from list" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and __fish_seen_subcommand_from list" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and __fish_seen_subcommand_from list" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and __fish_seen_subcommand_from list" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -1677,9 +1891,10 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and __fish_se
 complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and __fish_seen_subcommand_from list" -s h -l help -d 'Print help (see more with \'--help\')'
 complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and __fish_seen_subcommand_from use" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and __fish_seen_subcommand_from use" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and __fish_seen_subcommand_from use" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and __fish_seen_subcommand_from use" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and __fish_seen_subcommand_from use" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -1706,9 +1921,10 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and __fish_se
 complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and __fish_seen_subcommand_from help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
 complete -c sealtask -n "__fish_sealtask_using_subcommand inspect" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand inspect" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand inspect" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand inspect" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand inspect" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -1733,9 +1949,10 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand inspect" -l debug -d '
 complete -c sealtask -n "__fish_sealtask_using_subcommand inspect" -s h -l help -d 'Print help'
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and not __fish_seen_subcommand_from list create update delete help" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and not __fish_seen_subcommand_from list create update delete help" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and not __fish_seen_subcommand_from list create update delete help" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and not __fish_seen_subcommand_from list create update delete help" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and not __fish_seen_subcommand_from list create update delete help" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -1767,9 +1984,10 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_s
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from list" -l task-id -d 'Exact task UUID (legacy compatibility)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from list" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from list" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from list" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from list" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from list" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -1800,9 +2018,10 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_s
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from create" -l input-file -d 'Read the complete camelCase comment input object from a UTF-8 JSON file' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from create" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from create" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from create" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from create" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from create" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -1834,9 +2053,10 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_s
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from update" -l input-file -d 'Read the complete camelCase comment input object from a UTF-8 JSON file' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from update" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from update" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from update" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from update" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from update" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -1867,9 +2087,10 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_s
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from delete" -l input-file -d 'Read an optional audit patch from a UTF-8 JSON file' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from delete" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from delete" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from delete" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from delete" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from delete" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -1901,9 +2122,10 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_s
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create edit update delete help" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create edit update delete help" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create edit update delete help" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create edit update delete help" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create edit update delete help" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -1936,9 +2158,10 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from list" -l work-list-id -d 'Exact project UUID (legacy compatibility)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from list" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from list" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from list" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from list" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from list" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -1966,9 +2189,10 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from get" -l work-list-id -d 'Exact project UUID (legacy compatibility)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from get" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from get" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from get" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from get" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from get" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -1999,9 +2223,10 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from create" -l input-file -d 'Read the complete camelCase note input object from a UTF-8 JSON file' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from create" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from create" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from create" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from create" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from create" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -2031,9 +2256,10 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from edit" -l work-list-id -d 'Exact project UUID (legacy compatibility)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from edit" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from edit" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from edit" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from edit" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from edit" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -2064,9 +2290,10 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from update" -l input-file -d 'Read the complete camelCase note patch from a UTF-8 JSON file' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from update" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from update" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from update" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from update" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from update" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -2096,9 +2323,10 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from delete" -l input-file -d 'Read an optional audit patch from a UTF-8 JSON file' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from delete" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from delete" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from delete" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from delete" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
-json-pretty\t''"
+json-pretty\t''
+jsonl\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from delete" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
@@ -2130,23 +2358,24 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from help" -f -a "update" -d 'Patch an encrypted note'
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from help" -f -a "delete" -d 'Permanently delete a note'
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
-complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats doctor config profile inspect comments notes help" -f -a "completion" -d 'Generate a shell completion script without reading configuration or credentials'
-complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats doctor config profile inspect comments notes help" -f -a "man" -d 'Render a manual page for the root command or a nested command path'
-complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats doctor config profile inspect comments notes help" -f -a "info" -d 'Show machine-readable CLI capabilities and contract versions'
-complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats doctor config profile inspect comments notes help" -f -a "schema" -d 'Describe commands and arguments as human help or versioned JSON'
-complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats doctor config profile inspect comments notes help" -f -a "auth" -d 'Authenticate, inspect the session, and manage local unlock state'
-complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats doctor config profile inspect comments notes help" -f -a "me" -d 'Show the current authenticated user'
-complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats doctor config profile inspect comments notes help" -f -a "pick" -d 'Fuzzy-pick an entity while printing only a reusable opaque selector'
-complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats doctor config profile inspect comments notes help" -f -a "projects" -d 'List, inspect, select, archive, or restore projects'
-complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats doctor config profile inspect comments notes help" -f -a "tasks" -d 'List, inspect, create, update, move, or delete tasks'
-complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats doctor config profile inspect comments notes help" -f -a "stats" -d 'Show current dashboard task counts'
-complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats doctor config profile inspect comments notes help" -f -a "doctor" -d 'Diagnose local state, authentication, unlock, and API connectivity'
-complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats doctor config profile inspect comments notes help" -f -a "config" -d 'Inspect resolved operator configuration'
-complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats doctor config profile inspect comments notes help" -f -a "profile" -d 'List profiles or change the persisted default profile'
-complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats doctor config profile inspect comments notes help" -f -a "inspect"
-complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats doctor config profile inspect comments notes help" -f -a "comments" -d 'List, create, update, or delete task comments'
-complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats doctor config profile inspect comments notes help" -f -a "notes" -d 'List, inspect, create, update, or delete encrypted notes'
-complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats doctor config profile inspect comments notes help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity doctor config profile inspect comments notes help" -f -a "completion" -d 'Generate a shell completion script without reading configuration or credentials'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity doctor config profile inspect comments notes help" -f -a "man" -d 'Render a manual page for the root command or a nested command path'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity doctor config profile inspect comments notes help" -f -a "info" -d 'Show machine-readable CLI capabilities and contract versions'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity doctor config profile inspect comments notes help" -f -a "schema" -d 'Describe commands and arguments as human help or versioned JSON'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity doctor config profile inspect comments notes help" -f -a "auth" -d 'Authenticate, inspect the session, and manage local unlock state'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity doctor config profile inspect comments notes help" -f -a "me" -d 'Show the current authenticated user'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity doctor config profile inspect comments notes help" -f -a "pick" -d 'Fuzzy-pick an entity while printing only a reusable opaque selector'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity doctor config profile inspect comments notes help" -f -a "projects" -d 'List, inspect, select, archive, or restore projects'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity doctor config profile inspect comments notes help" -f -a "tasks" -d 'List, inspect, create, update, move, or delete tasks'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity doctor config profile inspect comments notes help" -f -a "stats" -d 'Show current dashboard task counts'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity doctor config profile inspect comments notes help" -f -a "activity" -d 'Inspect or continuously follow recent account activity'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity doctor config profile inspect comments notes help" -f -a "doctor" -d 'Diagnose local state, authentication, unlock, and API connectivity'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity doctor config profile inspect comments notes help" -f -a "config" -d 'Inspect resolved operator configuration'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity doctor config profile inspect comments notes help" -f -a "profile" -d 'List profiles or change the persisted default profile'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity doctor config profile inspect comments notes help" -f -a "inspect"
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity doctor config profile inspect comments notes help" -f -a "comments" -d 'List, create, update, or delete task comments'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity doctor config profile inspect comments notes help" -f -a "notes" -d 'List, inspect, create, update, or delete encrypted notes'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity doctor config profile inspect comments notes help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from auth" -f -a "login" -d 'Sign in with an email and password, optionally completing MFA'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from auth" -f -a "unlock" -d 'Unlock workspace data in memory for a bounded session'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from auth" -f -a "lock" -d 'Lock workspace data and stop the in-memory unlock session'
@@ -2163,8 +2392,10 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from projects" -f -a "current" -d 'Show the saved current project without accessing the network'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from projects" -f -a "clear" -d 'Clear the saved current project'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from projects" -f -a "sections" -d 'Discover sections in a project'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from projects" -f -a "audit" -d 'Show a bounded page of safe project audit metadata'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from tasks" -f -a "list" -d 'List tasks in the selected/current project, or assigned tasks when none is selected'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from tasks" -f -a "get" -d 'Show one decrypted task, including comments and attachment metadata'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from tasks" -f -a "watch" -d 'Follow authoritative task changes in one project until interrupted'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from tasks" -f -a "create" -d 'Create an encrypted task'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from tasks" -f -a "edit" -d 'Edit a task\'s title and Markdown body in your configured editor'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from tasks" -f -a "update" -d 'Patch an encrypted task; omitted fields remain unchanged'
@@ -2175,6 +2406,7 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from tasks" -f -a "unarchive" -d 'Restore an archived task'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from tasks" -f -a "delete" -d 'Permanently delete a task'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from tasks" -f -a "attachments" -d 'Upload, delete, read, or download encrypted task attachments'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from activity" -f -a "follow" -d 'Follow new activity using bounded cursor catch-up polling'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from config" -f -a "show" -d 'Show safe configuration values and where they came from'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from profile" -f -a "list" -d 'List known local profiles and mark the active one'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from profile" -f -a "use" -d 'Persist the default profile for future commands'

@@ -23,7 +23,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
         'sealtask' {
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -55,6 +55,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('lists', 'lists', [CompletionResultType]::ParameterValue, 'List, inspect, select, archive, or restore projects')
             [CompletionResult]::new('tasks', 'tasks', [CompletionResultType]::ParameterValue, 'List, inspect, create, update, move, or delete tasks')
             [CompletionResult]::new('stats', 'stats', [CompletionResultType]::ParameterValue, 'Show current dashboard task counts')
+            [CompletionResult]::new('activity', 'activity', [CompletionResultType]::ParameterValue, 'Inspect or continuously follow recent account activity')
             [CompletionResult]::new('doctor', 'doctor', [CompletionResultType]::ParameterValue, 'Diagnose local state, authentication, unlock, and API connectivity')
             [CompletionResult]::new('config', 'config', [CompletionResultType]::ParameterValue, 'Inspect resolved operator configuration')
             [CompletionResult]::new('profile', 'profile', [CompletionResultType]::ParameterValue, 'List profiles or change the persisted default profile')
@@ -67,7 +68,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
         'sealtask;completion' {
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -91,7 +92,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--output-dir', '--output-dir', [CompletionResultType]::ParameterName, 'Generate the root and every visible subcommand manual beneath this directory')
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -114,7 +115,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
         'sealtask;info' {
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -137,7 +138,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
         'sealtask;schema' {
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -160,7 +161,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
         'sealtask;auth' {
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -191,7 +192,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--email', '--email', [CompletionResultType]::ParameterName, 'Account email. Required with --non-interactive')
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -217,7 +218,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--ttl-seconds', '--ttl-seconds', [CompletionResultType]::ParameterName, 'Number of seconds before the memory-only unlock expires (legacy compatibility)')
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -241,7 +242,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
         'sealtask;auth;lock' {
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -264,7 +265,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
         'sealtask;auth;keychain' {
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -290,7 +291,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
         'sealtask;auth;keychain;store' {
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -314,7 +315,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
         'sealtask;auth;keychain;clear' {
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -352,7 +353,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
         'sealtask;auth;logout' {
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -375,7 +376,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
         'sealtask;auth;status' {
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -437,7 +438,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
         'sealtask;me' {
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -460,7 +461,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
         'sealtask;pick' {
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -486,7 +487,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
         'sealtask;pick;project' {
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -513,7 +514,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--work-list-id', '--work-list-id', [CompletionResultType]::ParameterName, 'Exact project UUID (legacy compatibility)')
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -554,7 +555,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
         'sealtask;projects' {
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -584,13 +585,14 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('current', 'current', [CompletionResultType]::ParameterValue, 'Show the saved current project without accessing the network')
             [CompletionResult]::new('clear', 'clear', [CompletionResultType]::ParameterValue, 'Clear the saved current project')
             [CompletionResult]::new('sections', 'sections', [CompletionResultType]::ParameterValue, 'Discover sections in a project')
+            [CompletionResult]::new('audit', 'audit', [CompletionResultType]::ParameterValue, 'Show a bounded page of safe project audit metadata')
             [CompletionResult]::new('help', 'help', [CompletionResultType]::ParameterValue, 'Print this message or the help of the given subcommand(s)')
             break
         }
         'sealtask;lists' {
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -620,13 +622,14 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('current', 'current', [CompletionResultType]::ParameterValue, 'Show the saved current project without accessing the network')
             [CompletionResult]::new('clear', 'clear', [CompletionResultType]::ParameterValue, 'Clear the saved current project')
             [CompletionResult]::new('sections', 'sections', [CompletionResultType]::ParameterValue, 'Discover sections in a project')
+            [CompletionResult]::new('audit', 'audit', [CompletionResultType]::ParameterValue, 'Show a bounded page of safe project audit metadata')
             [CompletionResult]::new('help', 'help', [CompletionResultType]::ParameterValue, 'Print this message or the help of the given subcommand(s)')
             break
         }
         'sealtask;projects;list' {
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -653,7 +656,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
         'sealtask;lists;list' {
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -680,7 +683,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
         'sealtask;projects;get' {
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -705,7 +708,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
         'sealtask;lists;get' {
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -730,7 +733,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
         'sealtask;projects;archive' {
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -755,7 +758,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
         'sealtask;lists;archive' {
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -780,7 +783,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
         'sealtask;projects;unarchive' {
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -805,7 +808,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
         'sealtask;lists;unarchive' {
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -830,7 +833,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
         'sealtask;projects;use' {
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -854,7 +857,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
         'sealtask;lists;use' {
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -878,7 +881,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
         'sealtask;projects;current' {
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -901,7 +904,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
         'sealtask;lists;current' {
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -924,7 +927,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
         'sealtask;projects;clear' {
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -947,7 +950,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
         'sealtask;lists;clear' {
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -970,7 +973,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
         'sealtask;projects;sections' {
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -997,7 +1000,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--work-list-id', '--work-list-id', [CompletionResultType]::ParameterName, 'Exact project UUID (legacy compatibility)')
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -1032,7 +1035,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
         'sealtask;lists;sections' {
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -1059,7 +1062,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--work-list-id', '--work-list-id', [CompletionResultType]::ParameterName, 'Exact project UUID (legacy compatibility)')
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -1091,6 +1094,60 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
         'sealtask;lists;sections;help;help' {
             break
         }
+        'sealtask;projects;audit' {
+            [CompletionResult]::new('--work-list-id', '--work-list-id', [CompletionResultType]::ParameterName, 'Exact project UUID (legacy compatibility)')
+            [CompletionResult]::new('--cursor', '--cursor', [CompletionResultType]::ParameterName, 'Fetch entries older than this audit-event UUID')
+            [CompletionResult]::new('--limit', '--limit', [CompletionResultType]::ParameterName, 'Maximum number of audit entries to return')
+            [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
+            [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
+            [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
+            [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
+            [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
+            [CompletionResult]::new('--connect-timeout', '--connect-timeout', [CompletionResultType]::ParameterName, 'Maximum time to establish a control-plane connection (for example 5s)')
+            [CompletionResult]::new('--read-timeout', '--read-timeout', [CompletionResultType]::ParameterName, 'Maximum idle time while reading a control-plane response (for example 30s)')
+            [CompletionResult]::new('--request-timeout', '--request-timeout', [CompletionResultType]::ParameterName, 'Maximum total time for one control-plane request (for example 1m)')
+            [CompletionResult]::new('--profile', '--profile', [CompletionResultType]::ParameterName, 'Isolate credentials and unlock state under a named profile')
+            [CompletionResult]::new('--config-dir', '--config-dir', [CompletionResultType]::ParameterName, 'Override the base directory used for credentials and local unlock state')
+            [CompletionResult]::new('--password-stdin', '--password-stdin', [CompletionResultType]::ParameterName, 'Read the account password from stdin when project-name resolution needs an unlock')
+            [CompletionResult]::new('--json', '--json', [CompletionResultType]::ParameterName, 'Emit compact JSON instead of human-readable output')
+            [CompletionResult]::new('--no-pager', '--no-pager', [CompletionResultType]::ParameterName, 'Disable paging (equivalent to --pager never)')
+            [CompletionResult]::new('-q', '-q', [CompletionResultType]::ParameterName, 'Suppress automatic paging, progress, and successful mutation acknowledgements')
+            [CompletionResult]::new('--quiet', '--quiet', [CompletionResultType]::ParameterName, 'Suppress automatic paging, progress, and successful mutation acknowledgements')
+            [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
+            [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
+            [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
+            [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
+            break
+        }
+        'sealtask;lists;audit' {
+            [CompletionResult]::new('--work-list-id', '--work-list-id', [CompletionResultType]::ParameterName, 'Exact project UUID (legacy compatibility)')
+            [CompletionResult]::new('--cursor', '--cursor', [CompletionResultType]::ParameterName, 'Fetch entries older than this audit-event UUID')
+            [CompletionResult]::new('--limit', '--limit', [CompletionResultType]::ParameterName, 'Maximum number of audit entries to return')
+            [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
+            [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
+            [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
+            [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
+            [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
+            [CompletionResult]::new('--connect-timeout', '--connect-timeout', [CompletionResultType]::ParameterName, 'Maximum time to establish a control-plane connection (for example 5s)')
+            [CompletionResult]::new('--read-timeout', '--read-timeout', [CompletionResultType]::ParameterName, 'Maximum idle time while reading a control-plane response (for example 30s)')
+            [CompletionResult]::new('--request-timeout', '--request-timeout', [CompletionResultType]::ParameterName, 'Maximum total time for one control-plane request (for example 1m)')
+            [CompletionResult]::new('--profile', '--profile', [CompletionResultType]::ParameterName, 'Isolate credentials and unlock state under a named profile')
+            [CompletionResult]::new('--config-dir', '--config-dir', [CompletionResultType]::ParameterName, 'Override the base directory used for credentials and local unlock state')
+            [CompletionResult]::new('--password-stdin', '--password-stdin', [CompletionResultType]::ParameterName, 'Read the account password from stdin when project-name resolution needs an unlock')
+            [CompletionResult]::new('--json', '--json', [CompletionResultType]::ParameterName, 'Emit compact JSON instead of human-readable output')
+            [CompletionResult]::new('--no-pager', '--no-pager', [CompletionResultType]::ParameterName, 'Disable paging (equivalent to --pager never)')
+            [CompletionResult]::new('-q', '-q', [CompletionResultType]::ParameterName, 'Suppress automatic paging, progress, and successful mutation acknowledgements')
+            [CompletionResult]::new('--quiet', '--quiet', [CompletionResultType]::ParameterName, 'Suppress automatic paging, progress, and successful mutation acknowledgements')
+            [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
+            [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
+            [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
+            [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
+            break
+        }
         'sealtask;projects;help' {
             [CompletionResult]::new('list', 'list', [CompletionResultType]::ParameterValue, 'List accessible projects')
             [CompletionResult]::new('get', 'get', [CompletionResultType]::ParameterValue, 'Show one decrypted project')
@@ -1100,6 +1157,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('current', 'current', [CompletionResultType]::ParameterValue, 'Show the saved current project without accessing the network')
             [CompletionResult]::new('clear', 'clear', [CompletionResultType]::ParameterValue, 'Clear the saved current project')
             [CompletionResult]::new('sections', 'sections', [CompletionResultType]::ParameterValue, 'Discover sections in a project')
+            [CompletionResult]::new('audit', 'audit', [CompletionResultType]::ParameterValue, 'Show a bounded page of safe project audit metadata')
             [CompletionResult]::new('help', 'help', [CompletionResultType]::ParameterValue, 'Print this message or the help of the given subcommand(s)')
             break
         }
@@ -1131,6 +1189,9 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
         'sealtask;projects;help;sections;list' {
             break
         }
+        'sealtask;projects;help;audit' {
+            break
+        }
         'sealtask;projects;help;help' {
             break
         }
@@ -1143,6 +1204,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('current', 'current', [CompletionResultType]::ParameterValue, 'Show the saved current project without accessing the network')
             [CompletionResult]::new('clear', 'clear', [CompletionResultType]::ParameterValue, 'Clear the saved current project')
             [CompletionResult]::new('sections', 'sections', [CompletionResultType]::ParameterValue, 'Discover sections in a project')
+            [CompletionResult]::new('audit', 'audit', [CompletionResultType]::ParameterValue, 'Show a bounded page of safe project audit metadata')
             [CompletionResult]::new('help', 'help', [CompletionResultType]::ParameterValue, 'Print this message or the help of the given subcommand(s)')
             break
         }
@@ -1174,13 +1236,16 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
         'sealtask;lists;help;sections;list' {
             break
         }
+        'sealtask;lists;help;audit' {
+            break
+        }
         'sealtask;lists;help;help' {
             break
         }
         'sealtask;tasks' {
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -1200,6 +1265,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('list', 'list', [CompletionResultType]::ParameterValue, 'List tasks in the selected/current project, or assigned tasks when none is selected')
             [CompletionResult]::new('get', 'get', [CompletionResultType]::ParameterValue, 'Show one decrypted task, including comments and attachment metadata')
+            [CompletionResult]::new('watch', 'watch', [CompletionResultType]::ParameterValue, 'Follow authoritative task changes in one project until interrupted')
             [CompletionResult]::new('create', 'create', [CompletionResultType]::ParameterValue, 'Create an encrypted task')
             [CompletionResult]::new('edit', 'edit', [CompletionResultType]::ParameterValue, 'Edit a task''s title and Markdown body in your configured editor')
             [CompletionResult]::new('update', 'update', [CompletionResultType]::ParameterValue, 'Patch an encrypted task; omitted fields remain unchanged')
@@ -1222,7 +1288,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--web-url', '--web-url', [CompletionResultType]::ParameterName, 'Browser application origin; valid only with --field url (defaults to the API origin)')
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -1253,7 +1319,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--work-list-id', '--work-list-id', [CompletionResultType]::ParameterName, 'Exact project UUID (legacy compatibility)')
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -1264,6 +1330,34 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--config-dir', '--config-dir', [CompletionResultType]::ParameterName, 'Override the base directory used for credentials and local unlock state')
             [CompletionResult]::new('--password-stdin', '--password-stdin', [CompletionResultType]::ParameterName, 'Read the account password from stdin when no local unlock is available')
             [CompletionResult]::new('--raw', '--raw', [CompletionResultType]::ParameterName, 'raw')
+            [CompletionResult]::new('--json', '--json', [CompletionResultType]::ParameterName, 'Emit compact JSON instead of human-readable output')
+            [CompletionResult]::new('--no-pager', '--no-pager', [CompletionResultType]::ParameterName, 'Disable paging (equivalent to --pager never)')
+            [CompletionResult]::new('-q', '-q', [CompletionResultType]::ParameterName, 'Suppress automatic paging, progress, and successful mutation acknowledgements')
+            [CompletionResult]::new('--quiet', '--quiet', [CompletionResultType]::ParameterName, 'Suppress automatic paging, progress, and successful mutation acknowledgements')
+            [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
+            [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
+            [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
+            [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
+            break
+        }
+        'sealtask;tasks;watch' {
+            [CompletionResult]::new('--project', '--project', [CompletionResultType]::ParameterName, 'Restrict results to a project name, UUID, or unique UUID prefix')
+            [CompletionResult]::new('--work-list-id', '--work-list-id', [CompletionResultType]::ParameterName, 'Restrict results to one exact project UUID (legacy compatibility)')
+            [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
+            [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
+            [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
+            [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
+            [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
+            [CompletionResult]::new('--connect-timeout', '--connect-timeout', [CompletionResultType]::ParameterName, 'Maximum time to establish a control-plane connection (for example 5s)')
+            [CompletionResult]::new('--read-timeout', '--read-timeout', [CompletionResultType]::ParameterName, 'Maximum idle time while reading a control-plane response (for example 30s)')
+            [CompletionResult]::new('--request-timeout', '--request-timeout', [CompletionResultType]::ParameterName, 'Maximum total time for one control-plane request (for example 1m)')
+            [CompletionResult]::new('--profile', '--profile', [CompletionResultType]::ParameterName, 'Isolate credentials and unlock state under a named profile')
+            [CompletionResult]::new('--config-dir', '--config-dir', [CompletionResultType]::ParameterName, 'Override the base directory used for credentials and local unlock state')
+            [CompletionResult]::new('--include-completed', '--include-completed', [CompletionResultType]::ParameterName, 'Include completed tasks')
+            [CompletionResult]::new('--include-archived', '--include-archived', [CompletionResultType]::ParameterName, 'Include archived tasks')
+            [CompletionResult]::new('--password-stdin', '--password-stdin', [CompletionResultType]::ParameterName, 'Read the account password from stdin when no local unlock is available')
             [CompletionResult]::new('--json', '--json', [CompletionResultType]::ParameterName, 'Emit compact JSON instead of human-readable output')
             [CompletionResult]::new('--no-pager', '--no-pager', [CompletionResultType]::ParameterName, 'Disable paging (equivalent to --pager never)')
             [CompletionResult]::new('-q', '-q', [CompletionResultType]::ParameterName, 'Suppress automatic paging, progress, and successful mutation acknowledgements')
@@ -1291,7 +1385,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--input-file', '--input-file', [CompletionResultType]::ParameterName, 'Read the complete camelCase task input object from a UTF-8 JSON file')
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -1320,7 +1414,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--work-list-id', '--work-list-id', [CompletionResultType]::ParameterName, 'Exact project UUID (legacy compatibility)')
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -1357,7 +1451,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--input-file', '--input-file', [CompletionResultType]::ParameterName, 'Read the complete camelCase patch object from a UTF-8 JSON file')
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -1394,7 +1488,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--before', '--before', [CompletionResultType]::ParameterName, 'Place the task immediately before this task title, UUID, or unique UUID prefix')
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -1421,7 +1515,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--work-list-id', '--work-list-id', [CompletionResultType]::ParameterName, 'Exact project UUID (legacy compatibility)')
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -1448,7 +1542,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--work-list-id', '--work-list-id', [CompletionResultType]::ParameterName, 'Exact project UUID (legacy compatibility)')
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -1475,7 +1569,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--work-list-id', '--work-list-id', [CompletionResultType]::ParameterName, 'Exact project UUID (legacy compatibility)')
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -1502,7 +1596,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--work-list-id', '--work-list-id', [CompletionResultType]::ParameterName, 'Exact project UUID (legacy compatibility)')
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -1530,7 +1624,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--input-file', '--input-file', [CompletionResultType]::ParameterName, 'Read an optional audit patch from a UTF-8 JSON file')
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -1556,7 +1650,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
         'sealtask;tasks;attachments' {
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -1590,7 +1684,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--content-type', '--content-type', [CompletionResultType]::ParameterName, 'Override the detected MIME content type')
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -1618,7 +1712,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--attachment-id', '--attachment-id', [CompletionResultType]::ParameterName, 'Attachment UUID or unique UUID prefix')
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -1647,7 +1741,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--attachment-id', '--attachment-id', [CompletionResultType]::ParameterName, 'Attachment UUID or unique UUID prefix')
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -1676,7 +1770,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--output', '--output', [CompletionResultType]::ParameterName, 'Current-working-directory-relative output path (absolute paths, parent traversal, and symlinks are rejected)')
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -1724,6 +1818,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
         'sealtask;tasks;help' {
             [CompletionResult]::new('list', 'list', [CompletionResultType]::ParameterValue, 'List tasks in the selected/current project, or assigned tasks when none is selected')
             [CompletionResult]::new('get', 'get', [CompletionResultType]::ParameterValue, 'Show one decrypted task, including comments and attachment metadata')
+            [CompletionResult]::new('watch', 'watch', [CompletionResultType]::ParameterValue, 'Follow authoritative task changes in one project until interrupted')
             [CompletionResult]::new('create', 'create', [CompletionResultType]::ParameterValue, 'Create an encrypted task')
             [CompletionResult]::new('edit', 'edit', [CompletionResultType]::ParameterValue, 'Edit a task''s title and Markdown body in your configured editor')
             [CompletionResult]::new('update', 'update', [CompletionResultType]::ParameterValue, 'Patch an encrypted task; omitted fields remain unchanged')
@@ -1741,6 +1836,9 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             break
         }
         'sealtask;tasks;help;get' {
+            break
+        }
+        'sealtask;tasks;help;watch' {
             break
         }
         'sealtask;tasks;help;create' {
@@ -1795,7 +1893,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
         'sealtask;stats' {
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -1815,10 +1913,71 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
         }
+        'sealtask;activity' {
+            [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
+            [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
+            [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
+            [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
+            [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
+            [CompletionResult]::new('--connect-timeout', '--connect-timeout', [CompletionResultType]::ParameterName, 'Maximum time to establish a control-plane connection (for example 5s)')
+            [CompletionResult]::new('--read-timeout', '--read-timeout', [CompletionResultType]::ParameterName, 'Maximum idle time while reading a control-plane response (for example 30s)')
+            [CompletionResult]::new('--request-timeout', '--request-timeout', [CompletionResultType]::ParameterName, 'Maximum total time for one control-plane request (for example 1m)')
+            [CompletionResult]::new('--profile', '--profile', [CompletionResultType]::ParameterName, 'Isolate credentials and unlock state under a named profile')
+            [CompletionResult]::new('--config-dir', '--config-dir', [CompletionResultType]::ParameterName, 'Override the base directory used for credentials and local unlock state')
+            [CompletionResult]::new('--json', '--json', [CompletionResultType]::ParameterName, 'Emit compact JSON instead of human-readable output')
+            [CompletionResult]::new('--no-pager', '--no-pager', [CompletionResultType]::ParameterName, 'Disable paging (equivalent to --pager never)')
+            [CompletionResult]::new('-q', '-q', [CompletionResultType]::ParameterName, 'Suppress automatic paging, progress, and successful mutation acknowledgements')
+            [CompletionResult]::new('--quiet', '--quiet', [CompletionResultType]::ParameterName, 'Suppress automatic paging, progress, and successful mutation acknowledgements')
+            [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
+            [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
+            [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help')
+            [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help')
+            [CompletionResult]::new('follow', 'follow', [CompletionResultType]::ParameterValue, 'Follow new activity using bounded cursor catch-up polling')
+            [CompletionResult]::new('help', 'help', [CompletionResultType]::ParameterValue, 'Print this message or the help of the given subcommand(s)')
+            break
+        }
+        'sealtask;activity;follow' {
+            [CompletionResult]::new('--interval', '--interval', [CompletionResultType]::ParameterName, 'Delay between activity polls (for example 2s or 1m)')
+            [CompletionResult]::new('--since', '--since', [CompletionResultType]::ParameterName, 'Emit recent history from this window before following new events')
+            [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
+            [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
+            [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
+            [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
+            [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
+            [CompletionResult]::new('--connect-timeout', '--connect-timeout', [CompletionResultType]::ParameterName, 'Maximum time to establish a control-plane connection (for example 5s)')
+            [CompletionResult]::new('--read-timeout', '--read-timeout', [CompletionResultType]::ParameterName, 'Maximum idle time while reading a control-plane response (for example 30s)')
+            [CompletionResult]::new('--request-timeout', '--request-timeout', [CompletionResultType]::ParameterName, 'Maximum total time for one control-plane request (for example 1m)')
+            [CompletionResult]::new('--profile', '--profile', [CompletionResultType]::ParameterName, 'Isolate credentials and unlock state under a named profile')
+            [CompletionResult]::new('--config-dir', '--config-dir', [CompletionResultType]::ParameterName, 'Override the base directory used for credentials and local unlock state')
+            [CompletionResult]::new('--json', '--json', [CompletionResultType]::ParameterName, 'Emit compact JSON instead of human-readable output')
+            [CompletionResult]::new('--no-pager', '--no-pager', [CompletionResultType]::ParameterName, 'Disable paging (equivalent to --pager never)')
+            [CompletionResult]::new('-q', '-q', [CompletionResultType]::ParameterName, 'Suppress automatic paging, progress, and successful mutation acknowledgements')
+            [CompletionResult]::new('--quiet', '--quiet', [CompletionResultType]::ParameterName, 'Suppress automatic paging, progress, and successful mutation acknowledgements')
+            [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
+            [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
+            [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
+            [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
+            break
+        }
+        'sealtask;activity;help' {
+            [CompletionResult]::new('follow', 'follow', [CompletionResultType]::ParameterValue, 'Follow new activity using bounded cursor catch-up polling')
+            [CompletionResult]::new('help', 'help', [CompletionResultType]::ParameterValue, 'Print this message or the help of the given subcommand(s)')
+            break
+        }
+        'sealtask;activity;help;follow' {
+            break
+        }
+        'sealtask;activity;help;help' {
+            break
+        }
         'sealtask;doctor' {
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -1844,7 +2003,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
         'sealtask;config' {
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -1869,7 +2028,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
         'sealtask;config;show' {
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -1904,7 +2063,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
         'sealtask;profile' {
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -1930,7 +2089,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
         'sealtask;profile;list' {
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -1953,7 +2112,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
         'sealtask;profile;use' {
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -1991,7 +2150,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
         'sealtask;inspect' {
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -2015,7 +2174,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
         'sealtask;comments' {
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -2046,7 +2205,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--task-id', '--task-id', [CompletionResultType]::ParameterName, 'Exact task UUID (legacy compatibility)')
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -2076,7 +2235,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--input-file', '--input-file', [CompletionResultType]::ParameterName, 'Read the complete camelCase comment input object from a UTF-8 JSON file')
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -2107,7 +2266,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--input-file', '--input-file', [CompletionResultType]::ParameterName, 'Read the complete camelCase comment input object from a UTF-8 JSON file')
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -2137,7 +2296,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--input-file', '--input-file', [CompletionResultType]::ParameterName, 'Read an optional audit patch from a UTF-8 JSON file')
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -2186,7 +2345,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
         'sealtask;notes' {
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -2218,7 +2377,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--work-list-id', '--work-list-id', [CompletionResultType]::ParameterName, 'Exact project UUID (legacy compatibility)')
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -2245,7 +2404,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--work-list-id', '--work-list-id', [CompletionResultType]::ParameterName, 'Exact project UUID (legacy compatibility)')
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -2275,7 +2434,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--input-file', '--input-file', [CompletionResultType]::ParameterName, 'Read the complete camelCase note input object from a UTF-8 JSON file')
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -2304,7 +2463,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--work-list-id', '--work-list-id', [CompletionResultType]::ParameterName, 'Exact project UUID (legacy compatibility)')
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -2334,7 +2493,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--input-file', '--input-file', [CompletionResultType]::ParameterName, 'Read the complete camelCase note patch from a UTF-8 JSON file')
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -2363,7 +2522,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--input-file', '--input-file', [CompletionResultType]::ParameterName, 'Read an optional audit patch from a UTF-8 JSON file')
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
             [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
             [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
             [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
@@ -2428,6 +2587,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('projects', 'projects', [CompletionResultType]::ParameterValue, 'List, inspect, select, archive, or restore projects')
             [CompletionResult]::new('tasks', 'tasks', [CompletionResultType]::ParameterValue, 'List, inspect, create, update, move, or delete tasks')
             [CompletionResult]::new('stats', 'stats', [CompletionResultType]::ParameterValue, 'Show current dashboard task counts')
+            [CompletionResult]::new('activity', 'activity', [CompletionResultType]::ParameterValue, 'Inspect or continuously follow recent account activity')
             [CompletionResult]::new('doctor', 'doctor', [CompletionResultType]::ParameterValue, 'Diagnose local state, authentication, unlock, and API connectivity')
             [CompletionResult]::new('config', 'config', [CompletionResultType]::ParameterValue, 'Inspect resolved operator configuration')
             [CompletionResult]::new('profile', 'profile', [CompletionResultType]::ParameterValue, 'List profiles or change the persisted default profile')
@@ -2507,6 +2667,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('current', 'current', [CompletionResultType]::ParameterValue, 'Show the saved current project without accessing the network')
             [CompletionResult]::new('clear', 'clear', [CompletionResultType]::ParameterValue, 'Clear the saved current project')
             [CompletionResult]::new('sections', 'sections', [CompletionResultType]::ParameterValue, 'Discover sections in a project')
+            [CompletionResult]::new('audit', 'audit', [CompletionResultType]::ParameterValue, 'Show a bounded page of safe project audit metadata')
             break
         }
         'sealtask;help;projects;list' {
@@ -2537,9 +2698,13 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
         'sealtask;help;projects;sections;list' {
             break
         }
+        'sealtask;help;projects;audit' {
+            break
+        }
         'sealtask;help;tasks' {
             [CompletionResult]::new('list', 'list', [CompletionResultType]::ParameterValue, 'List tasks in the selected/current project, or assigned tasks when none is selected')
             [CompletionResult]::new('get', 'get', [CompletionResultType]::ParameterValue, 'Show one decrypted task, including comments and attachment metadata')
+            [CompletionResult]::new('watch', 'watch', [CompletionResultType]::ParameterValue, 'Follow authoritative task changes in one project until interrupted')
             [CompletionResult]::new('create', 'create', [CompletionResultType]::ParameterValue, 'Create an encrypted task')
             [CompletionResult]::new('edit', 'edit', [CompletionResultType]::ParameterValue, 'Edit a task''s title and Markdown body in your configured editor')
             [CompletionResult]::new('update', 'update', [CompletionResultType]::ParameterValue, 'Patch an encrypted task; omitted fields remain unchanged')
@@ -2556,6 +2721,9 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             break
         }
         'sealtask;help;tasks;get' {
+            break
+        }
+        'sealtask;help;tasks;watch' {
             break
         }
         'sealtask;help;tasks;create' {
@@ -2605,6 +2773,13 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             break
         }
         'sealtask;help;stats' {
+            break
+        }
+        'sealtask;help;activity' {
+            [CompletionResult]::new('follow', 'follow', [CompletionResultType]::ParameterValue, 'Follow new activity using bounded cursor catch-up polling')
+            break
+        }
+        'sealtask;help;activity;follow' {
             break
         }
         'sealtask;help;doctor' {

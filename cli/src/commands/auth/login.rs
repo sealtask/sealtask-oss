@@ -382,7 +382,7 @@ fn build_login_result(
 
 fn print_login_result(format: OutputFormat, result: &LoginResult, api_url: &str) -> CliResult<()> {
     match format {
-        OutputFormat::Json | OutputFormat::JsonPretty => {
+        OutputFormat::Json | OutputFormat::JsonPretty | OutputFormat::Jsonl => {
             print_json(result, format, "serializing login result should succeed")
         }
         OutputFormat::Table => {

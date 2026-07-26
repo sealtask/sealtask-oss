@@ -77,13 +77,13 @@ enum AuthStatusResult {
 pub(super) fn run(format: OutputFormat, runtime: &RuntimeClient) -> CliResult<()> {
     match load_auth_status(runtime)? {
         AuthStatusResult::LoggedIn(status) => match format {
-            OutputFormat::Json | OutputFormat::JsonPretty => {
+            OutputFormat::Json | OutputFormat::JsonPretty | OutputFormat::Jsonl => {
                 print_json(&status, format, "serializing auth status should succeed")
             }
             OutputFormat::Table => print_logged_in_auth_status(&status),
         },
         AuthStatusResult::LoggedOut(status) => match format {
-            OutputFormat::Json | OutputFormat::JsonPretty => print_json(
+            OutputFormat::Json | OutputFormat::JsonPretty | OutputFormat::Jsonl => print_json(
                 &status,
                 format,
                 "serializing unauthenticated auth status should succeed",

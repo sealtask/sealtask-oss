@@ -17,7 +17,7 @@ _sealtask() {
     _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -51,7 +51,7 @@ _sealtask() {
 _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -77,7 +77,7 @@ _arguments "${_arguments_options[@]}" : \
 '--output-dir=[Generate the root and every visible subcommand manual beneath this directory]:DIR:_files' \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -102,7 +102,7 @@ _arguments "${_arguments_options[@]}" : \
 _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -126,7 +126,7 @@ _arguments "${_arguments_options[@]}" : \
 _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -151,7 +151,7 @@ _arguments "${_arguments_options[@]}" : \
 _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -184,7 +184,7 @@ _arguments "${_arguments_options[@]}" : \
 '--email=[Account email. Required with --non-interactive]:EMAIL:_default' \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -211,7 +211,7 @@ _arguments "${_arguments_options[@]}" : \
 '(--ttl)--ttl-seconds=[Number of seconds before the memory-only unlock expires (legacy compatibility)]:TTL_SECONDS:_default' \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -236,7 +236,7 @@ _arguments "${_arguments_options[@]}" : \
 _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -260,7 +260,7 @@ _arguments "${_arguments_options[@]}" : \
 _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -292,7 +292,7 @@ _arguments "${_arguments_options[@]}" : \
 _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -317,7 +317,7 @@ _arguments "${_arguments_options[@]}" : \
 _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -373,7 +373,7 @@ esac
 _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -397,7 +397,7 @@ _arguments "${_arguments_options[@]}" : \
 _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -489,7 +489,7 @@ esac
 _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -513,7 +513,7 @@ _arguments "${_arguments_options[@]}" : \
 _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -545,7 +545,7 @@ _arguments "${_arguments_options[@]}" : \
 _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -573,7 +573,7 @@ _arguments "${_arguments_options[@]}" : \
 '--work-list-id=[Exact project UUID (legacy compatibility)]:WORK_LIST_ID:_default' \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -632,7 +632,7 @@ esac
 _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -668,7 +668,7 @@ _arguments "${_arguments_options[@]}" : \
 _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -696,7 +696,7 @@ _arguments "${_arguments_options[@]}" : \
 _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -723,7 +723,7 @@ _arguments "${_arguments_options[@]}" : \
 _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -750,7 +750,7 @@ _arguments "${_arguments_options[@]}" : \
 _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -777,7 +777,7 @@ _arguments "${_arguments_options[@]}" : \
 _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -803,7 +803,7 @@ _arguments "${_arguments_options[@]}" : \
 _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -827,7 +827,7 @@ _arguments "${_arguments_options[@]}" : \
 _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -851,7 +851,7 @@ _arguments "${_arguments_options[@]}" : \
 _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -885,7 +885,7 @@ _arguments "${_arguments_options[@]}" : \
 '--work-list-id=[Exact project UUID (legacy compatibility)]:WORK_LIST_ID:_default' \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -933,6 +933,35 @@ esac
         esac
     ;;
 esac
+;;
+(audit)
+_arguments "${_arguments_options[@]}" : \
+'--work-list-id=[Exact project UUID (legacy compatibility)]:WORK_LIST_ID:_default' \
+'--cursor=[Fetch entries older than this audit-event UUID]:CURSOR:_default' \
+'--limit=[Maximum number of audit entries to return]:LIMIT:_default' \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'--password-stdin[Read the account password from stdin when project-name resolution needs an unlock]' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+'::project -- Project name, UUID, or unique UUID prefix; defaults to the current project:_default' \
+&& ret=0
 ;;
 (help)
 _arguments "${_arguments_options[@]}" : \
@@ -993,6 +1022,10 @@ _arguments "${_arguments_options[@]}" : \
         esac
     ;;
 esac
+;;
+(audit)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
 ;;
 (help)
 _arguments "${_arguments_options[@]}" : \
@@ -1010,7 +1043,7 @@ esac
 _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -1046,7 +1079,7 @@ _arguments "${_arguments_options[@]}" : \
 _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -1074,7 +1107,7 @@ _arguments "${_arguments_options[@]}" : \
 _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -1101,7 +1134,7 @@ _arguments "${_arguments_options[@]}" : \
 _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -1128,7 +1161,7 @@ _arguments "${_arguments_options[@]}" : \
 _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -1155,7 +1188,7 @@ _arguments "${_arguments_options[@]}" : \
 _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -1181,7 +1214,7 @@ _arguments "${_arguments_options[@]}" : \
 _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -1205,7 +1238,7 @@ _arguments "${_arguments_options[@]}" : \
 _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -1229,7 +1262,7 @@ _arguments "${_arguments_options[@]}" : \
 _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -1263,7 +1296,7 @@ _arguments "${_arguments_options[@]}" : \
 '--work-list-id=[Exact project UUID (legacy compatibility)]:WORK_LIST_ID:_default' \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -1311,6 +1344,35 @@ esac
         esac
     ;;
 esac
+;;
+(audit)
+_arguments "${_arguments_options[@]}" : \
+'--work-list-id=[Exact project UUID (legacy compatibility)]:WORK_LIST_ID:_default' \
+'--cursor=[Fetch entries older than this audit-event UUID]:CURSOR:_default' \
+'--limit=[Maximum number of audit entries to return]:LIMIT:_default' \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'--password-stdin[Read the account password from stdin when project-name resolution needs an unlock]' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+'::project -- Project name, UUID, or unique UUID prefix; defaults to the current project:_default' \
+&& ret=0
 ;;
 (help)
 _arguments "${_arguments_options[@]}" : \
@@ -1372,6 +1434,10 @@ _arguments "${_arguments_options[@]}" : \
     ;;
 esac
 ;;
+(audit)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
 (help)
 _arguments "${_arguments_options[@]}" : \
 && ret=0
@@ -1388,7 +1454,7 @@ esac
 _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -1426,7 +1492,7 @@ _arguments "${_arguments_options[@]}" : \
 '(--raw)--web-url=[Browser application origin; valid only with --field url (defaults to the API origin)]:ORIGIN:_default' \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -1458,7 +1524,7 @@ _arguments "${_arguments_options[@]}" : \
 '--work-list-id=[Exact project UUID (legacy compatibility)]:WORK_LIST_ID:_default' \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -1481,6 +1547,35 @@ _arguments "${_arguments_options[@]}" : \
 '::task -- Task title, UUID, or unique UUID prefix:_default' \
 && ret=0
 ;;
+(watch)
+_arguments "${_arguments_options[@]}" : \
+'(--work-list-id)--project=[Restrict results to a project name, UUID, or unique UUID prefix]:PROJECT:_default' \
+'--work-list-id=[Restrict results to one exact project UUID (legacy compatibility)]:WORK_LIST_ID:_default' \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'--include-completed[Include completed tasks]' \
+'--include-archived[Include archived tasks]' \
+'--password-stdin[Read the account password from stdin when no local unlock is available]' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+&& ret=0
+;;
 (create)
 _arguments "${_arguments_options[@]}" : \
 '(--work-list-id)--project=[Project name, UUID, or unique UUID prefix]:PROJECT:_default' \
@@ -1498,7 +1593,7 @@ _arguments "${_arguments_options[@]}" : \
 '(--input-stdin --title --body --body-file --edit --priority --due-at --due --start-at --section-id --section --idempotency-key)--input-file=[Read the complete camelCase task input object from a UTF-8 JSON file]:PATH:_files' \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -1528,7 +1623,7 @@ _arguments "${_arguments_options[@]}" : \
 '--work-list-id=[Exact project UUID (legacy compatibility)]:WORK_LIST_ID:_default' \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -1567,7 +1662,7 @@ _arguments "${_arguments_options[@]}" : \
 '(--input-stdin --title --body --body-file --clear-body --priority --clear-priority --due-at --due --clear-due-at --start-at --clear-start-at --section-id --section --clear-section)--input-file=[Read the complete camelCase patch object from a UTF-8 JSON file]:PATH:_files' \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -1606,7 +1701,7 @@ _arguments "${_arguments_options[@]}" : \
 '(--insert-before-task-id)--before=[Place the task immediately before this task title, UUID, or unique UUID prefix]:BEFORE:_default' \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -1635,7 +1730,7 @@ _arguments "${_arguments_options[@]}" : \
 '--work-list-id=[Exact project UUID (legacy compatibility)]:WORK_LIST_ID:_default' \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -1664,7 +1759,7 @@ _arguments "${_arguments_options[@]}" : \
 '--work-list-id=[Exact project UUID (legacy compatibility)]:WORK_LIST_ID:_default' \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -1693,7 +1788,7 @@ _arguments "${_arguments_options[@]}" : \
 '--work-list-id=[Exact project UUID (legacy compatibility)]:WORK_LIST_ID:_default' \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -1722,7 +1817,7 @@ _arguments "${_arguments_options[@]}" : \
 '--work-list-id=[Exact project UUID (legacy compatibility)]:WORK_LIST_ID:_default' \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -1752,7 +1847,7 @@ _arguments "${_arguments_options[@]}" : \
 '(--input-stdin)--input-file=[Read an optional audit patch from a UTF-8 JSON file]:PATH:_files' \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -1780,7 +1875,7 @@ _arguments "${_arguments_options[@]}" : \
 _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -1818,7 +1913,7 @@ _arguments "${_arguments_options[@]}" : \
 '--content-type=[Override the detected MIME content type]:CONTENT_TYPE:_default' \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -1848,7 +1943,7 @@ _arguments "${_arguments_options[@]}" : \
 '--attachment-id=[Attachment UUID or unique UUID prefix]:ATTACHMENT_ID:_default' \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -1879,7 +1974,7 @@ _arguments "${_arguments_options[@]}" : \
 '--attachment-id=[Attachment UUID or unique UUID prefix]:ATTACHMENT_ID:_default' \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -1910,7 +2005,7 @@ _arguments "${_arguments_options[@]}" : \
 '--output=[Current-working-directory-relative output path (absolute paths, parent traversal, and symlinks are rejected)]:OUTPUT:_files' \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -1990,6 +2085,10 @@ _arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
 (get)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(watch)
 _arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
@@ -2077,7 +2176,7 @@ esac
 _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -2097,11 +2196,97 @@ _arguments "${_arguments_options[@]}" : \
 '--help[Print help (see more with '\''--help'\'')]' \
 && ret=0
 ;;
+(activity)
+_arguments "${_arguments_options[@]}" : \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help]' \
+'--help[Print help]' \
+":: :_sealtask__subcmd__activity_commands" \
+"*::: :->activity" \
+&& ret=0
+
+    case $state in
+    (activity)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:sealtask-activity-command-$line[1]:"
+        case $line[1] in
+            (follow)
+_arguments "${_arguments_options[@]}" : \
+'--interval=[Delay between activity polls (for example 2s or 1m)]:DURATION:_default' \
+'--since=[Emit recent history from this window before following new events]:DURATION:_default' \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+":: :_sealtask__subcmd__activity__subcmd__help_commands" \
+"*::: :->help" \
+&& ret=0
+
+    case $state in
+    (help)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:sealtask-activity-help-command-$line[1]:"
+        case $line[1] in
+            (follow)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+        esac
+    ;;
+esac
+;;
 (doctor)
 _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -2128,7 +2313,7 @@ _arguments "${_arguments_options[@]}" : \
 _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -2160,7 +2345,7 @@ _arguments "${_arguments_options[@]}" : \
 _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -2213,7 +2398,7 @@ esac
 _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -2245,7 +2430,7 @@ _arguments "${_arguments_options[@]}" : \
 _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -2269,7 +2454,7 @@ _arguments "${_arguments_options[@]}" : \
 _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -2326,7 +2511,7 @@ esac
 _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -2352,7 +2537,7 @@ _arguments "${_arguments_options[@]}" : \
 _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -2387,7 +2572,7 @@ _arguments "${_arguments_options[@]}" : \
 '--task-id=[Exact task UUID (legacy compatibility)]:TASK_ID:_default' \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -2419,7 +2604,7 @@ _arguments "${_arguments_options[@]}" : \
 '(--input-stdin --body --body-file)--input-file=[Read the complete camelCase comment input object from a UTF-8 JSON file]:PATH:_files' \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -2452,7 +2637,7 @@ _arguments "${_arguments_options[@]}" : \
 '(--input-stdin --body)--input-file=[Read the complete camelCase comment input object from a UTF-8 JSON file]:PATH:_files' \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -2484,7 +2669,7 @@ _arguments "${_arguments_options[@]}" : \
 '(--input-stdin)--input-file=[Read an optional audit patch from a UTF-8 JSON file]:PATH:_files' \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -2552,7 +2737,7 @@ esac
 _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -2586,7 +2771,7 @@ _arguments "${_arguments_options[@]}" : \
 '--work-list-id=[Exact project UUID (legacy compatibility)]:WORK_LIST_ID:_default' \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -2614,7 +2799,7 @@ _arguments "${_arguments_options[@]}" : \
 '--work-list-id=[Exact project UUID (legacy compatibility)]:WORK_LIST_ID:_default' \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -2646,7 +2831,7 @@ _arguments "${_arguments_options[@]}" : \
 '(--input-stdin --title --body --private --idempotency-key)--input-file=[Read the complete camelCase note input object from a UTF-8 JSON file]:PATH:_files' \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -2676,7 +2861,7 @@ _arguments "${_arguments_options[@]}" : \
 '--work-list-id=[Exact project UUID (legacy compatibility)]:WORK_LIST_ID:_default' \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -2708,7 +2893,7 @@ _arguments "${_arguments_options[@]}" : \
 '(--input-stdin --title --body)--input-file=[Read the complete camelCase note patch from a UTF-8 JSON file]:PATH:_files' \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -2739,7 +2924,7 @@ _arguments "${_arguments_options[@]}" : \
 '(--input-stdin)--input-file=[Read an optional audit patch from a UTF-8 JSON file]:PATH:_files' \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
 '--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
 '--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
 '--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
@@ -2987,6 +3172,10 @@ _arguments "${_arguments_options[@]}" : \
     ;;
 esac
 ;;
+(audit)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
         esac
     ;;
 esac
@@ -3008,6 +3197,10 @@ _arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
 (get)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(watch)
 _arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
@@ -3086,6 +3279,26 @@ esac
 (stats)
 _arguments "${_arguments_options[@]}" : \
 && ret=0
+;;
+(activity)
+_arguments "${_arguments_options[@]}" : \
+":: :_sealtask__subcmd__help__subcmd__activity_commands" \
+"*::: :->activity" \
+&& ret=0
+
+    case $state in
+    (activity)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:sealtask-help-activity-command-$line[1]:"
+        case $line[1] in
+            (follow)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
 ;;
 (doctor)
 _arguments "${_arguments_options[@]}" : \
@@ -3238,6 +3451,7 @@ _sealtask_commands() {
 'lists:List, inspect, select, archive, or restore projects' \
 'tasks:List, inspect, create, update, move, or delete tasks' \
 'stats:Show current dashboard task counts' \
+'activity:Inspect or continuously follow recent account activity' \
 'doctor:Diagnose local state, authentication, unlock, and API connectivity' \
 'config:Inspect resolved operator configuration' \
 'profile:List profiles or change the persisted default profile' \
@@ -3247,6 +3461,37 @@ _sealtask_commands() {
 'help:Print this message or the help of the given subcommand(s)' \
     )
     _describe -t commands 'sealtask commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__activity_commands] )) ||
+_sealtask__subcmd__activity_commands() {
+    local commands; commands=(
+'follow:Follow new activity using bounded cursor catch-up polling' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'sealtask activity commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__activity__subcmd__follow_commands] )) ||
+_sealtask__subcmd__activity__subcmd__follow_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask activity follow commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__activity__subcmd__help_commands] )) ||
+_sealtask__subcmd__activity__subcmd__help_commands() {
+    local commands; commands=(
+'follow:Follow new activity using bounded cursor catch-up polling' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'sealtask activity help commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__activity__subcmd__help__subcmd__follow_commands] )) ||
+_sealtask__subcmd__activity__subcmd__help__subcmd__follow_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask activity help follow commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__activity__subcmd__help__subcmd__help_commands] )) ||
+_sealtask__subcmd__activity__subcmd__help__subcmd__help_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask activity help help commands' commands "$@"
 }
 (( $+functions[_sealtask__subcmd__auth_commands] )) ||
 _sealtask__subcmd__auth_commands() {
@@ -3511,6 +3756,7 @@ _sealtask__subcmd__help_commands() {
 'projects:List, inspect, select, archive, or restore projects' \
 'tasks:List, inspect, create, update, move, or delete tasks' \
 'stats:Show current dashboard task counts' \
+'activity:Inspect or continuously follow recent account activity' \
 'doctor:Diagnose local state, authentication, unlock, and API connectivity' \
 'config:Inspect resolved operator configuration' \
 'profile:List profiles or change the persisted default profile' \
@@ -3520,6 +3766,18 @@ _sealtask__subcmd__help_commands() {
 'help:Print this message or the help of the given subcommand(s)' \
     )
     _describe -t commands 'sealtask help commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__activity_commands] )) ||
+_sealtask__subcmd__help__subcmd__activity_commands() {
+    local commands; commands=(
+'follow:Follow new activity using bounded cursor catch-up polling' \
+    )
+    _describe -t commands 'sealtask help activity commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__activity__subcmd__follow_commands] )) ||
+_sealtask__subcmd__help__subcmd__activity__subcmd__follow_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help activity follow commands' commands "$@"
 }
 (( $+functions[_sealtask__subcmd__help__subcmd__auth_commands] )) ||
 _sealtask__subcmd__help__subcmd__auth_commands() {
@@ -3742,6 +4000,7 @@ _sealtask__subcmd__help__subcmd__projects_commands() {
 'current:Show the saved current project without accessing the network' \
 'clear:Clear the saved current project' \
 'sections:Discover sections in a project' \
+'audit:Show a bounded page of safe project audit metadata' \
     )
     _describe -t commands 'sealtask help projects commands' commands "$@"
 }
@@ -3749,6 +4008,11 @@ _sealtask__subcmd__help__subcmd__projects_commands() {
 _sealtask__subcmd__help__subcmd__projects__subcmd__archive_commands() {
     local commands; commands=()
     _describe -t commands 'sealtask help projects archive commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__projects__subcmd__audit_commands] )) ||
+_sealtask__subcmd__help__subcmd__projects__subcmd__audit_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help projects audit commands' commands "$@"
 }
 (( $+functions[_sealtask__subcmd__help__subcmd__projects__subcmd__clear_commands] )) ||
 _sealtask__subcmd__help__subcmd__projects__subcmd__clear_commands() {
@@ -3807,6 +4071,7 @@ _sealtask__subcmd__help__subcmd__tasks_commands() {
     local commands; commands=(
 'list:List tasks in the selected/current project, or assigned tasks when none is selected' \
 'get:Show one decrypted task, including comments and attachment metadata' \
+'watch:Follow authoritative task changes in one project until interrupted' \
 'create:Create an encrypted task' \
 'edit:Edit a task'\''s title and Markdown body in your configured editor' \
 'update:Patch an encrypted task; omitted fields remain unchanged' \
@@ -3904,6 +4169,11 @@ _sealtask__subcmd__help__subcmd__tasks__subcmd__unarchive_commands() {
 _sealtask__subcmd__help__subcmd__tasks__subcmd__update_commands() {
     local commands; commands=()
     _describe -t commands 'sealtask help tasks update commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__tasks__subcmd__watch_commands] )) ||
+_sealtask__subcmd__help__subcmd__tasks__subcmd__watch_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help tasks watch commands' commands "$@"
 }
 (( $+functions[_sealtask__subcmd__info_commands] )) ||
 _sealtask__subcmd__info_commands() {
@@ -4113,6 +4383,7 @@ _sealtask__subcmd__projects_commands() {
 'current:Show the saved current project without accessing the network' \
 'clear:Clear the saved current project' \
 'sections:Discover sections in a project' \
+'audit:Show a bounded page of safe project audit metadata' \
 'help:Print this message or the help of the given subcommand(s)' \
     )
     _describe -t commands 'sealtask projects commands' commands "$@"
@@ -4121,6 +4392,11 @@ _sealtask__subcmd__projects_commands() {
 _sealtask__subcmd__projects__subcmd__archive_commands() {
     local commands; commands=()
     _describe -t commands 'sealtask projects archive commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__projects__subcmd__audit_commands] )) ||
+_sealtask__subcmd__projects__subcmd__audit_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask projects audit commands' commands "$@"
 }
 (( $+functions[_sealtask__subcmd__projects__subcmd__clear_commands] )) ||
 _sealtask__subcmd__projects__subcmd__clear_commands() {
@@ -4148,6 +4424,7 @@ _sealtask__subcmd__projects__subcmd__help_commands() {
 'current:Show the saved current project without accessing the network' \
 'clear:Clear the saved current project' \
 'sections:Discover sections in a project' \
+'audit:Show a bounded page of safe project audit metadata' \
 'help:Print this message or the help of the given subcommand(s)' \
     )
     _describe -t commands 'sealtask projects help commands' commands "$@"
@@ -4156,6 +4433,11 @@ _sealtask__subcmd__projects__subcmd__help_commands() {
 _sealtask__subcmd__projects__subcmd__help__subcmd__archive_commands() {
     local commands; commands=()
     _describe -t commands 'sealtask projects help archive commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__projects__subcmd__help__subcmd__audit_commands] )) ||
+_sealtask__subcmd__projects__subcmd__help__subcmd__audit_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask projects help audit commands' commands "$@"
 }
 (( $+functions[_sealtask__subcmd__projects__subcmd__help__subcmd__clear_commands] )) ||
 _sealtask__subcmd__projects__subcmd__help__subcmd__clear_commands() {
@@ -4265,6 +4547,7 @@ _sealtask__subcmd__tasks_commands() {
     local commands; commands=(
 'list:List tasks in the selected/current project, or assigned tasks when none is selected' \
 'get:Show one decrypted task, including comments and attachment metadata' \
+'watch:Follow authoritative task changes in one project until interrupted' \
 'create:Create an encrypted task' \
 'edit:Edit a task'\''s title and Markdown body in your configured editor' \
 'update:Patch an encrypted task; omitted fields remain unchanged' \
@@ -4381,6 +4664,7 @@ _sealtask__subcmd__tasks__subcmd__help_commands() {
     local commands; commands=(
 'list:List tasks in the selected/current project, or assigned tasks when none is selected' \
 'get:Show one decrypted task, including comments and attachment metadata' \
+'watch:Follow authoritative task changes in one project until interrupted' \
 'create:Create an encrypted task' \
 'edit:Edit a task'\''s title and Markdown body in your configured editor' \
 'update:Patch an encrypted task; omitted fields remain unchanged' \
@@ -4485,6 +4769,11 @@ _sealtask__subcmd__tasks__subcmd__help__subcmd__update_commands() {
     local commands; commands=()
     _describe -t commands 'sealtask tasks help update commands' commands "$@"
 }
+(( $+functions[_sealtask__subcmd__tasks__subcmd__help__subcmd__watch_commands] )) ||
+_sealtask__subcmd__tasks__subcmd__help__subcmd__watch_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask tasks help watch commands' commands "$@"
+}
 (( $+functions[_sealtask__subcmd__tasks__subcmd__list_commands] )) ||
 _sealtask__subcmd__tasks__subcmd__list_commands() {
     local commands; commands=()
@@ -4509,6 +4798,11 @@ _sealtask__subcmd__tasks__subcmd__unarchive_commands() {
 _sealtask__subcmd__tasks__subcmd__update_commands() {
     local commands; commands=()
     _describe -t commands 'sealtask tasks update commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__tasks__subcmd__watch_commands] )) ||
+_sealtask__subcmd__tasks__subcmd__watch_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask tasks watch commands' commands "$@"
 }
 
 if [ "$funcstack[1]" = "_sealtask" ]; then

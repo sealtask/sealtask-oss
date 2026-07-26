@@ -12,6 +12,7 @@ mod editor;
 mod human_input;
 mod input;
 mod interaction;
+mod live_output;
 mod operator_config;
 mod output_models;
 mod picker;
@@ -27,8 +28,8 @@ mod terminal;
 use args::{Cli, Command};
 use clap::FromArgMatches;
 use commands::{
-    run_auth, run_comments, run_config, run_info, run_lists_get, run_me, run_notes, run_pick,
-    run_profile, run_projects, run_schema, run_stats, run_tasks,
+    run_activity, run_auth, run_comments, run_config, run_info, run_lists_get, run_me, run_notes,
+    run_pick, run_profile, run_projects, run_schema, run_stats, run_tasks,
 };
 use operator_config::{
     OperatorOverrides, parse_timeout, resolve_operator_config,
@@ -73,6 +74,7 @@ async fn main() {
         cli.command.as_ref(),
         Some(Command::Tasks { command }) if task_list::is_raw_field_output(command)
     );
+    let streaming = command_is_streaming(cli.command.as_ref());
     let terminal = if raw_discovery {
         Ok(None)
     } else {
@@ -85,7 +87,7 @@ async fn main() {
             progress_explicit: long_option_present(&args, "--progress"),
             quiet: cli.quiet,
             format,
-            pager_allowed: !(composable_picker || composable_field),
+            pager_allowed: !(composable_picker || composable_field || streaming),
         })
         .map(Some)
     };
@@ -144,6 +146,8 @@ async fn run(cli: Cli, format: OutputFormat, raw_args: &[OsString]) -> CliResult
         return serve(socket_path).await.map_err(Into::into);
     }
 
+    validate_stream_output(cli.command.as_ref(), format)?;
+
     match cli.command.as_ref() {
         Some(Command::Completion { shell }) => {
             ensure_raw_discovery_output(&cli, format, "completion", raw_args)?;
@@ -165,7 +169,7 @@ async fn run(cli: Cli, format: OutputFormat, raw_args: &[OsString]) -> CliResult
     if matches!(cli.command.as_ref(), Some(Command::Pick { .. })) {
         if format.is_json() {
             return Err(PublicError::validation(
-                "'sealtask pick' emits one raw reusable selector and cannot be combined with --json, --format json, or --format json-pretty",
+                "'sealtask pick' emits one raw reusable selector and cannot be combined with --json or any JSON --format value",
             )
             .into());
         }
@@ -313,6 +317,9 @@ async fn run(cli: Cli, format: OutputFormat, raw_args: &[OsString]) -> CliResult
             run_tasks(&runtime, format, cli.non_interactive, command).await
         }
         (Command::Stats, Ok(runtime)) => run_stats(&runtime, format).await,
+        (Command::Activity { command }, Ok(runtime)) => {
+            run_activity(&runtime, format, command).await
+        }
         (
             Command::Doctor {
                 offline,
@@ -365,7 +372,7 @@ fn ensure_raw_discovery_output(
 ) -> CliResult<()> {
     if format.is_json() {
         return Err(PublicError::validation(format!(
-            "'sealtask {command}' emits a raw terminal integration artifact and cannot be combined with --json, --format json, or --format json-pretty"
+            "'sealtask {command}' emits a raw terminal integration artifact and cannot be combined with --json or any JSON --format value"
         ))
         .into());
     }
@@ -464,6 +471,7 @@ fn command_name(command: &Command) -> &'static str {
         Command::Projects { .. } => "projects",
         Command::Tasks { .. } => "tasks",
         Command::Stats => "stats",
+        Command::Activity { .. } => "activity",
         Command::Doctor { .. } => "doctor",
         Command::Config { .. } => "config",
         Command::Profile { .. } => "profile",
@@ -471,6 +479,29 @@ fn command_name(command: &Command) -> &'static str {
         Command::Comments { .. } => "comments",
         Command::Notes { .. } => "notes",
     }
+}
+
+fn command_is_streaming(command: Option<&Command>) -> bool {
+    matches!(
+        command,
+        Some(Command::Tasks {
+            command: args::TasksCommand::Watch { .. },
+        }) | Some(Command::Activity {
+            command: args::ActivityCommand::Follow { .. },
+        })
+    )
+}
+
+fn validate_stream_output(command: Option<&Command>, format: OutputFormat) -> CliResult<()> {
+    if command_is_streaming(command)
+        && matches!(format, OutputFormat::Json | OutputFormat::JsonPretty)
+    {
+        return Err(PublicError::validation(
+            "streaming commands do not produce one finite JSON document; use '--format jsonl' for machine-readable records or table output for humans",
+        )
+        .into());
+    }
+    Ok(())
 }
 
 fn command_uses_editor(command: Option<&Command>) -> bool {

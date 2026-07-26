@@ -18,7 +18,7 @@ mod storage;
 mod unlock_daemon;
 mod upload_lifecycle;
 
-pub use client::RuntimeClient;
+pub use client::{ProjectTaskSession, RuntimeClient};
 pub use inputs::{
     ArchiveTaskArgs, AttachmentUploadPassword, CommentInput, CreateCommentArgs, CreateNoteArgs,
     CreateTaskArgs, DeleteCommentArgs, DeleteNoteArgs, DeleteTaskArgs, DeleteTaskAttachmentArgs,

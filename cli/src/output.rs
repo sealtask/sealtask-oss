@@ -139,6 +139,22 @@ pub(crate) fn write_stdout_line(args: fmt::Arguments<'_>) -> CliResult<()> {
     write_line_to_stream(io::stdout().lock(), args, "print to", "stdout", true)
 }
 
+pub(crate) fn write_stdout_line_flushed(args: fmt::Arguments<'_>) -> CliResult<()> {
+    let mut stdout = io::stdout().lock();
+    write_line_to_stream(&mut stdout, args, "print to", "stdout", true)?;
+    stdout
+        .flush()
+        .map_err(|err| map_stream_error(err, "flush", "stdout", true))
+}
+
+pub(crate) fn write_stdout_flushed(args: fmt::Arguments<'_>) -> CliResult<()> {
+    let mut stdout = io::stdout().lock();
+    write_to_stream(&mut stdout, args, "print to", "stdout", true)?;
+    stdout
+        .flush()
+        .map_err(|err| map_stream_error(err, "flush", "stdout", true))
+}
+
 pub(crate) fn write_stderr_line(args: fmt::Arguments<'_>) -> CliResult<()> {
     terminal::clear_active_progress();
     write_line_to_stream(io::stderr().lock(), args, "print to", "stderr", false)
@@ -206,6 +222,11 @@ pub(crate) fn print_json<T: Serialize + ?Sized>(
     Ok(())
 }
 
+pub(crate) fn print_jsonl<T: Serialize + ?Sized>(value: &T, context: &str) -> CliResult<()> {
+    let output = serde_json::to_string(value).expect(context);
+    write_stdout_line_flushed(format_args!("{output}"))
+}
+
 fn print_json_stderr<T: Serialize + ?Sized>(
     value: &T,
     format: OutputFormat,
@@ -225,6 +246,7 @@ pub(crate) enum OutputFormat {
     Table,
     Json,
     JsonPretty,
+    Jsonl,
 }
 
 impl OutputFormat {
@@ -255,13 +277,14 @@ impl OutputFormat {
         match cli.format {
             Some(OutputArg::Json) => Self::Json,
             Some(OutputArg::JsonPretty) => Self::JsonPretty,
+            Some(OutputArg::Jsonl) => Self::Jsonl,
             Some(OutputArg::Table) | None => Self::Table,
         }
     }
 
     #[must_use]
     pub(crate) const fn is_json(self) -> bool {
-        matches!(self, Self::Json | Self::JsonPretty)
+        matches!(self, Self::Json | Self::JsonPretty | Self::Jsonl)
     }
 
     const fn pretty_json(self) -> bool {
@@ -272,6 +295,7 @@ impl OutputFormat {
         match value {
             "json" => Self::Json,
             "json-pretty" => Self::JsonPretty,
+            "jsonl" => Self::Jsonl,
             _ => Self::Table,
         }
     }
@@ -328,12 +352,14 @@ pub(crate) fn print_cli_error(err: &CliError, format: OutputFormat) -> CliResult
             print_warnings(format, err.warnings())?;
             write_table_error(io::stderr().lock(), err)
         }
-        OutputFormat::Json | OutputFormat::JsonPretty => print_json_stderr_envelope(
-            format,
-            err.warnings(),
-            Some(err.error_result()),
-            "serializing CLI error should succeed",
-        ),
+        OutputFormat::Json | OutputFormat::JsonPretty | OutputFormat::Jsonl => {
+            print_json_stderr_envelope(
+                format,
+                err.warnings(),
+                Some(err.error_result()),
+                "serializing CLI error should succeed",
+            )
+        }
     }
 }
 
@@ -490,7 +516,7 @@ fn write_warnings<W: Write>(
             }
             Ok(())
         }
-        OutputFormat::Json | OutputFormat::JsonPretty => {
+        OutputFormat::Json | OutputFormat::JsonPretty | OutputFormat::Jsonl => {
             let envelope = StderrEnvelope {
                 warnings,
                 error: None,
@@ -570,7 +596,9 @@ pub(crate) fn print_simple_result<T: Serialize + ?Sized>(
     table_message: &str,
 ) -> CliResult<()> {
     match format {
-        OutputFormat::Json | OutputFormat::JsonPretty => print_json(payload, format, context),
+        OutputFormat::Json | OutputFormat::JsonPretty | OutputFormat::Jsonl => {
+            print_json(payload, format, context)
+        }
         OutputFormat::Table => {
             if !terminal::quiet() {
                 println!(

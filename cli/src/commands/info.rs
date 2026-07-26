@@ -13,7 +13,24 @@ pub(crate) fn run_info(runtime: &RuntimeClient, format: OutputFormat) -> CliResu
         "commandName": "sealtask",
         "automationProfile": "agent_task_management",
         "jsonContractVersion": 2,
-        "outputFormats": ["table", "json", "json-pretty"],
+        "outputFormats": ["table", "json", "json-pretty", "jsonl"],
+        "streaming": {
+            "commands": ["tasks watch", "activity follow"],
+            "machineFormat": "jsonl",
+            "recordSchemaVersion": 1,
+            "finiteJsonRejected": true,
+            "flushEachRecord": true,
+            "pagerDisabled": true,
+            "redirectedHumanOutput": "append-only",
+            "interactiveHumanOutput": "bounded-live-region",
+            "interruptionExitCode": 130,
+        },
+        "audit": {
+            "command": "projects audit",
+            "activityCommand": "activity follow",
+            "maximumPageItems": 100,
+            "encryptedPayloadExcluded": true,
+        },
         "shellCompletions": ["bash", "zsh", "fish", "powershell"],
         "manualPages": true,
         "taskListing": {
@@ -101,10 +118,12 @@ pub(crate) fn run_info(runtime: &RuntimeClient, format: OutputFormat) -> CliResu
             println!("Editor: SEALTASK_EDITOR > VISUAL > EDITOR");
             println!("Picker: sealtask pick project|task");
             println!("Task lists: --columns, --sort, --field id|title|url");
+            println!("Streams: tasks watch, activity follow (--format jsonl for automation)");
+            println!("Audit: projects audit [PROJECT]");
             println!("Project details: sealtask projects list --details");
             Ok(())
         }
-        OutputFormat::Json | OutputFormat::JsonPretty => {
+        OutputFormat::Json | OutputFormat::JsonPretty | OutputFormat::Jsonl => {
             print_json(&payload, format, "serializing CLI metadata should succeed")
         }
     }

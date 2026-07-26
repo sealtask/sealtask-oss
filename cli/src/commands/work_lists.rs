@@ -1,4 +1,5 @@
 use crate::args::{ProjectSectionsCommand, ProjectsCommand};
+use crate::commands::audit_output::print_audit_page;
 use crate::output::{
     CliResult, OutputFormat, mutation_output_enabled, print_json, print_simple_result,
 };
@@ -210,7 +211,7 @@ pub(crate) async fn run_projects(
                 api_base_url: runtime.api_url(),
             };
             match format {
-                OutputFormat::Json | OutputFormat::JsonPretty => print_json(
+                OutputFormat::Json | OutputFormat::JsonPretty | OutputFormat::Jsonl => print_json(
                     &result,
                     format,
                     "serializing current-project status should succeed",
@@ -278,6 +279,35 @@ pub(crate) async fn run_projects(
                 return print_empty_collection(format, "No sections found in this project.");
             }
             print_project_sections(&sections, format)
+        }
+        Some(ProjectsCommand::Audit {
+            project,
+            work_list_id,
+            cursor,
+            limit,
+            password_stdin: command_password_stdin,
+        }) => {
+            reject_project_options(&[
+                ("--verbose", legacy_verbose),
+                ("--include-archived", include_archived),
+                ("--raw", raw),
+            ])?;
+            let password_stdin = password_stdin || command_password_stdin;
+            let project = resolve_project(
+                runtime,
+                project.as_ref(),
+                work_list_id,
+                password_stdin,
+                ProjectLifecycle::Any,
+            )
+            .await?;
+            let mut client = runtime.authenticated_api_client()?;
+            let page = with_progress(
+                "Loading project audit log…",
+                client.get_work_list_audit_log(project.id, cursor, limit),
+            )
+            .await?;
+            print_audit_page(project.id, &page, format)
         }
         None => {
             list_projects(

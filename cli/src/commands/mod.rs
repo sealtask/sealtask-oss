@@ -1,3 +1,5 @@
+mod activity;
+mod audit_output;
 mod auth;
 mod comments;
 mod info;
@@ -5,9 +7,11 @@ mod notes;
 mod operator;
 mod pick;
 mod schema;
+mod streams;
 mod tasks;
 mod work_lists;
 
+pub(crate) use activity::run_activity;
 pub(crate) use auth::run_auth;
 pub(crate) use comments::run_comments;
 pub(crate) use info::run_info;

@@ -47,7 +47,7 @@ pub(crate) fn run(format: OutputFormat, path: &[String]) -> CliResult<()> {
             print!("{}", display_command.render_long_help());
             Ok(())
         }
-        OutputFormat::Json | OutputFormat::JsonPretty => {
+        OutputFormat::Json | OutputFormat::JsonPretty | OutputFormat::Jsonl => {
             let schema = command_schema(selected, &display_path);
             print_json(&schema, format, "serializing command schema should succeed")
         }

@@ -5,6 +5,8 @@ mod task_references;
 mod tasks;
 mod work_lists;
 
+pub use tasks::ProjectTaskSession;
+
 use crate::blocking_crypto::BlockingCryptoAdmission;
 use crate::models::ReadError;
 use crate::password::{

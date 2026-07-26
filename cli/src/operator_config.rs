@@ -544,9 +544,13 @@ fn resolve_operator_config_from_process(
 }
 
 pub(crate) fn parse_timeout(raw: &str) -> Result<Duration, String> {
+    parse_human_duration(raw, "timeout")
+}
+
+pub(crate) fn parse_human_duration(raw: &str, description: &str) -> Result<Duration, String> {
     let normalized = raw.trim().to_ascii_lowercase();
     if normalized.is_empty() {
-        return Err(timeout_format_error());
+        return Err(duration_format_error(description));
     }
 
     let bytes = normalized.as_bytes();
@@ -558,11 +562,11 @@ pub(crate) fn parse_timeout(raw: &str) -> Result<Duration, String> {
             index += 1;
         }
         if index == number_start {
-            return Err(timeout_format_error());
+            return Err(duration_format_error(description));
         }
         let value = normalized[number_start..index]
             .parse::<u128>()
-            .map_err(|_| timeout_format_error())?;
+            .map_err(|_| duration_format_error(description))?;
 
         let multiplier = if normalized[index..].starts_with("ms") {
             index += 2;
@@ -572,28 +576,29 @@ pub(crate) fn parse_timeout(raw: &str) -> Result<Duration, String> {
                 b's' => 1_000_u128,
                 b'm' => 60 * 1_000_u128,
                 b'h' => 60 * 60 * 1_000_u128,
-                _ => return Err(timeout_format_error()),
+                _ => return Err(duration_format_error(description)),
             };
             index += 1;
             multiplier
         } else {
-            return Err(timeout_format_error());
+            return Err(duration_format_error(description));
         };
 
         let segment = value
             .checked_mul(multiplier)
-            .ok_or_else(timeout_range_error)?;
+            .ok_or_else(|| duration_range_error(description))?;
         total_milliseconds = total_milliseconds
             .checked_add(segment)
-            .ok_or_else(timeout_range_error)?;
+            .ok_or_else(|| duration_range_error(description))?;
         if total_milliseconds > MAX_TIMEOUT.as_millis() {
-            return Err(timeout_range_error());
+            return Err(duration_range_error(description));
         }
     }
 
-    let milliseconds = u64::try_from(total_milliseconds).map_err(|_| timeout_range_error())?;
+    let milliseconds =
+        u64::try_from(total_milliseconds).map_err(|_| duration_range_error(description))?;
     let timeout = Duration::from_millis(milliseconds);
-    validate_timeout(timeout, "timeout").map_err(|error| error.to_string())?;
+    validate_timeout(timeout, description).map_err(|error| error.to_string())?;
     Ok(timeout)
 }
 
@@ -770,13 +775,14 @@ fn validate_timeout(timeout: Duration, description: &str) -> PublicResult<()> {
     Ok(())
 }
 
-fn timeout_format_error() -> String {
-    "timeout must be a positive duration using ms, s, m, or h (for example 500ms, 30s, or 1m30s)"
-        .to_string()
+fn duration_format_error(description: &str) -> String {
+    format!(
+        "{description} must be a positive duration using ms, s, m, or h (for example 500ms, 30s, or 1m30s)"
+    )
 }
 
-fn timeout_range_error() -> String {
-    "timeout must be between 1ms and 24h".to_string()
+fn duration_range_error(description: &str) -> String {
+    format!("{description} must be between 1ms and 24h")
 }
 
 fn serialize_optional_duration_milliseconds<S>(

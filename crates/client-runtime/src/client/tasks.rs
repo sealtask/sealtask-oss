@@ -7,8 +7,8 @@ use crate::inputs::{
 use crate::models::{AgentTaskDetail, AgentTaskSummary};
 use chrono::{DateTime, Utc};
 use sealtask_client_api::{
-    ArchiveTaskRequest, CreateTaskRequest, MoveTaskRequest, TaskSectionBoundary,
-    UnarchiveTaskRequest, UpdateTaskRequest,
+    ArchiveTaskRequest, BoardEventStream, CreateTaskRequest, MoveTaskRequest, PublicApiClient,
+    TaskSectionBoundary, UnarchiveTaskRequest, UpdateTaskRequest,
 };
 use sealtask_client_core::{PublicError, PublicResult};
 use sealtask_client_crypto::{
@@ -31,6 +31,61 @@ struct TaskCreateSemanticPlan<'a> {
     due_at: Option<&'a DateTime<Utc>>,
     start_at: Option<&'a DateTime<Utc>>,
     section_id: Option<Uuid>,
+}
+
+/// An authenticated, unlocked session for repeatedly reading one project's tasks.
+///
+/// The session intentionally has no `Debug` implementation because it retains
+/// authenticated API credentials and the decrypted project context.
+pub struct ProjectTaskSession {
+    runtime: RuntimeClient,
+    client: PublicApiClient,
+    work_list_id: Uuid,
+    context: WorkListContext,
+}
+
+impl ProjectTaskSession {
+    #[must_use]
+    pub const fn work_list_id(&self) -> Uuid {
+        self.work_list_id
+    }
+
+    /// Fetch the authoritative task collection while reusing the unlocked
+    /// project context retained by this session.
+    pub async fn list_tasks(
+        &mut self,
+        include_completed: bool,
+        include_archived: bool,
+    ) -> PublicResult<Vec<AgentTaskSummary>> {
+        let response = self
+            .client
+            .get_tasks(self.work_list_id, include_archived)
+            .await?;
+        let tasks = if include_completed {
+            response.tasks
+        } else {
+            response
+                .tasks
+                .into_iter()
+                .filter(|task| !task.is_completed)
+                .collect()
+        };
+
+        Ok(tasks
+            .into_iter()
+            .map(|task| self.runtime.project_task_summary(task, Some(&self.context)))
+            .collect())
+    }
+
+    /// Issue a fresh one-time stream token and connect to this project's event
+    /// feed without exposing the bearer token to callers.
+    pub async fn connect_events(&self) -> PublicResult<BoardEventStream> {
+        let mut client = self.client.clone();
+        let token = client.issue_project_sse_token(self.work_list_id).await?;
+        client
+            .connect_project_events(self.work_list_id, &token)
+            .await
+    }
 }
 
 impl RuntimeClient {
@@ -90,6 +145,21 @@ impl RuntimeClient {
         include_archived: bool,
         password_stdin: bool,
     ) -> PublicResult<Vec<AgentTaskSummary>> {
+        let mut session = self
+            .project_task_session(work_list_id, password_stdin)
+            .await?;
+        session
+            .list_tasks(include_completed, include_archived)
+            .await
+    }
+
+    /// Authenticate, unlock, and resolve the decrypted context for one project
+    /// so repeated authoritative task refreshes can reuse it.
+    pub async fn project_task_session(
+        &self,
+        work_list_id: Uuid,
+        password_stdin: bool,
+    ) -> PublicResult<ProjectTaskSession> {
         let mut credentials = self.require_logged_in_credentials()?;
         let data_key = self
             .load_data_key(
@@ -98,31 +168,32 @@ impl RuntimeClient {
                 "Password required to decrypt task data.",
             )
             .await?;
-        let mut client = sealtask_client_api::PublicApiClient::with_credentials_and_options(
+        let client = sealtask_client_api::PublicApiClient::with_credentials_and_options(
             &self.api_url,
             credentials,
             self.api_transport_options,
         )?;
+        self.project_task_session_with_client_and_data_key(work_list_id, client, &data_key)
+            .await
+    }
+
+    async fn project_task_session_with_client_and_data_key(
+        &self,
+        work_list_id: Uuid,
+        mut client: PublicApiClient,
+        data_key: &sealtask_client_crypto::SymmetricKey,
+    ) -> PublicResult<ProjectTaskSession> {
         let work_list = client.get_work_list(work_list_id).await?;
         let scheme_history =
             load_task_reference_scheme_history(&mut client, &work_list.work_list).await;
         let context =
-            self.context_from_work_list_detail(&work_list, &scheme_history, Some(&data_key));
-        let response = client.get_tasks(work_list_id, include_archived).await?;
-        let tasks = if include_completed {
-            response.tasks
-        } else {
-            response
-                .tasks
-                .into_iter()
-                .filter(|task| !task.is_completed)
-                .collect()
-        };
-
-        Ok(tasks
-            .into_iter()
-            .map(|task| self.project_task_summary(task, Some(&context)))
-            .collect())
+            self.context_from_work_list_detail(&work_list, &scheme_history, Some(data_key));
+        Ok(ProjectTaskSession {
+            runtime: self.clone(),
+            client,
+            work_list_id,
+            context,
+        })
     }
 
     pub async fn get_task(
@@ -679,5 +750,306 @@ mod task_reference_tests {
                 .expect("explicit work-list selection should disambiguate"),
             (second, 7)
         );
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::{TimeDelta, Utc};
+    use sealtask_client_api::{
+        MembershipResponse, TaskListResponse, TaskResponse, WorkListDetailResponse,
+        WorkListResponse,
+    };
+    use sealtask_client_auth::Credentials;
+    use sealtask_client_crypto::{
+        KEY_SIZE, SymmetricKey, build_task_payload_envelope, derive_work_list_key,
+        encrypt_task_payload,
+    };
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+    #[tokio::test]
+    async fn project_task_session_reuses_context_and_preserves_filtering() {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+            .await
+            .expect("listener");
+        let api_url = format!("http://{}", listener.local_addr().expect("address"));
+        let work_list_id = Uuid::now_v7();
+        let data_key = SymmetricKey::new([0x61; KEY_SIZE]);
+        let list_key = derive_work_list_key(&data_key, &work_list_id).expect("list key");
+        let active_id = Uuid::now_v7();
+        let completed_id = Uuid::now_v7();
+        let archived_id = Uuid::now_v7();
+        let project_body =
+            serde_json::to_vec(&work_list_fixture(work_list_id)).expect("project response");
+        let active_body = serde_json::to_vec(&TaskListResponse {
+            tasks: vec![
+                task_fixture(
+                    &list_key,
+                    work_list_id,
+                    active_id,
+                    "Active task",
+                    false,
+                    false,
+                ),
+                task_fixture(
+                    &list_key,
+                    work_list_id,
+                    completed_id,
+                    "Completed task",
+                    true,
+                    false,
+                ),
+            ],
+            archived_counts: Vec::new(),
+        })
+        .expect("active task response");
+        let archived_body = serde_json::to_vec(&TaskListResponse {
+            tasks: vec![
+                task_fixture(
+                    &list_key,
+                    work_list_id,
+                    active_id,
+                    "Active task",
+                    false,
+                    false,
+                ),
+                task_fixture(
+                    &list_key,
+                    work_list_id,
+                    completed_id,
+                    "Completed task",
+                    true,
+                    false,
+                ),
+                task_fixture(
+                    &list_key,
+                    work_list_id,
+                    archived_id,
+                    "Archived task",
+                    false,
+                    true,
+                ),
+            ],
+            archived_counts: Vec::new(),
+        })
+        .expect("archived task response");
+        let server = tokio::spawn(async move {
+            let mut request_targets = Vec::new();
+            for _ in 0..5 {
+                let (mut stream, _) = listener.accept().await.expect("connection");
+                let request = read_http_request(&mut stream).await;
+                let target = request_target(&request);
+                let response = if target == format!("/work-lists/{work_list_id}") {
+                    &project_body
+                } else if target == format!("/work-lists/{work_list_id}/tasks?includeArchived=true")
+                {
+                    &archived_body
+                } else {
+                    assert_eq!(target, format!("/work-lists/{work_list_id}/tasks"));
+                    &active_body
+                };
+                request_targets.push(target);
+                write_http_response(&mut stream, response).await;
+            }
+            request_targets
+        });
+
+        let runtime = RuntimeClient::new(&api_url).expect("runtime");
+        let client = PublicApiClient::with_credentials(&api_url, test_credentials(&api_url))
+            .expect("API client");
+        let mut session = runtime
+            .project_task_session_with_client_and_data_key(work_list_id, client, &data_key)
+            .await
+            .expect("task session");
+
+        assert_eq!(session.work_list_id(), work_list_id);
+        assert_eq!(
+            task_titles(
+                &session
+                    .list_tasks(false, false)
+                    .await
+                    .expect("active refresh")
+            ),
+            ["Active task"]
+        );
+        assert_eq!(
+            task_titles(
+                &session
+                    .list_tasks(true, false)
+                    .await
+                    .expect("completed refresh")
+            ),
+            ["Active task", "Completed task"]
+        );
+        assert_eq!(
+            task_titles(
+                &session
+                    .list_tasks(false, true)
+                    .await
+                    .expect("archived refresh")
+            ),
+            ["Active task", "Archived task"]
+        );
+        assert_eq!(
+            task_titles(
+                &session
+                    .list_tasks(true, true)
+                    .await
+                    .expect("complete refresh")
+            ),
+            ["Active task", "Completed task", "Archived task"]
+        );
+
+        let request_targets = server.await.expect("server");
+        assert_eq!(
+            request_targets
+                .iter()
+                .filter(|target| *target == &format!("/work-lists/{work_list_id}"))
+                .count(),
+            1,
+            "the decrypted project context must be resolved only once"
+        );
+    }
+
+    fn task_titles(tasks: &[AgentTaskSummary]) -> Vec<&str> {
+        tasks
+            .iter()
+            .map(|task| task.title.as_deref().expect("decrypted task title"))
+            .collect()
+    }
+
+    fn task_fixture(
+        list_key: &SymmetricKey,
+        work_list_id: Uuid,
+        id: Uuid,
+        title: &str,
+        is_completed: bool,
+        is_archived: bool,
+    ) -> TaskResponse {
+        let payload = encrypt_task_payload(
+            &build_task_payload_envelope(
+                TaskPayloadBody {
+                    title: title.to_string(),
+                    rich_text: None,
+                    checklist: None,
+                    attachments: None,
+                    references: None,
+                    mentions: None,
+                    client_meta: None,
+                    recurrence_state: None,
+                },
+                1,
+            ),
+            list_key,
+        )
+        .expect("task payload");
+        let now = Utc::now();
+        TaskResponse {
+            id,
+            work_list_id,
+            created_by_membership_id: Uuid::now_v7(),
+            title_ciphertext: String::new(),
+            payload_ciphertext: payload.base64,
+            section_id: None,
+            priority: None,
+            position: id.simple().to_string(),
+            due_at: None,
+            start_at: None,
+            completed_at: is_completed.then_some(now),
+            archived_at: is_archived.then_some(now),
+            is_completed,
+            recurrence_id: None,
+            recurrence_schedule: None,
+            recurrence_iteration: None,
+            materialized_at: None,
+            created_at: now,
+            updated_at: now,
+            comment_count: 0,
+            delegations: Vec::new(),
+        }
+    }
+
+    fn work_list_fixture(id: Uuid) -> WorkListDetailResponse {
+        let now = Utc::now();
+        WorkListDetailResponse {
+            work_list: WorkListResponse {
+                id,
+                owner_user_id: Uuid::now_v7(),
+                workspace_id: Uuid::now_v7(),
+                title_ciphertext: String::new(),
+                description_ciphertext: None,
+                payload_ciphertext: String::new(),
+                timezone: "UTC".to_string(),
+                section_snapshots: Vec::new(),
+                created_at: now,
+                updated_at: now,
+                archived_at: None,
+                membership: MembershipResponse {
+                    id: Uuid::now_v7(),
+                    user_id: Uuid::now_v7(),
+                    user_email: "agent@example.com".to_string(),
+                    user_name: "Agent".to_string(),
+                    user_avatar_color: "#000000".to_string(),
+                    role: "owner".to_string(),
+                    status: "active".to_string(),
+                    work_list_key_ciphertext: String::new(),
+                    recipient_ciphertext: None,
+                    invite_package_ciphertext: None,
+                    salt_member: None,
+                    expires_at: None,
+                    joined_at: now,
+                    payload_binding_key: None,
+                },
+            },
+            members: Vec::new(),
+        }
+    }
+
+    fn test_credentials(api_url: &str) -> Credentials {
+        Credentials {
+            api_url: api_url.to_string(),
+            access_token: "test-access".to_string(),
+            refresh_token: "test-refresh".to_string(),
+            access_expires_at: Utc::now() + TimeDelta::hours(1),
+            refresh_expires_at: Utc::now() + TimeDelta::hours(2),
+            user_id: Uuid::now_v7(),
+            email: "agent@example.com".to_string(),
+            data_key_ciphertext: "unused".to_string(),
+        }
+    }
+
+    async fn read_http_request(stream: &mut tokio::net::TcpStream) -> Vec<u8> {
+        let mut request = Vec::new();
+        let mut buffer = [0_u8; 1024];
+        while !request.windows(4).any(|window| window == b"\r\n\r\n") {
+            let read = stream.read(&mut buffer).await.expect("request bytes");
+            if read == 0 {
+                break;
+            }
+            request.extend_from_slice(&buffer[..read]);
+        }
+        request
+    }
+
+    fn request_target(request: &[u8]) -> String {
+        String::from_utf8_lossy(request)
+            .lines()
+            .next()
+            .and_then(|line| line.split_whitespace().nth(1))
+            .expect("request target")
+            .to_string()
+    }
+
+    async fn write_http_response(stream: &mut tokio::net::TcpStream, body: &[u8]) {
+        let head = format!(
+            "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+            body.len()
+        );
+        stream
+            .write_all(head.as_bytes())
+            .await
+            .expect("response head");
+        stream.write_all(body).await.expect("response body");
     }
 }

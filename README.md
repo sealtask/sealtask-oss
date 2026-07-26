@@ -653,13 +653,67 @@ and use deadlines capped by the signed URL's expiry. Loopback HTTP storage is
 enabled only when the configured API URL is itself loopback HTTP, for local
 development and tests.
 
+### Live tasks, activity, and audit
+
+Follow one project's decrypted task state with an authoritative live view:
+
+```bash
+sealtask tasks watch --project "Release Engineering"
+sealtask --format jsonl tasks watch --work-list-id <project-id>
+```
+
+The event stream is advisory. SealTask subscribes before loading the initial
+snapshot, refetches authoritative tasks after every board or resync event, and
+subscribes before refetching after a reconnect. Each reconnect uses a fresh
+short-lived stream credential; credentials never appear in output, errors, or
+debug values. Interactive terminals redraw only the CLI-owned region.
+Redirected human output is append-only and contains no cursor control
+sequences. JSONL refresh records carry the current authoritative `tasks`
+snapshot plus filter-neutral `addedTaskIds`, `updatedTaskIds`, and
+`removedTaskIds`; a completion or archive filtered from the view is therefore
+never mislabeled as a deletion.
+
+Account activity uses bounded cursor polling and emits initial history
+oldest-first:
+
+```bash
+sealtask activity follow
+sealtask activity follow --since 30m --interval 10s
+sealtask --format jsonl activity follow
+```
+
+The default history window is 10 minutes and the default poll interval is five
+seconds. Pagination, page size, history, and catch-up are bounded. Malformed
+pagination or more than 1,000 unseen events fails explicitly instead of moving
+the live anchor and silently dropping records.
+
+Inspect one bounded project audit page without decrypting payload contents:
+
+```bash
+sealtask projects audit
+sealtask projects audit "Release Engineering" --limit 25
+sealtask --json projects audit --work-list-id <project-id>
+```
+
+Audit JSON uses an explicit safe projection. It reports `payloadPresent` but
+never serializes the backend payload object, payload ciphertext, or payload
+HMAC. Continuation output pins the project ID so a later current-project change
+cannot apply a cursor to the wrong project.
+
+Streaming commands reject `--json` and `--format json|json-pretty`, because a
+never-ending stream cannot be one finite document. Use `--format jsonl` for one
+compact, flushed, versioned domain record per stdout line. Stream warnings and
+errors remain compact structured envelopes on stderr, paging is disabled, and
+SIGINT or SIGTERM preserves the final display and exits with status 130.
+
 ### JSON process contract
 
 `sealtask --json info` reports `"jsonContractVersion": 2`. For ordinary commands run
 with `--json --non-interactive`, version 2 guarantees:
 
 - `--json` emits one compact JSON document; `--format json-pretty` emits the
-  same document with indentation
+  same document with indentation; `--format jsonl` emits compact JSON Lines
+  (one line for finite commands and a flushed record sequence for streams)
 - success writes exactly one JSON document to stdout; stderr is empty unless a
   structured warning is emitted
 - collection commands always write a JSON array, including `[]` for an empty

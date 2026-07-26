@@ -1,6 +1,8 @@
 #![cfg_attr(test, allow(clippy::unwrap_used))]
 
 mod attachments;
+mod audit;
+mod events;
 pub mod note_transport;
 mod note_transport_limits;
 mod notes;
@@ -9,6 +11,15 @@ mod transport;
 pub use attachments::{
     CompleteAttachmentUploadRequest, DownloadAttachmentResponse, InitiateAttachmentUploadRequest,
     InitiateAttachmentUploadResponse,
+};
+pub use audit::{
+    AuditLogChange, AuditLogEvent, AuditLogPage, AuditLogValue, AuditSectionSnapshot,
+    MAX_AUDIT_LOG_CHANGES_PER_EVENT, MAX_AUDIT_LOG_PAGE_ITEMS, MAX_AUDIT_LOG_RESPONSE_BYTES,
+    MAX_AUDIT_LOG_SECTIONS_PER_CHANGE,
+};
+pub use events::{
+    BoardEvent, BoardEventEnvelope, BoardEventStream, BoardStreamEvent, EVENT_STREAM_IDLE_TIMEOUT,
+    MAX_EVENT_STREAM_EVENT_BYTES, SseToken,
 };
 pub use note_transport_limits::{
     DEFAULT_NOTE_PAGE_ITEMS, MAX_NOTE_COLLECTION_ENCODED_BYTES, MAX_NOTE_COLLECTION_ITEMS,

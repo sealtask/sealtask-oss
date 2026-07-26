@@ -16,6 +16,9 @@ _sealtask() {
             ",$1")
                 cmd="sealtask"
                 ;;
+            sealtask,activity)
+                cmd="sealtask__subcmd__activity"
+                ;;
             sealtask,auth)
                 cmd="sealtask__subcmd__auth"
                 ;;
@@ -69,6 +72,18 @@ _sealtask() {
                 ;;
             sealtask,tasks)
                 cmd="sealtask__subcmd__tasks"
+                ;;
+            sealtask__subcmd__activity,follow)
+                cmd="sealtask__subcmd__activity__subcmd__follow"
+                ;;
+            sealtask__subcmd__activity,help)
+                cmd="sealtask__subcmd__activity__subcmd__help"
+                ;;
+            sealtask__subcmd__activity__subcmd__help,follow)
+                cmd="sealtask__subcmd__activity__subcmd__help__subcmd__follow"
+                ;;
+            sealtask__subcmd__activity__subcmd__help,help)
+                cmd="sealtask__subcmd__activity__subcmd__help__subcmd__help"
                 ;;
             sealtask__subcmd__auth,help)
                 cmd="sealtask__subcmd__auth__subcmd__help"
@@ -178,6 +193,9 @@ _sealtask() {
             sealtask__subcmd__config__subcmd__help,show)
                 cmd="sealtask__subcmd__config__subcmd__help__subcmd__show"
                 ;;
+            sealtask__subcmd__help,activity)
+                cmd="sealtask__subcmd__help__subcmd__activity"
+                ;;
             sealtask__subcmd__help,auth)
                 cmd="sealtask__subcmd__help__subcmd__auth"
                 ;;
@@ -228,6 +246,9 @@ _sealtask() {
                 ;;
             sealtask__subcmd__help,tasks)
                 cmd="sealtask__subcmd__help__subcmd__tasks"
+                ;;
+            sealtask__subcmd__help__subcmd__activity,follow)
+                cmd="sealtask__subcmd__help__subcmd__activity__subcmd__follow"
                 ;;
             sealtask__subcmd__help__subcmd__auth,keychain)
                 cmd="sealtask__subcmd__help__subcmd__auth__subcmd__keychain"
@@ -301,6 +322,9 @@ _sealtask() {
             sealtask__subcmd__help__subcmd__projects,archive)
                 cmd="sealtask__subcmd__help__subcmd__projects__subcmd__archive"
                 ;;
+            sealtask__subcmd__help__subcmd__projects,audit)
+                cmd="sealtask__subcmd__help__subcmd__projects__subcmd__audit"
+                ;;
             sealtask__subcmd__help__subcmd__projects,clear)
                 cmd="sealtask__subcmd__help__subcmd__projects__subcmd__clear"
                 ;;
@@ -360,6 +384,9 @@ _sealtask() {
                 ;;
             sealtask__subcmd__help__subcmd__tasks,update)
                 cmd="sealtask__subcmd__help__subcmd__tasks__subcmd__update"
+                ;;
+            sealtask__subcmd__help__subcmd__tasks,watch)
+                cmd="sealtask__subcmd__help__subcmd__tasks__subcmd__watch"
                 ;;
             sealtask__subcmd__help__subcmd__tasks__subcmd__attachments,delete)
                 cmd="sealtask__subcmd__help__subcmd__tasks__subcmd__attachments__subcmd__delete"
@@ -454,6 +481,9 @@ _sealtask() {
             sealtask__subcmd__projects,archive)
                 cmd="sealtask__subcmd__projects__subcmd__archive"
                 ;;
+            sealtask__subcmd__projects,audit)
+                cmd="sealtask__subcmd__projects__subcmd__audit"
+                ;;
             sealtask__subcmd__projects,clear)
                 cmd="sealtask__subcmd__projects__subcmd__clear"
                 ;;
@@ -480,6 +510,9 @@ _sealtask() {
                 ;;
             sealtask__subcmd__projects__subcmd__help,archive)
                 cmd="sealtask__subcmd__projects__subcmd__help__subcmd__archive"
+                ;;
+            sealtask__subcmd__projects__subcmd__help,audit)
+                cmd="sealtask__subcmd__projects__subcmd__help__subcmd__audit"
                 ;;
             sealtask__subcmd__projects__subcmd__help,clear)
                 cmd="sealtask__subcmd__projects__subcmd__help__subcmd__clear"
@@ -559,6 +592,9 @@ _sealtask() {
             sealtask__subcmd__tasks,update)
                 cmd="sealtask__subcmd__tasks__subcmd__update"
                 ;;
+            sealtask__subcmd__tasks,watch)
+                cmd="sealtask__subcmd__tasks__subcmd__watch"
+                ;;
             sealtask__subcmd__tasks__subcmd__attachments,delete)
                 cmd="sealtask__subcmd__tasks__subcmd__attachments__subcmd__delete"
                 ;;
@@ -628,6 +664,9 @@ _sealtask() {
             sealtask__subcmd__tasks__subcmd__help,update)
                 cmd="sealtask__subcmd__tasks__subcmd__help__subcmd__update"
                 ;;
+            sealtask__subcmd__tasks__subcmd__help,watch)
+                cmd="sealtask__subcmd__tasks__subcmd__help__subcmd__watch"
+                ;;
             sealtask__subcmd__tasks__subcmd__help__subcmd__attachments,delete)
                 cmd="sealtask__subcmd__tasks__subcmd__help__subcmd__attachments__subcmd__delete"
                 ;;
@@ -647,7 +686,7 @@ _sealtask() {
 
     case "${cmd}" in
         sealtask)
-            opts="-q -v -h -V --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --serve-unlock-daemon --help --version completion man info schema auth me pick projects lists tasks stats doctor config profile inspect comments notes help"
+            opts="-q -v -h -V --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --serve-unlock-daemon --help --version completion man info schema auth me pick projects lists tasks stats activity doctor config profile inspect comments notes help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 1 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -662,7 +701,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -708,6 +747,172 @@ _sealtask() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
+        sealtask__subcmd__activity)
+            opts="-q -v -h --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help follow help"
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                --api-url)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --storage-origin)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --format)
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
+                    return 0
+                    ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --connect-timeout)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --read-timeout)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --request-timeout)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --profile)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --config-dir)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        sealtask__subcmd__activity__subcmd__follow)
+            opts="-q -v -h --interval --since --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                --interval)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --since)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --api-url)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --storage-origin)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --format)
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
+                    return 0
+                    ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --connect-timeout)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --read-timeout)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --request-timeout)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --profile)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --config-dir)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        sealtask__subcmd__activity__subcmd__help)
+            opts="follow help"
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        sealtask__subcmd__activity__subcmd__help__subcmd__follow)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        sealtask__subcmd__activity__subcmd__help__subcmd__help)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
         sealtask__subcmd__auth)
             opts="-q -v -h --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help login unlock lock keychain logout status help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
@@ -724,7 +929,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -922,7 +1127,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -980,7 +1185,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -1094,7 +1299,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -1152,7 +1357,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -1214,7 +1419,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -1272,7 +1477,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -1330,7 +1535,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -1396,7 +1601,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -1454,7 +1659,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -1536,7 +1741,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -1614,7 +1819,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -1768,7 +1973,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -1850,7 +2055,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -1908,7 +2113,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -1966,7 +2171,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -2066,7 +2271,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -2124,7 +2329,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -2167,8 +2372,36 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__help)
-            opts="completion man info schema auth me pick projects tasks stats doctor config profile inspect comments notes help"
+            opts="completion man info schema auth me pick projects tasks stats activity doctor config profile inspect comments notes help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        sealtask__subcmd__help__subcmd__activity)
+            opts="follow"
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        sealtask__subcmd__help__subcmd__activity__subcmd__follow)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
             fi
@@ -2685,7 +2918,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__help__subcmd__projects)
-            opts="list get archive unarchive use current clear sections"
+            opts="list get archive unarchive use current clear sections audit"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -2699,6 +2932,20 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__help__subcmd__projects__subcmd__archive)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        sealtask__subcmd__help__subcmd__projects__subcmd__audit)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -2853,7 +3100,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__help__subcmd__tasks)
-            opts="list get create edit update move complete reopen archive unarchive delete attachments"
+            opts="list get watch create edit update move complete reopen archive unarchive delete attachments"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -3090,6 +3337,20 @@ _sealtask() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
+        sealtask__subcmd__help__subcmd__tasks__subcmd__watch)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
         sealtask__subcmd__info)
             opts="-q -v -h --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
@@ -3106,7 +3367,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -3164,7 +3425,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -3226,7 +3487,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -3284,7 +3545,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -3342,7 +3603,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -3424,7 +3685,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -3498,7 +3759,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -3568,7 +3829,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -3638,7 +3899,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -3816,7 +4077,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -3898,7 +4159,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -3956,7 +4217,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -4070,7 +4331,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -4136,7 +4397,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -4194,7 +4455,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -4308,7 +4569,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -4366,7 +4627,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -4409,7 +4670,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__projects)
-            opts="-q -v -h --verbose --include-archived --password-stdin --raw --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help list get archive unarchive use current clear sections help"
+            opts="-q -v -h --verbose --include-archived --password-stdin --raw --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help list get archive unarchive use current clear sections audit help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -4424,7 +4685,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -4482,7 +4743,77 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
+                    return 0
+                    ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --connect-timeout)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --read-timeout)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --request-timeout)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --profile)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --config-dir)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        sealtask__subcmd__projects__subcmd__audit)
+            opts="-q -v -h --work-list-id --cursor --limit --password-stdin --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                --work-list-id)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --cursor)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --limit)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --api-url)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --storage-origin)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --format)
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -4540,7 +4871,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -4598,7 +4929,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -4656,7 +4987,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -4699,7 +5030,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__projects__subcmd__help)
-            opts="list get archive unarchive use current clear sections help"
+            opts="list get archive unarchive use current clear sections audit help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -4713,6 +5044,20 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__projects__subcmd__help__subcmd__archive)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        sealtask__subcmd__projects__subcmd__help__subcmd__audit)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -4868,7 +5213,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -4926,7 +5271,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -5034,7 +5379,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -5092,7 +5437,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -5150,7 +5495,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -5208,7 +5553,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -5266,7 +5611,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -5309,7 +5654,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__tasks)
-            opts="-q -v -h --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help list get create edit update move complete reopen archive unarchive delete attachments help"
+            opts="-q -v -h --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help list get watch create edit update move complete reopen archive unarchive delete attachments help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -5324,7 +5669,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -5394,7 +5739,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -5452,7 +5797,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -5526,7 +5871,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -5604,7 +5949,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -5762,7 +6107,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -5844,7 +6189,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -5914,7 +6259,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -6024,7 +6369,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -6098,7 +6443,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -6168,7 +6513,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -6238,7 +6583,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -6281,7 +6626,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__tasks__subcmd__help)
-            opts="list get create edit update move complete reopen archive unarchive delete attachments help"
+            opts="list get watch create edit update move complete reopen archive unarchive delete attachments help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -6532,6 +6877,20 @@ _sealtask() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
+        sealtask__subcmd__tasks__subcmd__help__subcmd__watch)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
         sealtask__subcmd__tasks__subcmd__list)
             opts="-q -v -h --project --work-list-id --include-completed --include-archived --all --columns --sort --field --web-url --password-stdin --raw --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
@@ -6572,7 +6931,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -6658,7 +7017,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -6728,7 +7087,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -6798,7 +7157,7 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)
@@ -6908,7 +7267,73 @@ _sealtask() {
                     return 0
                     ;;
                 --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
+                    return 0
+                    ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --connect-timeout)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --read-timeout)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --request-timeout)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --profile)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --config-dir)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        sealtask__subcmd__tasks__subcmd__watch)
+            opts="-q -v -h --project --work-list-id --include-completed --include-archived --password-stdin --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                --project)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --work-list-id)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --api-url)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --storage-origin)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --format)
+                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
                     return 0
                     ;;
                 --color)

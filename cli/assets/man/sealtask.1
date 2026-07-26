@@ -51,7 +51,7 @@ May also be specified with the \fBSEALTASK_REQUEST_TIMEOUT\fR environment variab
 Emit compact JSON instead of human\-readable output
 .TP
 \fB\-\-format\fR \fI<FORMAT>\fR
-Select human\-readable, compact JSON, or pretty JSON output
+Select human\-readable, finite JSON, or streaming JSON Lines output
 .br
 
 .br
@@ -63,6 +63,8 @@ table
 json
 .IP \(bu 2
 json\-pretty
+.IP \(bu 2
+jsonl
 .RE
 .TP
 \fB\-\-color\fR \fI<WHEN>\fR [default: auto]
@@ -179,6 +181,9 @@ List, inspect, create, update, move, or delete tasks
 .TP
 sealtask\-stats(1)
 Show current dashboard task counts
+.TP
+sealtask\-activity(1)
+Inspect or continuously follow recent account activity
 .TP
 sealtask\-doctor(1)
 Diagnose local state, authentication, unlock, and API connectivity

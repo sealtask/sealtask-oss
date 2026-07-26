@@ -142,7 +142,7 @@ pub(crate) fn print_doctor_report(
     format: OutputFormat,
 ) -> CliResult<()> {
     match format {
-        OutputFormat::Json | OutputFormat::JsonPretty => {
+        OutputFormat::Json | OutputFormat::JsonPretty | OutputFormat::Jsonl => {
             print_json(report, format, "serializing doctor report should succeed")
         }
         OutputFormat::Table => {

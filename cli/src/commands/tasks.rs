@@ -237,6 +237,31 @@ pub(crate) async fn run_tasks(
                 )
             }
         },
+        TasksCommand::Watch {
+            project,
+            work_list_id,
+            include_completed,
+            include_archived,
+            password_stdin,
+        } => {
+            let project = resolve_project(
+                runtime,
+                project.as_ref(),
+                work_list_id,
+                password_stdin,
+                ProjectLifecycle::Any,
+            )
+            .await?;
+            super::streams::watch_tasks(
+                runtime,
+                format,
+                project.id,
+                include_completed,
+                include_archived,
+                password_stdin,
+            )
+            .await
+        }
         TasksCommand::Create(args) => create_task(runtime, format, non_interactive, args).await,
         TasksCommand::Edit(args) => edit_task(runtime, format, non_interactive, args).await,
         TasksCommand::Update(args) => update_task(runtime, format, args).await,

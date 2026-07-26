@@ -48,13 +48,13 @@ pub(crate) fn validate_output_mode(
 ) -> CliResult<()> {
     if format.is_json() && !columns.is_empty() {
         return Err(PublicError::validation(
-            "--columns controls human table output and cannot be combined with --json, --format json, or --format json-pretty",
+            "--columns controls human table output and cannot be combined with --json or any JSON --format value",
         )
         .into());
     }
     if format.is_json() && field.is_some() {
         return Err(PublicError::validation(
-            "--field emits raw newline-delimited values and cannot be combined with --json, --format json, or --format json-pretty",
+            "--field emits raw newline-delimited values and cannot be combined with --json or any JSON --format value",
         )
         .into());
     }
@@ -299,6 +299,22 @@ fn print_table(
     requested_columns: &[TaskListColumnArg],
     cross_project: bool,
 ) -> CliResult<()> {
+    print!(
+        "{}",
+        render_task_table(tasks, requested_columns, cross_project)
+    );
+    Ok(())
+}
+
+pub(crate) fn render_default_project_task_table(tasks: &[AgentTaskSummary]) -> String {
+    render_task_table(tasks, &[], false)
+}
+
+fn render_task_table(
+    tasks: &[AgentTaskSummary],
+    requested_columns: &[TaskListColumnArg],
+    cross_project: bool,
+) -> String {
     let columns = if requested_columns.is_empty() {
         default_columns(cross_project)
     } else {
@@ -323,9 +339,7 @@ fn print_table(
                 .map(|column| column_value(task, task_id.as_str(), &project_ids, *column)),
         );
     }
-    print!("{}", table.render());
-    println!("\nTotal: {} task(s)", tasks.len());
-    Ok(())
+    format!("{}\nTotal: {} task(s)\n", table.render(), tasks.len())
 }
 
 fn default_columns(cross_project: bool) -> Vec<Column> {

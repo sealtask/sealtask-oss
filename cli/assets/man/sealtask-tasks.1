@@ -48,7 +48,7 @@ May also be specified with the \fBSEALTASK_REQUEST_TIMEOUT\fR environment variab
 Emit compact JSON instead of human\-readable output
 .TP
 \fB\-\-format\fR \fI<FORMAT>\fR
-Select human\-readable, compact JSON, or pretty JSON output
+Select human\-readable, finite JSON, or streaming JSON Lines output
 .br
 
 .br
@@ -60,6 +60,8 @@ table
 json
 .IP \(bu 2
 json\-pretty
+.IP \(bu 2
+jsonl
 .RE
 .TP
 \fB\-\-color\fR \fI<WHEN>\fR [default: auto]
@@ -152,6 +154,9 @@ List tasks in the selected/current project, or assigned tasks when none is selec
 .TP
 sealtask\-tasks\-get(1)
 Show one decrypted task, including comments and attachment metadata
+.TP
+sealtask\-tasks\-watch(1)
+Follow authoritative task changes in one project until interrupted
 .TP
 sealtask\-tasks\-create(1)
 Create an encrypted task

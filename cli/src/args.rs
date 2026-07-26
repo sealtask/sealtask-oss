@@ -50,7 +50,7 @@ pub(crate) struct Cli {
     #[arg(long, global = true, conflicts_with = "format")]
     pub(crate) json: bool,
 
-    /// Select human-readable, compact JSON, or pretty JSON output.
+    /// Select human-readable, finite JSON, or streaming JSON Lines output.
     #[arg(
         long = "format",
         global = true,
@@ -165,6 +165,7 @@ pub(crate) enum OutputArg {
     Table,
     Json,
     JsonPretty,
+    Jsonl,
 }
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, ValueEnum)]
@@ -294,6 +295,11 @@ pub(crate) enum Command {
     },
     /// Show current dashboard task counts.
     Stats,
+    /// Inspect or continuously follow recent account activity.
+    Activity {
+        #[command(subcommand)]
+        command: ActivityCommand,
+    },
     /// Diagnose local state, authentication, unlock, and API connectivity.
     Doctor {
         /// Run local checks only and make no network requests.
@@ -450,6 +456,28 @@ pub(crate) enum ProjectsCommand {
         #[command(subcommand)]
         command: ProjectSectionsCommand,
     },
+    /// Show a bounded page of safe project audit metadata.
+    Audit {
+        /// Project name, UUID, or unique UUID prefix; defaults to the current project.
+        #[arg(value_name = "PROJECT", conflicts_with = "work_list_id")]
+        project: Option<EntitySelector>,
+        /// Exact project UUID (legacy compatibility).
+        #[arg(long)]
+        work_list_id: Option<Uuid>,
+        /// Fetch entries older than this audit-event UUID.
+        #[arg(long)]
+        cursor: Option<Uuid>,
+        /// Maximum number of audit entries to return.
+        #[arg(
+            long,
+            default_value_t = 50,
+            value_parser = clap::value_parser!(u32).range(1..=100)
+        )]
+        limit: u32,
+        /// Read the account password from stdin when project-name resolution needs an unlock.
+        #[arg(long)]
+        password_stdin: bool,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -548,6 +576,24 @@ pub(crate) enum TasksCommand {
     TaskReferences {
         #[command(subcommand)]
         command: TaskReferencesCommand,
+    },
+    /// Follow authoritative task changes in one project until interrupted.
+    Watch {
+        /// Restrict results to a project name, UUID, or unique UUID prefix.
+        #[arg(long, conflicts_with = "work_list_id")]
+        project: Option<EntitySelector>,
+        /// Restrict results to one exact project UUID (legacy compatibility).
+        #[arg(long)]
+        work_list_id: Option<Uuid>,
+        /// Include completed tasks.
+        #[arg(long)]
+        include_completed: bool,
+        /// Include archived tasks.
+        #[arg(long)]
+        include_archived: bool,
+        /// Read the account password from stdin when no local unlock is available.
+        #[arg(long)]
+        password_stdin: bool,
     },
     /// Create an encrypted task.
     Create(TaskCreateArgsCli),
@@ -660,6 +706,19 @@ pub(crate) struct TaskReferenceQuarantineArgsCli {
     /// Read the account password from stdin when no local unlock is available.
     #[arg(long)]
     pub(crate) password_stdin: bool,
+}
+
+#[derive(Subcommand, Debug)]
+pub(crate) enum ActivityCommand {
+    /// Follow new activity using bounded cursor catch-up polling.
+    Follow {
+        /// Delay between activity polls (for example 2s or 1m).
+        #[arg(long, default_value = "5s", value_name = "DURATION")]
+        interval: String,
+        /// Emit recent history from this window before following new events.
+        #[arg(long, default_value = "10m", value_name = "DURATION")]
+        since: String,
+    },
 }
 
 #[derive(Subcommand, Debug)]

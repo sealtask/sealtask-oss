@@ -112,7 +112,7 @@ fn print_config(
     };
 
     match format {
-        OutputFormat::Json | OutputFormat::JsonPretty => print_json(
+        OutputFormat::Json | OutputFormat::JsonPretty | OutputFormat::Jsonl => print_json(
             &report,
             format,
             "serializing resolved operator configuration should succeed",
@@ -164,7 +164,7 @@ fn list_profiles(
     };
 
     match format {
-        OutputFormat::Json | OutputFormat::JsonPretty => {
+        OutputFormat::Json | OutputFormat::JsonPretty | OutputFormat::Jsonl => {
             print_json(&result, format, "serializing profile list should succeed")
         }
         OutputFormat::Table => {

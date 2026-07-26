@@ -296,6 +296,9 @@ fn command_examples(path: &[String]) -> Option<&'static str> {
         "projects sections list" => {
             "Examples:\n  sealtask projects sections list\n  sealtask projects sections list --project \"Release Engineering\""
         }
+        "projects audit" => {
+            "Examples:\n  sealtask projects audit\n  sealtask projects audit \"Release Engineering\" --limit 25\n  sealtask --json projects audit id:019f42ab"
+        }
         "tasks" => {
             "Examples:\n  sealtask tasks list\n  sealtask tasks create --title \"Ship 0.4\" --due tomorrow"
         }
@@ -304,6 +307,9 @@ fn command_examples(path: &[String]) -> Option<&'static str> {
         }
         "tasks get" => {
             "Examples:\n  sealtask tasks get \"Prepare release notes\"\n  sealtask tasks get id:019f42ab"
+        }
+        "tasks watch" => {
+            "Examples:\n  sealtask tasks watch --project \"Release Engineering\"\n  sealtask --format jsonl tasks watch --work-list-id 019f42ab-0000-7000-8000-000000000000"
         }
         "tasks create" => {
             "Examples:\n  sealtask tasks create --edit\n  sealtask tasks create --title \"Ship 0.4\" --due tomorrow\n  sealtask tasks create --project Release --section Doing --priority high --title \"Publish artifacts\"\n  sealtask tasks create --input-file ./task.json"
@@ -338,6 +344,9 @@ fn command_examples(path: &[String]) -> Option<&'static str> {
             "Examples:\n  sealtask tasks attachments download \"Ship 0.4\" --attachment-id id:019f42ab\n  sealtask tasks attachments download \"Ship 0.4\" --attachment-id id:019f42ab --output ./release.pdf"
         }
         "stats" => "Examples:\n  sealtask stats\n  sealtask --json stats",
+        "activity follow" => {
+            "Examples:\n  sealtask activity follow\n  sealtask activity follow --since 30m --interval 10s\n  sealtask --format jsonl activity follow"
+        }
         "doctor" => {
             "Examples:\n  sealtask doctor\n  sealtask doctor --offline\n  sealtask doctor --strict"
         }

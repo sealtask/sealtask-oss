@@ -48,6 +48,186 @@ use uuid::Uuid;
 use zeroize::Zeroize;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn d6_project_audit_excludes_encrypted_payload_canaries() {
+    let fixture = TestFixture::new();
+    let state = Arc::new(Mutex::new(TestState::new(fixture.clone())));
+    let server = spawn_server(state).await;
+    let home = TempDir::new().expect("temp home");
+    seed_credentials(home.path(), &fixture, &server.base_url);
+
+    let output = run_cli(
+        home.path(),
+        &server.base_url,
+        &[
+            "--format",
+            "jsonl",
+            "projects",
+            "audit",
+            "--work-list-id",
+            &fixture.work_list_id.to_string(),
+        ],
+        None,
+    );
+
+    assert!(output.status.success(), "audit failed: {}", output.stderr);
+    assert_eq!(output.stdout.lines().count(), 1);
+    assert!(output.stderr.is_empty());
+    assert!(!output.stdout.contains("D6_PAYLOAD_CIPHERTEXT_CANARY"));
+    assert!(!output.stdout.contains("D6_PAYLOAD_HMAC_CANARY"));
+    let page = parse_stdout_json(&output.stdout);
+    assert_eq!(page["projectId"], fixture.work_list_id.to_string());
+    assert_eq!(page["events"][0]["payloadPresent"], true);
+    assert!(page["events"][0].get("payload").is_none());
+    assert!(page["events"][0].get("payloadCiphertext").is_none());
+}
+
+#[cfg(unix)]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn d6_task_watch_subscribes_then_refetches_and_sigint_exits_130() {
+    let fixture = TestFixture::new();
+    let state = Arc::new(Mutex::new(TestState::new(fixture.clone())));
+    state.lock().expect("state lock").d6_watch_enabled = true;
+    let server = spawn_server(state.clone()).await;
+    let home = TempDir::new().expect("temp home");
+    seed_credentials(home.path(), &fixture, &server.base_url);
+
+    let mut child = spawn_cli_process_with_stdin(
+        home.path(),
+        &server.base_url,
+        &[
+            "--format",
+            "jsonl",
+            "tasks",
+            "watch",
+            "--work-list-id",
+            &fixture.work_list_id.to_string(),
+            "--password-stdin",
+        ],
+        &fixture.password,
+    );
+    wait_for_condition("watch refetches once after the queued event burst", || {
+        state.lock().expect("state lock").d6_watch_task_reads >= 2
+    })
+    .await;
+    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    signal_process(&mut child, libc::SIGINT);
+    let output = wait_for_cli_process(child).await;
+
+    assert_eq!(
+        output.status.code(),
+        Some(130),
+        "stdout: {}\nstderr: {}",
+        output.stdout,
+        output.stderr
+    );
+    assert!(!output.stdout.contains('\u{1b}'));
+    assert!(!output.stdout.contains("D6_SECRET_STREAM_TOKEN"));
+    assert!(!output.stdout.contains("D6_ACTOR_INSTANCE_CANARY"));
+    let records = output
+        .stdout
+        .lines()
+        .map(|line| serde_json::from_str::<Value>(line).expect("compact JSONL record"))
+        .collect::<Vec<_>>();
+    assert_eq!(records.len(), 2, "stdout: {}", output.stdout);
+    assert_eq!(records[0]["type"], "snapshot");
+    assert_eq!(records[0]["tasks"][0]["commentCount"], 1);
+    assert_eq!(records[1]["type"], "refresh");
+    assert_eq!(records[1]["trigger"], "resync");
+    assert_eq!(records[1]["missedEvents"], 2);
+    assert_eq!(records[1]["updatedTaskIds"][0], fixture.task_id.to_string());
+    assert_eq!(
+        records[1]["addedTaskIds"],
+        json!([]),
+        "filter transitions must use neutral diff names"
+    );
+    assert_eq!(records[1]["removedTaskIds"], json!([]));
+    assert!(records[1].get("created").is_none());
+    assert!(records[1].get("deletedTaskIds").is_none());
+    assert_eq!(records[1]["tasks"][0]["commentCount"], 2);
+
+    let state = state.lock().expect("state lock");
+    assert_eq!(
+        state.d6_watch_task_reads, 2,
+        "the initial snapshot plus one authoritative refetch should cover the queued burst"
+    );
+    let call_order = &state.d6_watch_call_order;
+    assert!(
+        call_order.starts_with(&["token", "connect", "list"]),
+        "SSE must connect before the initial task snapshot: {call_order:?}"
+    );
+    for line in output.stderr.lines() {
+        let envelope: Value = serde_json::from_str(line).expect("compact JSON stderr envelope");
+        assert!(envelope.is_object());
+    }
+    let final_error: Value = serde_json::from_str(
+        output
+            .stderr
+            .lines()
+            .last()
+            .expect("typed interruption on stderr"),
+    )
+    .expect("interruption JSON");
+    assert_eq!(final_error["error"]["code"], "interrupted");
+}
+
+#[cfg(unix)]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn d6_activity_is_oldest_first_and_sigterm_exits_130_without_stdout_status() {
+    let fixture = TestFixture::new();
+    let state = Arc::new(Mutex::new(TestState::new(fixture.clone())));
+    let server = spawn_server(state.clone()).await;
+    let home = TempDir::new().expect("temp home");
+    seed_credentials(home.path(), &fixture, &server.base_url);
+
+    let mut child = spawn_cli_process(
+        home.path(),
+        &server.base_url,
+        &[
+            "--format",
+            "jsonl",
+            "activity",
+            "follow",
+            "--since",
+            "1h",
+            "--interval",
+            "250ms",
+        ],
+    );
+    wait_for_condition("activity initial page and poll", || {
+        state.lock().expect("state lock").d6_activity_reads >= 2
+    })
+    .await;
+    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    signal_process(&mut child, libc::SIGTERM);
+    let output = wait_for_cli_process(child).await;
+
+    assert_eq!(
+        output.status.code(),
+        Some(130),
+        "stdout: {}\nstderr: {}",
+        output.stdout,
+        output.stderr
+    );
+    assert!(!output.stdout.contains('\u{1b}'));
+    let records = output
+        .stdout
+        .lines()
+        .map(|line| serde_json::from_str::<Value>(line).expect("activity JSONL"))
+        .collect::<Vec<_>>();
+    assert_eq!(records.len(), 3, "stdout: {}", output.stdout);
+    assert_eq!(
+        records
+            .iter()
+            .map(|record| record["event"]["action"].as_str().expect("action"))
+            .collect::<Vec<_>>(),
+        ["updated_1", "updated_2", "updated_3"]
+    );
+    assert!(records.iter().all(|record| record["type"] == "activity"));
+    let error = parse_stderr_json(&output.stderr);
+    assert_eq!(error["error"]["code"], "interrupted");
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn cli_proven_flows_round_trip_through_mock_api() {
     let fixture = TestFixture::new();
     let state = Arc::new(Mutex::new(TestState::new(fixture.clone())));
@@ -6645,6 +6825,10 @@ struct TestState {
     deleted_attachment_ids: Vec<Uuid>,
     notes: HashMap<Uuid, StoredNote>,
     note_create_operations: HashMap<String, (String, Uuid)>,
+    d6_watch_enabled: bool,
+    d6_watch_task_reads: usize,
+    d6_watch_call_order: Vec<&'static str>,
+    d6_activity_reads: usize,
     base_url: Option<String>,
 }
 
@@ -6712,6 +6896,10 @@ impl TestState {
             deleted_attachment_ids: Vec::new(),
             notes: HashMap::new(),
             note_create_operations: HashMap::new(),
+            d6_watch_enabled: false,
+            d6_watch_task_reads: 0,
+            d6_watch_call_order: Vec::new(),
+            d6_activity_reads: 0,
             base_url: None,
         }
     }
@@ -7008,6 +7196,9 @@ async fn spawn_server(state: Arc<Mutex<TestState>>) -> TestServer {
         .route("/work-lists/{id}", get(get_work_list))
         .route("/work-lists/{id}/archive", post(archive_work_list))
         .route("/work-lists/{id}/unarchive", post(unarchive_work_list))
+        .route("/work-lists/{id}/audit-log", get(project_audit_log))
+        .route("/work-lists/{id}/sse-token", post(issue_sse_token))
+        .route("/work-lists/{id}/events", get(project_events))
         .route("/work-lists/{id}/tasks", get(list_tasks).post(create_task))
         .route("/work-lists/{id}/notes", get(list_notes).post(create_note))
         .route(
@@ -7052,6 +7243,7 @@ async fn spawn_server(state: Arc<Mutex<TestState>>) -> TestServer {
             patch(update_comment).delete(delete_comment),
         )
         .route("/me/tasks", get(list_my_tasks))
+        .route("/me/activity", get(my_activity))
         .route("/downloads/{attachment_id}", get(download_attachment_bytes))
         .route("/uploads/{attachment_id}", put(upload_attachment_bytes))
         .with_state(state.clone());
@@ -7671,11 +7863,19 @@ async fn list_tasks(
     let mut state = state.lock().expect("state lock");
     assert_eq!(work_list_id, state.fixture.work_list_id);
     state.list_task_include_archived.push(include_archived);
+    if state.d6_watch_enabled {
+        state.d6_watch_call_order.push("list");
+        state.d6_watch_task_reads += 1;
+    }
 
     let tasks = if state.tasks_empty || (state.task_archived_at.is_some() && !include_archived) {
         Vec::new()
     } else {
-        vec![task_response_json(&state)]
+        let mut task = task_response_json(&state);
+        if state.d6_watch_enabled && state.d6_watch_task_reads >= 2 {
+            task["commentCount"] = json!(2);
+        }
+        vec![task]
     };
     let payload = json!({
         "tasks": tasks,
@@ -7688,6 +7888,131 @@ async fn list_tasks(
     });
 
     (StatusCode::OK, Json(payload))
+}
+
+async fn project_audit_log(
+    Path(work_list_id): Path<Uuid>,
+    State(state): State<Arc<Mutex<TestState>>>,
+    headers: HeaderMap,
+) -> (StatusCode, Json<serde_json::Value>) {
+    authorize(&state, &headers);
+    let state = state.lock().expect("state lock");
+    assert_eq!(work_list_id, state.fixture.work_list_id);
+    (
+        StatusCode::OK,
+        Json(json!({
+            "events": [audit_event_json(&state, 1, Utc::now())],
+            "nextCursor": null,
+        })),
+    )
+}
+
+async fn my_activity(
+    State(state): State<Arc<Mutex<TestState>>>,
+    headers: HeaderMap,
+) -> (StatusCode, Json<serde_json::Value>) {
+    authorize(&state, &headers);
+    let mut state = state.lock().expect("state lock");
+    state.d6_activity_reads += 1;
+    let now = Utc::now();
+    let events = if state.d6_activity_reads == 1 {
+        vec![
+            audit_event_json(&state, 2, now - Duration::minutes(2)),
+            audit_event_json(&state, 1, now - Duration::minutes(3)),
+        ]
+    } else {
+        vec![
+            audit_event_json(&state, 3, now - Duration::minutes(1)),
+            audit_event_json(&state, 2, now - Duration::minutes(2)),
+            audit_event_json(&state, 1, now - Duration::minutes(3)),
+        ]
+    };
+    (
+        StatusCode::OK,
+        Json(json!({
+            "events": events,
+            "nextCursor": null,
+        })),
+    )
+}
+
+fn audit_event_json(
+    state: &TestState,
+    ordinal: u128,
+    occurred_at: DateTime<Utc>,
+) -> serde_json::Value {
+    json!({
+        "id": Uuid::from_u128(state.fixture.task_id.as_u128().wrapping_add(ordinal)),
+        "workspaceId": state.fixture.workspace_id,
+        "workListId": state.fixture.work_list_id,
+        "taskId": state.fixture.task_id,
+        "commentId": null,
+        "entityType": "task",
+        "entityId": state.fixture.task_id,
+        "action": format!("updated_{ordinal}"),
+        "scopeLevel": "task",
+        "actorUserId": state.fixture.owner_user_id,
+        "actorUserName": "Fixture Operator",
+        "actorMembershipId": state.fixture.membership_id,
+        "actorType": "user",
+        "sourceKind": "api",
+        "targetVersion": i64::try_from(ordinal).expect("small audit ordinal"),
+        "clientVersion": "test-client",
+        "occurredAt": occurred_at,
+        "changes": [],
+        "payload": {
+            "payloadCiphertext": "D6_PAYLOAD_CIPHERTEXT_CANARY",
+            "payloadHmac": "D6_PAYLOAD_HMAC_CANARY",
+            "payloadVersion": 1,
+            "fieldDescriptors": [],
+        },
+    })
+}
+
+async fn issue_sse_token(
+    Path(work_list_id): Path<Uuid>,
+    State(state): State<Arc<Mutex<TestState>>>,
+    headers: HeaderMap,
+) -> (StatusCode, Json<serde_json::Value>) {
+    authorize(&state, &headers);
+    let mut state = state.lock().expect("state lock");
+    assert_eq!(work_list_id, state.fixture.work_list_id);
+    state.d6_watch_call_order.push("token");
+    (
+        StatusCode::OK,
+        Json(json!({
+            "token": "D6_SECRET_STREAM_TOKEN",
+            "expiresIn": 120,
+        })),
+    )
+}
+
+async fn project_events(
+    Path(work_list_id): Path<Uuid>,
+    State(state): State<Arc<Mutex<TestState>>>,
+) -> (StatusCode, [(&'static str, &'static str); 1], String) {
+    let mut state = state.lock().expect("state lock");
+    assert_eq!(work_list_id, state.fixture.work_list_id);
+    state.d6_watch_call_order.push("connect");
+    let event = json!({
+        "eventId": Uuid::now_v7(),
+        "workListId": work_list_id,
+        "actorUserId": state.fixture.owner_user_id,
+        "actorMembershipId": state.fixture.membership_id,
+        "actorInstanceId": "D6_ACTOR_INSTANCE_CANARY",
+        "occurredAt": Utc::now(),
+        "type": "task_updated",
+        "taskId": state.fixture.task_id,
+        "fields": ["commentCount"],
+    });
+    let body = format!(
+        "event: board_event\ndata: {event}\n\nevent: resync\ndata: {{\"missedEvents\":2}}\n\n"
+    );
+    (
+        StatusCode::OK,
+        [("content-type", "text/event-stream")],
+        body,
+    )
 }
 
 async fn list_my_tasks(
@@ -8381,6 +8706,48 @@ fn spawn_cli_process(home: &std::path::Path, api_url: &str, args: &[&str]) -> Ch
     command.stdout(Stdio::piped());
     command.stderr(Stdio::piped());
     command.spawn().expect("spawn concurrent CLI process")
+}
+
+fn spawn_cli_process_with_stdin(
+    home: &std::path::Path,
+    api_url: &str,
+    args: &[&str],
+    stdin: &str,
+) -> Child {
+    let binary = assert_cmd::cargo::cargo_bin("sealtask");
+    let mut command = std::process::Command::new(binary);
+    command.env("HOME", home);
+    command.current_dir(home);
+    command.arg("--api-url").arg(api_url);
+    command.args(args);
+    command.stdin(Stdio::piped());
+    command.stdout(Stdio::piped());
+    command.stderr(Stdio::piped());
+    let mut child = command.spawn().expect("spawn CLI process with stdin");
+    let mut child_stdin = child.stdin.take().expect("CLI stdin pipe");
+    child_stdin
+        .write_all(stdin.as_bytes())
+        .expect("write CLI stdin");
+    drop(child_stdin);
+    child
+}
+
+async fn wait_for_condition(description: &str, mut condition: impl FnMut() -> bool) {
+    tokio::time::timeout(std::time::Duration::from_secs(5), async {
+        while !condition() {
+            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .unwrap_or_else(|_| panic!("timed out waiting for {description}"));
+}
+
+#[cfg(unix)]
+fn signal_process(child: &mut Child, signal: i32) {
+    // SAFETY: `child.id()` identifies the live process spawned by this test,
+    // and `kill` neither retains nor dereferences any Rust memory.
+    let result = unsafe { libc::kill(child.id().cast_signed(), signal) };
+    assert_eq!(result, 0, "send signal {signal} to CLI process");
 }
 
 async fn wait_for_cli_process(child: Child) -> CliOutput {
