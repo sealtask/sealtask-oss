@@ -274,6 +274,9 @@ _sealtask() {
             sealtask__subcmd__help__subcmd__notes,delete)
                 cmd="sealtask__subcmd__help__subcmd__notes__subcmd__delete"
                 ;;
+            sealtask__subcmd__help__subcmd__notes,edit)
+                cmd="sealtask__subcmd__help__subcmd__notes__subcmd__edit"
+                ;;
             sealtask__subcmd__help__subcmd__notes,get)
                 cmd="sealtask__subcmd__help__subcmd__notes__subcmd__get"
                 ;;
@@ -337,6 +340,9 @@ _sealtask() {
             sealtask__subcmd__help__subcmd__tasks,delete)
                 cmd="sealtask__subcmd__help__subcmd__tasks__subcmd__delete"
                 ;;
+            sealtask__subcmd__help__subcmd__tasks,edit)
+                cmd="sealtask__subcmd__help__subcmd__tasks__subcmd__edit"
+                ;;
             sealtask__subcmd__help__subcmd__tasks,get)
                 cmd="sealtask__subcmd__help__subcmd__tasks__subcmd__get"
                 ;;
@@ -373,6 +379,9 @@ _sealtask() {
             sealtask__subcmd__notes,delete)
                 cmd="sealtask__subcmd__notes__subcmd__delete"
                 ;;
+            sealtask__subcmd__notes,edit)
+                cmd="sealtask__subcmd__notes__subcmd__edit"
+                ;;
             sealtask__subcmd__notes,get)
                 cmd="sealtask__subcmd__notes__subcmd__get"
                 ;;
@@ -390,6 +399,9 @@ _sealtask() {
                 ;;
             sealtask__subcmd__notes__subcmd__help,delete)
                 cmd="sealtask__subcmd__notes__subcmd__help__subcmd__delete"
+                ;;
+            sealtask__subcmd__notes__subcmd__help,edit)
+                cmd="sealtask__subcmd__notes__subcmd__help__subcmd__edit"
                 ;;
             sealtask__subcmd__notes__subcmd__help,get)
                 cmd="sealtask__subcmd__notes__subcmd__help__subcmd__get"
@@ -523,6 +535,9 @@ _sealtask() {
             sealtask__subcmd__tasks,delete)
                 cmd="sealtask__subcmd__tasks__subcmd__delete"
                 ;;
+            sealtask__subcmd__tasks,edit)
+                cmd="sealtask__subcmd__tasks__subcmd__edit"
+                ;;
             sealtask__subcmd__tasks,get)
                 cmd="sealtask__subcmd__tasks__subcmd__get"
                 ;;
@@ -588,6 +603,9 @@ _sealtask() {
                 ;;
             sealtask__subcmd__tasks__subcmd__help,delete)
                 cmd="sealtask__subcmd__tasks__subcmd__help__subcmd__delete"
+                ;;
+            sealtask__subcmd__tasks__subcmd__help,edit)
+                cmd="sealtask__subcmd__tasks__subcmd__help__subcmd__edit"
                 ;;
             sealtask__subcmd__tasks__subcmd__help,get)
                 cmd="sealtask__subcmd__tasks__subcmd__help__subcmd__get"
@@ -1479,7 +1497,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__comments__subcmd__create)
-            opts="-q -v -h --task-id --project --work-list-id --body --input-file --input-stdin --password-stdin --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
+            opts="-q -v -h --task-id --project --work-list-id --body --body-file --input-file --input-stdin --password-stdin --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -1498,6 +1516,10 @@ _sealtask() {
                     return 0
                     ;;
                 --body)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --body-file)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
@@ -2481,7 +2503,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__help__subcmd__notes)
-            opts="list get create update delete"
+            opts="list get create edit update delete"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -2509,6 +2531,20 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__help__subcmd__notes__subcmd__delete)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        sealtask__subcmd__help__subcmd__notes__subcmd__edit)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -2817,7 +2853,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__help__subcmd__tasks)
-            opts="list get create update move complete reopen archive unarchive delete attachments"
+            opts="list get create edit update move complete reopen archive unarchive delete attachments"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -2943,6 +2979,20 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__help__subcmd__tasks__subcmd__delete)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        sealtask__subcmd__help__subcmd__tasks__subcmd__edit)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -3277,7 +3327,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__notes)
-            opts="-q -v -h --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help list get create update delete help"
+            opts="-q -v -h --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help list get create edit update delete help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -3490,6 +3540,76 @@ _sealtask() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
+        sealtask__subcmd__notes__subcmd__edit)
+            opts="-q -v -h --note-id --project --work-list-id --password-stdin --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                --note-id)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --project)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --work-list-id)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --api-url)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --storage-origin)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --format)
+                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    return 0
+                    ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --connect-timeout)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --read-timeout)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --request-timeout)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --profile)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --config-dir)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
         sealtask__subcmd__notes__subcmd__get)
             opts="-q -v -h --note-id --project --work-list-id --password-stdin --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
@@ -3561,7 +3681,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__notes__subcmd__help)
-            opts="list get create update delete help"
+            opts="list get create edit update delete help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -3589,6 +3709,20 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__notes__subcmd__help__subcmd__delete)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        sealtask__subcmd__notes__subcmd__help__subcmd__edit)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -5175,7 +5309,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__tasks)
-            opts="-q -v -h --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help list get create update move complete reopen archive unarchive delete attachments help"
+            opts="-q -v -h --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help list get create edit update move complete reopen archive unarchive delete attachments help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -5823,7 +5957,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__tasks__subcmd__create)
-            opts="-q -v -h --project --work-list-id --title --body --priority --due-at --due --start-at --section-id --section --idempotency-key --input-file --input-stdin --password-stdin --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
+            opts="-q -v -h --project --work-list-id --title --body --body-file --edit --priority --due-at --due --start-at --section-id --section --idempotency-key --input-file --input-stdin --password-stdin --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -5842,6 +5976,10 @@ _sealtask() {
                     return 0
                     ;;
                 --body)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --body-file)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
@@ -6002,6 +6140,76 @@ _sealtask() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
+        sealtask__subcmd__tasks__subcmd__edit)
+            opts="-q -v -h --task-id --project --work-list-id --password-stdin --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                --task-id)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --project)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --work-list-id)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --api-url)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --storage-origin)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --format)
+                    COMPREPLY=($(compgen -W "table json json-pretty" -- "${cur}"))
+                    return 0
+                    ;;
+                --color)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --pager)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --progress)
+                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
+                    return 0
+                    ;;
+                --connect-timeout)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --read-timeout)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --request-timeout)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --profile)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --config-dir)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
         sealtask__subcmd__tasks__subcmd__get)
             opts="-q -v -h --task-id --project --work-list-id --password-stdin --raw --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
@@ -6073,7 +6281,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__tasks__subcmd__help)
-            opts="list get create update move complete reopen archive unarchive delete attachments help"
+            opts="list get create edit update move complete reopen archive unarchive delete attachments help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -6199,6 +6407,20 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__tasks__subcmd__help__subcmd__delete)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        sealtask__subcmd__tasks__subcmd__help__subcmd__edit)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -6603,7 +6825,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__tasks__subcmd__update)
-            opts="-q -v -h --task-id --project --work-list-id --title --body --clear-body --priority --clear-priority --due-at --due --clear-due-at --start-at --clear-start-at --section-id --section --clear-section --input-file --input-stdin --password-stdin --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
+            opts="-q -v -h --task-id --project --work-list-id --title --body --body-file --clear-body --priority --clear-priority --due-at --due --clear-due-at --start-at --clear-start-at --section-id --section --clear-section --input-file --input-stdin --password-stdin --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -6626,6 +6848,10 @@ _sealtask() {
                     return 0
                     ;;
                 --body)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --body-file)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;

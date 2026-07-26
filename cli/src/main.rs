@@ -8,6 +8,7 @@ mod attachment_output;
 mod commands;
 mod discovery;
 mod doctor;
+mod editor;
 mod human_input;
 mod input;
 mod interaction;
@@ -170,6 +171,16 @@ async fn run(cli: Cli, format: OutputFormat, raw_args: &[OsString]) -> CliResult
             .into());
         }
         picker::ensure_picker_terminal()?;
+    }
+
+    if command_uses_editor(cli.command.as_ref()) {
+        if cli.non_interactive {
+            return Err(PublicError::validation(
+                "editor workflows require an interactive controlling terminal and cannot be combined with --non-interactive; use explicit field or input-file flags in automation",
+            )
+            .into());
+        }
+        editor::ensure_editor_available()?;
     }
 
     let telemetry_level = TelemetryLevel::from_flags(cli.verbosity, cli.debug);
@@ -434,4 +445,23 @@ fn command_name(command: &Command) -> &'static str {
         Command::Comments { .. } => "comments",
         Command::Notes { .. } => "notes",
     }
+}
+
+fn command_uses_editor(command: Option<&Command>) -> bool {
+    matches!(
+        command,
+        Some(Command::Tasks {
+            command: args::TasksCommand::Create(args),
+        }) if args.edit
+    ) || matches!(
+        command,
+        Some(Command::Tasks {
+            command: args::TasksCommand::Edit(_),
+        })
+    ) || matches!(
+        command,
+        Some(Command::Notes {
+            command: args::NotesCommand::Edit(_),
+        })
+    )
 }

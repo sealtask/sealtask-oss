@@ -490,6 +490,8 @@ pub(crate) enum TasksCommand {
     },
     /// Create an encrypted task.
     Create(TaskCreateArgsCli),
+    /// Edit a task's title and Markdown body in your configured editor.
+    Edit(TaskEditArgsCli),
     /// Patch an encrypted task; omitted fields remain unchanged.
     Update(TaskUpdateArgsCli),
     /// Move a task to a section or relative position.
@@ -646,6 +648,8 @@ pub(crate) enum NotesCommand {
     },
     /// Create an encrypted shared or private note.
     Create(NoteCreateArgsCli),
+    /// Edit a note's title and Markdown body in your configured editor.
+    Edit(NoteEditArgsCli),
     /// Patch an encrypted note.
     Update(NoteUpdateArgsCli),
     /// Permanently delete a note.
@@ -693,8 +697,18 @@ pub(crate) struct TaskCreateArgsCli {
     #[arg(long)]
     pub(crate) title: Option<String>,
     /// Plaintext Markdown task body.
-    #[arg(long)]
+    #[arg(long, conflicts_with = "body_file")]
     pub(crate) body: Option<String>,
+    /// Read the plaintext Markdown task body from PATH; use '-' for stdin.
+    #[arg(
+        long,
+        value_name = "PATH",
+        conflicts_with_all = ["body", "input_file", "input_stdin"]
+    )]
+    pub(crate) body_file: Option<PathBuf>,
+    /// Open your configured editor; --title, --body, and --body-file seed its contents.
+    #[arg(long, conflicts_with_all = ["input_file", "input_stdin"])]
+    pub(crate) edit: bool,
     /// Task priority: low/p4/1, medium/p3/3, high/p2/5, or urgent/p1/8.
     #[arg(long, value_parser = parse_priority)]
     pub(crate) priority: Option<i8>,
@@ -724,6 +738,8 @@ pub(crate) struct TaskCreateArgsCli {
             "input_stdin",
             "title",
             "body",
+            "body_file",
+            "edit",
             "priority",
             "due_at",
             "due",
@@ -742,6 +758,8 @@ pub(crate) struct TaskCreateArgsCli {
             "password_stdin",
             "title",
             "body",
+            "body_file",
+            "edit",
             "priority",
             "due_at",
             "due",
@@ -765,6 +783,8 @@ impl fmt::Debug for TaskCreateArgsCli {
             .field("work_list_id", &self.work_list_id)
             .field("title_present", &self.title.is_some())
             .field("body_present", &self.body.is_some())
+            .field("body_file_present", &self.body_file.is_some())
+            .field("edit", &self.edit)
             .field("priority_present", &self.priority.is_some())
             .field("due_at_present", &self.due_at.is_some())
             .field("due_present", &self.due.is_some())
@@ -777,6 +797,26 @@ impl fmt::Debug for TaskCreateArgsCli {
             .field("password_stdin", &self.password_stdin)
             .finish()
     }
+}
+
+#[derive(Args, Debug)]
+#[command(group(task_target_group()))]
+pub(crate) struct TaskEditArgsCli {
+    /// Task title, UUID, or unique UUID prefix.
+    #[arg(value_name = "TASK", conflicts_with = "task_id")]
+    pub(crate) task: Option<EntitySelector>,
+    /// Exact task UUID (legacy compatibility).
+    #[arg(long)]
+    pub(crate) task_id: Option<Uuid>,
+    /// Project name, UUID, or unique UUID prefix.
+    #[arg(long, conflicts_with = "work_list_id")]
+    pub(crate) project: Option<EntitySelector>,
+    /// Exact project UUID (legacy compatibility).
+    #[arg(long)]
+    pub(crate) work_list_id: Option<Uuid>,
+    /// Read the account password from stdin when no local unlock is available.
+    #[arg(long)]
+    pub(crate) password_stdin: bool,
 }
 
 #[derive(Args)]
@@ -798,10 +838,22 @@ pub(crate) struct TaskUpdateArgsCli {
     #[arg(long)]
     pub(crate) title: Option<String>,
     /// Replace the Markdown body.
-    #[arg(long, conflicts_with = "clear_body")]
+    #[arg(long, conflicts_with_all = ["body_file", "clear_body"])]
     pub(crate) body: Option<String>,
+    /// Read the replacement Markdown task body from PATH; use '-' for stdin.
+    #[arg(
+        long,
+        value_name = "PATH",
+        conflicts_with_all = [
+            "body",
+            "clear_body",
+            "input_file",
+            "input_stdin"
+        ]
+    )]
+    pub(crate) body_file: Option<PathBuf>,
     /// Remove the task body.
-    #[arg(long)]
+    #[arg(long, conflicts_with = "body_file")]
     pub(crate) clear_body: bool,
     /// Set priority to low/p4/1, medium/p3/3, high/p2/5, or urgent/p1/8.
     #[arg(
@@ -845,6 +897,7 @@ pub(crate) struct TaskUpdateArgsCli {
             "input_stdin",
             "title",
             "body",
+            "body_file",
             "clear_body",
             "priority",
             "clear_priority",
@@ -867,6 +920,7 @@ pub(crate) struct TaskUpdateArgsCli {
             "password_stdin",
             "title",
             "body",
+            "body_file",
             "clear_body",
             "priority",
             "clear_priority",
@@ -896,6 +950,7 @@ impl fmt::Debug for TaskUpdateArgsCli {
             .field("work_list_id", &self.work_list_id)
             .field("title_present", &self.title.is_some())
             .field("body_present", &self.body.is_some())
+            .field("body_file_present", &self.body_file.is_some())
             .field("clear_body", &self.clear_body)
             .field("priority_present", &self.priority.is_some())
             .field("clear_priority", &self.clear_priority)
@@ -1051,19 +1106,31 @@ pub(crate) struct CommentCreateArgsCli {
     #[arg(long)]
     pub(crate) work_list_id: Option<Uuid>,
     /// Plaintext Markdown comment body.
-    #[arg(long)]
+    #[arg(long, conflicts_with = "body_file")]
     pub(crate) body: Option<String>,
+    /// Read the plaintext Markdown comment body from PATH; use '-' for stdin.
+    #[arg(
+        long,
+        value_name = "PATH",
+        conflicts_with_all = ["body", "input_file", "input_stdin"]
+    )]
+    pub(crate) body_file: Option<PathBuf>,
     /// Read the complete camelCase comment input object from a UTF-8 JSON file.
     #[arg(
         long,
         value_name = "PATH",
-        conflicts_with_all = ["input_stdin", "body"]
+        conflicts_with_all = ["input_stdin", "body", "body_file"]
     )]
     pub(crate) input_file: Option<PathBuf>,
     /// Read the complete camelCase comment input object from stdin.
     #[arg(
         long,
-        conflicts_with_all = ["input_file", "password_stdin", "body"]
+        conflicts_with_all = [
+            "input_file",
+            "password_stdin",
+            "body",
+            "body_file"
+        ]
     )]
     pub(crate) input_stdin: bool,
     /// Read the account password from stdin when no local unlock is available.
@@ -1080,6 +1147,7 @@ impl fmt::Debug for CommentCreateArgsCli {
             .field("project", &self.project)
             .field("work_list_id", &self.work_list_id)
             .field("body_present", &self.body.is_some())
+            .field("body_file_present", &self.body_file.is_some())
             .field("input_file_present", &self.input_file.is_some())
             .field("input_stdin", &self.input_stdin)
             .field("password_stdin", &self.password_stdin)
@@ -1233,12 +1301,32 @@ impl fmt::Debug for NoteCreateArgsCli {
             .field("title_present", &self.title.is_some())
             .field("body_present", &self.body.is_some())
             .field("is_private", &self.is_private)
-            .field("idempotency_key", &self.idempotency_key)
+            .field("idempotency_key_present", &self.idempotency_key.is_some())
             .field("input_file_present", &self.input_file.is_some())
             .field("input_stdin", &self.input_stdin)
             .field("password_stdin", &self.password_stdin)
             .finish()
     }
+}
+
+#[derive(Args, Debug)]
+#[command(group(note_target_group()))]
+pub(crate) struct NoteEditArgsCli {
+    /// Note title, UUID, or unique UUID prefix.
+    #[arg(value_name = "NOTE", conflicts_with = "note_id")]
+    pub(crate) note: Option<EntitySelector>,
+    /// Exact note UUID (legacy compatibility).
+    #[arg(long)]
+    pub(crate) note_id: Option<Uuid>,
+    /// Project name, UUID, or unique UUID prefix.
+    #[arg(long, conflicts_with = "work_list_id")]
+    pub(crate) project: Option<EntitySelector>,
+    /// Exact project UUID (legacy compatibility).
+    #[arg(long)]
+    pub(crate) work_list_id: Option<Uuid>,
+    /// Read the account password from stdin when no local unlock is available.
+    #[arg(long)]
+    pub(crate) password_stdin: bool,
 }
 
 #[derive(Args)]
@@ -1667,5 +1755,183 @@ mod tests {
             panic!("expected task-reference quarantine command");
         };
         assert!(!args.confirm);
+    }
+
+    #[test]
+    fn editor_commands_accept_human_and_legacy_targets() {
+        let task = Cli::try_parse_from([
+            "sealtask",
+            "tasks",
+            "edit",
+            "Release checklist",
+            "--project",
+            "Operations",
+            "--password-stdin",
+        ])
+        .expect("parse task editor command");
+        assert!(matches!(
+            task.command,
+            Some(Command::Tasks {
+                command: TasksCommand::Edit(TaskEditArgsCli {
+                    task: Some(_),
+                    project: Some(_),
+                    password_stdin: true,
+                    ..
+                })
+            })
+        ));
+
+        let note = Cli::try_parse_from([
+            "sealtask",
+            "notes",
+            "edit",
+            "--note-id",
+            "018f4a76-c9f2-7f38-a09a-2ac748db8ee9",
+            "--work-list-id",
+            "018f4a76-c9f2-7f38-a09a-2ac748db8ee8",
+        ])
+        .expect("parse note editor command");
+        assert!(matches!(
+            note.command,
+            Some(Command::Notes {
+                command: NotesCommand::Edit(NoteEditArgsCli {
+                    note_id: Some(_),
+                    work_list_id: Some(_),
+                    ..
+                })
+            })
+        ));
+    }
+
+    #[test]
+    fn task_create_editor_accepts_scalar_seeds_and_redacts_body_file_path() {
+        let body_path = "canary-task-create-body-path.md";
+        let parsed = Cli::try_parse_from([
+            "sealtask",
+            "tasks",
+            "create",
+            "--title",
+            "Seed title",
+            "--body-file",
+            body_path,
+            "--edit",
+        ])
+        .expect("parse task create editor seeds");
+        let debug = format!("{parsed:?}");
+        assert!(!debug.contains(body_path));
+        assert!(debug.contains("body_file_present: true"));
+        assert!(debug.contains("edit: true"));
+
+        for args in [
+            vec![
+                "sealtask",
+                "tasks",
+                "create",
+                "--edit",
+                "--input-file",
+                "task.json",
+            ],
+            vec!["sealtask", "tasks", "create", "--edit", "--input-stdin"],
+            vec![
+                "sealtask",
+                "tasks",
+                "create",
+                "--body",
+                "inline",
+                "--body-file",
+                "body.md",
+            ],
+            vec![
+                "sealtask",
+                "tasks",
+                "create",
+                "--body-file",
+                "body.md",
+                "--input-file",
+                "task.json",
+            ],
+        ] {
+            assert!(
+                Cli::try_parse_from(args).is_err(),
+                "conflicting task create input parsed successfully"
+            );
+        }
+    }
+
+    #[test]
+    fn task_update_and_comment_create_body_files_are_exclusive_and_redacted() {
+        let task_body_path = "canary-task-update-body-path.md";
+        let task = Cli::try_parse_from([
+            "sealtask",
+            "tasks",
+            "update",
+            "Release checklist",
+            "--body-file",
+            task_body_path,
+        ])
+        .expect("parse task update body file");
+        let task_debug = format!("{task:?}");
+        assert!(!task_debug.contains(task_body_path));
+        assert!(task_debug.contains("body_file_present: true"));
+
+        let comment_body_path = "canary-comment-create-body-path.md";
+        let comment = Cli::try_parse_from([
+            "sealtask",
+            "comments",
+            "create",
+            "Release checklist",
+            "--body-file",
+            comment_body_path,
+        ])
+        .expect("parse comment create body file");
+        let comment_debug = format!("{comment:?}");
+        assert!(!comment_debug.contains(comment_body_path));
+        assert!(comment_debug.contains("body_file_present: true"));
+
+        for args in [
+            vec![
+                "sealtask",
+                "tasks",
+                "update",
+                "Release checklist",
+                "--body-file",
+                "body.md",
+                "--clear-body",
+            ],
+            vec![
+                "sealtask",
+                "tasks",
+                "update",
+                "Release checklist",
+                "--body-file",
+                "body.md",
+                "--input-stdin",
+            ],
+            vec![
+                "sealtask",
+                "comments",
+                "create",
+                "Release checklist",
+                "--body-file",
+                "body.md",
+                "--body",
+                "inline",
+            ],
+            vec![
+                "sealtask",
+                "comments",
+                "create",
+                "Release checklist",
+                "--body-file",
+                "body.md",
+                "--input-file",
+                "comment.json",
+            ],
+        ] {
+            assert!(
+                Cli::try_parse_from(args).is_err(),
+                "conflicting body input parsed successfully"
+            );
+        }
     }
 }

@@ -4,7 +4,7 @@
 .SH NAME
 sealtask\-tasks\-create \- Create an encrypted task
 .SH SYNOPSIS
-\fBsealtask tasks create\fR [\fB\-\-api\-url\fR] [\fB\-\-project\fR] [\fB\-\-storage\-origin\fR] [\fB\-\-work\-list\-id\fR] [\fB\-\-json\fR] [\fB\-\-title\fR] [\fB\-\-body\fR] [\fB\-\-format\fR] [\fB\-\-color\fR] [\fB\-\-priority\fR] [\fB\-\-due\-at\fR] [\fB\-\-pager\fR] [\fB\-\-due\fR] [\fB\-\-no\-pager\fR] [\fB\-\-progress\fR] [\fB\-\-start\-at\fR] [\fB\-q\fR|\fB\-\-quiet\fR] [\fB\-\-section\-id\fR] [\fB\-\-non\-interactive\fR] [\fB\-\-section\fR] [\fB\-\-idempotency\-key\fR] [\fB\-v \fR]... [\fB\-\-debug\fR] [\fB\-\-input\-file\fR] [\fB\-\-connect\-timeout\fR] [\fB\-\-input\-stdin\fR] [\fB\-\-password\-stdin\fR] [\fB\-\-read\-timeout\fR] [\fB\-\-request\-timeout\fR] [\fB\-\-profile\fR] [\fB\-\-config\-dir\fR] [\fB\-h\fR|\fB\-\-help\fR]
+\fBsealtask tasks create\fR [\fB\-\-api\-url\fR] [\fB\-\-project\fR] [\fB\-\-storage\-origin\fR] [\fB\-\-work\-list\-id\fR] [\fB\-\-json\fR] [\fB\-\-title\fR] [\fB\-\-body\fR] [\fB\-\-format\fR] [\fB\-\-body\-file\fR] [\fB\-\-color\fR] [\fB\-\-edit\fR] [\fB\-\-pager\fR] [\fB\-\-no\-pager\fR] [\fB\-\-priority\fR] [\fB\-\-due\-at\fR] [\fB\-\-progress\fR] [\fB\-\-due\fR] [\fB\-q\fR|\fB\-\-quiet\fR] [\fB\-\-non\-interactive\fR] [\fB\-\-start\-at\fR] [\fB\-\-section\-id\fR] [\fB\-v \fR]... [\fB\-\-debug\fR] [\fB\-\-section\fR] [\fB\-\-connect\-timeout\fR] [\fB\-\-idempotency\-key\fR] [\fB\-\-input\-file\fR] [\fB\-\-read\-timeout\fR] [\fB\-\-input\-stdin\fR] [\fB\-\-request\-timeout\fR] [\fB\-\-password\-stdin\fR] [\fB\-\-profile\fR] [\fB\-\-config\-dir\fR] [\fB\-h\fR|\fB\-\-help\fR]
 .SH DESCRIPTION
 Create an encrypted task
 .SH OPTIONS
@@ -43,11 +43,10 @@ Human due date in the project\*(Aqs timezone (for example tomorrow or 2026\-08\-
 .TP
 \fB\-\-start\-at\fR \fI<START_AT>\fR
 Start time as an RFC 3339 timestamp
-.SH ADVANCED
-.TP
-\fB\-\-idempotency\-key\fR \fI<IDEMPOTENCY_KEY>\fR
-Stable retry key containing at most 128 ASCII letters, digits, \*(Aq.\*(Aq, \*(Aq_\*(Aq, \*(Aq\-\*(Aq, or \*(Aq:\*(Aq
 .SH INPUT
+.TP
+\fB\-\-body\-file\fR \fI<PATH>\fR
+Read the plaintext Markdown task body from PATH; use \*(Aq\-\*(Aq for stdin
 .TP
 \fB\-\-input\-file\fR \fI<PATH>\fR
 Read the complete camelCase task input object from a UTF\-8 JSON file
@@ -57,6 +56,17 @@ Read the complete camelCase task input object from stdin
 .TP
 \fB\-\-password\-stdin\fR
 Read the account password from stdin when no local unlock is available
+.SH INTERACTION
+.TP
+\fB\-\-edit\fR
+Open your configured editor; \-\-title, \-\-body, and \-\-body\-file seed its contents
+.TP
+\fB\-\-non\-interactive\fR
+Never prompt; fail with an actionable validation error when input is missing
+.SH ADVANCED
+.TP
+\fB\-\-idempotency\-key\fR \fI<IDEMPOTENCY_KEY>\fR
+Stable retry key containing at most 128 ASCII letters, digits, \*(Aq.\*(Aq, \*(Aq_\*(Aq, \*(Aq\-\*(Aq, or \*(Aq:\*(Aq
 .SH CONNECTION
 .TP
 \fB\-\-api\-url\fR \fI<API_URL>\fR [default: https://sealtask.com]
@@ -167,10 +177,6 @@ May also be specified with the \fBSEALTASK_PROGRESS\fR environment variable.
 .TP
 \fB\-q\fR, \fB\-\-quiet\fR
 Suppress automatic paging, progress, and successful mutation acknowledgements
-.SH INTERACTION
-.TP
-\fB\-\-non\-interactive\fR
-Never prompt; fail with an actionable validation error when input is missing
 .SH DIAGNOSTICS
 .TP
 \fB\-v\fR
@@ -193,6 +199,7 @@ May also be specified with the \fBSEALTASK_CONFIG_DIR\fR environment variable.
 .RE
 .SH EXTRA
 Examples:
+  sealtask tasks create \-\-edit
   sealtask tasks create \-\-title "Ship 0.4" \-\-due tomorrow
   sealtask tasks create \-\-project Release \-\-section Doing \-\-priority high \-\-title "Publish artifacts"
   sealtask tasks create \-\-input\-file ./task.json

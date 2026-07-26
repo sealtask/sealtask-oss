@@ -4,6 +4,7 @@ mod reconciliation;
 
 use std::collections::HashSet;
 
+use chrono::{DateTime, Utc};
 use sealtask_client_api::note_transport::EncodedNoteRequest;
 use sealtask_client_api::{
     MAX_NOTE_COLLECTION_ITEMS, MAX_NOTE_COLLECTION_PAGES, MAX_NOTE_PAGE_ITEMS,
@@ -219,6 +220,23 @@ impl RuntimeClient {
     }
 
     pub async fn update_note(&self, args: UpdateNoteArgs) -> PublicResult<AgentNote> {
+        self.update_note_with_expected_revision(args, None).await
+    }
+
+    pub async fn update_note_if_unchanged(
+        &self,
+        args: UpdateNoteArgs,
+        expected_updated_at: DateTime<Utc>,
+    ) -> PublicResult<AgentNote> {
+        self.update_note_with_expected_revision(args, Some(expected_updated_at))
+            .await
+    }
+
+    async fn update_note_with_expected_revision(
+        &self,
+        args: UpdateNoteArgs,
+        expected_updated_at: Option<DateTime<Utc>>,
+    ) -> PublicResult<AgentNote> {
         let UpdateNoteArgs {
             work_list_id,
             note_id,
@@ -248,8 +266,11 @@ impl RuntimeClient {
                 payload_permit,
                 move || {
                     let current = current_response.decode()?;
-                    let request =
+                    let mut request =
                         runtime.prepare_update_note_request(&current, input, &crypto_context)?;
+                    if let Some(expected_updated_at) = expected_updated_at {
+                        request.expected_updated_at = Some(expected_updated_at);
+                    }
                     let encoded = EncodedNoteRequest::encode(&request)?;
                     Ok(PreparedNoteUpdate {
                         current,

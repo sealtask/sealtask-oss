@@ -1034,44 +1034,45 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from help" -f -a "clear" -d 'Clear the saved current project'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from help" -f -a "sections" -d 'Discover sections in a project'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create update move complete reopen archive unarchive delete attachments help" -l api-url -d 'SealTask API base URL' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create update move complete reopen archive unarchive delete attachments help" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create update move complete reopen archive unarchive delete attachments help" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -l api-url -d 'SealTask API base URL' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create update move complete reopen archive unarchive delete attachments help" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create update move complete reopen archive unarchive delete attachments help" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create update move complete reopen archive unarchive delete attachments help" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
 always\t''
 never\t''"
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create update move complete reopen archive unarchive delete attachments help" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create update move complete reopen archive unarchive delete attachments help" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create update move complete reopen archive unarchive delete attachments help" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create update move complete reopen archive unarchive delete attachments help" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create update move complete reopen archive unarchive delete attachments help" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create update move complete reopen archive unarchive delete attachments help" -l json -d 'Emit compact JSON instead of human-readable output'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create update move complete reopen archive unarchive delete attachments help" -l no-pager -d 'Disable paging (equivalent to --pager never)'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create update move complete reopen archive unarchive delete attachments help" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create update move complete reopen archive unarchive delete attachments help" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create update move complete reopen archive unarchive delete attachments help" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create update move complete reopen archive unarchive delete attachments help" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create update move complete reopen archive unarchive delete attachments help" -s h -l help -d 'Print help (see more with \'--help\')'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create update move complete reopen archive unarchive delete attachments help" -f -a "list" -d 'List tasks in the selected/current project, or assigned tasks when none is selected'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create update move complete reopen archive unarchive delete attachments help" -f -a "get" -d 'Show one decrypted task, including comments and attachment metadata'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create update move complete reopen archive unarchive delete attachments help" -f -a "create" -d 'Create an encrypted task'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create update move complete reopen archive unarchive delete attachments help" -f -a "update" -d 'Patch an encrypted task; omitted fields remain unchanged'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create update move complete reopen archive unarchive delete attachments help" -f -a "move" -d 'Move a task to a section or relative position'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create update move complete reopen archive unarchive delete attachments help" -f -a "complete" -d 'Move a task to the final section'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create update move complete reopen archive unarchive delete attachments help" -f -a "reopen" -d 'Move a task to the first section'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create update move complete reopen archive unarchive delete attachments help" -f -a "archive" -d 'Archive a task'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create update move complete reopen archive unarchive delete attachments help" -f -a "unarchive" -d 'Restore an archived task'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create update move complete reopen archive unarchive delete attachments help" -f -a "delete" -d 'Permanently delete a task'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create update move complete reopen archive unarchive delete attachments help" -f -a "attachments" -d 'Upload, delete, read, or download encrypted task attachments'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create update move complete reopen archive unarchive delete attachments help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -s h -l help -d 'Print help (see more with \'--help\')'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -f -a "list" -d 'List tasks in the selected/current project, or assigned tasks when none is selected'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -f -a "get" -d 'Show one decrypted task, including comments and attachment metadata'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -f -a "create" -d 'Create an encrypted task'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -f -a "edit" -d 'Edit a task\'s title and Markdown body in your configured editor'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -f -a "update" -d 'Patch an encrypted task; omitted fields remain unchanged'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -f -a "move" -d 'Move a task to a section or relative position'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -f -a "complete" -d 'Move a task to the final section'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -f -a "reopen" -d 'Move a task to the first section'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -f -a "archive" -d 'Archive a task'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -f -a "unarchive" -d 'Restore an archived task'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -f -a "delete" -d 'Permanently delete a task'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -f -a "attachments" -d 'Upload, delete, read, or download encrypted task attachments'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from list" -l project -d 'Restrict results to a project name, UUID, or unique UUID prefix' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from list" -l work-list-id -d 'Restrict results to one exact project UUID (legacy compatibility)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from list" -l api-url -d 'SealTask API base URL' -r
@@ -1140,6 +1141,7 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from create" -l work-list-id -d 'Exact project UUID (legacy compatibility)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from create" -l title -d 'Plaintext task title' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from create" -l body -d 'Plaintext Markdown task body' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from create" -l body-file -d 'Read the plaintext Markdown task body from PATH; use \'-\' for stdin' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from create" -l priority -d 'Task priority: low/p4/1, medium/p3/3, high/p2/5, or urgent/p1/8' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from create" -l due-at -d 'Due time as an RFC 3339 timestamp' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from create" -l due -d 'Human due date in the project\'s timezone (for example tomorrow or 2026-08-10)' -r
@@ -1167,6 +1169,7 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from create" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from create" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from create" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from create" -l edit -d 'Open your configured editor; --title, --body, and --body-file seed its contents'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from create" -l input-stdin -d 'Read the complete camelCase task input object from stdin'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from create" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from create" -l json -d 'Emit compact JSON instead of human-readable output'
@@ -1176,11 +1179,42 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from create" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from create" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from create" -s h -l help -d 'Print help (see more with \'--help\')'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from edit" -l task-id -d 'Exact task UUID (legacy compatibility)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from edit" -l project -d 'Project name, UUID, or unique UUID prefix' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from edit" -l work-list-id -d 'Exact project UUID (legacy compatibility)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from edit" -l api-url -d 'SealTask API base URL' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from edit" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from edit" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+json\t''
+json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from edit" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from edit" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from edit" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from edit" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from edit" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from edit" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from edit" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from edit" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from edit" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from edit" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from edit" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from edit" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from edit" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from edit" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from edit" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from edit" -s h -l help -d 'Print help (see more with \'--help\')'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from update" -l task-id -d 'Exact task UUID (legacy compatibility)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from update" -l project -d 'Project name, UUID, or unique UUID prefix' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from update" -l work-list-id -d 'Exact project UUID (legacy compatibility)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from update" -l title -d 'Replace the task title' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from update" -l body -d 'Replace the Markdown body' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from update" -l body-file -d 'Read the replacement Markdown task body from PATH; use \'-\' for stdin' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from update" -l priority -d 'Set priority to low/p4/1, medium/p3/3, high/p2/5, or urgent/p1/8' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from update" -l due-at -d 'Set the due time as an RFC 3339 timestamp' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from update" -l due -d 'Set a human due date in the project\'s timezone' -r
@@ -1442,6 +1476,7 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from help" -f -a "list" -d 'List tasks in the selected/current project, or assigned tasks when none is selected'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from help" -f -a "get" -d 'Show one decrypted task, including comments and attachment metadata'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from help" -f -a "create" -d 'Create an encrypted task'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from help" -f -a "edit" -d 'Edit a task\'s title and Markdown body in your configured editor'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from help" -f -a "update" -d 'Patch an encrypted task; omitted fields remain unchanged'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from help" -f -a "move" -d 'Move a task to a section or relative position'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from help" -f -a "complete" -d 'Move a task to the final section'
@@ -1739,6 +1774,7 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_s
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from create" -l project -d 'Project name, UUID, or unique UUID prefix' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from create" -l work-list-id -d 'Exact project UUID (legacy compatibility)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from create" -l body -d 'Plaintext Markdown comment body' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from create" -l body-file -d 'Read the plaintext Markdown comment body from PATH; use \'-\' for stdin' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from create" -l input-file -d 'Read the complete camelCase comment input object from a UTF-8 JSON file' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from create" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from create" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
@@ -1841,38 +1877,39 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_s
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from help" -f -a "update" -d 'Replace an encrypted task comment body'
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from help" -f -a "delete" -d 'Permanently delete a task comment'
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
-complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create update delete help" -l api-url -d 'SealTask API base URL' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create update delete help" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create update delete help" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create edit update delete help" -l api-url -d 'SealTask API base URL' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create edit update delete help" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create edit update delete help" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
 json\t''
 json-pretty\t''"
-complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create update delete help" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create edit update delete help" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
-complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create update delete help" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create edit update delete help" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
-complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create update delete help" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create edit update delete help" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
 always\t''
 never\t''"
-complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create update delete help" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create update delete help" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create update delete help" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create update delete help" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create update delete help" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
-complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create update delete help" -l json -d 'Emit compact JSON instead of human-readable output'
-complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create update delete help" -l no-pager -d 'Disable paging (equivalent to --pager never)'
-complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create update delete help" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
-complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create update delete help" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
-complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create update delete help" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
-complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create update delete help" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
-complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create update delete help" -s h -l help -d 'Print help (see more with \'--help\')'
-complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create update delete help" -f -a "list" -d 'List decrypted notes in a project'
-complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create update delete help" -f -a "get" -d 'Show one decrypted note'
-complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create update delete help" -f -a "create" -d 'Create an encrypted shared or private note'
-complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create update delete help" -f -a "update" -d 'Patch an encrypted note'
-complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create update delete help" -f -a "delete" -d 'Permanently delete a note'
-complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create update delete help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create edit update delete help" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create edit update delete help" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create edit update delete help" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create edit update delete help" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create edit update delete help" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create edit update delete help" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create edit update delete help" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create edit update delete help" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create edit update delete help" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create edit update delete help" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create edit update delete help" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create edit update delete help" -s h -l help -d 'Print help (see more with \'--help\')'
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create edit update delete help" -f -a "list" -d 'List decrypted notes in a project'
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create edit update delete help" -f -a "get" -d 'Show one decrypted note'
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create edit update delete help" -f -a "create" -d 'Create an encrypted shared or private note'
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create edit update delete help" -f -a "edit" -d 'Edit a note\'s title and Markdown body in your configured editor'
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create edit update delete help" -f -a "update" -d 'Patch an encrypted note'
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create edit update delete help" -f -a "delete" -d 'Permanently delete a note'
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create edit update delete help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from list" -l project -d 'Project name, UUID, or unique UUID prefix' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from list" -l work-list-id -d 'Exact project UUID (legacy compatibility)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from list" -l api-url -d 'SealTask API base URL' -r
@@ -1967,6 +2004,36 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from create" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from create" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from create" -s h -l help -d 'Print help (see more with \'--help\')'
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from edit" -l note-id -d 'Exact note UUID (legacy compatibility)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from edit" -l project -d 'Project name, UUID, or unique UUID prefix' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from edit" -l work-list-id -d 'Exact project UUID (legacy compatibility)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from edit" -l api-url -d 'SealTask API base URL' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from edit" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from edit" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
+json\t''
+json-pretty\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from edit" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from edit" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from edit" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from edit" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from edit" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from edit" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from edit" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from edit" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from edit" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from edit" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from edit" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from edit" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from edit" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from edit" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from edit" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from edit" -s h -l help -d 'Print help (see more with \'--help\')'
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from update" -l note-id -d 'Exact note UUID (legacy compatibility)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from update" -l project -d 'Project name, UUID, or unique UUID prefix' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from update" -l work-list-id -d 'Exact project UUID (legacy compatibility)' -r
@@ -2037,6 +2104,7 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from help" -f -a "list" -d 'List decrypted notes in a project'
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from help" -f -a "get" -d 'Show one decrypted note'
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from help" -f -a "create" -d 'Create an encrypted shared or private note'
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from help" -f -a "edit" -d 'Edit a note\'s title and Markdown body in your configured editor'
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from help" -f -a "update" -d 'Patch an encrypted note'
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from help" -f -a "delete" -d 'Permanently delete a note'
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
@@ -2076,6 +2144,7 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from tasks" -f -a "list" -d 'List tasks in the selected/current project, or assigned tasks when none is selected'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from tasks" -f -a "get" -d 'Show one decrypted task, including comments and attachment metadata'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from tasks" -f -a "create" -d 'Create an encrypted task'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from tasks" -f -a "edit" -d 'Edit a task\'s title and Markdown body in your configured editor'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from tasks" -f -a "update" -d 'Patch an encrypted task; omitted fields remain unchanged'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from tasks" -f -a "move" -d 'Move a task to a section or relative position'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from tasks" -f -a "complete" -d 'Move a task to the final section'
@@ -2094,5 +2163,6 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from notes" -f -a "list" -d 'List decrypted notes in a project'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from notes" -f -a "get" -d 'Show one decrypted note'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from notes" -f -a "create" -d 'Create an encrypted shared or private note'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from notes" -f -a "edit" -d 'Edit a note\'s title and Markdown body in your configured editor'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from notes" -f -a "update" -d 'Patch an encrypted note'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from notes" -f -a "delete" -d 'Permanently delete a note'

@@ -343,6 +343,23 @@ impl RuntimeClient {
     }
 
     pub async fn update_task(&self, args: UpdateTaskArgs) -> PublicResult<AgentTaskSummary> {
+        self.update_task_with_expected_revision(args, None).await
+    }
+
+    pub async fn update_task_if_unchanged(
+        &self,
+        args: UpdateTaskArgs,
+        expected_updated_at: DateTime<Utc>,
+    ) -> PublicResult<AgentTaskSummary> {
+        self.update_task_with_expected_revision(args, Some(expected_updated_at))
+            .await
+    }
+
+    async fn update_task_with_expected_revision(
+        &self,
+        args: UpdateTaskArgs,
+        expected_updated_at: Option<DateTime<Utc>>,
+    ) -> PublicResult<AgentTaskSummary> {
         let (mut client, context) = self
             .load_work_list_context(
                 args.work_list_id,
@@ -353,6 +370,7 @@ impl RuntimeClient {
         let list_key = self.require_work_list_key(&context)?;
         let binding_key = derive_payload_binding_key(list_key)?;
         let task_detail = client.get_task(args.work_list_id, args.task_id).await?;
+        let expected_updated_at = expected_updated_at.unwrap_or(task_detail.task.updated_at);
 
         let TaskUpdateInput {
             title,
@@ -379,7 +397,7 @@ impl RuntimeClient {
         }
 
         let mut request = UpdateTaskRequest {
-            expected_updated_at: Some(task_detail.task.updated_at),
+            expected_updated_at: Some(expected_updated_at),
             priority: priority.into_nested_option(),
             due_at: due_at.into_nested_option(),
             start_at: start_at.into_nested_option(),

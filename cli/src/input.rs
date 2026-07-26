@@ -1,6 +1,7 @@
 use crate::args::{NoteCreateArgsCli, NoteUpdateArgsCli, TaskCreateArgsCli, TaskUpdateArgsCli};
 use crate::interaction::write_interaction;
 use crate::output::CliResult;
+use crate::table::sanitize_cell;
 use sealtask_client_core::{PublicError, PublicResult};
 use sealtask_client_runtime::{
     CommentInput, NoteCreateInput, NoteUpdateInput, TaskCreateInput, TaskFieldPatch,
@@ -10,7 +11,9 @@ use serde::de::DeserializeOwned;
 use std::fs;
 use std::io::{self, IsTerminal, Read};
 use std::path::Path;
-use zeroize::Zeroizing;
+use zeroize::{Zeroize, Zeroizing};
+
+const MAX_BODY_INPUT_BYTES: usize = 4 * 1024 * 1024;
 
 #[derive(Debug, Clone, Copy)]
 enum JsonInputSource<'a> {
@@ -41,9 +44,14 @@ pub(crate) fn resolve_task_create_input(args: &TaskCreateArgsCli) -> PublicResul
         .as_deref()
         .map(str::to_owned)
         .ok_or_else(|| PublicError::validation("title is required"))?;
+    let body = resolve_body_input(
+        args.body.as_deref(),
+        args.body_file.as_deref(),
+        args.password_stdin,
+    )?;
     Ok(TaskCreateInput {
         title,
-        body: args.body.as_deref().map(str::to_owned),
+        body,
         checklist: None,
         priority: args.priority,
         due_at: args.due_at,
@@ -62,9 +70,14 @@ pub(crate) fn resolve_task_update_input(args: &TaskUpdateArgsCli) -> PublicResul
         return Ok(input);
     }
 
+    let body = resolve_body_input(
+        args.body.as_deref(),
+        args.body_file.as_deref(),
+        args.password_stdin,
+    )?;
     Ok(TaskUpdateInput {
         title: args.title.as_deref().map(str::to_owned),
-        body: task_field_patch(args.body.clone(), args.clear_body),
+        body: task_field_patch(body, args.clear_body),
         checklist: TaskFieldPatch::Unchanged,
         priority: task_field_patch(args.priority, args.clear_priority),
         due_at: task_field_patch(args.due_at, args.clear_due_at),
@@ -84,6 +97,7 @@ fn task_field_patch<T>(value: Option<T>, clear: bool) -> TaskFieldPatch<T> {
 
 pub(crate) fn resolve_comment_input(
     body: Option<&str>,
+    body_file: Option<&Path>,
     input_file: Option<&Path>,
     input_stdin: bool,
     password_stdin: bool,
@@ -94,10 +108,50 @@ pub(crate) fn resolve_comment_input(
         return Ok(input);
     }
 
-    let body = body
-        .map(str::to_owned)
+    let body = resolve_body_input(body, body_file, password_stdin)?
         .ok_or_else(|| PublicError::validation("comment body is required"))?;
     Ok(CommentInput { body })
+}
+
+pub(crate) fn resolve_body_input(
+    body: Option<&str>,
+    body_file: Option<&Path>,
+    password_stdin: bool,
+) -> PublicResult<Option<String>> {
+    validate_body_input(body, body_file, password_stdin)?;
+    let Some(path) = body_file else {
+        return Ok(body.map(str::to_owned));
+    };
+    if path == Path::new("-") {
+        return read_body_input(io::stdin().lock(), "stdin").map(Some);
+    }
+
+    let source = sanitize_cell(&path.to_string_lossy());
+    let file = fs::File::open(path).map_err(|error| {
+        PublicError::unexpected(format!("failed to open body file {source}: {error}"))
+    })?;
+    read_body_input(file, &format!("file {source}")).map(Some)
+}
+
+pub(crate) fn validate_body_input(
+    body: Option<&str>,
+    body_file: Option<&Path>,
+    password_stdin: bool,
+) -> PublicResult<()> {
+    if body.is_some() && body_file.is_some() {
+        return Err(PublicError::validation(
+            "use only one of --body or --body-file",
+        ));
+    }
+    let Some(path) = body_file else {
+        return Ok(());
+    };
+    if path == Path::new("-") && password_stdin {
+        return Err(PublicError::validation(
+            "--body-file - cannot be combined with --password-stdin because both consume stdin",
+        ));
+    }
+    Ok(())
 }
 
 pub(crate) fn resolve_note_create_input(args: &NoteCreateArgsCli) -> PublicResult<NoteCreateInput> {
@@ -204,6 +258,36 @@ fn read_json_input(source: JsonInputSource<'_>) -> PublicResult<String> {
     }
 }
 
+fn read_body_input(reader: impl Read, source: &str) -> PublicResult<String> {
+    let mut bytes = Zeroizing::new(Vec::new());
+    reader
+        .take((MAX_BODY_INPUT_BYTES + 1) as u64)
+        .read_to_end(&mut bytes)
+        .map_err(|error| {
+            PublicError::unexpected(format!(
+                "failed to read Markdown body from {source}: {error}"
+            ))
+        })?;
+    if bytes.len() > MAX_BODY_INPUT_BYTES {
+        return Err(PublicError::validation(format!(
+            "Markdown body from {source} exceeds the {MAX_BODY_INPUT_BYTES}-byte input limit"
+        )));
+    }
+
+    let bytes = std::mem::take(&mut *bytes);
+    match String::from_utf8(bytes) {
+        Ok(body) => Ok(body),
+        Err(error) => {
+            let utf8_error = error.utf8_error();
+            let mut bytes = error.into_bytes();
+            bytes.zeroize();
+            Err(PublicError::validation(format!(
+                "Markdown body from {source} is not valid UTF-8: {utf8_error}"
+            )))
+        }
+    }
+}
+
 fn parse_json_input<T: DeserializeOwned>(contents: &str, source: &str) -> PublicResult<T> {
     serde_json::from_str(contents)
         .map_err(|err| PublicError::validation(format!("invalid JSON input from {source}: {err}")))
@@ -268,6 +352,8 @@ pub(crate) fn read_required_password(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io::Cursor;
+    use std::path::Path;
     use uuid::Uuid;
 
     #[test]
@@ -302,5 +388,41 @@ mod tests {
                 .expect_err("unknown fields must not be silently ignored");
         assert!(error.to_string().contains("unknown field"));
         assert!(error.to_string().contains("ignoredBefore"));
+    }
+
+    #[test]
+    fn body_input_preserves_markdown_and_accepts_the_exact_limit() {
+        let markdown = "# Heading\n\n- first\n- second\n";
+        assert_eq!(
+            read_body_input(Cursor::new(markdown), "test").expect("read Markdown"),
+            markdown
+        );
+
+        let exact = vec![b'a'; MAX_BODY_INPUT_BYTES];
+        assert_eq!(
+            read_body_input(Cursor::new(exact), "test")
+                .expect("exact body limit")
+                .len(),
+            MAX_BODY_INPUT_BYTES
+        );
+    }
+
+    #[test]
+    fn body_input_rejects_oversized_and_non_utf8_content_without_echoing_it() {
+        let oversized = vec![b'x'; MAX_BODY_INPUT_BYTES + 1];
+        let error =
+            read_body_input(Cursor::new(oversized), "test").expect_err("oversized body rejected");
+        assert!(error.to_string().contains("input limit"));
+
+        let error = read_body_input(Cursor::new([0xff, 0xfe]), "test")
+            .expect_err("non-UTF-8 body rejected");
+        assert!(error.to_string().contains("not valid UTF-8"));
+    }
+
+    #[test]
+    fn stdin_body_and_password_inputs_cannot_compete() {
+        let error = resolve_body_input(None, Some(Path::new("-")), true)
+            .expect_err("stdin cannot provide both body and password");
+        assert!(error.to_string().contains("both consume stdin"));
     }
 }

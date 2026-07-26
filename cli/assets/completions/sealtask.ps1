@@ -1201,6 +1201,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('list', 'list', [CompletionResultType]::ParameterValue, 'List tasks in the selected/current project, or assigned tasks when none is selected')
             [CompletionResult]::new('get', 'get', [CompletionResultType]::ParameterValue, 'Show one decrypted task, including comments and attachment metadata')
             [CompletionResult]::new('create', 'create', [CompletionResultType]::ParameterValue, 'Create an encrypted task')
+            [CompletionResult]::new('edit', 'edit', [CompletionResultType]::ParameterValue, 'Edit a task''s title and Markdown body in your configured editor')
             [CompletionResult]::new('update', 'update', [CompletionResultType]::ParameterValue, 'Patch an encrypted task; omitted fields remain unchanged')
             [CompletionResult]::new('move', 'move', [CompletionResultType]::ParameterValue, 'Move a task to a section or relative position')
             [CompletionResult]::new('complete', 'complete', [CompletionResultType]::ParameterValue, 'Move a task to the final section')
@@ -1275,6 +1276,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--work-list-id', '--work-list-id', [CompletionResultType]::ParameterName, 'Exact project UUID (legacy compatibility)')
             [CompletionResult]::new('--title', '--title', [CompletionResultType]::ParameterName, 'Plaintext task title')
             [CompletionResult]::new('--body', '--body', [CompletionResultType]::ParameterName, 'Plaintext Markdown task body')
+            [CompletionResult]::new('--body-file', '--body-file', [CompletionResultType]::ParameterName, 'Read the plaintext Markdown task body from PATH; use ''-'' for stdin')
             [CompletionResult]::new('--priority', '--priority', [CompletionResultType]::ParameterName, 'Task priority: low/p4/1, medium/p3/3, high/p2/5, or urgent/p1/8')
             [CompletionResult]::new('--due-at', '--due-at', [CompletionResultType]::ParameterName, 'Due time as an RFC 3339 timestamp')
             [CompletionResult]::new('--due', '--due', [CompletionResultType]::ParameterName, 'Human due date in the project''s timezone (for example tomorrow or 2026-08-10)')
@@ -1294,7 +1296,35 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--request-timeout', '--request-timeout', [CompletionResultType]::ParameterName, 'Maximum total time for one control-plane request (for example 1m)')
             [CompletionResult]::new('--profile', '--profile', [CompletionResultType]::ParameterName, 'Isolate credentials and unlock state under a named profile')
             [CompletionResult]::new('--config-dir', '--config-dir', [CompletionResultType]::ParameterName, 'Override the base directory used for credentials and local unlock state')
+            [CompletionResult]::new('--edit', '--edit', [CompletionResultType]::ParameterName, 'Open your configured editor; --title, --body, and --body-file seed its contents')
             [CompletionResult]::new('--input-stdin', '--input-stdin', [CompletionResultType]::ParameterName, 'Read the complete camelCase task input object from stdin')
+            [CompletionResult]::new('--password-stdin', '--password-stdin', [CompletionResultType]::ParameterName, 'Read the account password from stdin when no local unlock is available')
+            [CompletionResult]::new('--json', '--json', [CompletionResultType]::ParameterName, 'Emit compact JSON instead of human-readable output')
+            [CompletionResult]::new('--no-pager', '--no-pager', [CompletionResultType]::ParameterName, 'Disable paging (equivalent to --pager never)')
+            [CompletionResult]::new('-q', '-q', [CompletionResultType]::ParameterName, 'Suppress automatic paging, progress, and successful mutation acknowledgements')
+            [CompletionResult]::new('--quiet', '--quiet', [CompletionResultType]::ParameterName, 'Suppress automatic paging, progress, and successful mutation acknowledgements')
+            [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
+            [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
+            [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
+            [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
+            break
+        }
+        'sealtask;tasks;edit' {
+            [CompletionResult]::new('--task-id', '--task-id', [CompletionResultType]::ParameterName, 'Exact task UUID (legacy compatibility)')
+            [CompletionResult]::new('--project', '--project', [CompletionResultType]::ParameterName, 'Project name, UUID, or unique UUID prefix')
+            [CompletionResult]::new('--work-list-id', '--work-list-id', [CompletionResultType]::ParameterName, 'Exact project UUID (legacy compatibility)')
+            [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
+            [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
+            [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
+            [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
+            [CompletionResult]::new('--connect-timeout', '--connect-timeout', [CompletionResultType]::ParameterName, 'Maximum time to establish a control-plane connection (for example 5s)')
+            [CompletionResult]::new('--read-timeout', '--read-timeout', [CompletionResultType]::ParameterName, 'Maximum idle time while reading a control-plane response (for example 30s)')
+            [CompletionResult]::new('--request-timeout', '--request-timeout', [CompletionResultType]::ParameterName, 'Maximum total time for one control-plane request (for example 1m)')
+            [CompletionResult]::new('--profile', '--profile', [CompletionResultType]::ParameterName, 'Isolate credentials and unlock state under a named profile')
+            [CompletionResult]::new('--config-dir', '--config-dir', [CompletionResultType]::ParameterName, 'Override the base directory used for credentials and local unlock state')
             [CompletionResult]::new('--password-stdin', '--password-stdin', [CompletionResultType]::ParameterName, 'Read the account password from stdin when no local unlock is available')
             [CompletionResult]::new('--json', '--json', [CompletionResultType]::ParameterName, 'Emit compact JSON instead of human-readable output')
             [CompletionResult]::new('--no-pager', '--no-pager', [CompletionResultType]::ParameterName, 'Disable paging (equivalent to --pager never)')
@@ -1313,6 +1343,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--work-list-id', '--work-list-id', [CompletionResultType]::ParameterName, 'Exact project UUID (legacy compatibility)')
             [CompletionResult]::new('--title', '--title', [CompletionResultType]::ParameterName, 'Replace the task title')
             [CompletionResult]::new('--body', '--body', [CompletionResultType]::ParameterName, 'Replace the Markdown body')
+            [CompletionResult]::new('--body-file', '--body-file', [CompletionResultType]::ParameterName, 'Read the replacement Markdown task body from PATH; use ''-'' for stdin')
             [CompletionResult]::new('--priority', '--priority', [CompletionResultType]::ParameterName, 'Set priority to low/p4/1, medium/p3/3, high/p2/5, or urgent/p1/8')
             [CompletionResult]::new('--due-at', '--due-at', [CompletionResultType]::ParameterName, 'Set the due time as an RFC 3339 timestamp')
             [CompletionResult]::new('--due', '--due', [CompletionResultType]::ParameterName, 'Set a human due date in the project''s timezone')
@@ -1690,6 +1721,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('list', 'list', [CompletionResultType]::ParameterValue, 'List tasks in the selected/current project, or assigned tasks when none is selected')
             [CompletionResult]::new('get', 'get', [CompletionResultType]::ParameterValue, 'Show one decrypted task, including comments and attachment metadata')
             [CompletionResult]::new('create', 'create', [CompletionResultType]::ParameterValue, 'Create an encrypted task')
+            [CompletionResult]::new('edit', 'edit', [CompletionResultType]::ParameterValue, 'Edit a task''s title and Markdown body in your configured editor')
             [CompletionResult]::new('update', 'update', [CompletionResultType]::ParameterValue, 'Patch an encrypted task; omitted fields remain unchanged')
             [CompletionResult]::new('move', 'move', [CompletionResultType]::ParameterValue, 'Move a task to a section or relative position')
             [CompletionResult]::new('complete', 'complete', [CompletionResultType]::ParameterValue, 'Move a task to the final section')
@@ -1708,6 +1740,9 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             break
         }
         'sealtask;tasks;help;create' {
+            break
+        }
+        'sealtask;tasks;help;edit' {
             break
         }
         'sealtask;tasks;help;update' {
@@ -2033,6 +2068,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--project', '--project', [CompletionResultType]::ParameterName, 'Project name, UUID, or unique UUID prefix')
             [CompletionResult]::new('--work-list-id', '--work-list-id', [CompletionResultType]::ParameterName, 'Exact project UUID (legacy compatibility)')
             [CompletionResult]::new('--body', '--body', [CompletionResultType]::ParameterName, 'Plaintext Markdown comment body')
+            [CompletionResult]::new('--body-file', '--body-file', [CompletionResultType]::ParameterName, 'Read the plaintext Markdown comment body from PATH; use ''-'' for stdin')
             [CompletionResult]::new('--input-file', '--input-file', [CompletionResultType]::ParameterName, 'Read the complete camelCase comment input object from a UTF-8 JSON file')
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
@@ -2167,6 +2203,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('list', 'list', [CompletionResultType]::ParameterValue, 'List decrypted notes in a project')
             [CompletionResult]::new('get', 'get', [CompletionResultType]::ParameterValue, 'Show one decrypted note')
             [CompletionResult]::new('create', 'create', [CompletionResultType]::ParameterValue, 'Create an encrypted shared or private note')
+            [CompletionResult]::new('edit', 'edit', [CompletionResultType]::ParameterValue, 'Edit a note''s title and Markdown body in your configured editor')
             [CompletionResult]::new('update', 'update', [CompletionResultType]::ParameterValue, 'Patch an encrypted note')
             [CompletionResult]::new('delete', 'delete', [CompletionResultType]::ParameterValue, 'Permanently delete a note')
             [CompletionResult]::new('help', 'help', [CompletionResultType]::ParameterValue, 'Print this message or the help of the given subcommand(s)')
@@ -2257,6 +2294,33 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
         }
+        'sealtask;notes;edit' {
+            [CompletionResult]::new('--note-id', '--note-id', [CompletionResultType]::ParameterName, 'Exact note UUID (legacy compatibility)')
+            [CompletionResult]::new('--project', '--project', [CompletionResultType]::ParameterName, 'Project name, UUID, or unique UUID prefix')
+            [CompletionResult]::new('--work-list-id', '--work-list-id', [CompletionResultType]::ParameterName, 'Exact project UUID (legacy compatibility)')
+            [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
+            [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, compact JSON, or pretty JSON output')
+            [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
+            [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
+            [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
+            [CompletionResult]::new('--connect-timeout', '--connect-timeout', [CompletionResultType]::ParameterName, 'Maximum time to establish a control-plane connection (for example 5s)')
+            [CompletionResult]::new('--read-timeout', '--read-timeout', [CompletionResultType]::ParameterName, 'Maximum idle time while reading a control-plane response (for example 30s)')
+            [CompletionResult]::new('--request-timeout', '--request-timeout', [CompletionResultType]::ParameterName, 'Maximum total time for one control-plane request (for example 1m)')
+            [CompletionResult]::new('--profile', '--profile', [CompletionResultType]::ParameterName, 'Isolate credentials and unlock state under a named profile')
+            [CompletionResult]::new('--config-dir', '--config-dir', [CompletionResultType]::ParameterName, 'Override the base directory used for credentials and local unlock state')
+            [CompletionResult]::new('--password-stdin', '--password-stdin', [CompletionResultType]::ParameterName, 'Read the account password from stdin when no local unlock is available')
+            [CompletionResult]::new('--json', '--json', [CompletionResultType]::ParameterName, 'Emit compact JSON instead of human-readable output')
+            [CompletionResult]::new('--no-pager', '--no-pager', [CompletionResultType]::ParameterName, 'Disable paging (equivalent to --pager never)')
+            [CompletionResult]::new('-q', '-q', [CompletionResultType]::ParameterName, 'Suppress automatic paging, progress, and successful mutation acknowledgements')
+            [CompletionResult]::new('--quiet', '--quiet', [CompletionResultType]::ParameterName, 'Suppress automatic paging, progress, and successful mutation acknowledgements')
+            [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
+            [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
+            [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
+            [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
+            break
+        }
         'sealtask;notes;update' {
             [CompletionResult]::new('--note-id', '--note-id', [CompletionResultType]::ParameterName, 'Exact note UUID (legacy compatibility)')
             [CompletionResult]::new('--project', '--project', [CompletionResultType]::ParameterName, 'Project name, UUID, or unique UUID prefix')
@@ -2322,6 +2386,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('list', 'list', [CompletionResultType]::ParameterValue, 'List decrypted notes in a project')
             [CompletionResult]::new('get', 'get', [CompletionResultType]::ParameterValue, 'Show one decrypted note')
             [CompletionResult]::new('create', 'create', [CompletionResultType]::ParameterValue, 'Create an encrypted shared or private note')
+            [CompletionResult]::new('edit', 'edit', [CompletionResultType]::ParameterValue, 'Edit a note''s title and Markdown body in your configured editor')
             [CompletionResult]::new('update', 'update', [CompletionResultType]::ParameterValue, 'Patch an encrypted note')
             [CompletionResult]::new('delete', 'delete', [CompletionResultType]::ParameterValue, 'Permanently delete a note')
             [CompletionResult]::new('help', 'help', [CompletionResultType]::ParameterValue, 'Print this message or the help of the given subcommand(s)')
@@ -2334,6 +2399,9 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             break
         }
         'sealtask;notes;help;create' {
+            break
+        }
+        'sealtask;notes;help;edit' {
             break
         }
         'sealtask;notes;help;update' {
@@ -2469,6 +2537,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('list', 'list', [CompletionResultType]::ParameterValue, 'List tasks in the selected/current project, or assigned tasks when none is selected')
             [CompletionResult]::new('get', 'get', [CompletionResultType]::ParameterValue, 'Show one decrypted task, including comments and attachment metadata')
             [CompletionResult]::new('create', 'create', [CompletionResultType]::ParameterValue, 'Create an encrypted task')
+            [CompletionResult]::new('edit', 'edit', [CompletionResultType]::ParameterValue, 'Edit a task''s title and Markdown body in your configured editor')
             [CompletionResult]::new('update', 'update', [CompletionResultType]::ParameterValue, 'Patch an encrypted task; omitted fields remain unchanged')
             [CompletionResult]::new('move', 'move', [CompletionResultType]::ParameterValue, 'Move a task to a section or relative position')
             [CompletionResult]::new('complete', 'complete', [CompletionResultType]::ParameterValue, 'Move a task to the final section')
@@ -2486,6 +2555,9 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             break
         }
         'sealtask;help;tasks;create' {
+            break
+        }
+        'sealtask;help;tasks;edit' {
             break
         }
         'sealtask;help;tasks;update' {
@@ -2578,6 +2650,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('list', 'list', [CompletionResultType]::ParameterValue, 'List decrypted notes in a project')
             [CompletionResult]::new('get', 'get', [CompletionResultType]::ParameterValue, 'Show one decrypted note')
             [CompletionResult]::new('create', 'create', [CompletionResultType]::ParameterValue, 'Create an encrypted shared or private note')
+            [CompletionResult]::new('edit', 'edit', [CompletionResultType]::ParameterValue, 'Edit a note''s title and Markdown body in your configured editor')
             [CompletionResult]::new('update', 'update', [CompletionResultType]::ParameterValue, 'Patch an encrypted note')
             [CompletionResult]::new('delete', 'delete', [CompletionResultType]::ParameterValue, 'Permanently delete a note')
             break
@@ -2589,6 +2662,9 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             break
         }
         'sealtask;help;notes;create' {
+            break
+        }
+        'sealtask;help;notes;edit' {
             break
         }
         'sealtask;help;notes;update' {

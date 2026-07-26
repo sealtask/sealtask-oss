@@ -4,7 +4,7 @@
 .SH NAME
 sealtask\-tasks\-update \- Patch an encrypted task; omitted fields remain unchanged
 .SH SYNOPSIS
-\fBsealtask tasks update\fR [\fB\-\-api\-url\fR] [\fB\-\-task\-id\fR] [\fB\-\-project\fR] [\fB\-\-storage\-origin\fR] [\fB\-\-json\fR] [\fB\-\-work\-list\-id\fR] [\fB\-\-format\fR] [\fB\-\-title\fR] [\fB\-\-body\fR] [\fB\-\-color\fR] [\fB\-\-clear\-body\fR] [\fB\-\-pager\fR] [\fB\-\-no\-pager\fR] [\fB\-\-priority\fR] [\fB\-\-clear\-priority\fR] [\fB\-\-progress\fR] [\fB\-\-due\-at\fR] [\fB\-q\fR|\fB\-\-quiet\fR] [\fB\-\-due\fR] [\fB\-\-non\-interactive\fR] [\fB\-\-clear\-due\-at\fR] [\fB\-v \fR]... [\fB\-\-debug\fR] [\fB\-\-start\-at\fR] [\fB\-\-clear\-start\-at\fR] [\fB\-\-connect\-timeout\fR] [\fB\-\-read\-timeout\fR] [\fB\-\-section\-id\fR] [\fB\-\-request\-timeout\fR] [\fB\-\-section\fR] [\fB\-\-clear\-section\fR] [\fB\-\-profile\fR] [\fB\-\-config\-dir\fR] [\fB\-\-input\-file\fR] [\fB\-\-input\-stdin\fR] [\fB\-\-password\-stdin\fR] [\fB\-h\fR|\fB\-\-help\fR] [\fITASK\fR]
+\fBsealtask tasks update\fR [\fB\-\-api\-url\fR] [\fB\-\-task\-id\fR] [\fB\-\-project\fR] [\fB\-\-storage\-origin\fR] [\fB\-\-json\fR] [\fB\-\-work\-list\-id\fR] [\fB\-\-format\fR] [\fB\-\-title\fR] [\fB\-\-body\fR] [\fB\-\-color\fR] [\fB\-\-body\-file\fR] [\fB\-\-pager\fR] [\fB\-\-clear\-body\fR] [\fB\-\-no\-pager\fR] [\fB\-\-priority\fR] [\fB\-\-progress\fR] [\fB\-\-clear\-priority\fR] [\fB\-q\fR|\fB\-\-quiet\fR] [\fB\-\-due\-at\fR] [\fB\-\-non\-interactive\fR] [\fB\-\-due\fR] [\fB\-v \fR]... [\fB\-\-clear\-due\-at\fR] [\fB\-\-debug\fR] [\fB\-\-connect\-timeout\fR] [\fB\-\-start\-at\fR] [\fB\-\-clear\-start\-at\fR] [\fB\-\-read\-timeout\fR] [\fB\-\-request\-timeout\fR] [\fB\-\-section\-id\fR] [\fB\-\-profile\fR] [\fB\-\-section\fR] [\fB\-\-clear\-section\fR] [\fB\-\-config\-dir\fR] [\fB\-\-input\-file\fR] [\fB\-\-input\-stdin\fR] [\fB\-\-password\-stdin\fR] [\fB\-h\fR|\fB\-\-help\fR] [\fITASK\fR]
 .SH DESCRIPTION
 Patch an encrypted task; omitted fields remain unchanged
 .SH OPTIONS
@@ -65,6 +65,9 @@ Remove the start time
 \fB\-\-clear\-section\fR
 Remove the explicit section assignment
 .SH INPUT
+.TP
+\fB\-\-body\-file\fR \fI<PATH>\fR
+Read the replacement Markdown task body from PATH; use \*(Aq\-\*(Aq for stdin
 .TP
 \fB\-\-input\-file\fR \fI<PATH>\fR
 Read the complete camelCase patch object from a UTF\-8 JSON file
@@ -211,4 +214,5 @@ May also be specified with the \fBSEALTASK_CONFIG_DIR\fR environment variable.
 .SH EXTRA
 Examples:
   sealtask tasks update "Ship 0.4" \-\-priority urgent \-\-due tomorrow
+  sealtask tasks update id:019f42ab \-\-body\-file ./release.md
   sealtask tasks update id:019f42ab \-\-clear\-due\-at

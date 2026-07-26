@@ -16,6 +16,26 @@ pub(crate) fn run_info(runtime: &RuntimeClient, format: OutputFormat) -> CliResu
         "outputFormats": ["table", "json", "json-pretty"],
         "shellCompletions": ["bash", "zsh", "fish", "powershell"],
         "manualPages": true,
+        "editorInput": {
+            "commandPrecedence": ["SEALTASK_EDITOR", "VISUAL", "EDITOR", "platform-default"],
+            "directProcess": true,
+            "controllingTerminal": true,
+            "documentFormat": "first-line-title-then-markdown",
+            "temporaryPermissions": {
+                "posixDirectoryMode": "0700",
+                "posixFileMode": "0600",
+                "posixModesEnforced": cfg!(unix),
+            },
+            "workflows": ["tasks create --edit", "tasks edit", "notes edit"],
+        },
+        "bodyFileInput": {
+            "stdinPath": "-",
+            "workflows": [
+                "tasks create --body-file",
+                "tasks update --body-file",
+                "comments create --body-file",
+            ],
+        },
         "picker": {
             "command": "sealtask pick",
             "entities": ["project", "task"],
@@ -56,6 +76,7 @@ pub(crate) fn run_info(runtime: &RuntimeClient, format: OutputFormat) -> CliResu
             println!("API: {}", runtime.api_url());
             println!("Profile: {}", active_profile()?);
             println!("Config: {}", config_dir()?.display());
+            println!("Editor: SEALTASK_EDITOR > VISUAL > EDITOR");
             println!("Picker: sealtask pick project|task");
             Ok(())
         }

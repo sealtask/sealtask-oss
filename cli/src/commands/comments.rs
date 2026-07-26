@@ -1,7 +1,7 @@
 use crate::args::{
     CommentCreateArgsCli, CommentDeleteArgsCli, CommentUpdateArgsCli, CommentsCommand,
 };
-use crate::input::{resolve_comment_input, resolve_delete_input};
+use crate::input::{resolve_comment_input, resolve_delete_input, validate_body_input};
 use crate::interaction::require_confirmation;
 use crate::output::{CliResult, OutputFormat};
 use crate::render::{print_comment, print_comments, print_delete_result, print_empty_collection};
@@ -79,6 +79,11 @@ async fn create_comment(
     format: OutputFormat,
     args: CommentCreateArgsCli,
 ) -> CliResult<()> {
+    validate_body_input(
+        args.body.as_deref(),
+        args.body_file.as_deref(),
+        args.password_stdin,
+    )?;
     let project = resolve_project(
         runtime,
         args.project.as_ref(),
@@ -98,6 +103,7 @@ async fn create_comment(
     .await?;
     let input = resolve_comment_input(
         args.body.as_deref(),
+        args.body_file.as_deref(),
         args.input_file.as_deref(),
         args.input_stdin,
         args.password_stdin,
@@ -139,6 +145,7 @@ async fn update_comment(
     .await?;
     let input = resolve_comment_input(
         args.body.as_deref(),
+        None,
         args.input_file.as_deref(),
         args.input_stdin,
         args.password_stdin,

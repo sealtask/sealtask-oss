@@ -1482,7 +1482,8 @@ _arguments "${_arguments_options[@]}" : \
 '(--work-list-id)--project=[Project name, UUID, or unique UUID prefix]:PROJECT:_default' \
 '--work-list-id=[Exact project UUID (legacy compatibility)]:WORK_LIST_ID:_default' \
 '--title=[Plaintext task title]:TITLE:_default' \
-'--body=[Plaintext Markdown task body]:BODY:_default' \
+'(--body-file)--body=[Plaintext Markdown task body]:BODY:_default' \
+'(--body --input-file --input-stdin)--body-file=[Read the plaintext Markdown task body from PATH; use '\''-'\'' for stdin]:PATH:_files' \
 '--priority=[Task priority\: low/p4/1, medium/p3/3, high/p2/5, or urgent/p1/8]:PRIORITY:_default' \
 '(--due)--due-at=[Due time as an RFC 3339 timestamp]:DUE_AT:_default' \
 '(--due-at)--due=[Human due date in the project'\''s timezone (for example tomorrow or 2026-08-10)]:DUE:_default' \
@@ -1490,7 +1491,7 @@ _arguments "${_arguments_options[@]}" : \
 '(--section)--section-id=[Initial section UUID]:SECTION_ID:_default' \
 '(--section-id)--section=[Initial section name, UUID, or unique UUID prefix]:SECTION:_default' \
 '--idempotency-key=[Stable retry key containing at most 128 ASCII letters, digits, '\''.'\'', '\''_'\'', '\''-'\'', or '\''\:'\'']:IDEMPOTENCY_KEY:_default' \
-'(--input-stdin --title --body --priority --due-at --due --start-at --section-id --section --idempotency-key)--input-file=[Read the complete camelCase task input object from a UTF-8 JSON file]:PATH:_files' \
+'(--input-stdin --title --body --body-file --edit --priority --due-at --due --start-at --section-id --section --idempotency-key)--input-file=[Read the complete camelCase task input object from a UTF-8 JSON file]:PATH:_files' \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
@@ -1502,7 +1503,8 @@ _arguments "${_arguments_options[@]}" : \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
-'(--input-file --password-stdin --title --body --priority --due-at --due --start-at --section-id --section --idempotency-key)--input-stdin[Read the complete camelCase task input object from stdin]' \
+'(--input-file --input-stdin)--edit[Open your configured editor; --title, --body, and --body-file seed its contents]' \
+'(--input-file --password-stdin --title --body --body-file --edit --priority --due-at --due --start-at --section-id --section --idempotency-key)--input-stdin[Read the complete camelCase task input object from stdin]' \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
@@ -1515,20 +1517,11 @@ _arguments "${_arguments_options[@]}" : \
 '--help[Print help (see more with '\''--help'\'')]' \
 && ret=0
 ;;
-(update)
+(edit)
 _arguments "${_arguments_options[@]}" : \
 '--task-id=[Exact task UUID (legacy compatibility)]:TASK_ID:_default' \
 '(--work-list-id)--project=[Project name, UUID, or unique UUID prefix]:PROJECT:_default' \
 '--work-list-id=[Exact project UUID (legacy compatibility)]:WORK_LIST_ID:_default' \
-'--title=[Replace the task title]:TITLE:_default' \
-'(--clear-body)--body=[Replace the Markdown body]:BODY:_default' \
-'(--clear-priority)--priority=[Set priority to low/p4/1, medium/p3/3, high/p2/5, or urgent/p1/8]:PRIORITY:_default' \
-'(--clear-due-at --due)--due-at=[Set the due time as an RFC 3339 timestamp]:DUE_AT:_default' \
-'(--due-at --clear-due-at)--due=[Set a human due date in the project'\''s timezone]:DUE:_default' \
-'(--clear-start-at)--start-at=[Set the start time as an RFC 3339 timestamp]:START_AT:_default' \
-'(--clear-section --section)--section-id=[Move the task to this section UUID]:SECTION_ID:_default' \
-'(--section-id --clear-section)--section=[Move the task to a section name, UUID, or unique UUID prefix]:SECTION:_default' \
-'(--input-stdin --title --body --clear-body --priority --clear-priority --due-at --due --clear-due-at --start-at --clear-start-at --section-id --section --clear-section)--input-file=[Read the complete camelCase patch object from a UTF-8 JSON file]:PATH:_files' \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
@@ -1540,12 +1533,51 @@ _arguments "${_arguments_options[@]}" : \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
-'--clear-body[Remove the task body]' \
+'--password-stdin[Read the account password from stdin when no local unlock is available]' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+'::task -- Task title, UUID, or unique UUID prefix:_default' \
+&& ret=0
+;;
+(update)
+_arguments "${_arguments_options[@]}" : \
+'--task-id=[Exact task UUID (legacy compatibility)]:TASK_ID:_default' \
+'(--work-list-id)--project=[Project name, UUID, or unique UUID prefix]:PROJECT:_default' \
+'--work-list-id=[Exact project UUID (legacy compatibility)]:WORK_LIST_ID:_default' \
+'--title=[Replace the task title]:TITLE:_default' \
+'(--body-file --clear-body)--body=[Replace the Markdown body]:BODY:_default' \
+'(--body --clear-body --input-file --input-stdin)--body-file=[Read the replacement Markdown task body from PATH; use '\''-'\'' for stdin]:PATH:_files' \
+'(--clear-priority)--priority=[Set priority to low/p4/1, medium/p3/3, high/p2/5, or urgent/p1/8]:PRIORITY:_default' \
+'(--clear-due-at --due)--due-at=[Set the due time as an RFC 3339 timestamp]:DUE_AT:_default' \
+'(--due-at --clear-due-at)--due=[Set a human due date in the project'\''s timezone]:DUE:_default' \
+'(--clear-start-at)--start-at=[Set the start time as an RFC 3339 timestamp]:START_AT:_default' \
+'(--clear-section --section)--section-id=[Move the task to this section UUID]:SECTION_ID:_default' \
+'(--section-id --clear-section)--section=[Move the task to a section name, UUID, or unique UUID prefix]:SECTION:_default' \
+'(--input-stdin --title --body --body-file --clear-body --priority --clear-priority --due-at --due --clear-due-at --start-at --clear-start-at --section-id --section --clear-section)--input-file=[Read the complete camelCase patch object from a UTF-8 JSON file]:PATH:_files' \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'(--body-file)--clear-body[Remove the task body]' \
 '--clear-priority[Remove the priority]' \
 '--clear-due-at[Remove the due time]' \
 '--clear-start-at[Remove the start time]' \
 '--clear-section[Remove the explicit section assignment]' \
-'(--input-file --password-stdin --title --body --clear-body --priority --clear-priority --due-at --due --clear-due-at --start-at --clear-start-at --section-id --section --clear-section)--input-stdin[Read the complete camelCase patch object from stdin]' \
+'(--input-file --password-stdin --title --body --body-file --clear-body --priority --clear-priority --due-at --due --clear-due-at --start-at --clear-start-at --section-id --section --clear-section)--input-stdin[Read the complete camelCase patch object from stdin]' \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
@@ -1958,6 +1990,10 @@ _arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
 (create)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(edit)
 _arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
@@ -2374,8 +2410,9 @@ _arguments "${_arguments_options[@]}" : \
 '--task-id=[Exact task UUID (legacy compatibility)]:TASK_ID:_default' \
 '(--work-list-id)--project=[Project name, UUID, or unique UUID prefix]:PROJECT:_default' \
 '--work-list-id=[Exact project UUID (legacy compatibility)]:WORK_LIST_ID:_default' \
-'--body=[Plaintext Markdown comment body]:BODY:_default' \
-'(--input-stdin --body)--input-file=[Read the complete camelCase comment input object from a UTF-8 JSON file]:PATH:_files' \
+'(--body-file)--body=[Plaintext Markdown comment body]:BODY:_default' \
+'(--body --input-file --input-stdin)--body-file=[Read the plaintext Markdown comment body from PATH; use '\''-'\'' for stdin]:PATH:_files' \
+'(--input-stdin --body --body-file)--input-file=[Read the complete camelCase comment input object from a UTF-8 JSON file]:PATH:_files' \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
@@ -2387,7 +2424,7 @@ _arguments "${_arguments_options[@]}" : \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
-'(--input-file --password-stdin --body)--input-stdin[Read the complete camelCase comment input object from stdin]' \
+'(--input-file --password-stdin --body --body-file)--input-stdin[Read the complete camelCase comment input object from stdin]' \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
@@ -2628,6 +2665,35 @@ _arguments "${_arguments_options[@]}" : \
 '--help[Print help (see more with '\''--help'\'')]' \
 && ret=0
 ;;
+(edit)
+_arguments "${_arguments_options[@]}" : \
+'--note-id=[Exact note UUID (legacy compatibility)]:NOTE_ID:_default' \
+'(--work-list-id)--project=[Project name, UUID, or unique UUID prefix]:PROJECT:_default' \
+'--work-list-id=[Exact project UUID (legacy compatibility)]:WORK_LIST_ID:_default' \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'--password-stdin[Read the account password from stdin when no local unlock is available]' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+'::note -- Note title, UUID, or unique UUID prefix:_default' \
+&& ret=0
+;;
 (update)
 _arguments "${_arguments_options[@]}" : \
 '--note-id=[Exact note UUID (legacy compatibility)]:NOTE_ID:_default' \
@@ -2714,6 +2780,10 @@ _arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
 (create)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(edit)
 _arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
@@ -2941,6 +3011,10 @@ _arguments "${_arguments_options[@]}" : \
 _arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
+(edit)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
 (update)
 _arguments "${_arguments_options[@]}" : \
 && ret=0
@@ -3114,6 +3188,10 @@ _arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
 (create)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(edit)
 _arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
@@ -3577,6 +3655,7 @@ _sealtask__subcmd__help__subcmd__notes_commands() {
 'list:List decrypted notes in a project' \
 'get:Show one decrypted note' \
 'create:Create an encrypted shared or private note' \
+'edit:Edit a note'\''s title and Markdown body in your configured editor' \
 'update:Patch an encrypted note' \
 'delete:Permanently delete a note' \
     )
@@ -3591,6 +3670,11 @@ _sealtask__subcmd__help__subcmd__notes__subcmd__create_commands() {
 _sealtask__subcmd__help__subcmd__notes__subcmd__delete_commands() {
     local commands; commands=()
     _describe -t commands 'sealtask help notes delete commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__notes__subcmd__edit_commands] )) ||
+_sealtask__subcmd__help__subcmd__notes__subcmd__edit_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help notes edit commands' commands "$@"
 }
 (( $+functions[_sealtask__subcmd__help__subcmd__notes__subcmd__get_commands] )) ||
 _sealtask__subcmd__help__subcmd__notes__subcmd__get_commands() {
@@ -3720,6 +3804,7 @@ _sealtask__subcmd__help__subcmd__tasks_commands() {
 'list:List tasks in the selected/current project, or assigned tasks when none is selected' \
 'get:Show one decrypted task, including comments and attachment metadata' \
 'create:Create an encrypted task' \
+'edit:Edit a task'\''s title and Markdown body in your configured editor' \
 'update:Patch an encrypted task; omitted fields remain unchanged' \
 'move:Move a task to a section or relative position' \
 'complete:Move a task to the final section' \
@@ -3781,6 +3866,11 @@ _sealtask__subcmd__help__subcmd__tasks__subcmd__delete_commands() {
     local commands; commands=()
     _describe -t commands 'sealtask help tasks delete commands' commands "$@"
 }
+(( $+functions[_sealtask__subcmd__help__subcmd__tasks__subcmd__edit_commands] )) ||
+_sealtask__subcmd__help__subcmd__tasks__subcmd__edit_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help tasks edit commands' commands "$@"
+}
 (( $+functions[_sealtask__subcmd__help__subcmd__tasks__subcmd__get_commands] )) ||
 _sealtask__subcmd__help__subcmd__tasks__subcmd__get_commands() {
     local commands; commands=()
@@ -3837,6 +3927,7 @@ _sealtask__subcmd__notes_commands() {
 'list:List decrypted notes in a project' \
 'get:Show one decrypted note' \
 'create:Create an encrypted shared or private note' \
+'edit:Edit a note'\''s title and Markdown body in your configured editor' \
 'update:Patch an encrypted note' \
 'delete:Permanently delete a note' \
 'help:Print this message or the help of the given subcommand(s)' \
@@ -3853,6 +3944,11 @@ _sealtask__subcmd__notes__subcmd__delete_commands() {
     local commands; commands=()
     _describe -t commands 'sealtask notes delete commands' commands "$@"
 }
+(( $+functions[_sealtask__subcmd__notes__subcmd__edit_commands] )) ||
+_sealtask__subcmd__notes__subcmd__edit_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask notes edit commands' commands "$@"
+}
 (( $+functions[_sealtask__subcmd__notes__subcmd__get_commands] )) ||
 _sealtask__subcmd__notes__subcmd__get_commands() {
     local commands; commands=()
@@ -3864,6 +3960,7 @@ _sealtask__subcmd__notes__subcmd__help_commands() {
 'list:List decrypted notes in a project' \
 'get:Show one decrypted note' \
 'create:Create an encrypted shared or private note' \
+'edit:Edit a note'\''s title and Markdown body in your configured editor' \
 'update:Patch an encrypted note' \
 'delete:Permanently delete a note' \
 'help:Print this message or the help of the given subcommand(s)' \
@@ -3879,6 +3976,11 @@ _sealtask__subcmd__notes__subcmd__help__subcmd__create_commands() {
 _sealtask__subcmd__notes__subcmd__help__subcmd__delete_commands() {
     local commands; commands=()
     _describe -t commands 'sealtask notes help delete commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__notes__subcmd__help__subcmd__edit_commands] )) ||
+_sealtask__subcmd__notes__subcmd__help__subcmd__edit_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask notes help edit commands' commands "$@"
 }
 (( $+functions[_sealtask__subcmd__notes__subcmd__help__subcmd__get_commands] )) ||
 _sealtask__subcmd__notes__subcmd__help__subcmd__get_commands() {
@@ -4160,6 +4262,7 @@ _sealtask__subcmd__tasks_commands() {
 'list:List tasks in the selected/current project, or assigned tasks when none is selected' \
 'get:Show one decrypted task, including comments and attachment metadata' \
 'create:Create an encrypted task' \
+'edit:Edit a task'\''s title and Markdown body in your configured editor' \
 'update:Patch an encrypted task; omitted fields remain unchanged' \
 'move:Move a task to a section or relative position' \
 'complete:Move a task to the final section' \
@@ -4259,6 +4362,11 @@ _sealtask__subcmd__tasks__subcmd__delete_commands() {
     local commands; commands=()
     _describe -t commands 'sealtask tasks delete commands' commands "$@"
 }
+(( $+functions[_sealtask__subcmd__tasks__subcmd__edit_commands] )) ||
+_sealtask__subcmd__tasks__subcmd__edit_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask tasks edit commands' commands "$@"
+}
 (( $+functions[_sealtask__subcmd__tasks__subcmd__get_commands] )) ||
 _sealtask__subcmd__tasks__subcmd__get_commands() {
     local commands; commands=()
@@ -4270,6 +4378,7 @@ _sealtask__subcmd__tasks__subcmd__help_commands() {
 'list:List tasks in the selected/current project, or assigned tasks when none is selected' \
 'get:Show one decrypted task, including comments and attachment metadata' \
 'create:Create an encrypted task' \
+'edit:Edit a task'\''s title and Markdown body in your configured editor' \
 'update:Patch an encrypted task; omitted fields remain unchanged' \
 'move:Move a task to a section or relative position' \
 'complete:Move a task to the final section' \
@@ -4331,6 +4440,11 @@ _sealtask__subcmd__tasks__subcmd__help__subcmd__create_commands() {
 _sealtask__subcmd__tasks__subcmd__help__subcmd__delete_commands() {
     local commands; commands=()
     _describe -t commands 'sealtask tasks help delete commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__tasks__subcmd__help__subcmd__edit_commands] )) ||
+_sealtask__subcmd__tasks__subcmd__help__subcmd__edit_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask tasks help edit commands' commands "$@"
 }
 (( $+functions[_sealtask__subcmd__tasks__subcmd__help__subcmd__get_commands] )) ||
 _sealtask__subcmd__tasks__subcmd__help__subcmd__get_commands() {

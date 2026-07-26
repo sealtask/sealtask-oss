@@ -239,6 +239,42 @@ shell completion remains static so decrypted names are never fetched while the
 shell is completing a command. Pass an exact UUID, `id:<prefix>`, or exact name
 directly in automation.
 
+### Secure editor and body-file input
+
+Long-form titles and Markdown bodies can stay out of shell history and process
+arguments:
+
+```bash
+sealtask tasks create --edit
+sealtask tasks create --title "Release checklist" --body-file ./checklist.md
+sealtask tasks edit "Release checklist"
+sealtask notes edit "Incident runbook"
+sealtask comments create "Ship release" --body-file -
+```
+
+Editor documents use a deliberately small format: the first line is the title,
+an optional single blank line separates it from the remaining Markdown body.
+For task creation, `--title`, `--body`, or `--body-file` seed the editor while
+priority, due date, section, and idempotency flags remain ordinary structured
+options. Existing task and note edits are revision-checked, so a concurrent
+change fails instead of being overwritten after a long editing session.
+
+SealTask resolves `SEALTASK_EDITOR`, then `VISUAL`, then `EDITOR`, with `vi` on
+Unix and Notepad on Windows as platform fallbacks. Editor command arguments are
+parsed and executed directly—never through a shell—and only a generic temporary
+path is appended. The child uses the controlling terminal, keeping JSON stdout
+clean. Each document lives in a private temporary directory with a mode-0600
+file on Unix; the whole directory, including adjacent swap or backup files, is
+removed before any API mutation. On Unix, SIGINT, SIGTERM, SIGHUP, and SIGQUIT
+are forwarded to the editor while the CLI retains control long enough to reap
+it, remove the plaintext workspace, and return exit 130. An editor configured
+to save recovery data elsewhere remains responsible for protecting that data.
+
+`--body-file PATH` reads raw UTF-8 Markdown, while `--body-file -` reads stdin.
+The stdin form cannot be combined with `--password-stdin`; use a saved unlock,
+the unlock daemon, or a real body file in that case. Editor workflows reject
+`--non-interactive`; body-file workflows are designed for automation.
+
 Selectors accept an exact UUID, an exact or Unicode-normalized name, or a
 unique UUID prefix of at least eight hexadecimal digits. Use `name:<value>` or
 `id:<prefix>` to make the intended selector form explicit. Ambiguous selectors

@@ -212,6 +212,8 @@ async fn cli_proven_flows_round_trip_through_mock_api() {
     let unarchived_task_json: Value = parse_stdout_json(&unarchive_task_output.stdout);
     assert!(unarchived_task_json["archivedAt"].is_null());
 
+    let comment_body_path = home.path().join("comment-body.md");
+    std::fs::write(&comment_body_path, "New comment\n").expect("write comment body");
     let create_comment_output = run_cli(
         home.path(),
         &server.base_url,
@@ -223,8 +225,8 @@ async fn cli_proven_flows_round_trip_through_mock_api() {
             &fixture.work_list_id.to_string(),
             "--task-id",
             &fixture.task_id.to_string(),
-            "--body",
-            "New comment",
+            "--body-file",
+            comment_body_path.to_str().expect("UTF-8 comment body path"),
             "--password-stdin",
         ],
         Some(&fixture.password),
@@ -2660,6 +2662,114 @@ fn cli_fuzzy_picker_is_raw_private_and_automation_safe() {
     assert!(completion.status.success());
     assert!(completion.stdout.contains("pick"));
     assert!(!completion.stdout.to_ascii_lowercase().contains("fzf"));
+}
+
+#[test]
+fn cli_editor_and_body_file_inputs_are_discoverable_and_automation_safe() {
+    let home = TempDir::new().expect("temp home");
+
+    for (args, expected) in [
+        (
+            &["tasks", "create", "--help"][..],
+            ["--edit", "--body-file", "sealtask tasks create --edit"],
+        ),
+        (
+            &["tasks", "edit", "--help"][..],
+            ["configured editor", "TASK", "sealtask tasks edit"],
+        ),
+        (
+            &["notes", "edit", "--help"][..],
+            ["configured editor", "NOTE", "sealtask notes edit"],
+        ),
+        (
+            &["comments", "create", "--help"][..],
+            ["--body-file", "use '-' for stdin", "--input-file"],
+        ),
+    ] {
+        let help = run_cli_exact(home.path(), args, None);
+        assert!(help.status.success(), "{args:?}: {}", help.stderr);
+        for marker in expected {
+            assert!(
+                help.stdout.contains(marker),
+                "{args:?} missing {marker:?}:\n{}",
+                help.stdout
+            );
+        }
+    }
+    assert!(!home.path().join(".sealtask").exists());
+
+    let malformed_editor = run_cli_with_operator_env(
+        home.path(),
+        "https://sealtask.invalid",
+        &["tasks", "create", "--edit"],
+        &[
+            ("SEALTASK_EDITOR", "vim '"),
+            ("SEALTASK_CONNECT_TIMEOUT", "not-a-duration"),
+        ],
+        None,
+    );
+    assert_eq!(malformed_editor.status.code(), Some(1));
+    assert!(malformed_editor.stdout.is_empty());
+    assert!(
+        malformed_editor
+            .stderr
+            .contains("SEALTASK_EDITOR contains unmatched quoting")
+    );
+    assert!(!home.path().join(".sealtask").exists());
+
+    for args in [
+        &["--non-interactive", "tasks", "create", "--edit"][..],
+        &["--non-interactive", "tasks", "edit", "Release checklist"][..],
+        &["--non-interactive", "notes", "edit", "Incident runbook"][..],
+    ] {
+        let output = run_cli_exact(home.path(), args, None);
+        assert_eq!(output.status.code(), Some(1), "{args:?}: {}", output.stderr);
+        assert!(output.stdout.is_empty(), "{args:?}: {}", output.stdout);
+        assert!(
+            output.stderr.contains("interactive controlling terminal"),
+            "{args:?}: {}",
+            output.stderr
+        );
+    }
+    assert!(!home.path().join(".sealtask").exists());
+
+    for args in [
+        &[
+            "comments",
+            "create",
+            "Release checklist",
+            "--body-file",
+            "-",
+            "--password-stdin",
+        ][..],
+        &[
+            "tasks",
+            "update",
+            "Release checklist",
+            "--body-file",
+            "-",
+            "--password-stdin",
+        ][..],
+    ] {
+        let output = run_cli_exact(home.path(), args, Some("password"));
+        assert_eq!(output.status.code(), Some(1), "{args:?}: {}", output.stderr);
+        assert!(output.stdout.is_empty(), "{args:?}: {}", output.stdout);
+        assert!(output.stderr.contains("both consume stdin"), "{args:?}");
+    }
+
+    let info = run_cli_exact(home.path(), &["--json", "info"], None);
+    assert!(info.status.success(), "info failed: {}", info.stderr);
+    let info = parse_stdout_json(&info.stdout);
+    assert_eq!(
+        info["editorInput"]["temporaryPermissions"]["posixFileMode"],
+        "0600"
+    );
+    assert_eq!(
+        info["editorInput"]["temporaryPermissions"]["posixModesEnforced"],
+        cfg!(unix)
+    );
+    assert_eq!(info["editorInput"]["directProcess"], true);
+    assert_eq!(info["bodyFileInput"]["stdinPath"], "-");
 }
 
 #[test]

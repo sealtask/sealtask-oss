@@ -224,10 +224,11 @@ fn argument_heading(path: &[String], argument: &Arg) -> &'static str {
         | "clear_priority" | "clear_due_at" | "clear_start_at" | "clear_section" | "is_private"
         | "file_name" | "content_type" => "Fields",
         "include_archived" | "include_completed" | "all" => "Filters",
-        "input_file" | "input_stdin" | "password_stdin" | "file" => "Input",
+        "input_file" | "input_stdin" | "body_file" | "password_stdin" | "file" => "Input",
         "format" | "json" | "verbose" | "raw" | "output" | "color" | "pager" | "no_pager"
         | "progress" | "quiet" => "Output",
         "yes" | "force" => "Safety",
+        "edit" => "Interaction",
         "idempotency_key" | "ttl_seconds" => "Advanced",
         _ => "Options",
     }
@@ -305,10 +306,11 @@ fn command_examples(path: &[String]) -> Option<&'static str> {
             "Examples:\n  sealtask tasks get \"Prepare release notes\"\n  sealtask tasks get id:019f42ab"
         }
         "tasks create" => {
-            "Examples:\n  sealtask tasks create --title \"Ship 0.4\" --due tomorrow\n  sealtask tasks create --project Release --section Doing --priority high --title \"Publish artifacts\"\n  sealtask tasks create --input-file ./task.json"
+            "Examples:\n  sealtask tasks create --edit\n  sealtask tasks create --title \"Ship 0.4\" --due tomorrow\n  sealtask tasks create --project Release --section Doing --priority high --title \"Publish artifacts\"\n  sealtask tasks create --input-file ./task.json"
         }
+        "tasks edit" => "Examples:\n  sealtask tasks edit \"Release checklist\"",
         "tasks update" => {
-            "Examples:\n  sealtask tasks update \"Ship 0.4\" --priority urgent --due tomorrow\n  sealtask tasks update id:019f42ab --clear-due-at"
+            "Examples:\n  sealtask tasks update \"Ship 0.4\" --priority urgent --due tomorrow\n  sealtask tasks update id:019f42ab --body-file ./release.md\n  sealtask tasks update id:019f42ab --clear-due-at"
         }
         "tasks move" => {
             "Examples:\n  sealtask tasks move \"Ship 0.4\" --section Review\n  sealtask tasks move \"Ship 0.4\" --before \"Publish notes\""
@@ -353,7 +355,7 @@ fn command_examples(path: &[String]) -> Option<&'static str> {
             "Examples:\n  sealtask comments list \"Ship 0.4\"\n  sealtask --json comments list id:019f42ab"
         }
         "comments create" => {
-            "Examples:\n  sealtask comments create \"Ship 0.4\" --body \"Ready for review\"\n  sealtask comments create \"Ship 0.4\" --input-file ./comment.json"
+            "Examples:\n  sealtask comments create \"Ship 0.4\" --body \"Ready for review\"\n  sealtask comments create \"Ship 0.4\" --body-file -\n  sealtask comments create \"Ship 0.4\" --input-file ./comment.json"
         }
         "comments update" => {
             "Examples:\n  sealtask comments update \"Ship 0.4\" --comment-id 019f42ab-0000-7000-8000-000000000001 --body \"Approved\""
@@ -373,6 +375,7 @@ fn command_examples(path: &[String]) -> Option<&'static str> {
         "notes create" => {
             "Examples:\n  sealtask notes create --title \"Incident runbook\" --body \"Recovery steps\"\n  sealtask notes create --private --input-file ./note.json"
         }
+        "notes edit" => "Examples:\n  sealtask notes edit \"Incident runbook\"",
         "notes update" => {
             "Examples:\n  sealtask notes update \"Incident runbook\" --body \"Updated recovery steps\""
         }

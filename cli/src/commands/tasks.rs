@@ -1,13 +1,14 @@
 use crate::args::{
     TaskArchiveArgsCli, TaskAttachmentsCommand, TaskCompletionArgsCli, TaskCreateArgsCli,
-    TaskDeleteArgsCli, TaskMoveArgsCli, TaskReferencesCommand, TaskUnarchiveArgsCli,
-    TaskUpdateArgsCli, TasksCommand,
+    TaskDeleteArgsCli, TaskEditArgsCli, TaskMoveArgsCli, TaskReferencesCommand,
+    TaskUnarchiveArgsCli, TaskUpdateArgsCli, TasksCommand,
 };
 use crate::attachment_output::{resolve_attachment_output_path, write_attachment_file};
+use crate::editor;
 use crate::human_input::parse_due_input;
 use crate::input::{
-    read_required_password, resolve_delete_input, resolve_task_create_input,
-    resolve_task_update_input,
+    read_required_password, resolve_body_input, resolve_delete_input, resolve_task_create_input,
+    resolve_task_update_input, validate_body_input,
 };
 use crate::interaction::require_confirmation;
 use crate::output::{
@@ -221,6 +222,7 @@ pub(crate) async fn run_tasks(
             }
         },
         TasksCommand::Create(args) => create_task(runtime, format, non_interactive, args).await,
+        TasksCommand::Edit(args) => edit_task(runtime, format, non_interactive, args).await,
         TasksCommand::Update(args) => update_task(runtime, format, args).await,
         TasksCommand::Move(args) => move_task(runtime, format, args).await,
         TasksCommand::Complete(args) => set_task_completion(runtime, format, args, true).await,
@@ -560,8 +562,19 @@ async fn create_task(
     runtime: &RuntimeClient,
     format: OutputFormat,
     non_interactive: bool,
-    args: TaskCreateArgsCli,
+    mut args: TaskCreateArgsCli,
 ) -> CliResult<()> {
+    validate_body_input(
+        args.body.as_deref(),
+        args.body_file.as_deref(),
+        args.password_stdin,
+    )?;
+    if non_interactive && args.edit {
+        return Err(PublicError::validation(
+            "--edit requires an interactive controlling terminal and cannot be combined with --non-interactive",
+        )
+        .into());
+    }
     let project = resolve_project(
         runtime,
         args.project.as_ref(),
@@ -570,6 +583,29 @@ async fn create_task(
         ProjectLifecycle::Active,
     )
     .await?;
+    let edited = if args.edit {
+        let seed_body = resolve_body_input(
+            args.body.as_deref(),
+            args.body_file.as_deref(),
+            args.password_stdin,
+        )?;
+        Some(if args.title.is_some() || seed_body.is_some() {
+            editor::edit_existing_document(
+                "task",
+                args.title.as_deref().unwrap_or_default(),
+                seed_body.as_deref().unwrap_or_default(),
+            )?
+        } else {
+            editor::edit_new_document("task")?
+        })
+    } else {
+        None
+    };
+    if let Some(edited) = edited.as_ref() {
+        args.title = Some(edited.title.clone());
+        args.body = Some(edited.body.clone());
+        args.body_file = None;
+    }
     let mut input = resolve_task_create_input(&args)?;
     if let Some(due) = args.due.as_deref() {
         let project_detail = load_project(runtime, project.id, args.password_stdin).await?;
@@ -600,11 +636,92 @@ async fn create_task(
     print_task(&created, format)
 }
 
+async fn edit_task(
+    runtime: &RuntimeClient,
+    format: OutputFormat,
+    non_interactive: bool,
+    args: TaskEditArgsCli,
+) -> CliResult<()> {
+    if non_interactive {
+        return Err(PublicError::validation(
+            "'sealtask tasks edit' requires an interactive controlling terminal and cannot be combined with --non-interactive",
+        )
+        .into());
+    }
+    let (project_id, task) = resolve_task_target(
+        runtime,
+        args.project.as_ref(),
+        args.work_list_id,
+        args.task.as_ref(),
+        args.task_id,
+        args.password_stdin,
+        TaskLifecycle::Any,
+    )
+    .await?;
+    let current = with_progress(
+        "Loading and decrypting task to edit…",
+        runtime.get_task(project_id, task.id, args.password_stdin),
+    )
+    .await?;
+    if current.task.read_error.is_some() {
+        return Err(PublicError::validation(
+            "the task cannot be edited because its encrypted content is unreadable; inspect it with 'sealtask tasks get' and resolve the read error first",
+        )
+        .into());
+    }
+    let current_title = current.task.title.as_deref().ok_or_else(|| {
+        PublicError::validation(
+            "the task cannot be edited because its decrypted title is unavailable",
+        )
+    })?;
+    let current_body = current.task.body_markdown.as_deref().unwrap_or_default();
+    let edited = editor::edit_existing_document("task", current_title, current_body)?;
+    let title = (edited.title.trim() != current_title.trim()).then(|| edited.title.clone());
+    let body = if edited.body.trim() == current_body.trim() {
+        TaskFieldPatch::Unchanged
+    } else if edited.body.trim().is_empty() {
+        TaskFieldPatch::Clear
+    } else {
+        TaskFieldPatch::Set(edited.body.clone())
+    };
+    if title.is_none() && body.is_unchanged() {
+        return print_task(&current.task, format);
+    }
+
+    let updated = with_progress(
+        "Updating task…",
+        runtime.update_task_if_unchanged(
+            UpdateTaskArgs {
+                work_list_id: project_id,
+                task_id: task.id,
+                input: sealtask_client_runtime::TaskUpdateInput {
+                    title,
+                    body,
+                    checklist: TaskFieldPatch::Unchanged,
+                    priority: TaskFieldPatch::Unchanged,
+                    due_at: TaskFieldPatch::Unchanged,
+                    start_at: TaskFieldPatch::Unchanged,
+                    section_id: TaskFieldPatch::Unchanged,
+                },
+                password_stdin: args.password_stdin,
+            },
+            current.task.updated_at,
+        ),
+    )
+    .await?;
+    print_task(&updated, format)
+}
+
 async fn update_task(
     runtime: &RuntimeClient,
     format: OutputFormat,
     args: TaskUpdateArgsCli,
 ) -> CliResult<()> {
+    validate_body_input(
+        args.body.as_deref(),
+        args.body_file.as_deref(),
+        args.password_stdin,
+    )?;
     let (project_id, task) = resolve_task_target(
         runtime,
         args.project.as_ref(),

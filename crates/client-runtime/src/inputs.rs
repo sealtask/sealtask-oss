@@ -9,7 +9,7 @@ use std::path::PathBuf;
 use uuid::Uuid;
 use zeroize::Zeroizing;
 
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Clone, Default, PartialEq, Eq)]
 pub enum TaskFieldPatch<T> {
     #[default]
     Unchanged,
@@ -29,6 +29,16 @@ impl<T> TaskFieldPatch<T> {
             Self::Set(value) => Some(Some(value)),
             Self::Clear => Some(None),
         }
+    }
+}
+
+impl<T> fmt::Debug for TaskFieldPatch<T> {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(match self {
+            Self::Unchanged => "Unchanged",
+            Self::Set(_) => "Set(<redacted>)",
+            Self::Clear => "Clear",
+        })
     }
 }
 
@@ -56,7 +66,7 @@ impl<'de, T: Deserialize<'de>> Deserialize<'de> for TaskFieldPatch<T> {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct TaskCreateInput {
     pub title: String,
@@ -76,7 +86,23 @@ pub struct TaskCreateInput {
     pub idempotency_key: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+impl fmt::Debug for TaskCreateInput {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("TaskCreateInput")
+            .field("title_present", &!self.title.is_empty())
+            .field("body_present", &self.body.is_some())
+            .field("checklist_present", &self.checklist.is_some())
+            .field("priority", &self.priority)
+            .field("due_at", &self.due_at)
+            .field("start_at", &self.start_at)
+            .field("section_id", &self.section_id)
+            .field("idempotency_key_present", &self.idempotency_key.is_some())
+            .finish()
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct TaskUpdateInput {
     #[serde(default)]
@@ -95,10 +121,34 @@ pub struct TaskUpdateInput {
     pub section_id: TaskFieldPatch<Uuid>,
 }
 
-#[derive(Debug, Deserialize)]
+impl fmt::Debug for TaskUpdateInput {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("TaskUpdateInput")
+            .field("title_present", &self.title.is_some())
+            .field("body", &self.body)
+            .field("checklist", &self.checklist)
+            .field("priority", &self.priority)
+            .field("due_at", &self.due_at)
+            .field("start_at", &self.start_at)
+            .field("section_id", &self.section_id)
+            .finish()
+    }
+}
+
+#[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct CommentInput {
     pub body: String,
+}
+
+impl fmt::Debug for CommentInput {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("CommentInput")
+            .field("body_present", &!self.body.is_empty())
+            .finish()
+    }
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -503,5 +553,54 @@ mod tests {
         assert!(!update_debug.contains(update_body));
         assert!(update_debug.contains("title_present: true"));
         assert!(update_debug.contains("body_present: true"));
+    }
+
+    #[test]
+    fn task_and_comment_debug_redact_plaintext_fields() {
+        let title = "task-title-debug-canary";
+        let body = "body-debug-canary";
+        let checklist_title = "checklist-debug-canary";
+        let task = TaskCreateInput {
+            title: title.to_string(),
+            body: Some(body.to_string()),
+            checklist: Some(vec![ChecklistItemPayload {
+                id: Uuid::now_v7().to_string(),
+                title: checklist_title.to_string(),
+                is_done: false,
+                completed_at: None,
+                assignee_user_ids: None,
+            }]),
+            priority: Some(5),
+            due_at: None,
+            start_at: None,
+            section_id: None,
+            idempotency_key: Some("task:debug".to_string()),
+        };
+        let patch = TaskUpdateInput {
+            title: Some(title.to_string()),
+            body: TaskFieldPatch::Set(body.to_string()),
+            checklist: TaskFieldPatch::Set(task.checklist.clone().expect("checklist")),
+            priority: TaskFieldPatch::Unchanged,
+            due_at: TaskFieldPatch::Unchanged,
+            start_at: TaskFieldPatch::Unchanged,
+            section_id: TaskFieldPatch::Unchanged,
+        };
+        let comment = CommentInput {
+            body: body.to_string(),
+        };
+
+        for debug in [
+            format!("{task:?}"),
+            format!("{patch:?}"),
+            format!("{comment:?}"),
+        ] {
+            assert!(!debug.contains(title));
+            assert!(!debug.contains(body));
+            assert!(!debug.contains(checklist_title));
+        }
+        assert_eq!(
+            format!("{:?}", TaskFieldPatch::Set(body.to_string())),
+            "Set(<redacted>)"
+        );
     }
 }
