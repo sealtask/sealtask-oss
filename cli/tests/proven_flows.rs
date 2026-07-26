@@ -3230,6 +3230,141 @@ fn cli_public_name_is_sealtask() {
 }
 
 #[test]
+fn cli_discovery_artifacts_are_local_complete_and_pipe_safe() {
+    let home = TempDir::new().expect("temp home");
+    let mut completion = Command::cargo_bin("sealtask").expect("binary");
+    completion
+        .env("HOME", home.path())
+        .env("SEALTASK_API_URL", "not a URL")
+        .env("SEALTASK_CONNECT_TIMEOUT", "not a duration")
+        .current_dir(home.path())
+        .args(["completion", "zsh"]);
+    let completion = completion.output().expect("generate completion");
+    assert!(
+        completion.status.success(),
+        "completion failed: {}",
+        String::from_utf8_lossy(&completion.stderr)
+    );
+    let completion_stdout =
+        String::from_utf8(completion.stdout).expect("completion output should be UTF-8");
+    assert!(completion_stdout.contains("#compdef sealtask"));
+    assert!(!home.path().join(".sealtask").exists());
+
+    for (shell, marker) in [
+        ("bash", "_sealtask"),
+        ("fish", "complete -c sealtask"),
+        ("powershell", "Register-ArgumentCompleter"),
+    ] {
+        let output = run_cli_exact(home.path(), &["completion", shell], None);
+        assert!(
+            output.status.success(),
+            "{shell} completion failed: {}",
+            output.stderr
+        );
+        assert!(output.stderr.is_empty(), "{shell}: {}", output.stderr);
+        assert!(
+            output.stdout.contains(marker),
+            "{shell} output missing {marker:?}"
+        );
+    }
+    for unsupported in ["power-shell", "elvish"] {
+        let output = run_cli_exact(home.path(), &["completion", unsupported], None);
+        assert_eq!(output.status.code(), Some(2), "{unsupported}");
+    }
+
+    let man = run_cli_exact(home.path(), &["man", "lists", "get"], None);
+    assert!(man.status.success(), "man failed: {}", man.stderr);
+    assert!(man.stderr.is_empty());
+    assert!(man.stdout.contains(".TH sealtask-projects-get 1"));
+    assert!(man.stdout.contains("sealtask projects get"));
+
+    let broken_pipe = run_cli_with_closed_stdout(
+        home.path(),
+        "https://sealtask.com",
+        &["completion", "bash"],
+        None,
+    );
+    assert!(
+        broken_pipe.status.success(),
+        "broken completion pipe failed: {}",
+        broken_pipe.stderr
+    );
+
+    let man_dir = home.path().join("man");
+    let man_set = run_cli_exact(
+        home.path(),
+        &[
+            "man",
+            "--output-dir",
+            man_dir.to_str().expect("UTF-8 man directory"),
+        ],
+        None,
+    );
+    assert!(
+        man_set.status.success(),
+        "man set failed: {}",
+        man_set.stderr
+    );
+    assert!(man_dir.join("sealtask.1").is_file());
+    assert!(
+        man_dir
+            .join("sealtask-tasks-attachments-upload.1")
+            .is_file()
+    );
+    assert!(!man_dir.join("sealtask-inspect.1").exists());
+    assert!(
+        std::fs::read_dir(&man_dir)
+            .expect("read man directory")
+            .all(|entry| !entry
+                .expect("man directory entry")
+                .file_name()
+                .to_string_lossy()
+                .contains("-help"))
+    );
+}
+
+#[test]
+fn cli_long_help_groups_options_and_covers_realistic_examples() {
+    let home = TempDir::new().expect("temp home");
+    let help = run_cli_exact(home.path(), &["tasks", "create", "--help"], None);
+    assert!(help.status.success(), "help failed: {}", help.stderr);
+    for expected in [
+        "Target:",
+        "Fields:",
+        "Input:",
+        "Advanced:",
+        "Connection:",
+        "Examples:",
+        "sealtask tasks create --title \"Ship 0.4\" --due tomorrow",
+    ] {
+        assert!(
+            help.stdout.contains(expected),
+            "missing {expected:?} in:\n{}",
+            help.stdout
+        );
+    }
+}
+
+#[test]
+fn cli_discovery_rejects_modes_that_would_corrupt_generated_output() {
+    let home = TempDir::new().expect("temp home");
+    for args in [
+        &["--json", "completion", "fish"][..],
+        &["-v", "man", "tasks", "list"][..],
+    ] {
+        let output = run_cli_exact(home.path(), args, None);
+        assert_eq!(output.status.code(), Some(1), "{args:?}: {}", output.stderr);
+        assert!(output.stdout.is_empty(), "{args:?}: {}", output.stdout);
+        assert!(
+            output.stderr.contains("corrupt generated output")
+                || output.stderr.contains("raw terminal integration artifact"),
+            "{args:?}: {}",
+            output.stderr
+        );
+    }
+}
+
+#[test]
 fn cli_root_without_arguments_matches_release_a_help_contract() {
     let home = TempDir::new().expect("temp home");
     let output = run_cli_exact(home.path(), &[], None);

@@ -13,6 +13,8 @@ pub(crate) fn run_info(runtime: &RuntimeClient, format: OutputFormat) -> CliResu
         "automationProfile": "agent_task_management",
         "jsonContractVersion": 2,
         "outputFormats": ["table", "json", "json-pretty"],
+        "shellCompletions": ["bash", "zsh", "fish", "powershell"],
+        "manualPages": true,
         "nonInteractiveFlag": "--non-interactive",
         "authUnlockModes": [
             UnlockMode::SingleCommand.as_str(),

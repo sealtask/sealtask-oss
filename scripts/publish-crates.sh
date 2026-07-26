@@ -18,6 +18,8 @@ CRATES=(
   "sealtask"
 )
 
+./scripts/generate-cli-assets.sh check
+
 cargo_publish_args=(publish --manifest-path Cargo.toml)
 if [[ "${ALLOW_DIRTY}" == "1" ]]; then
   cargo_publish_args+=(--allow-dirty)

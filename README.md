@@ -135,6 +135,45 @@ sealtask tasks list
 sealtask projects clear
 ```
 
+### Shell completion, help, and manual pages
+
+Generate native completion scripts without reading operator configuration,
+credentials, decrypted project/task names, or the network:
+
+```bash
+# Bash or Zsh, for the current shell
+source <(sealtask completion bash)
+source <(sealtask completion zsh)
+
+# Fish
+sealtask completion fish | source
+
+# PowerShell
+sealtask completion powershell > sealtask.ps1
+```
+
+Package managers should install these generated files into their shell-specific
+completion directories. `sealtask man` renders roff for the root command,
+accepts canonical or aliased nested paths, and can generate the complete manual
+set:
+
+```bash
+sealtask man tasks create
+sealtask man lists get       # renders sealtask-projects-get(1)
+sealtask man --output-dir ./target/man
+```
+
+Version-matched copies live in this repository under
+`cli/assets/{completions,man}` and are included as `assets/...` in the published
+crate archive. Maintainers regenerate and verify them with
+`./scripts/generate-cli-assets.sh update` and
+`./scripts/generate-cli-assets.sh check`.
+
+Long help groups target, field, input, output, safety, and advanced options and
+ends every runnable leaf command with copyable examples. `completion` and `man`
+emit raw artifacts, so they reject JSON and diagnostic-verbosity flags that
+would corrupt stdout.
+
 Selectors accept an exact UUID, an exact or Unicode-normalized name, or a
 unique UUID prefix of at least eight hexadecimal digits. Use `name:<value>` or
 `id:<prefix>` to make the intended selector form explicit. Ambiguous selectors

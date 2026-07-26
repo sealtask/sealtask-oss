@@ -78,5 +78,8 @@ jobs:
       - name: Test workspace
         run: cargo test --workspace --all-targets --locked
 
+      - name: Verify generated CLI assets
+        run: ./scripts/generate-cli-assets.sh check
+
       - name: Verify canonical StrongBox WASM artifact
         run: ./scripts/build-strong-box-wasm.sh verify

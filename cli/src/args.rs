@@ -121,8 +121,32 @@ pub(crate) enum OutputArg {
     JsonPretty,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
+pub(crate) enum CompletionShell {
+    Bash,
+    Zsh,
+    Fish,
+    #[value(name = "powershell")]
+    PowerShell,
+}
+
 #[derive(Subcommand, Debug)]
 pub(crate) enum Command {
+    /// Generate a shell completion script without reading configuration or credentials.
+    Completion {
+        /// Shell whose completion script should be written to stdout.
+        #[arg(value_enum)]
+        shell: CompletionShell,
+    },
+    /// Render a manual page for the root command or a nested command path.
+    Man {
+        /// Optional nested command path, for example: tasks create.
+        #[arg(value_name = "COMMAND", num_args = 0.., conflicts_with = "output_dir")]
+        command: Vec<String>,
+        /// Generate the root and every visible subcommand manual beneath this directory.
+        #[arg(long, value_name = "DIR")]
+        output_dir: Option<PathBuf>,
+    },
     /// Show machine-readable CLI capabilities and contract versions.
     Info,
     /// Describe commands and arguments as human help or versioned JSON.

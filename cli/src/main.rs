@@ -6,6 +6,7 @@ mod output;
 mod args;
 mod attachment_output;
 mod commands;
+mod discovery;
 mod doctor;
 mod human_input;
 mod input;
@@ -20,7 +21,7 @@ mod table;
 mod telemetry;
 
 use args::{Cli, Command};
-use clap::Parser;
+use clap::FromArgMatches;
 use commands::{
     run_auth, run_comments, run_config, run_info, run_lists_get, run_me, run_notes, run_profile,
     run_projects, run_schema, run_stats, run_tasks,
@@ -69,10 +70,11 @@ async fn main() {
 }
 
 fn parse_cli_or_exit(args: &[OsString], format: OutputFormat) -> Cli {
-    match Cli::try_parse_from(args.iter().cloned()) {
-        Ok(cli) => cli,
-        Err(err) => exit_after_clap_error(err, format),
-    }
+    let command = discovery::command();
+    let matches = command
+        .try_get_matches_from(args.iter().cloned())
+        .unwrap_or_else(|err| exit_after_clap_error(err, format));
+    Cli::from_arg_matches(&matches).unwrap_or_else(|err| exit_after_clap_error(err, format))
 }
 
 fn exit_after_clap_error(err: clap::Error, format: OutputFormat) -> ! {
@@ -98,6 +100,24 @@ async fn run(cli: Cli, format: OutputFormat, raw_args: &[OsString]) -> CliResult
 
     if let Some(socket_path) = cli.serve_unlock_daemon.as_deref() {
         return serve(socket_path).await.map_err(Into::into);
+    }
+
+    match cli.command.as_ref() {
+        Some(Command::Completion { shell }) => {
+            ensure_raw_discovery_output(&cli, format, "completion")?;
+            return discovery::print_completion(*shell);
+        }
+        Some(Command::Man {
+            command,
+            output_dir,
+        }) => {
+            ensure_raw_discovery_output(&cli, format, "man")?;
+            return output_dir.as_deref().map_or_else(
+                || discovery::print_manpage(command),
+                discovery::generate_manpages,
+            );
+        }
+        _ => {}
     }
 
     let telemetry_level = TelemetryLevel::from_flags(cli.verbosity, cli.debug);
@@ -150,6 +170,8 @@ async fn run(cli: Cli, format: OutputFormat, raw_args: &[OsString]) -> CliResult
     let local_only = matches!(
         &command,
         Command::Info
+            | Command::Completion { .. }
+            | Command::Man { .. }
             | Command::Schema { .. }
             | Command::Doctor { .. }
             | Command::Config { .. }
@@ -168,6 +190,9 @@ async fn run(cli: Cli, format: OutputFormat, raw_args: &[OsString]) -> CliResult
 
     let result = match (command, runtime) {
         (Command::Info, Ok(runtime)) => run_info(&runtime, format),
+        (Command::Completion { .. } | Command::Man { .. }, Ok(_)) => {
+            unreachable!("discovery commands return before operator configuration")
+        }
         (Command::Schema { command }, _) => run_schema(format, &command),
         (Command::Auth { command }, Ok(runtime)) => {
             run_auth(&runtime, format, cli.non_interactive, command).await
@@ -242,6 +267,22 @@ async fn run(cli: Cli, format: OutputFormat, raw_args: &[OsString]) -> CliResult
     result
 }
 
+fn ensure_raw_discovery_output(cli: &Cli, format: OutputFormat, command: &str) -> CliResult<()> {
+    if format.is_json() {
+        return Err(PublicError::validation(format!(
+            "'sealtask {command}' emits a raw terminal integration artifact and cannot be combined with --json, --format json, or --format json-pretty"
+        ))
+        .into());
+    }
+    if cli.verbosity > 0 || cli.debug {
+        return Err(PublicError::validation(format!(
+            "'sealtask {command}' cannot be combined with -v, -vv, or --debug because diagnostics would corrupt generated output"
+        ))
+        .into());
+    }
+    Ok(())
+}
+
 fn cli_overrides(cli: &Cli, raw_args: &[OsString]) -> CliResult<OperatorOverrides> {
     Ok(OperatorOverrides {
         api_url: long_option_present(raw_args, "--api-url").then(|| cli.api_url.clone()),
@@ -305,6 +346,8 @@ fn long_option_present(raw_args: &[OsString], option: &str) -> bool {
 
 fn command_name(command: &Command) -> &'static str {
     match command {
+        Command::Completion { .. } => "completion",
+        Command::Man { .. } => "man",
         Command::Info => "info",
         Command::Schema { .. } => "schema",
         Command::Auth { .. } => "auth",

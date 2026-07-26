@@ -1,0 +1,3774 @@
+#compdef sealtask
+
+autoload -U is-at-least
+
+_sealtask() {
+    typeset -A opt_args
+    typeset -a _arguments_options
+    local ret=1
+
+    if is-at-least 5.2; then
+        _arguments_options=(-s -S -C)
+    else
+        _arguments_options=(-s -C)
+    fi
+
+    local context curcontext="$curcontext" state line
+    _arguments "${_arguments_options[@]}" : \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'--serve-unlock-daemon=[]:SERVE_UNLOCK_DAEMON:_files' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help]' \
+'--help[Print help]' \
+'-V[Print version]' \
+'--version[Print version]' \
+":: :_sealtask_commands" \
+"*::: :->sealtask" \
+&& ret=0
+    case $state in
+    (sealtask)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:sealtask-command-$line[1]:"
+        case $line[1] in
+            (completion)
+_arguments "${_arguments_options[@]}" : \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+':shell -- Shell whose completion script should be written to stdout:(bash zsh fish powershell)' \
+&& ret=0
+;;
+(man)
+_arguments "${_arguments_options[@]}" : \
+'--output-dir=[Generate the root and every visible subcommand manual beneath this directory]:DIR:_files' \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+'*::command -- Optional nested command path, for example\: tasks create:_default' \
+&& ret=0
+;;
+(info)
+_arguments "${_arguments_options[@]}" : \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+&& ret=0
+;;
+(schema)
+_arguments "${_arguments_options[@]}" : \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+'*::command -- Optional nested command path, for example\: tasks create:_default' \
+&& ret=0
+;;
+(auth)
+_arguments "${_arguments_options[@]}" : \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+":: :_sealtask__subcmd__auth_commands" \
+"*::: :->auth" \
+&& ret=0
+
+    case $state in
+    (auth)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:sealtask-auth-command-$line[1]:"
+        case $line[1] in
+            (login)
+_arguments "${_arguments_options[@]}" : \
+'--email=[Account email. Required with --non-interactive]:EMAIL:_default' \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'--password-stdin[Read login input from stdin\: trimmed password on line 1 and optional exact authenticator or backup code on line 2]' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+&& ret=0
+;;
+(unlock)
+_arguments "${_arguments_options[@]}" : \
+'(--ttl-seconds)--ttl=[Human duration before the memory-only unlock expires (for example 30m or 8h)]:TTL:_default' \
+'(--ttl)--ttl-seconds=[Number of seconds before the memory-only unlock expires (legacy compatibility)]:TTL_SECONDS:_default' \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'--password-stdin[Read the account password from stdin]' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+&& ret=0
+;;
+(lock)
+_arguments "${_arguments_options[@]}" : \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+&& ret=0
+;;
+(keychain)
+_arguments "${_arguments_options[@]}" : \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+":: :_sealtask__subcmd__auth__subcmd__keychain_commands" \
+"*::: :->keychain" \
+&& ret=0
+
+    case $state in
+    (keychain)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:sealtask-auth-keychain-command-$line[1]:"
+        case $line[1] in
+            (store)
+_arguments "${_arguments_options[@]}" : \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'--password-stdin[Read the account password from stdin]' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+&& ret=0
+;;
+(clear)
+_arguments "${_arguments_options[@]}" : \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+":: :_sealtask__subcmd__auth__subcmd__keychain__subcmd__help_commands" \
+"*::: :->help" \
+&& ret=0
+
+    case $state in
+    (help)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:sealtask-auth-keychain-help-command-$line[1]:"
+        case $line[1] in
+            (store)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(clear)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+        esac
+    ;;
+esac
+;;
+(logout)
+_arguments "${_arguments_options[@]}" : \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+&& ret=0
+;;
+(status)
+_arguments "${_arguments_options[@]}" : \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+":: :_sealtask__subcmd__auth__subcmd__help_commands" \
+"*::: :->help" \
+&& ret=0
+
+    case $state in
+    (help)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:sealtask-auth-help-command-$line[1]:"
+        case $line[1] in
+            (login)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(unlock)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(lock)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(keychain)
+_arguments "${_arguments_options[@]}" : \
+":: :_sealtask__subcmd__auth__subcmd__help__subcmd__keychain_commands" \
+"*::: :->keychain" \
+&& ret=0
+
+    case $state in
+    (keychain)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:sealtask-auth-help-keychain-command-$line[1]:"
+        case $line[1] in
+            (store)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(clear)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+(logout)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(status)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+        esac
+    ;;
+esac
+;;
+(me)
+_arguments "${_arguments_options[@]}" : \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+&& ret=0
+;;
+(projects)
+_arguments "${_arguments_options[@]}" : \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'--verbose[Print expanded human-readable project details]' \
+'--include-archived[Include archived projects]' \
+'--password-stdin[Read the account password from stdin when no local unlock is available]' \
+'--raw[]' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+":: :_sealtask__subcmd__projects_commands" \
+"*::: :->projects" \
+&& ret=0
+
+    case $state in
+    (projects)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:sealtask-projects-command-$line[1]:"
+        case $line[1] in
+            (list)
+_arguments "${_arguments_options[@]}" : \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'--verbose[Print expanded human-readable project details]' \
+'--include-archived[Include archived projects]' \
+'--password-stdin[Read the account password from stdin when no local unlock is available]' \
+'--raw[]' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+&& ret=0
+;;
+(get)
+_arguments "${_arguments_options[@]}" : \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'--password-stdin[Read the account password from stdin when no local unlock is available]' \
+'--raw[]' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+':project -- Project name, UUID, or unique UUID prefix:_default' \
+&& ret=0
+;;
+(archive)
+_arguments "${_arguments_options[@]}" : \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'--password-stdin[Read the account password from stdin when no local unlock is available]' \
+'--raw[]' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+':project -- Project name, UUID, or unique UUID prefix:_default' \
+&& ret=0
+;;
+(unarchive)
+_arguments "${_arguments_options[@]}" : \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'--password-stdin[Read the account password from stdin when no local unlock is available]' \
+'--raw[]' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+':project -- Project name, UUID, or unique UUID prefix:_default' \
+&& ret=0
+;;
+(use)
+_arguments "${_arguments_options[@]}" : \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'--password-stdin[Read the account password from stdin when no local unlock is available]' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+':project -- Active project name, UUID, or unique UUID prefix:_default' \
+&& ret=0
+;;
+(current)
+_arguments "${_arguments_options[@]}" : \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+&& ret=0
+;;
+(clear)
+_arguments "${_arguments_options[@]}" : \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+&& ret=0
+;;
+(sections)
+_arguments "${_arguments_options[@]}" : \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+":: :_sealtask__subcmd__projects__subcmd__sections_commands" \
+"*::: :->sections" \
+&& ret=0
+
+    case $state in
+    (sections)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:sealtask-projects-sections-command-$line[1]:"
+        case $line[1] in
+            (list)
+_arguments "${_arguments_options[@]}" : \
+'(--work-list-id)--project=[Project name, UUID, or unique UUID prefix]:PROJECT:_default' \
+'--work-list-id=[Exact project UUID (legacy compatibility)]:WORK_LIST_ID:_default' \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'--password-stdin[Read the account password from stdin when no local unlock is available]' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+":: :_sealtask__subcmd__projects__subcmd__sections__subcmd__help_commands" \
+"*::: :->help" \
+&& ret=0
+
+    case $state in
+    (help)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:sealtask-projects-sections-help-command-$line[1]:"
+        case $line[1] in
+            (list)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+        esac
+    ;;
+esac
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+":: :_sealtask__subcmd__projects__subcmd__help_commands" \
+"*::: :->help" \
+&& ret=0
+
+    case $state in
+    (help)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:sealtask-projects-help-command-$line[1]:"
+        case $line[1] in
+            (list)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(get)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(archive)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(unarchive)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(use)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(current)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(clear)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(sections)
+_arguments "${_arguments_options[@]}" : \
+":: :_sealtask__subcmd__projects__subcmd__help__subcmd__sections_commands" \
+"*::: :->sections" \
+&& ret=0
+
+    case $state in
+    (sections)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:sealtask-projects-help-sections-command-$line[1]:"
+        case $line[1] in
+            (list)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+        esac
+    ;;
+esac
+;;
+(lists)
+_arguments "${_arguments_options[@]}" : \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'--verbose[Print expanded human-readable project details]' \
+'--include-archived[Include archived projects]' \
+'--password-stdin[Read the account password from stdin when no local unlock is available]' \
+'--raw[]' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+":: :_sealtask__subcmd__projects_commands" \
+"*::: :->projects" \
+&& ret=0
+
+    case $state in
+    (projects)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:sealtask-projects-command-$line[1]:"
+        case $line[1] in
+            (list)
+_arguments "${_arguments_options[@]}" : \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'--verbose[Print expanded human-readable project details]' \
+'--include-archived[Include archived projects]' \
+'--password-stdin[Read the account password from stdin when no local unlock is available]' \
+'--raw[]' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+&& ret=0
+;;
+(get)
+_arguments "${_arguments_options[@]}" : \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'--password-stdin[Read the account password from stdin when no local unlock is available]' \
+'--raw[]' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+':project -- Project name, UUID, or unique UUID prefix:_default' \
+&& ret=0
+;;
+(archive)
+_arguments "${_arguments_options[@]}" : \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'--password-stdin[Read the account password from stdin when no local unlock is available]' \
+'--raw[]' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+':project -- Project name, UUID, or unique UUID prefix:_default' \
+&& ret=0
+;;
+(unarchive)
+_arguments "${_arguments_options[@]}" : \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'--password-stdin[Read the account password from stdin when no local unlock is available]' \
+'--raw[]' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+':project -- Project name, UUID, or unique UUID prefix:_default' \
+&& ret=0
+;;
+(use)
+_arguments "${_arguments_options[@]}" : \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'--password-stdin[Read the account password from stdin when no local unlock is available]' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+':project -- Active project name, UUID, or unique UUID prefix:_default' \
+&& ret=0
+;;
+(current)
+_arguments "${_arguments_options[@]}" : \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+&& ret=0
+;;
+(clear)
+_arguments "${_arguments_options[@]}" : \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+&& ret=0
+;;
+(sections)
+_arguments "${_arguments_options[@]}" : \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+":: :_sealtask__subcmd__projects__subcmd__sections_commands" \
+"*::: :->sections" \
+&& ret=0
+
+    case $state in
+    (sections)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:sealtask-projects-sections-command-$line[1]:"
+        case $line[1] in
+            (list)
+_arguments "${_arguments_options[@]}" : \
+'(--work-list-id)--project=[Project name, UUID, or unique UUID prefix]:PROJECT:_default' \
+'--work-list-id=[Exact project UUID (legacy compatibility)]:WORK_LIST_ID:_default' \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'--password-stdin[Read the account password from stdin when no local unlock is available]' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+":: :_sealtask__subcmd__projects__subcmd__sections__subcmd__help_commands" \
+"*::: :->help" \
+&& ret=0
+
+    case $state in
+    (help)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:sealtask-projects-sections-help-command-$line[1]:"
+        case $line[1] in
+            (list)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+        esac
+    ;;
+esac
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+":: :_sealtask__subcmd__projects__subcmd__help_commands" \
+"*::: :->help" \
+&& ret=0
+
+    case $state in
+    (help)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:sealtask-projects-help-command-$line[1]:"
+        case $line[1] in
+            (list)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(get)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(archive)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(unarchive)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(use)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(current)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(clear)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(sections)
+_arguments "${_arguments_options[@]}" : \
+":: :_sealtask__subcmd__projects__subcmd__help__subcmd__sections_commands" \
+"*::: :->sections" \
+&& ret=0
+
+    case $state in
+    (sections)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:sealtask-projects-help-sections-command-$line[1]:"
+        case $line[1] in
+            (list)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+        esac
+    ;;
+esac
+;;
+(tasks)
+_arguments "${_arguments_options[@]}" : \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+":: :_sealtask__subcmd__tasks_commands" \
+"*::: :->tasks" \
+&& ret=0
+
+    case $state in
+    (tasks)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:sealtask-tasks-command-$line[1]:"
+        case $line[1] in
+            (list)
+_arguments "${_arguments_options[@]}" : \
+'(--work-list-id)--project=[Restrict results to a project name, UUID, or unique UUID prefix]:PROJECT:_default' \
+'--work-list-id=[Restrict results to one exact project UUID (legacy compatibility)]:WORK_LIST_ID:_default' \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'--include-completed[Include tasks in completed sections]' \
+'(--all)--include-archived[Include archived tasks from the selected/current project]' \
+'(--project --work-list-id)--all[List assigned tasks across all accessible projects]' \
+'--password-stdin[Read the account password from stdin when no local unlock is available]' \
+'--raw[]' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+&& ret=0
+;;
+(get)
+_arguments "${_arguments_options[@]}" : \
+'--task-id=[Exact task UUID (legacy compatibility)]:TASK_ID:_default' \
+'(--work-list-id)--project=[Project name, UUID, or unique UUID prefix]:PROJECT:_default' \
+'--work-list-id=[Exact project UUID (legacy compatibility)]:WORK_LIST_ID:_default' \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'--password-stdin[Read the account password from stdin when no local unlock is available]' \
+'--raw[]' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+'::task -- Task title, UUID, or unique UUID prefix:_default' \
+&& ret=0
+;;
+(create)
+_arguments "${_arguments_options[@]}" : \
+'(--work-list-id)--project=[Project name, UUID, or unique UUID prefix]:PROJECT:_default' \
+'--work-list-id=[Exact project UUID (legacy compatibility)]:WORK_LIST_ID:_default' \
+'--title=[Plaintext task title]:TITLE:_default' \
+'--body=[Plaintext Markdown task body]:BODY:_default' \
+'--priority=[Task priority\: low/p4/1, medium/p3/3, high/p2/5, or urgent/p1/8]:PRIORITY:_default' \
+'(--due)--due-at=[Due time as an RFC 3339 timestamp]:DUE_AT:_default' \
+'(--due-at)--due=[Human due date in the project'\''s timezone (for example tomorrow or 2026-08-10)]:DUE:_default' \
+'--start-at=[Start time as an RFC 3339 timestamp]:START_AT:_default' \
+'(--section)--section-id=[Initial section UUID]:SECTION_ID:_default' \
+'(--section-id)--section=[Initial section name, UUID, or unique UUID prefix]:SECTION:_default' \
+'--idempotency-key=[Stable retry key containing at most 128 ASCII letters, digits, '\''.'\'', '\''_'\'', '\''-'\'', or '\''\:'\'']:IDEMPOTENCY_KEY:_default' \
+'(--input-stdin --title --body --priority --due-at --due --start-at --section-id --section --idempotency-key)--input-file=[Read the complete camelCase task input object from a UTF-8 JSON file]:PATH:_files' \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'(--input-file --password-stdin --title --body --priority --due-at --due --start-at --section-id --section --idempotency-key)--input-stdin[Read the complete camelCase task input object from stdin]' \
+'--password-stdin[Read the account password from stdin when no local unlock is available]' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+&& ret=0
+;;
+(update)
+_arguments "${_arguments_options[@]}" : \
+'--task-id=[Exact task UUID (legacy compatibility)]:TASK_ID:_default' \
+'(--work-list-id)--project=[Project name, UUID, or unique UUID prefix]:PROJECT:_default' \
+'--work-list-id=[Exact project UUID (legacy compatibility)]:WORK_LIST_ID:_default' \
+'--title=[Replace the task title]:TITLE:_default' \
+'(--clear-body)--body=[Replace the Markdown body]:BODY:_default' \
+'(--clear-priority)--priority=[Set priority to low/p4/1, medium/p3/3, high/p2/5, or urgent/p1/8]:PRIORITY:_default' \
+'(--clear-due-at --due)--due-at=[Set the due time as an RFC 3339 timestamp]:DUE_AT:_default' \
+'(--due-at --clear-due-at)--due=[Set a human due date in the project'\''s timezone]:DUE:_default' \
+'(--clear-start-at)--start-at=[Set the start time as an RFC 3339 timestamp]:START_AT:_default' \
+'(--clear-section --section)--section-id=[Move the task to this section UUID]:SECTION_ID:_default' \
+'(--section-id --clear-section)--section=[Move the task to a section name, UUID, or unique UUID prefix]:SECTION:_default' \
+'(--input-stdin --title --body --clear-body --priority --clear-priority --due-at --due --clear-due-at --start-at --clear-start-at --section-id --section --clear-section)--input-file=[Read the complete camelCase patch object from a UTF-8 JSON file]:PATH:_files' \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'--clear-body[Remove the task body]' \
+'--clear-priority[Remove the priority]' \
+'--clear-due-at[Remove the due time]' \
+'--clear-start-at[Remove the start time]' \
+'--clear-section[Remove the explicit section assignment]' \
+'(--input-file --password-stdin --title --body --clear-body --priority --clear-priority --due-at --due --clear-due-at --start-at --clear-start-at --section-id --section --clear-section)--input-stdin[Read the complete camelCase patch object from stdin]' \
+'--password-stdin[Read the account password from stdin when no local unlock is available]' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+'::task -- Task title, UUID, or unique UUID prefix:_default' \
+&& ret=0
+;;
+(move)
+_arguments "${_arguments_options[@]}" : \
+'--task-id=[Exact task UUID (legacy compatibility)]:TASK_ID:_default' \
+'(--work-list-id)--project=[Project name, UUID, or unique UUID prefix]:PROJECT:_default' \
+'--work-list-id=[Exact project UUID (legacy compatibility)]:WORK_LIST_ID:_default' \
+'(--section)--section-id=[Destination section UUID]:SECTION_ID:_default' \
+'(--section-id)--section=[Destination section name, UUID, or unique UUID prefix]:SECTION:_default' \
+'(--before)--insert-before-task-id=[Place the task immediately before this task UUID]:INSERT_BEFORE_TASK_ID:_default' \
+'(--insert-before-task-id)--before=[Place the task immediately before this task title, UUID, or unique UUID prefix]:BEFORE:_default' \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'--password-stdin[Read the account password from stdin when no local unlock is available]' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+'::task -- Task title, UUID, or unique UUID prefix:_default' \
+&& ret=0
+;;
+(complete)
+_arguments "${_arguments_options[@]}" : \
+'--task-id=[Exact task UUID (legacy compatibility)]:TASK_ID:_default' \
+'(--work-list-id)--project=[Project name, UUID, or unique UUID prefix]:PROJECT:_default' \
+'--work-list-id=[Exact project UUID (legacy compatibility)]:WORK_LIST_ID:_default' \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'--password-stdin[Read the account password from stdin when no local unlock is available]' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+'::task -- Task title, UUID, or unique UUID prefix:_default' \
+&& ret=0
+;;
+(reopen)
+_arguments "${_arguments_options[@]}" : \
+'--task-id=[Exact task UUID (legacy compatibility)]:TASK_ID:_default' \
+'(--work-list-id)--project=[Project name, UUID, or unique UUID prefix]:PROJECT:_default' \
+'--work-list-id=[Exact project UUID (legacy compatibility)]:WORK_LIST_ID:_default' \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'--password-stdin[Read the account password from stdin when no local unlock is available]' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+'::task -- Task title, UUID, or unique UUID prefix:_default' \
+&& ret=0
+;;
+(archive)
+_arguments "${_arguments_options[@]}" : \
+'--task-id=[Exact task UUID (legacy compatibility)]:TASK_ID:_default' \
+'(--work-list-id)--project=[Project name, UUID, or unique UUID prefix]:PROJECT:_default' \
+'--work-list-id=[Exact project UUID (legacy compatibility)]:WORK_LIST_ID:_default' \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'--password-stdin[Read the account password from stdin when no local unlock is available]' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+'::task -- Task title, UUID, or unique UUID prefix:_default' \
+&& ret=0
+;;
+(unarchive)
+_arguments "${_arguments_options[@]}" : \
+'--task-id=[Exact task UUID (legacy compatibility)]:TASK_ID:_default' \
+'(--work-list-id)--project=[Project name, UUID, or unique UUID prefix]:PROJECT:_default' \
+'--work-list-id=[Exact project UUID (legacy compatibility)]:WORK_LIST_ID:_default' \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'--password-stdin[Read the account password from stdin when no local unlock is available]' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+'::task -- Task title, UUID, or unique UUID prefix:_default' \
+&& ret=0
+;;
+(delete)
+_arguments "${_arguments_options[@]}" : \
+'--task-id=[Exact task UUID (legacy compatibility)]:TASK_ID:_default' \
+'(--work-list-id)--project=[Project name, UUID, or unique UUID prefix]:PROJECT:_default' \
+'--work-list-id=[Exact project UUID (legacy compatibility)]:WORK_LIST_ID:_default' \
+'(--input-stdin)--input-file=[Read an optional audit patch from a UTF-8 JSON file]:PATH:_files' \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'(--input-file)--input-stdin[Read an optional audit patch from stdin]' \
+'(--input-stdin)--password-stdin[Read the account password from stdin while resolving human selectors]' \
+'--yes[Confirm permanent deletion without prompting]' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+'::task -- Task title, UUID, or unique UUID prefix:_default' \
+&& ret=0
+;;
+(attachments)
+_arguments "${_arguments_options[@]}" : \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+":: :_sealtask__subcmd__tasks__subcmd__attachments_commands" \
+"*::: :->attachments" \
+&& ret=0
+
+    case $state in
+    (attachments)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:sealtask-tasks-attachments-command-$line[1]:"
+        case $line[1] in
+            (upload)
+_arguments "${_arguments_options[@]}" : \
+'--task-id=[Exact task UUID (legacy compatibility)]:TASK_ID:_default' \
+'(--work-list-id)--project=[Project name, UUID, or unique UUID prefix]:PROJECT:_default' \
+'--work-list-id=[Exact project UUID (legacy compatibility)]:WORK_LIST_ID:_default' \
+'--file=[Current-working-directory-relative regular file to upload (absolute paths, parent traversal, and symlinks are rejected)]:FILE:_files' \
+'--file-name=[Override the attachment file name stored in the encrypted task]:FILE_NAME:_default' \
+'--content-type=[Override the detected MIME content type]:CONTENT_TYPE:_default' \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'--password-stdin[Read the account password from stdin when no local unlock is available]' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+'::task -- Task title, UUID, or unique UUID prefix:_default' \
+&& ret=0
+;;
+(delete)
+_arguments "${_arguments_options[@]}" : \
+'--task-id=[Exact task UUID (legacy compatibility)]:TASK_ID:_default' \
+'(--work-list-id)--project=[Project name, UUID, or unique UUID prefix]:PROJECT:_default' \
+'--work-list-id=[Exact project UUID (legacy compatibility)]:WORK_LIST_ID:_default' \
+'--attachment-id=[Attachment UUID]:ATTACHMENT_ID:_default' \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'--password-stdin[Read the account password from stdin when no local unlock is available]' \
+'--yes[Confirm permanent deletion without prompting]' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+'::task -- Task title, UUID, or unique UUID prefix:_default' \
+&& ret=0
+;;
+(read)
+_arguments "${_arguments_options[@]}" : \
+'--task-id=[Exact task UUID (legacy compatibility)]:TASK_ID:_default' \
+'(--work-list-id)--project=[Project name, UUID, or unique UUID prefix]:PROJECT:_default' \
+'--work-list-id=[Exact project UUID (legacy compatibility)]:WORK_LIST_ID:_default' \
+'--attachment-id=[Attachment UUID]:ATTACHMENT_ID:_default' \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'--password-stdin[Read the account password from stdin when no local unlock is available]' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+'::task -- Task title, UUID, or unique UUID prefix:_default' \
+&& ret=0
+;;
+(download)
+_arguments "${_arguments_options[@]}" : \
+'--task-id=[Exact task UUID (legacy compatibility)]:TASK_ID:_default' \
+'(--work-list-id)--project=[Project name, UUID, or unique UUID prefix]:PROJECT:_default' \
+'--work-list-id=[Exact project UUID (legacy compatibility)]:WORK_LIST_ID:_default' \
+'--attachment-id=[Attachment UUID]:ATTACHMENT_ID:_default' \
+'--output=[Current-working-directory-relative output path (absolute paths, parent traversal, and symlinks are rejected)]:OUTPUT:_files' \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'--force[Replace an existing output file]' \
+'--password-stdin[Read the account password from stdin when no local unlock is available]' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+'::task -- Task title, UUID, or unique UUID prefix:_default' \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+":: :_sealtask__subcmd__tasks__subcmd__attachments__subcmd__help_commands" \
+"*::: :->help" \
+&& ret=0
+
+    case $state in
+    (help)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:sealtask-tasks-attachments-help-command-$line[1]:"
+        case $line[1] in
+            (upload)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(delete)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(read)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(download)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+        esac
+    ;;
+esac
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+":: :_sealtask__subcmd__tasks__subcmd__help_commands" \
+"*::: :->help" \
+&& ret=0
+
+    case $state in
+    (help)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:sealtask-tasks-help-command-$line[1]:"
+        case $line[1] in
+            (list)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(get)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(create)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(update)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(move)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(complete)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(reopen)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(archive)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(unarchive)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(delete)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(attachments)
+_arguments "${_arguments_options[@]}" : \
+":: :_sealtask__subcmd__tasks__subcmd__help__subcmd__attachments_commands" \
+"*::: :->attachments" \
+&& ret=0
+
+    case $state in
+    (attachments)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:sealtask-tasks-help-attachments-command-$line[1]:"
+        case $line[1] in
+            (upload)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(delete)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(read)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(download)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+        esac
+    ;;
+esac
+;;
+(stats)
+_arguments "${_arguments_options[@]}" : \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+&& ret=0
+;;
+(doctor)
+_arguments "${_arguments_options[@]}" : \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'--offline[Run local checks only and make no network requests]' \
+'--strict[Exit unsuccessfully when any check warns]' \
+'--include-keychain[Inspect the platform keychain (may trigger an operating-system prompt)]' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+&& ret=0
+;;
+(config)
+_arguments "${_arguments_options[@]}" : \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+":: :_sealtask__subcmd__config_commands" \
+"*::: :->config" \
+&& ret=0
+
+    case $state in
+    (config)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:sealtask-config-command-$line[1]:"
+        case $line[1] in
+            (show)
+_arguments "${_arguments_options[@]}" : \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'--resolved[Include resolution sources and defaults]' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+":: :_sealtask__subcmd__config__subcmd__help_commands" \
+"*::: :->help" \
+&& ret=0
+
+    case $state in
+    (help)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:sealtask-config-help-command-$line[1]:"
+        case $line[1] in
+            (show)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+        esac
+    ;;
+esac
+;;
+(profile)
+_arguments "${_arguments_options[@]}" : \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+":: :_sealtask__subcmd__profile_commands" \
+"*::: :->profile" \
+&& ret=0
+
+    case $state in
+    (profile)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:sealtask-profile-command-$line[1]:"
+        case $line[1] in
+            (list)
+_arguments "${_arguments_options[@]}" : \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+&& ret=0
+;;
+(use)
+_arguments "${_arguments_options[@]}" : \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+':name -- Profile name (letters, digits, '\''.'\'', '\''_'\'', and '\''-'\'' only):_default' \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+":: :_sealtask__subcmd__profile__subcmd__help_commands" \
+"*::: :->help" \
+&& ret=0
+
+    case $state in
+    (help)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:sealtask-profile-help-command-$line[1]:"
+        case $line[1] in
+            (list)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(use)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+        esac
+    ;;
+esac
+;;
+(inspect)
+_arguments "${_arguments_options[@]}" : \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'--password-stdin[]' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help]' \
+'--help[Print help]' \
+':work_list_id:_default' \
+&& ret=0
+;;
+(comments)
+_arguments "${_arguments_options[@]}" : \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+":: :_sealtask__subcmd__comments_commands" \
+"*::: :->comments" \
+&& ret=0
+
+    case $state in
+    (comments)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:sealtask-comments-command-$line[1]:"
+        case $line[1] in
+            (list)
+_arguments "${_arguments_options[@]}" : \
+'(--work-list-id)--project=[Project name, UUID, or unique UUID prefix]:PROJECT:_default' \
+'--work-list-id=[Exact project UUID (legacy compatibility)]:WORK_LIST_ID:_default' \
+'--task-id=[Exact task UUID (legacy compatibility)]:TASK_ID:_default' \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'--password-stdin[Read the account password from stdin when no local unlock is available]' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+'::task -- Task title, UUID, or unique UUID prefix:_default' \
+&& ret=0
+;;
+(create)
+_arguments "${_arguments_options[@]}" : \
+'--task-id=[Exact task UUID (legacy compatibility)]:TASK_ID:_default' \
+'(--work-list-id)--project=[Project name, UUID, or unique UUID prefix]:PROJECT:_default' \
+'--work-list-id=[Exact project UUID (legacy compatibility)]:WORK_LIST_ID:_default' \
+'--body=[Plaintext Markdown comment body]:BODY:_default' \
+'(--input-stdin --body)--input-file=[Read the complete camelCase comment input object from a UTF-8 JSON file]:PATH:_files' \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'(--input-file --password-stdin --body)--input-stdin[Read the complete camelCase comment input object from stdin]' \
+'--password-stdin[Read the account password from stdin when no local unlock is available]' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+'::task -- Task title, UUID, or unique UUID prefix:_default' \
+&& ret=0
+;;
+(update)
+_arguments "${_arguments_options[@]}" : \
+'--task-id=[Exact task UUID (legacy compatibility)]:TASK_ID:_default' \
+'(--work-list-id)--project=[Project name, UUID, or unique UUID prefix]:PROJECT:_default' \
+'--work-list-id=[Exact project UUID (legacy compatibility)]:WORK_LIST_ID:_default' \
+'--comment-id=[Comment UUID]:COMMENT_ID:_default' \
+'--body=[Replacement plaintext Markdown comment body]:BODY:_default' \
+'(--input-stdin --body)--input-file=[Read the complete camelCase comment input object from a UTF-8 JSON file]:PATH:_files' \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'(--input-file --password-stdin --body)--input-stdin[Read the complete camelCase comment input object from stdin]' \
+'--password-stdin[Read the account password from stdin when no local unlock is available]' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+'::task -- Task title, UUID, or unique UUID prefix:_default' \
+&& ret=0
+;;
+(delete)
+_arguments "${_arguments_options[@]}" : \
+'--task-id=[Exact task UUID (legacy compatibility)]:TASK_ID:_default' \
+'(--work-list-id)--project=[Project name, UUID, or unique UUID prefix]:PROJECT:_default' \
+'--work-list-id=[Exact project UUID (legacy compatibility)]:WORK_LIST_ID:_default' \
+'--comment-id=[Comment UUID]:COMMENT_ID:_default' \
+'(--input-stdin)--input-file=[Read an optional audit patch from a UTF-8 JSON file]:PATH:_files' \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'(--input-file)--input-stdin[Read an optional audit patch from stdin]' \
+'(--input-stdin)--password-stdin[Read the account password from stdin while resolving human selectors]' \
+'--yes[Confirm permanent deletion without prompting]' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+'::task -- Task title, UUID, or unique UUID prefix:_default' \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+":: :_sealtask__subcmd__comments__subcmd__help_commands" \
+"*::: :->help" \
+&& ret=0
+
+    case $state in
+    (help)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:sealtask-comments-help-command-$line[1]:"
+        case $line[1] in
+            (list)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(create)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(update)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(delete)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+        esac
+    ;;
+esac
+;;
+(notes)
+_arguments "${_arguments_options[@]}" : \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+":: :_sealtask__subcmd__notes_commands" \
+"*::: :->notes" \
+&& ret=0
+
+    case $state in
+    (notes)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:sealtask-notes-command-$line[1]:"
+        case $line[1] in
+            (list)
+_arguments "${_arguments_options[@]}" : \
+'(--work-list-id)--project=[Project name, UUID, or unique UUID prefix]:PROJECT:_default' \
+'--work-list-id=[Exact project UUID (legacy compatibility)]:WORK_LIST_ID:_default' \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'--password-stdin[Read the account password from stdin when no local unlock is available]' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+&& ret=0
+;;
+(get)
+_arguments "${_arguments_options[@]}" : \
+'--note-id=[Exact note UUID (legacy compatibility)]:NOTE_ID:_default' \
+'(--work-list-id)--project=[Project name, UUID, or unique UUID prefix]:PROJECT:_default' \
+'--work-list-id=[Exact project UUID (legacy compatibility)]:WORK_LIST_ID:_default' \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'--password-stdin[Read the account password from stdin when no local unlock is available]' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+'::note -- Note title, UUID, or unique UUID prefix:_default' \
+&& ret=0
+;;
+(create)
+_arguments "${_arguments_options[@]}" : \
+'(--work-list-id)--project=[Project name, UUID, or unique UUID prefix]:PROJECT:_default' \
+'--work-list-id=[Exact project UUID (legacy compatibility)]:WORK_LIST_ID:_default' \
+'--title=[Plaintext note title]:TITLE:_default' \
+'--body=[Plaintext Markdown note body]:BODY:_default' \
+'--idempotency-key=[Stable retry key containing at most 128 ASCII letters, digits, '\''.'\'', '\''_'\'', '\''-'\'', or '\''\:'\'']:IDEMPOTENCY_KEY:_default' \
+'(--input-stdin --title --body --private --idempotency-key)--input-file=[Read the complete camelCase note input object from a UTF-8 JSON file]:PATH:_files' \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'--private[Encrypt with a per-note key available only to the current user]' \
+'(--input-file --password-stdin --title --body --private --idempotency-key)--input-stdin[Read the complete camelCase note input object from stdin]' \
+'--password-stdin[Read the account password from stdin when no local unlock is available]' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+&& ret=0
+;;
+(update)
+_arguments "${_arguments_options[@]}" : \
+'--note-id=[Exact note UUID (legacy compatibility)]:NOTE_ID:_default' \
+'(--work-list-id)--project=[Project name, UUID, or unique UUID prefix]:PROJECT:_default' \
+'--work-list-id=[Exact project UUID (legacy compatibility)]:WORK_LIST_ID:_default' \
+'--title=[Replace the note title]:TITLE:_default' \
+'--body=[Replace the Markdown note body]:BODY:_default' \
+'(--input-stdin --title --body)--input-file=[Read the complete camelCase note patch from a UTF-8 JSON file]:PATH:_files' \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'(--input-file --password-stdin --title --body)--input-stdin[Read the complete camelCase note patch from stdin]' \
+'--password-stdin[Read the account password from stdin when no local unlock is available]' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+'::note -- Note title, UUID, or unique UUID prefix:_default' \
+&& ret=0
+;;
+(delete)
+_arguments "${_arguments_options[@]}" : \
+'--note-id=[Exact note UUID (legacy compatibility)]:NOTE_ID:_default' \
+'(--work-list-id)--project=[Project name, UUID, or unique UUID prefix]:PROJECT:_default' \
+'--work-list-id=[Exact project UUID (legacy compatibility)]:WORK_LIST_ID:_default' \
+'(--input-stdin)--input-file=[Read an optional audit patch from a UTF-8 JSON file]:PATH:_files' \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'(--input-file)--input-stdin[Read an optional audit patch from stdin]' \
+'(--input-stdin)--password-stdin[Read the account password from stdin while resolving human selectors]' \
+'--yes[Confirm permanent deletion without prompting]' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+'::note -- Note title, UUID, or unique UUID prefix:_default' \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+":: :_sealtask__subcmd__notes__subcmd__help_commands" \
+"*::: :->help" \
+&& ret=0
+
+    case $state in
+    (help)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:sealtask-notes-help-command-$line[1]:"
+        case $line[1] in
+            (list)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(get)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(create)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(update)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(delete)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+        esac
+    ;;
+esac
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+":: :_sealtask__subcmd__help_commands" \
+"*::: :->help" \
+&& ret=0
+
+    case $state in
+    (help)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:sealtask-help-command-$line[1]:"
+        case $line[1] in
+            (completion)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(man)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(info)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(schema)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(auth)
+_arguments "${_arguments_options[@]}" : \
+":: :_sealtask__subcmd__help__subcmd__auth_commands" \
+"*::: :->auth" \
+&& ret=0
+
+    case $state in
+    (auth)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:sealtask-help-auth-command-$line[1]:"
+        case $line[1] in
+            (login)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(unlock)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(lock)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(keychain)
+_arguments "${_arguments_options[@]}" : \
+":: :_sealtask__subcmd__help__subcmd__auth__subcmd__keychain_commands" \
+"*::: :->keychain" \
+&& ret=0
+
+    case $state in
+    (keychain)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:sealtask-help-auth-keychain-command-$line[1]:"
+        case $line[1] in
+            (store)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(clear)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+(logout)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(status)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+(me)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(projects)
+_arguments "${_arguments_options[@]}" : \
+":: :_sealtask__subcmd__help__subcmd__projects_commands" \
+"*::: :->projects" \
+&& ret=0
+
+    case $state in
+    (projects)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:sealtask-help-projects-command-$line[1]:"
+        case $line[1] in
+            (list)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(get)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(archive)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(unarchive)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(use)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(current)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(clear)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(sections)
+_arguments "${_arguments_options[@]}" : \
+":: :_sealtask__subcmd__help__subcmd__projects__subcmd__sections_commands" \
+"*::: :->sections" \
+&& ret=0
+
+    case $state in
+    (sections)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:sealtask-help-projects-sections-command-$line[1]:"
+        case $line[1] in
+            (list)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+        esac
+    ;;
+esac
+;;
+(tasks)
+_arguments "${_arguments_options[@]}" : \
+":: :_sealtask__subcmd__help__subcmd__tasks_commands" \
+"*::: :->tasks" \
+&& ret=0
+
+    case $state in
+    (tasks)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:sealtask-help-tasks-command-$line[1]:"
+        case $line[1] in
+            (list)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(get)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(create)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(update)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(move)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(complete)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(reopen)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(archive)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(unarchive)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(delete)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(attachments)
+_arguments "${_arguments_options[@]}" : \
+":: :_sealtask__subcmd__help__subcmd__tasks__subcmd__attachments_commands" \
+"*::: :->attachments" \
+&& ret=0
+
+    case $state in
+    (attachments)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:sealtask-help-tasks-attachments-command-$line[1]:"
+        case $line[1] in
+            (upload)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(delete)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(read)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(download)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+        esac
+    ;;
+esac
+;;
+(stats)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(doctor)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(config)
+_arguments "${_arguments_options[@]}" : \
+":: :_sealtask__subcmd__help__subcmd__config_commands" \
+"*::: :->config" \
+&& ret=0
+
+    case $state in
+    (config)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:sealtask-help-config-command-$line[1]:"
+        case $line[1] in
+            (show)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+(profile)
+_arguments "${_arguments_options[@]}" : \
+":: :_sealtask__subcmd__help__subcmd__profile_commands" \
+"*::: :->profile" \
+&& ret=0
+
+    case $state in
+    (profile)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:sealtask-help-profile-command-$line[1]:"
+        case $line[1] in
+            (list)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(use)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+(inspect)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(comments)
+_arguments "${_arguments_options[@]}" : \
+":: :_sealtask__subcmd__help__subcmd__comments_commands" \
+"*::: :->comments" \
+&& ret=0
+
+    case $state in
+    (comments)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:sealtask-help-comments-command-$line[1]:"
+        case $line[1] in
+            (list)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(create)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(update)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(delete)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+(notes)
+_arguments "${_arguments_options[@]}" : \
+":: :_sealtask__subcmd__help__subcmd__notes_commands" \
+"*::: :->notes" \
+&& ret=0
+
+    case $state in
+    (notes)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:sealtask-help-notes-command-$line[1]:"
+        case $line[1] in
+            (list)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(get)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(create)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(update)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(delete)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+        esac
+    ;;
+esac
+}
+
+(( $+functions[_sealtask_commands] )) ||
+_sealtask_commands() {
+    local commands; commands=(
+'completion:Generate a shell completion script without reading configuration or credentials' \
+'man:Render a manual page for the root command or a nested command path' \
+'info:Show machine-readable CLI capabilities and contract versions' \
+'schema:Describe commands and arguments as human help or versioned JSON' \
+'auth:Authenticate, inspect the session, and manage local unlock state' \
+'me:Show the current authenticated user' \
+'projects:List, inspect, select, archive, or restore projects' \
+'lists:List, inspect, select, archive, or restore projects' \
+'tasks:List, inspect, create, update, move, or delete tasks' \
+'stats:Show current dashboard task counts' \
+'doctor:Diagnose local state, authentication, unlock, and API connectivity' \
+'config:Inspect resolved operator configuration' \
+'profile:List profiles or change the persisted default profile' \
+'inspect:' \
+'comments:List, create, update, or delete task comments' \
+'notes:List, inspect, create, update, or delete encrypted notes' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'sealtask commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__auth_commands] )) ||
+_sealtask__subcmd__auth_commands() {
+    local commands; commands=(
+'login:Sign in with an email and password, optionally completing MFA' \
+'unlock:Unlock workspace data in memory for a bounded session' \
+'lock:Lock workspace data and stop the in-memory unlock session' \
+'keychain:Store or clear this profile'\''s saved unlock key' \
+'logout:Revoke the remote session and clear this profile'\''s local credentials' \
+'status:Inspect sign-in, token expiry, workspace-data, and saved-key state' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'sealtask auth commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__auth__subcmd__help_commands] )) ||
+_sealtask__subcmd__auth__subcmd__help_commands() {
+    local commands; commands=(
+'login:Sign in with an email and password, optionally completing MFA' \
+'unlock:Unlock workspace data in memory for a bounded session' \
+'lock:Lock workspace data and stop the in-memory unlock session' \
+'keychain:Store or clear this profile'\''s saved unlock key' \
+'logout:Revoke the remote session and clear this profile'\''s local credentials' \
+'status:Inspect sign-in, token expiry, workspace-data, and saved-key state' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'sealtask auth help commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__auth__subcmd__help__subcmd__help_commands] )) ||
+_sealtask__subcmd__auth__subcmd__help__subcmd__help_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask auth help help commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__auth__subcmd__help__subcmd__keychain_commands] )) ||
+_sealtask__subcmd__auth__subcmd__help__subcmd__keychain_commands() {
+    local commands; commands=(
+'store:Save this profile'\''s unlock key in the platform keychain' \
+'clear:Remove this profile'\''s saved unlock key' \
+    )
+    _describe -t commands 'sealtask auth help keychain commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__auth__subcmd__help__subcmd__keychain__subcmd__clear_commands] )) ||
+_sealtask__subcmd__auth__subcmd__help__subcmd__keychain__subcmd__clear_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask auth help keychain clear commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__auth__subcmd__help__subcmd__keychain__subcmd__store_commands] )) ||
+_sealtask__subcmd__auth__subcmd__help__subcmd__keychain__subcmd__store_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask auth help keychain store commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__auth__subcmd__help__subcmd__lock_commands] )) ||
+_sealtask__subcmd__auth__subcmd__help__subcmd__lock_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask auth help lock commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__auth__subcmd__help__subcmd__login_commands] )) ||
+_sealtask__subcmd__auth__subcmd__help__subcmd__login_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask auth help login commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__auth__subcmd__help__subcmd__logout_commands] )) ||
+_sealtask__subcmd__auth__subcmd__help__subcmd__logout_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask auth help logout commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__auth__subcmd__help__subcmd__status_commands] )) ||
+_sealtask__subcmd__auth__subcmd__help__subcmd__status_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask auth help status commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__auth__subcmd__help__subcmd__unlock_commands] )) ||
+_sealtask__subcmd__auth__subcmd__help__subcmd__unlock_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask auth help unlock commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__auth__subcmd__keychain_commands] )) ||
+_sealtask__subcmd__auth__subcmd__keychain_commands() {
+    local commands; commands=(
+'store:Save this profile'\''s unlock key in the platform keychain' \
+'clear:Remove this profile'\''s saved unlock key' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'sealtask auth keychain commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__auth__subcmd__keychain__subcmd__clear_commands] )) ||
+_sealtask__subcmd__auth__subcmd__keychain__subcmd__clear_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask auth keychain clear commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__auth__subcmd__keychain__subcmd__help_commands] )) ||
+_sealtask__subcmd__auth__subcmd__keychain__subcmd__help_commands() {
+    local commands; commands=(
+'store:Save this profile'\''s unlock key in the platform keychain' \
+'clear:Remove this profile'\''s saved unlock key' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'sealtask auth keychain help commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__auth__subcmd__keychain__subcmd__help__subcmd__clear_commands] )) ||
+_sealtask__subcmd__auth__subcmd__keychain__subcmd__help__subcmd__clear_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask auth keychain help clear commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__auth__subcmd__keychain__subcmd__help__subcmd__help_commands] )) ||
+_sealtask__subcmd__auth__subcmd__keychain__subcmd__help__subcmd__help_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask auth keychain help help commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__auth__subcmd__keychain__subcmd__help__subcmd__store_commands] )) ||
+_sealtask__subcmd__auth__subcmd__keychain__subcmd__help__subcmd__store_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask auth keychain help store commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__auth__subcmd__keychain__subcmd__store_commands] )) ||
+_sealtask__subcmd__auth__subcmd__keychain__subcmd__store_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask auth keychain store commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__auth__subcmd__lock_commands] )) ||
+_sealtask__subcmd__auth__subcmd__lock_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask auth lock commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__auth__subcmd__login_commands] )) ||
+_sealtask__subcmd__auth__subcmd__login_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask auth login commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__auth__subcmd__logout_commands] )) ||
+_sealtask__subcmd__auth__subcmd__logout_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask auth logout commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__auth__subcmd__status_commands] )) ||
+_sealtask__subcmd__auth__subcmd__status_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask auth status commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__auth__subcmd__unlock_commands] )) ||
+_sealtask__subcmd__auth__subcmd__unlock_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask auth unlock commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__comments_commands] )) ||
+_sealtask__subcmd__comments_commands() {
+    local commands; commands=(
+'list:List decrypted comments on a task' \
+'create:Create an encrypted task comment' \
+'update:Replace an encrypted task comment body' \
+'delete:Permanently delete a task comment' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'sealtask comments commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__comments__subcmd__create_commands] )) ||
+_sealtask__subcmd__comments__subcmd__create_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask comments create commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__comments__subcmd__delete_commands] )) ||
+_sealtask__subcmd__comments__subcmd__delete_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask comments delete commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__comments__subcmd__help_commands] )) ||
+_sealtask__subcmd__comments__subcmd__help_commands() {
+    local commands; commands=(
+'list:List decrypted comments on a task' \
+'create:Create an encrypted task comment' \
+'update:Replace an encrypted task comment body' \
+'delete:Permanently delete a task comment' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'sealtask comments help commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__comments__subcmd__help__subcmd__create_commands] )) ||
+_sealtask__subcmd__comments__subcmd__help__subcmd__create_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask comments help create commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__comments__subcmd__help__subcmd__delete_commands] )) ||
+_sealtask__subcmd__comments__subcmd__help__subcmd__delete_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask comments help delete commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__comments__subcmd__help__subcmd__help_commands] )) ||
+_sealtask__subcmd__comments__subcmd__help__subcmd__help_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask comments help help commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__comments__subcmd__help__subcmd__list_commands] )) ||
+_sealtask__subcmd__comments__subcmd__help__subcmd__list_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask comments help list commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__comments__subcmd__help__subcmd__update_commands] )) ||
+_sealtask__subcmd__comments__subcmd__help__subcmd__update_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask comments help update commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__comments__subcmd__list_commands] )) ||
+_sealtask__subcmd__comments__subcmd__list_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask comments list commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__comments__subcmd__update_commands] )) ||
+_sealtask__subcmd__comments__subcmd__update_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask comments update commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__completion_commands] )) ||
+_sealtask__subcmd__completion_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask completion commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__config_commands] )) ||
+_sealtask__subcmd__config_commands() {
+    local commands; commands=(
+'show:Show safe configuration values and where they came from' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'sealtask config commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__config__subcmd__help_commands] )) ||
+_sealtask__subcmd__config__subcmd__help_commands() {
+    local commands; commands=(
+'show:Show safe configuration values and where they came from' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'sealtask config help commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__config__subcmd__help__subcmd__help_commands] )) ||
+_sealtask__subcmd__config__subcmd__help__subcmd__help_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask config help help commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__config__subcmd__help__subcmd__show_commands] )) ||
+_sealtask__subcmd__config__subcmd__help__subcmd__show_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask config help show commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__config__subcmd__show_commands] )) ||
+_sealtask__subcmd__config__subcmd__show_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask config show commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__doctor_commands] )) ||
+_sealtask__subcmd__doctor_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask doctor commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help_commands] )) ||
+_sealtask__subcmd__help_commands() {
+    local commands; commands=(
+'completion:Generate a shell completion script without reading configuration or credentials' \
+'man:Render a manual page for the root command or a nested command path' \
+'info:Show machine-readable CLI capabilities and contract versions' \
+'schema:Describe commands and arguments as human help or versioned JSON' \
+'auth:Authenticate, inspect the session, and manage local unlock state' \
+'me:Show the current authenticated user' \
+'projects:List, inspect, select, archive, or restore projects' \
+'tasks:List, inspect, create, update, move, or delete tasks' \
+'stats:Show current dashboard task counts' \
+'doctor:Diagnose local state, authentication, unlock, and API connectivity' \
+'config:Inspect resolved operator configuration' \
+'profile:List profiles or change the persisted default profile' \
+'inspect:' \
+'comments:List, create, update, or delete task comments' \
+'notes:List, inspect, create, update, or delete encrypted notes' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'sealtask help commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__auth_commands] )) ||
+_sealtask__subcmd__help__subcmd__auth_commands() {
+    local commands; commands=(
+'login:Sign in with an email and password, optionally completing MFA' \
+'unlock:Unlock workspace data in memory for a bounded session' \
+'lock:Lock workspace data and stop the in-memory unlock session' \
+'keychain:Store or clear this profile'\''s saved unlock key' \
+'logout:Revoke the remote session and clear this profile'\''s local credentials' \
+'status:Inspect sign-in, token expiry, workspace-data, and saved-key state' \
+    )
+    _describe -t commands 'sealtask help auth commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__auth__subcmd__keychain_commands] )) ||
+_sealtask__subcmd__help__subcmd__auth__subcmd__keychain_commands() {
+    local commands; commands=(
+'store:Save this profile'\''s unlock key in the platform keychain' \
+'clear:Remove this profile'\''s saved unlock key' \
+    )
+    _describe -t commands 'sealtask help auth keychain commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__auth__subcmd__keychain__subcmd__clear_commands] )) ||
+_sealtask__subcmd__help__subcmd__auth__subcmd__keychain__subcmd__clear_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help auth keychain clear commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__auth__subcmd__keychain__subcmd__store_commands] )) ||
+_sealtask__subcmd__help__subcmd__auth__subcmd__keychain__subcmd__store_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help auth keychain store commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__auth__subcmd__lock_commands] )) ||
+_sealtask__subcmd__help__subcmd__auth__subcmd__lock_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help auth lock commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__auth__subcmd__login_commands] )) ||
+_sealtask__subcmd__help__subcmd__auth__subcmd__login_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help auth login commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__auth__subcmd__logout_commands] )) ||
+_sealtask__subcmd__help__subcmd__auth__subcmd__logout_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help auth logout commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__auth__subcmd__status_commands] )) ||
+_sealtask__subcmd__help__subcmd__auth__subcmd__status_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help auth status commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__auth__subcmd__unlock_commands] )) ||
+_sealtask__subcmd__help__subcmd__auth__subcmd__unlock_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help auth unlock commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__comments_commands] )) ||
+_sealtask__subcmd__help__subcmd__comments_commands() {
+    local commands; commands=(
+'list:List decrypted comments on a task' \
+'create:Create an encrypted task comment' \
+'update:Replace an encrypted task comment body' \
+'delete:Permanently delete a task comment' \
+    )
+    _describe -t commands 'sealtask help comments commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__comments__subcmd__create_commands] )) ||
+_sealtask__subcmd__help__subcmd__comments__subcmd__create_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help comments create commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__comments__subcmd__delete_commands] )) ||
+_sealtask__subcmd__help__subcmd__comments__subcmd__delete_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help comments delete commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__comments__subcmd__list_commands] )) ||
+_sealtask__subcmd__help__subcmd__comments__subcmd__list_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help comments list commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__comments__subcmd__update_commands] )) ||
+_sealtask__subcmd__help__subcmd__comments__subcmd__update_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help comments update commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__completion_commands] )) ||
+_sealtask__subcmd__help__subcmd__completion_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help completion commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__config_commands] )) ||
+_sealtask__subcmd__help__subcmd__config_commands() {
+    local commands; commands=(
+'show:Show safe configuration values and where they came from' \
+    )
+    _describe -t commands 'sealtask help config commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__config__subcmd__show_commands] )) ||
+_sealtask__subcmd__help__subcmd__config__subcmd__show_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help config show commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__doctor_commands] )) ||
+_sealtask__subcmd__help__subcmd__doctor_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help doctor commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__help_commands] )) ||
+_sealtask__subcmd__help__subcmd__help_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help help commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__info_commands] )) ||
+_sealtask__subcmd__help__subcmd__info_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help info commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__inspect_commands] )) ||
+_sealtask__subcmd__help__subcmd__inspect_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help inspect commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__man_commands] )) ||
+_sealtask__subcmd__help__subcmd__man_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help man commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__me_commands] )) ||
+_sealtask__subcmd__help__subcmd__me_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help me commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__notes_commands] )) ||
+_sealtask__subcmd__help__subcmd__notes_commands() {
+    local commands; commands=(
+'list:List decrypted notes in a project' \
+'get:Show one decrypted note' \
+'create:Create an encrypted shared or private note' \
+'update:Patch an encrypted note' \
+'delete:Permanently delete a note' \
+    )
+    _describe -t commands 'sealtask help notes commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__notes__subcmd__create_commands] )) ||
+_sealtask__subcmd__help__subcmd__notes__subcmd__create_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help notes create commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__notes__subcmd__delete_commands] )) ||
+_sealtask__subcmd__help__subcmd__notes__subcmd__delete_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help notes delete commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__notes__subcmd__get_commands] )) ||
+_sealtask__subcmd__help__subcmd__notes__subcmd__get_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help notes get commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__notes__subcmd__list_commands] )) ||
+_sealtask__subcmd__help__subcmd__notes__subcmd__list_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help notes list commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__notes__subcmd__update_commands] )) ||
+_sealtask__subcmd__help__subcmd__notes__subcmd__update_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help notes update commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__profile_commands] )) ||
+_sealtask__subcmd__help__subcmd__profile_commands() {
+    local commands; commands=(
+'list:List known local profiles and mark the active one' \
+'use:Persist the default profile for future commands' \
+    )
+    _describe -t commands 'sealtask help profile commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__profile__subcmd__list_commands] )) ||
+_sealtask__subcmd__help__subcmd__profile__subcmd__list_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help profile list commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__profile__subcmd__use_commands] )) ||
+_sealtask__subcmd__help__subcmd__profile__subcmd__use_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help profile use commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__projects_commands] )) ||
+_sealtask__subcmd__help__subcmd__projects_commands() {
+    local commands; commands=(
+'list:List accessible projects' \
+'get:Show one decrypted project' \
+'archive:Archive a project and make it read-only' \
+'unarchive:Restore an archived project' \
+'use:Save a project as the current project for this profile' \
+'current:Show the saved current project without accessing the network' \
+'clear:Clear the saved current project' \
+'sections:Discover sections in a project' \
+    )
+    _describe -t commands 'sealtask help projects commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__projects__subcmd__archive_commands] )) ||
+_sealtask__subcmd__help__subcmd__projects__subcmd__archive_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help projects archive commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__projects__subcmd__clear_commands] )) ||
+_sealtask__subcmd__help__subcmd__projects__subcmd__clear_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help projects clear commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__projects__subcmd__current_commands] )) ||
+_sealtask__subcmd__help__subcmd__projects__subcmd__current_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help projects current commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__projects__subcmd__get_commands] )) ||
+_sealtask__subcmd__help__subcmd__projects__subcmd__get_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help projects get commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__projects__subcmd__list_commands] )) ||
+_sealtask__subcmd__help__subcmd__projects__subcmd__list_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help projects list commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__projects__subcmd__sections_commands] )) ||
+_sealtask__subcmd__help__subcmd__projects__subcmd__sections_commands() {
+    local commands; commands=(
+'list:List normalized project sections and their IDs' \
+    )
+    _describe -t commands 'sealtask help projects sections commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__projects__subcmd__sections__subcmd__list_commands] )) ||
+_sealtask__subcmd__help__subcmd__projects__subcmd__sections__subcmd__list_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help projects sections list commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__projects__subcmd__unarchive_commands] )) ||
+_sealtask__subcmd__help__subcmd__projects__subcmd__unarchive_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help projects unarchive commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__projects__subcmd__use_commands] )) ||
+_sealtask__subcmd__help__subcmd__projects__subcmd__use_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help projects use commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__schema_commands] )) ||
+_sealtask__subcmd__help__subcmd__schema_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help schema commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__stats_commands] )) ||
+_sealtask__subcmd__help__subcmd__stats_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help stats commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__tasks_commands] )) ||
+_sealtask__subcmd__help__subcmd__tasks_commands() {
+    local commands; commands=(
+'list:List tasks in the selected/current project, or assigned tasks when none is selected' \
+'get:Show one decrypted task, including comments and attachment metadata' \
+'create:Create an encrypted task' \
+'update:Patch an encrypted task; omitted fields remain unchanged' \
+'move:Move a task to a section or relative position' \
+'complete:Move a task to the final section' \
+'reopen:Move a task to the first section' \
+'archive:Archive a task' \
+'unarchive:Restore an archived task' \
+'delete:Permanently delete a task' \
+'attachments:Upload, delete, read, or download encrypted task attachments' \
+    )
+    _describe -t commands 'sealtask help tasks commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__tasks__subcmd__archive_commands] )) ||
+_sealtask__subcmd__help__subcmd__tasks__subcmd__archive_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help tasks archive commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__tasks__subcmd__attachments_commands] )) ||
+_sealtask__subcmd__help__subcmd__tasks__subcmd__attachments_commands() {
+    local commands; commands=(
+'upload:Encrypt and upload a local regular file' \
+'delete:Remove an attachment reference and its encrypted object' \
+'read:Decrypt a text or DOCX attachment and print readable text' \
+'download:Decrypt an attachment and save it beneath the current directory' \
+    )
+    _describe -t commands 'sealtask help tasks attachments commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__tasks__subcmd__attachments__subcmd__delete_commands] )) ||
+_sealtask__subcmd__help__subcmd__tasks__subcmd__attachments__subcmd__delete_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help tasks attachments delete commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__tasks__subcmd__attachments__subcmd__download_commands] )) ||
+_sealtask__subcmd__help__subcmd__tasks__subcmd__attachments__subcmd__download_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help tasks attachments download commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__tasks__subcmd__attachments__subcmd__read_commands] )) ||
+_sealtask__subcmd__help__subcmd__tasks__subcmd__attachments__subcmd__read_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help tasks attachments read commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__tasks__subcmd__attachments__subcmd__upload_commands] )) ||
+_sealtask__subcmd__help__subcmd__tasks__subcmd__attachments__subcmd__upload_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help tasks attachments upload commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__tasks__subcmd__complete_commands] )) ||
+_sealtask__subcmd__help__subcmd__tasks__subcmd__complete_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help tasks complete commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__tasks__subcmd__create_commands] )) ||
+_sealtask__subcmd__help__subcmd__tasks__subcmd__create_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help tasks create commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__tasks__subcmd__delete_commands] )) ||
+_sealtask__subcmd__help__subcmd__tasks__subcmd__delete_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help tasks delete commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__tasks__subcmd__get_commands] )) ||
+_sealtask__subcmd__help__subcmd__tasks__subcmd__get_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help tasks get commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__tasks__subcmd__list_commands] )) ||
+_sealtask__subcmd__help__subcmd__tasks__subcmd__list_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help tasks list commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__tasks__subcmd__move_commands] )) ||
+_sealtask__subcmd__help__subcmd__tasks__subcmd__move_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help tasks move commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__tasks__subcmd__reopen_commands] )) ||
+_sealtask__subcmd__help__subcmd__tasks__subcmd__reopen_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help tasks reopen commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__tasks__subcmd__unarchive_commands] )) ||
+_sealtask__subcmd__help__subcmd__tasks__subcmd__unarchive_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help tasks unarchive commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__tasks__subcmd__update_commands] )) ||
+_sealtask__subcmd__help__subcmd__tasks__subcmd__update_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help tasks update commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__info_commands] )) ||
+_sealtask__subcmd__info_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask info commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__inspect_commands] )) ||
+_sealtask__subcmd__inspect_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask inspect commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__man_commands] )) ||
+_sealtask__subcmd__man_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask man commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__me_commands] )) ||
+_sealtask__subcmd__me_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask me commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__notes_commands] )) ||
+_sealtask__subcmd__notes_commands() {
+    local commands; commands=(
+'list:List decrypted notes in a project' \
+'get:Show one decrypted note' \
+'create:Create an encrypted shared or private note' \
+'update:Patch an encrypted note' \
+'delete:Permanently delete a note' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'sealtask notes commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__notes__subcmd__create_commands] )) ||
+_sealtask__subcmd__notes__subcmd__create_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask notes create commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__notes__subcmd__delete_commands] )) ||
+_sealtask__subcmd__notes__subcmd__delete_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask notes delete commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__notes__subcmd__get_commands] )) ||
+_sealtask__subcmd__notes__subcmd__get_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask notes get commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__notes__subcmd__help_commands] )) ||
+_sealtask__subcmd__notes__subcmd__help_commands() {
+    local commands; commands=(
+'list:List decrypted notes in a project' \
+'get:Show one decrypted note' \
+'create:Create an encrypted shared or private note' \
+'update:Patch an encrypted note' \
+'delete:Permanently delete a note' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'sealtask notes help commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__notes__subcmd__help__subcmd__create_commands] )) ||
+_sealtask__subcmd__notes__subcmd__help__subcmd__create_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask notes help create commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__notes__subcmd__help__subcmd__delete_commands] )) ||
+_sealtask__subcmd__notes__subcmd__help__subcmd__delete_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask notes help delete commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__notes__subcmd__help__subcmd__get_commands] )) ||
+_sealtask__subcmd__notes__subcmd__help__subcmd__get_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask notes help get commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__notes__subcmd__help__subcmd__help_commands] )) ||
+_sealtask__subcmd__notes__subcmd__help__subcmd__help_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask notes help help commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__notes__subcmd__help__subcmd__list_commands] )) ||
+_sealtask__subcmd__notes__subcmd__help__subcmd__list_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask notes help list commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__notes__subcmd__help__subcmd__update_commands] )) ||
+_sealtask__subcmd__notes__subcmd__help__subcmd__update_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask notes help update commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__notes__subcmd__list_commands] )) ||
+_sealtask__subcmd__notes__subcmd__list_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask notes list commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__notes__subcmd__update_commands] )) ||
+_sealtask__subcmd__notes__subcmd__update_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask notes update commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__profile_commands] )) ||
+_sealtask__subcmd__profile_commands() {
+    local commands; commands=(
+'list:List known local profiles and mark the active one' \
+'use:Persist the default profile for future commands' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'sealtask profile commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__profile__subcmd__help_commands] )) ||
+_sealtask__subcmd__profile__subcmd__help_commands() {
+    local commands; commands=(
+'list:List known local profiles and mark the active one' \
+'use:Persist the default profile for future commands' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'sealtask profile help commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__profile__subcmd__help__subcmd__help_commands] )) ||
+_sealtask__subcmd__profile__subcmd__help__subcmd__help_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask profile help help commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__profile__subcmd__help__subcmd__list_commands] )) ||
+_sealtask__subcmd__profile__subcmd__help__subcmd__list_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask profile help list commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__profile__subcmd__help__subcmd__use_commands] )) ||
+_sealtask__subcmd__profile__subcmd__help__subcmd__use_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask profile help use commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__profile__subcmd__list_commands] )) ||
+_sealtask__subcmd__profile__subcmd__list_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask profile list commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__profile__subcmd__use_commands] )) ||
+_sealtask__subcmd__profile__subcmd__use_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask profile use commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__projects_commands] )) ||
+_sealtask__subcmd__projects_commands() {
+    local commands; commands=(
+'list:List accessible projects' \
+'get:Show one decrypted project' \
+'archive:Archive a project and make it read-only' \
+'unarchive:Restore an archived project' \
+'use:Save a project as the current project for this profile' \
+'current:Show the saved current project without accessing the network' \
+'clear:Clear the saved current project' \
+'sections:Discover sections in a project' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'sealtask projects commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__projects__subcmd__archive_commands] )) ||
+_sealtask__subcmd__projects__subcmd__archive_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask projects archive commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__projects__subcmd__clear_commands] )) ||
+_sealtask__subcmd__projects__subcmd__clear_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask projects clear commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__projects__subcmd__current_commands] )) ||
+_sealtask__subcmd__projects__subcmd__current_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask projects current commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__projects__subcmd__get_commands] )) ||
+_sealtask__subcmd__projects__subcmd__get_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask projects get commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__projects__subcmd__help_commands] )) ||
+_sealtask__subcmd__projects__subcmd__help_commands() {
+    local commands; commands=(
+'list:List accessible projects' \
+'get:Show one decrypted project' \
+'archive:Archive a project and make it read-only' \
+'unarchive:Restore an archived project' \
+'use:Save a project as the current project for this profile' \
+'current:Show the saved current project without accessing the network' \
+'clear:Clear the saved current project' \
+'sections:Discover sections in a project' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'sealtask projects help commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__projects__subcmd__help__subcmd__archive_commands] )) ||
+_sealtask__subcmd__projects__subcmd__help__subcmd__archive_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask projects help archive commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__projects__subcmd__help__subcmd__clear_commands] )) ||
+_sealtask__subcmd__projects__subcmd__help__subcmd__clear_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask projects help clear commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__projects__subcmd__help__subcmd__current_commands] )) ||
+_sealtask__subcmd__projects__subcmd__help__subcmd__current_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask projects help current commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__projects__subcmd__help__subcmd__get_commands] )) ||
+_sealtask__subcmd__projects__subcmd__help__subcmd__get_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask projects help get commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__projects__subcmd__help__subcmd__help_commands] )) ||
+_sealtask__subcmd__projects__subcmd__help__subcmd__help_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask projects help help commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__projects__subcmd__help__subcmd__list_commands] )) ||
+_sealtask__subcmd__projects__subcmd__help__subcmd__list_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask projects help list commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__projects__subcmd__help__subcmd__sections_commands] )) ||
+_sealtask__subcmd__projects__subcmd__help__subcmd__sections_commands() {
+    local commands; commands=(
+'list:List normalized project sections and their IDs' \
+    )
+    _describe -t commands 'sealtask projects help sections commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__projects__subcmd__help__subcmd__sections__subcmd__list_commands] )) ||
+_sealtask__subcmd__projects__subcmd__help__subcmd__sections__subcmd__list_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask projects help sections list commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__projects__subcmd__help__subcmd__unarchive_commands] )) ||
+_sealtask__subcmd__projects__subcmd__help__subcmd__unarchive_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask projects help unarchive commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__projects__subcmd__help__subcmd__use_commands] )) ||
+_sealtask__subcmd__projects__subcmd__help__subcmd__use_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask projects help use commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__projects__subcmd__list_commands] )) ||
+_sealtask__subcmd__projects__subcmd__list_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask projects list commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__projects__subcmd__sections_commands] )) ||
+_sealtask__subcmd__projects__subcmd__sections_commands() {
+    local commands; commands=(
+'list:List normalized project sections and their IDs' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'sealtask projects sections commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__projects__subcmd__sections__subcmd__help_commands] )) ||
+_sealtask__subcmd__projects__subcmd__sections__subcmd__help_commands() {
+    local commands; commands=(
+'list:List normalized project sections and their IDs' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'sealtask projects sections help commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__projects__subcmd__sections__subcmd__help__subcmd__help_commands] )) ||
+_sealtask__subcmd__projects__subcmd__sections__subcmd__help__subcmd__help_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask projects sections help help commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__projects__subcmd__sections__subcmd__help__subcmd__list_commands] )) ||
+_sealtask__subcmd__projects__subcmd__sections__subcmd__help__subcmd__list_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask projects sections help list commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__projects__subcmd__sections__subcmd__list_commands] )) ||
+_sealtask__subcmd__projects__subcmd__sections__subcmd__list_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask projects sections list commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__projects__subcmd__unarchive_commands] )) ||
+_sealtask__subcmd__projects__subcmd__unarchive_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask projects unarchive commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__projects__subcmd__use_commands] )) ||
+_sealtask__subcmd__projects__subcmd__use_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask projects use commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__schema_commands] )) ||
+_sealtask__subcmd__schema_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask schema commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__stats_commands] )) ||
+_sealtask__subcmd__stats_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask stats commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__tasks_commands] )) ||
+_sealtask__subcmd__tasks_commands() {
+    local commands; commands=(
+'list:List tasks in the selected/current project, or assigned tasks when none is selected' \
+'get:Show one decrypted task, including comments and attachment metadata' \
+'create:Create an encrypted task' \
+'update:Patch an encrypted task; omitted fields remain unchanged' \
+'move:Move a task to a section or relative position' \
+'complete:Move a task to the final section' \
+'reopen:Move a task to the first section' \
+'archive:Archive a task' \
+'unarchive:Restore an archived task' \
+'delete:Permanently delete a task' \
+'attachments:Upload, delete, read, or download encrypted task attachments' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'sealtask tasks commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__tasks__subcmd__archive_commands] )) ||
+_sealtask__subcmd__tasks__subcmd__archive_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask tasks archive commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__tasks__subcmd__attachments_commands] )) ||
+_sealtask__subcmd__tasks__subcmd__attachments_commands() {
+    local commands; commands=(
+'upload:Encrypt and upload a local regular file' \
+'delete:Remove an attachment reference and its encrypted object' \
+'read:Decrypt a text or DOCX attachment and print readable text' \
+'download:Decrypt an attachment and save it beneath the current directory' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'sealtask tasks attachments commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__tasks__subcmd__attachments__subcmd__delete_commands] )) ||
+_sealtask__subcmd__tasks__subcmd__attachments__subcmd__delete_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask tasks attachments delete commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__tasks__subcmd__attachments__subcmd__download_commands] )) ||
+_sealtask__subcmd__tasks__subcmd__attachments__subcmd__download_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask tasks attachments download commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__tasks__subcmd__attachments__subcmd__help_commands] )) ||
+_sealtask__subcmd__tasks__subcmd__attachments__subcmd__help_commands() {
+    local commands; commands=(
+'upload:Encrypt and upload a local regular file' \
+'delete:Remove an attachment reference and its encrypted object' \
+'read:Decrypt a text or DOCX attachment and print readable text' \
+'download:Decrypt an attachment and save it beneath the current directory' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'sealtask tasks attachments help commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__tasks__subcmd__attachments__subcmd__help__subcmd__delete_commands] )) ||
+_sealtask__subcmd__tasks__subcmd__attachments__subcmd__help__subcmd__delete_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask tasks attachments help delete commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__tasks__subcmd__attachments__subcmd__help__subcmd__download_commands] )) ||
+_sealtask__subcmd__tasks__subcmd__attachments__subcmd__help__subcmd__download_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask tasks attachments help download commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__tasks__subcmd__attachments__subcmd__help__subcmd__help_commands] )) ||
+_sealtask__subcmd__tasks__subcmd__attachments__subcmd__help__subcmd__help_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask tasks attachments help help commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__tasks__subcmd__attachments__subcmd__help__subcmd__read_commands] )) ||
+_sealtask__subcmd__tasks__subcmd__attachments__subcmd__help__subcmd__read_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask tasks attachments help read commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__tasks__subcmd__attachments__subcmd__help__subcmd__upload_commands] )) ||
+_sealtask__subcmd__tasks__subcmd__attachments__subcmd__help__subcmd__upload_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask tasks attachments help upload commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__tasks__subcmd__attachments__subcmd__read_commands] )) ||
+_sealtask__subcmd__tasks__subcmd__attachments__subcmd__read_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask tasks attachments read commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__tasks__subcmd__attachments__subcmd__upload_commands] )) ||
+_sealtask__subcmd__tasks__subcmd__attachments__subcmd__upload_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask tasks attachments upload commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__tasks__subcmd__complete_commands] )) ||
+_sealtask__subcmd__tasks__subcmd__complete_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask tasks complete commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__tasks__subcmd__create_commands] )) ||
+_sealtask__subcmd__tasks__subcmd__create_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask tasks create commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__tasks__subcmd__delete_commands] )) ||
+_sealtask__subcmd__tasks__subcmd__delete_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask tasks delete commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__tasks__subcmd__get_commands] )) ||
+_sealtask__subcmd__tasks__subcmd__get_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask tasks get commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__tasks__subcmd__help_commands] )) ||
+_sealtask__subcmd__tasks__subcmd__help_commands() {
+    local commands; commands=(
+'list:List tasks in the selected/current project, or assigned tasks when none is selected' \
+'get:Show one decrypted task, including comments and attachment metadata' \
+'create:Create an encrypted task' \
+'update:Patch an encrypted task; omitted fields remain unchanged' \
+'move:Move a task to a section or relative position' \
+'complete:Move a task to the final section' \
+'reopen:Move a task to the first section' \
+'archive:Archive a task' \
+'unarchive:Restore an archived task' \
+'delete:Permanently delete a task' \
+'attachments:Upload, delete, read, or download encrypted task attachments' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'sealtask tasks help commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__tasks__subcmd__help__subcmd__archive_commands] )) ||
+_sealtask__subcmd__tasks__subcmd__help__subcmd__archive_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask tasks help archive commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__tasks__subcmd__help__subcmd__attachments_commands] )) ||
+_sealtask__subcmd__tasks__subcmd__help__subcmd__attachments_commands() {
+    local commands; commands=(
+'upload:Encrypt and upload a local regular file' \
+'delete:Remove an attachment reference and its encrypted object' \
+'read:Decrypt a text or DOCX attachment and print readable text' \
+'download:Decrypt an attachment and save it beneath the current directory' \
+    )
+    _describe -t commands 'sealtask tasks help attachments commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__tasks__subcmd__help__subcmd__attachments__subcmd__delete_commands] )) ||
+_sealtask__subcmd__tasks__subcmd__help__subcmd__attachments__subcmd__delete_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask tasks help attachments delete commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__tasks__subcmd__help__subcmd__attachments__subcmd__download_commands] )) ||
+_sealtask__subcmd__tasks__subcmd__help__subcmd__attachments__subcmd__download_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask tasks help attachments download commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__tasks__subcmd__help__subcmd__attachments__subcmd__read_commands] )) ||
+_sealtask__subcmd__tasks__subcmd__help__subcmd__attachments__subcmd__read_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask tasks help attachments read commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__tasks__subcmd__help__subcmd__attachments__subcmd__upload_commands] )) ||
+_sealtask__subcmd__tasks__subcmd__help__subcmd__attachments__subcmd__upload_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask tasks help attachments upload commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__tasks__subcmd__help__subcmd__complete_commands] )) ||
+_sealtask__subcmd__tasks__subcmd__help__subcmd__complete_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask tasks help complete commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__tasks__subcmd__help__subcmd__create_commands] )) ||
+_sealtask__subcmd__tasks__subcmd__help__subcmd__create_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask tasks help create commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__tasks__subcmd__help__subcmd__delete_commands] )) ||
+_sealtask__subcmd__tasks__subcmd__help__subcmd__delete_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask tasks help delete commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__tasks__subcmd__help__subcmd__get_commands] )) ||
+_sealtask__subcmd__tasks__subcmd__help__subcmd__get_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask tasks help get commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__tasks__subcmd__help__subcmd__help_commands] )) ||
+_sealtask__subcmd__tasks__subcmd__help__subcmd__help_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask tasks help help commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__tasks__subcmd__help__subcmd__list_commands] )) ||
+_sealtask__subcmd__tasks__subcmd__help__subcmd__list_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask tasks help list commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__tasks__subcmd__help__subcmd__move_commands] )) ||
+_sealtask__subcmd__tasks__subcmd__help__subcmd__move_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask tasks help move commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__tasks__subcmd__help__subcmd__reopen_commands] )) ||
+_sealtask__subcmd__tasks__subcmd__help__subcmd__reopen_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask tasks help reopen commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__tasks__subcmd__help__subcmd__unarchive_commands] )) ||
+_sealtask__subcmd__tasks__subcmd__help__subcmd__unarchive_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask tasks help unarchive commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__tasks__subcmd__help__subcmd__update_commands] )) ||
+_sealtask__subcmd__tasks__subcmd__help__subcmd__update_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask tasks help update commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__tasks__subcmd__list_commands] )) ||
+_sealtask__subcmd__tasks__subcmd__list_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask tasks list commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__tasks__subcmd__move_commands] )) ||
+_sealtask__subcmd__tasks__subcmd__move_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask tasks move commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__tasks__subcmd__reopen_commands] )) ||
+_sealtask__subcmd__tasks__subcmd__reopen_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask tasks reopen commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__tasks__subcmd__unarchive_commands] )) ||
+_sealtask__subcmd__tasks__subcmd__unarchive_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask tasks unarchive commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__tasks__subcmd__update_commands] )) ||
+_sealtask__subcmd__tasks__subcmd__update_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask tasks update commands' commands "$@"
+}
+
+if [ "$funcstack[1]" = "_sealtask" ]; then
+    _sealtask "$@"
+else
+    compdef _sealtask sealtask
+fi

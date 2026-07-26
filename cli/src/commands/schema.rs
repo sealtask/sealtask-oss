@@ -1,6 +1,6 @@
-use crate::args::Cli;
+use crate::discovery;
 use crate::output::{CliResult, OutputFormat, print_json};
-use clap::{Command, CommandFactory};
+use clap::Command;
 use sealtask_client_core::PublicError;
 use serde::Serialize;
 
@@ -29,7 +29,7 @@ struct ArgumentSchemaV1 {
 }
 
 pub(crate) fn run(format: OutputFormat, path: &[String]) -> CliResult<()> {
-    let mut root = Cli::command();
+    let mut root = discovery::command();
     root.build();
     let canonical_path = canonical_command_path(&root, path)?;
     let selected = select_command(&mut root, path)?;
@@ -167,7 +167,7 @@ mod tests {
 
     #[test]
     fn machine_schema_excludes_hidden_commands_and_arguments() {
-        let mut root = Cli::command();
+        let mut root = discovery::command();
         root.build();
         let schema = command_schema(&mut root, "sealtask");
 
@@ -191,7 +191,7 @@ mod tests {
 
     #[test]
     fn nested_schema_uses_runnable_paths_and_presence_flags_have_no_values() {
-        let mut root = Cli::command();
+        let mut root = discovery::command();
         root.build();
         let selected = select_command(&mut root, &["tasks".to_string(), "update".to_string()])
             .expect("tasks update");

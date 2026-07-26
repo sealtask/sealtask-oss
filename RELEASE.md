@@ -58,6 +58,19 @@ compact JSON document, `--format json-pretty` is equivalent except for
 whitespace, and two named profiles under a temporary `--config-dir` do not
 share credentials or unlock state.
 
+Generate the version-matched completion and manual bundle and attach it to
+binary/package-manager releases:
+
+```bash
+SEALTASK_BINARY=target/release/sealtask ./scripts/generate-cli-assets.sh update
+SEALTASK_BINARY=target/release/sealtask ./scripts/generate-cli-assets.sh check
+find cli/assets -type f -print | sort
+```
+
+The bundle contains Bash, Zsh, Fish, and PowerShell completions plus section-1
+manual pages for every visible command. Generate it from the exact release
+binary; do not reuse assets from a prior CLI version.
+
 Exercise data-key unlock against both a legacy version 1 account and an OPAQUE
 export-key version 2 account. For version 2, record successful single-command,
 unlock-daemon, and platform-keychain flows against the hosted API, including an
