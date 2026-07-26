@@ -185,14 +185,20 @@ pub(crate) fn print_comments(comments: &[AgentComment], format: OutputFormat) ->
             )?;
         }
         OutputFormat::Table => {
+            let ids = selectable_short_ids(
+                &comments
+                    .iter()
+                    .map(|comment| comment.id)
+                    .collect::<Vec<_>>(),
+            );
             let mut table = Table::new([
-                Column::required("ID", 36, 36).preserve(),
+                Column::required("ID", 11, 39).preserve(),
                 Column::optional("Updated", 16, 16, 20),
                 Column::optional("Comment", 12, 64, 40).flex(4),
             ]);
-            for comment in comments {
+            for (comment, id) in comments.iter().zip(ids) {
                 table.push_row([
-                    comment.id.to_string(),
+                    id,
                     comment.updated_at.format("%Y-%m-%d %H:%M").to_string(),
                     comment
                         .body_markdown
@@ -659,15 +665,21 @@ pub(crate) fn print_task_detail(detail: &AgentTaskDetail, format: OutputFormat) 
                 println!();
                 println!("Attachments");
                 println!("{}", "-".repeat(60));
+                let ids = selectable_short_ids(
+                    &attachments
+                        .iter()
+                        .map(|attachment| attachment.id)
+                        .collect::<Vec<_>>(),
+                );
                 let mut table = Table::new([
-                    Column::required("ID", 36, 36).preserve(),
+                    Column::required("ID", 11, 39).preserve(),
                     Column::optional("File", 12, 56, 40).flex(4),
                     Column::optional("Type", 12, 32, 30).flex(2),
                     Column::optional("Size", 6, 12, 20).align(Alignment::Right),
                 ]);
-                for attachment in attachments {
+                for (attachment, id) in attachments.iter().zip(ids) {
                     table.push_row([
-                        attachment.id.to_string(),
+                        id,
                         attachment.file_name.clone(),
                         attachment.content_type.clone(),
                         format!("{} B", attachment.size_bytes),
@@ -819,7 +831,7 @@ fn priority_label(priority: Option<i8>) -> String {
     }
 }
 
-fn task_due_date(task: &AgentTaskSummary) -> String {
+pub(crate) fn task_due_date(task: &AgentTaskSummary) -> String {
     format_due_date(task.due_at, task.work_list_timezone.as_deref())
 }
 

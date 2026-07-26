@@ -28,6 +28,59 @@ impl EntitySelector {
     }
 }
 
+#[derive(Clone, Eq, PartialEq)]
+pub(crate) struct IdSelector(String);
+
+impl IdSelector {
+    pub(crate) fn as_str(&self) -> &str {
+        &self.0
+    }
+
+    pub(crate) fn exact_id(&self) -> Option<Uuid> {
+        self.0
+            .strip_prefix("id:")
+            .and_then(|value| Uuid::parse_str(value).ok())
+    }
+}
+
+impl fmt::Debug for IdSelector {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("IdSelector(<redacted>)")
+    }
+}
+
+impl fmt::Display for IdSelector {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(&self.0)
+    }
+}
+
+impl FromStr for IdSelector {
+    type Err = String;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        let value = value.trim();
+        if value.is_empty() {
+            return Err("ID selector must not be empty".to_string());
+        }
+        if value.len() > MAXIMUM_SELECTOR_BYTES {
+            return Err(format!(
+                "ID selector must be at most {MAXIMUM_SELECTOR_BYTES} bytes"
+            ));
+        }
+        if value.chars().any(char::is_control) {
+            return Err("ID selector must not contain control characters".to_string());
+        }
+
+        let unprefixed = value.strip_prefix("id:").unwrap_or(value);
+        if let Ok(id) = Uuid::parse_str(unprefixed) {
+            return Ok(Self(format!("id:{}", id.simple())));
+        }
+        let normalized = normalize_id_prefix(unprefixed).map_err(|error| error.to_string())?;
+        Ok(Self(format!("id:{normalized}")))
+    }
+}
+
 impl fmt::Debug for EntitySelector {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str("EntitySelector(<redacted>)")
@@ -155,6 +208,45 @@ pub(crate) fn resolve_entity(
     }
 
     Err(not_found(entity_kind, scope, raw, list_command, "name"))
+}
+
+pub(crate) fn resolve_id_selector(
+    entity_kind: &str,
+    scope: &str,
+    selector: &IdSelector,
+    mut ids: Vec<Uuid>,
+    list_command: &str,
+) -> PublicResult<Uuid> {
+    if let Some(id) = selector.exact_id() {
+        return Ok(id);
+    }
+
+    ids.sort_unstable();
+    ids.dedup();
+    let prefix = selector
+        .as_str()
+        .strip_prefix("id:")
+        .expect("ID selectors are normalized with an id: prefix");
+    let matches = ids
+        .into_iter()
+        .filter(|id| simple_id(*id).starts_with(prefix))
+        .collect::<Vec<_>>();
+    match matches.as_slice() {
+        [id] => Ok(*id),
+        [] => Err(PublicError::validation(format!(
+            "no {entity_kind} matching ID prefix '{prefix}' was found in {scope}; run '{list_command}' to discover valid targets"
+        ))),
+        _ => {
+            let choices = matches
+                .iter()
+                .map(|id| format!("id:{}", id.simple()))
+                .collect::<Vec<_>>()
+                .join(", ");
+            Err(PublicError::validation(format!(
+                "ambiguous {entity_kind} ID prefix '{prefix}' in {scope}; matching IDs: {choices}; retry with one of these exact ID selectors"
+            )))
+        }
+    }
 }
 
 fn resolve_name(
@@ -455,6 +547,10 @@ mod tests {
         value.parse().expect("selector")
     }
 
+    fn id_selector(value: &str) -> IdSelector {
+        value.parse().expect("ID selector")
+    }
+
     fn candidate(id: &str, name: &str) -> EntityCandidate {
         EntityCandidate {
             id: Uuid::parse_str(id).expect("UUID"),
@@ -548,6 +644,52 @@ mod tests {
         }
 
         assert!(selector("id:01900000").exact_id().is_none());
+    }
+
+    #[test]
+    fn id_only_selectors_normalize_full_ids_and_reject_names_or_short_prefixes() {
+        let id = Uuid::parse_str("01900000-0000-7000-8000-000000000001").expect("UUID");
+        for value in [id.to_string(), format!("id:{id}"), id.simple().to_string()] {
+            let selector = id_selector(&value);
+            assert_eq!(selector.exact_id(), Some(id));
+            assert_eq!(selector.to_string(), format!("id:{}", id.simple()));
+            assert_eq!(format!("{selector:?}"), "IdSelector(<redacted>)");
+        }
+
+        assert!("Operations".parse::<IdSelector>().is_err());
+        assert!("id:0190".parse::<IdSelector>().is_err());
+    }
+
+    #[test]
+    fn id_only_prefix_resolution_is_unique_deterministic_and_plaintext_free() {
+        let first = Uuid::parse_str("01900000-0000-7000-8000-000000000001").expect("UUID");
+        let second = Uuid::parse_str("01900000-0000-7000-8000-000000000002").expect("UUID");
+        let other = Uuid::parse_str("02900000-0000-7000-8000-000000000003").expect("UUID");
+
+        assert_eq!(
+            resolve_id_selector(
+                "attachment",
+                "task",
+                &id_selector("02900000"),
+                vec![first, other],
+                "sealtask tasks get id:task",
+            )
+            .expect("unique prefix"),
+            other
+        );
+
+        let error = resolve_id_selector(
+            "comment",
+            "task",
+            &id_selector("01900000"),
+            vec![second, first],
+            "sealtask comments list id:task",
+        )
+        .expect_err("ambiguous prefix");
+        let message = error.to_string();
+        assert!(message.contains(&format!("id:{}", first.simple())));
+        assert!(message.contains(&format!("id:{}", second.simple())));
+        assert!(!message.contains("comment body"));
     }
 
     #[test]

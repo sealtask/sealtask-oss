@@ -641,7 +641,7 @@ _arguments "${_arguments_options[@]}" : \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
-'--verbose[Print expanded human-readable project details]' \
+'--verbose[]' \
 '--include-archived[Include archived projects]' \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
 '--raw[]' \
@@ -677,7 +677,7 @@ _arguments "${_arguments_options[@]}" : \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
-'--verbose[Print expanded human-readable project details]' \
+'--details[Print expanded human-readable project details]' \
 '--include-archived[Include archived projects]' \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
 '--raw[]' \
@@ -1019,7 +1019,7 @@ _arguments "${_arguments_options[@]}" : \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
-'--verbose[Print expanded human-readable project details]' \
+'--verbose[]' \
 '--include-archived[Include archived projects]' \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
 '--raw[]' \
@@ -1055,7 +1055,7 @@ _arguments "${_arguments_options[@]}" : \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
-'--verbose[Print expanded human-readable project details]' \
+'--details[Print expanded human-readable project details]' \
 '--include-archived[Include archived projects]' \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
 '--raw[]' \
@@ -1420,6 +1420,10 @@ _arguments "${_arguments_options[@]}" : \
 _arguments "${_arguments_options[@]}" : \
 '(--work-list-id)--project=[Restrict results to a project name, UUID, or unique UUID prefix]:PROJECT:_default' \
 '--work-list-id=[Restrict results to one exact project UUID (legacy compatibility)]:WORK_LIST_ID:_default' \
+'(--field --raw)*--columns=[Select and order human table columns (comma-separated or repeatable)]:COLUMN:(id title project project-id priority due status comments created updated)' \
+'(--raw)--sort=[Sort text/date/status ascending, priority high-first, or timestamps newest-first]:FIELD:(id title project priority due status created updated)' \
+'(--columns --raw)--field=[Emit one sanitized raw value per task with no headings, totals, or empty-state text]:FIELD:(id title url)' \
+'(--raw)--web-url=[Browser application origin; valid only with --field url (defaults to the API origin)]:ORIGIN:_default' \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
@@ -1841,7 +1845,7 @@ _arguments "${_arguments_options[@]}" : \
 '--task-id=[Exact task UUID (legacy compatibility)]:TASK_ID:_default' \
 '(--work-list-id)--project=[Project name, UUID, or unique UUID prefix]:PROJECT:_default' \
 '--work-list-id=[Exact project UUID (legacy compatibility)]:WORK_LIST_ID:_default' \
-'--attachment-id=[Attachment UUID]:ATTACHMENT_ID:_default' \
+'--attachment-id=[Attachment UUID or unique UUID prefix]:ATTACHMENT_ID:_default' \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
@@ -1872,7 +1876,7 @@ _arguments "${_arguments_options[@]}" : \
 '--task-id=[Exact task UUID (legacy compatibility)]:TASK_ID:_default' \
 '(--work-list-id)--project=[Project name, UUID, or unique UUID prefix]:PROJECT:_default' \
 '--work-list-id=[Exact project UUID (legacy compatibility)]:WORK_LIST_ID:_default' \
-'--attachment-id=[Attachment UUID]:ATTACHMENT_ID:_default' \
+'--attachment-id=[Attachment UUID or unique UUID prefix]:ATTACHMENT_ID:_default' \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, compact JSON, or pretty JSON output]:FORMAT:(table json json-pretty)' \
@@ -1902,7 +1906,7 @@ _arguments "${_arguments_options[@]}" : \
 '--task-id=[Exact task UUID (legacy compatibility)]:TASK_ID:_default' \
 '(--work-list-id)--project=[Project name, UUID, or unique UUID prefix]:PROJECT:_default' \
 '--work-list-id=[Exact project UUID (legacy compatibility)]:WORK_LIST_ID:_default' \
-'--attachment-id=[Attachment UUID]:ATTACHMENT_ID:_default' \
+'--attachment-id=[Attachment UUID or unique UUID prefix]:ATTACHMENT_ID:_default' \
 '--output=[Current-working-directory-relative output path (absolute paths, parent traversal, and symlinks are rejected)]:OUTPUT:_files' \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
@@ -2443,7 +2447,7 @@ _arguments "${_arguments_options[@]}" : \
 '--task-id=[Exact task UUID (legacy compatibility)]:TASK_ID:_default' \
 '(--work-list-id)--project=[Project name, UUID, or unique UUID prefix]:PROJECT:_default' \
 '--work-list-id=[Exact project UUID (legacy compatibility)]:WORK_LIST_ID:_default' \
-'--comment-id=[Comment UUID]:COMMENT_ID:_default' \
+'--comment-id=[Comment UUID or unique UUID prefix]:COMMENT_ID:_default' \
 '--body=[Replacement plaintext Markdown comment body]:BODY:_default' \
 '(--input-stdin --body)--input-file=[Read the complete camelCase comment input object from a UTF-8 JSON file]:PATH:_files' \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
@@ -2476,7 +2480,7 @@ _arguments "${_arguments_options[@]}" : \
 '--task-id=[Exact task UUID (legacy compatibility)]:TASK_ID:_default' \
 '(--work-list-id)--project=[Project name, UUID, or unique UUID prefix]:PROJECT:_default' \
 '--work-list-id=[Exact project UUID (legacy compatibility)]:WORK_LIST_ID:_default' \
-'--comment-id=[Comment UUID]:COMMENT_ID:_default' \
+'--comment-id=[Comment UUID or unique UUID prefix]:COMMENT_ID:_default' \
 '(--input-stdin)--input-file=[Read an optional audit patch from a UTF-8 JSON file]:PATH:_files' \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \

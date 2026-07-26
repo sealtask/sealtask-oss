@@ -16,6 +16,28 @@ pub(crate) fn run_info(runtime: &RuntimeClient, format: OutputFormat) -> CliResu
         "outputFormats": ["table", "json", "json-pretty"],
         "shellCompletions": ["bash", "zsh", "fish", "powershell"],
         "manualPages": true,
+        "taskListing": {
+            "columns": [
+                "id", "title", "project", "project-id", "priority", "due", "status",
+                "comments", "created", "updated",
+            ],
+            "sortFields": [
+                "id", "title", "project", "priority", "due", "status", "created", "updated",
+            ],
+            "rawFields": ["id", "title", "url"],
+            "rawFieldOutput": "newline-delimited",
+            "webUrlEnvironment": "SEALTASK_WEB_URL",
+            "webUrlDefault": "API origin",
+            "crossProjectTableIncludesProject": true,
+        },
+        "idPrefixSelectors": {
+            "minimumHexCharacters": 8,
+            "commentFlags": ["--comment-id"],
+            "attachmentFlags": ["--attachment-id"],
+        },
+        "canonicalFlags": {
+            "projectListDetails": "--details",
+        },
         "editorInput": {
             "commandPrecedence": ["SEALTASK_EDITOR", "VISUAL", "EDITOR", "platform-default"],
             "directProcess": true,
@@ -78,6 +100,8 @@ pub(crate) fn run_info(runtime: &RuntimeClient, format: OutputFormat) -> CliResu
             println!("Config: {}", config_dir()?.display());
             println!("Editor: SEALTASK_EDITOR > VISUAL > EDITOR");
             println!("Picker: sealtask pick project|task");
+            println!("Task lists: --columns, --sort, --field id|title|url");
+            println!("Project details: sealtask projects list --details");
             Ok(())
         }
         OutputFormat::Json | OutputFormat::JsonPretty => {

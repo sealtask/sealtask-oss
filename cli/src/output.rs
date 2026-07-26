@@ -527,10 +527,20 @@ fn sanitize_terminal_text(value: &str, preserve_newlines: bool) -> String {
             '\n' if preserve_newlines => Some('\n'),
             '\r' if preserve_newlines => None,
             ch if ch.is_whitespace() => Some(' '),
-            ch if ch.is_control() => None,
+            ch if ch.is_control() || is_bidi_control(ch) => None,
             ch => Some(ch),
         })
         .collect()
+}
+
+fn is_bidi_control(character: char) -> bool {
+    matches!(
+        character,
+        '\u{061c}'
+            | '\u{200e}'..='\u{200f}'
+            | '\u{202a}'..='\u{202e}'
+            | '\u{2066}'..='\u{2069}'
+    )
 }
 
 fn print_json_stderr_envelope(
@@ -862,8 +872,10 @@ mod tests {
     #[test]
     fn test_should_prevent_terminal_lines_from_injecting_controls_or_extra_rows() {
         assert_eq!(
-            terminal_line("safe\nnext\rrow\tcell\u{2028}more\u{1b}[2J\u{009b}31m"),
-            "safe next row cell more[2J31m"
+            terminal_line(
+                "safe\nnext\rrow\tcell\u{2028}more\u{1b}[2J\u{009b}31m\u{202e}spoof\u{202c}\u{2066}isolate\u{2069}"
+            ),
+            "safe next row cell more[2J31mspoofisolate"
         );
     }
 

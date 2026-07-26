@@ -6,7 +6,7 @@ use crate::interaction::require_confirmation;
 use crate::output::{CliResult, OutputFormat};
 use crate::render::{print_comment, print_comments, print_delete_result, print_empty_collection};
 use crate::resolver::{ProjectLifecycle, TaskLifecycle, resolve_project, resolve_task};
-use crate::selectors::ResolvedEntity;
+use crate::selectors::{IdSelector, ResolvedEntity, resolve_id_selector};
 use crate::terminal::with_progress;
 use sealtask_client_api::DeleteCommentRequest;
 use sealtask_client_runtime::{
@@ -143,6 +143,7 @@ async fn update_comment(
         TaskLifecycle::Any,
     )
     .await?;
+    let comment_id = resolve_comment_target(runtime, project.id, task.id, &args.comment_id).await?;
     let input = resolve_comment_input(
         args.body.as_deref(),
         None,
@@ -155,7 +156,7 @@ async fn update_comment(
         runtime.update_comment(UpdateCommentArgs {
             work_list_id: project.id,
             task_id: task.id,
-            comment_id: args.comment_id,
+            comment_id,
             input,
             password_stdin: args.password_stdin,
         }),
@@ -187,6 +188,7 @@ async fn delete_comment(
         TaskLifecycle::Any,
     )
     .await?;
+    let comment_id = resolve_comment_target(runtime, project.id, task.id, &args.comment_id).await?;
     require_confirmation(
         format,
         non_interactive,
@@ -194,7 +196,7 @@ async fn delete_comment(
         args.input_stdin || args.password_stdin,
         &format!(
             "comment {} on {} in project {}",
-            args.comment_id,
+            comment_id,
             entity_label("task", &task),
             project.id
         ),
@@ -206,7 +208,7 @@ async fn delete_comment(
         runtime.delete_comment(DeleteCommentArgs {
             work_list_id: project.id,
             task_id: task.id,
-            comment_id: args.comment_id,
+            comment_id,
             input,
         }),
     )
@@ -218,10 +220,40 @@ async fn delete_comment(
             "deleted": true,
             "workListId": project.id,
             "taskId": task.id,
-            "commentId": args.comment_id,
+            "commentId": comment_id,
         }),
-        &format!("Deleted comment {}.", args.comment_id),
+        &format!("Deleted comment {comment_id}."),
     )
+}
+
+async fn resolve_comment_target(
+    runtime: &RuntimeClient,
+    project_id: Uuid,
+    task_id: Uuid,
+    selector: &IdSelector,
+) -> CliResult<Uuid> {
+    if let Some(id) = selector.exact_id() {
+        return Ok(id);
+    }
+
+    let mut client = runtime.authenticated_api_client()?;
+    let comments = with_progress(
+        "Resolving comment ID…",
+        client.list_comments(project_id, task_id),
+    )
+    .await?;
+    resolve_id_selector(
+        "comment",
+        &format!("task {task_id} in project {project_id}"),
+        selector,
+        comments.into_iter().map(|comment| comment.id).collect(),
+        &format!(
+            "sealtask comments list id:{} --project id:{}",
+            task_id.simple(),
+            project_id.simple()
+        ),
+    )
+    .map_err(Into::into)
 }
 
 fn entity_label(kind: &str, entity: &ResolvedEntity) -> String {

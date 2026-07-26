@@ -520,6 +520,13 @@ pub(crate) fn clear_active_progress() {
     }
 }
 
+pub(crate) fn stdout_is_terminal() -> bool {
+    RUNTIME.get().map_or_else(
+        || io::stdout().is_terminal(),
+        |runtime| runtime.policy.stdout_is_terminal,
+    )
+}
+
 pub(crate) fn write_buffered_stdout(
     args: std::fmt::Arguments<'_>,
     newline: bool,

@@ -515,7 +515,7 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fi
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l verbose -d 'Print expanded human-readable project details'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l verbose
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l include-archived -d 'Include archived projects'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l raw
@@ -554,7 +554,7 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_s
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from list" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from list" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from list" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from list" -l verbose -d 'Print expanded human-readable project details'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from list" -l details -d 'Print expanded human-readable project details'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from list" -l include-archived -d 'Include archived projects'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from list" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from list" -l raw
@@ -784,7 +784,7 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l verbose -d 'Print expanded human-readable project details'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l verbose
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l include-archived -d 'Include archived projects'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections help" -l raw
@@ -823,7 +823,7 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from list" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from list" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from list" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from list" -l verbose -d 'Print expanded human-readable project details'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from list" -l details -d 'Print expanded human-readable project details'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from list" -l include-archived -d 'Include archived projects'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from list" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from list" -l raw
@@ -1075,6 +1075,28 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get create edit update move complete reopen archive unarchive delete attachments help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from list" -l project -d 'Restrict results to a project name, UUID, or unique UUID prefix' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from list" -l work-list-id -d 'Restrict results to one exact project UUID (legacy compatibility)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from list" -l columns -d 'Select and order human table columns (comma-separated or repeatable)' -r -f -a "id\t''
+title\t''
+project\t''
+project-id\t''
+priority\t''
+due\t''
+status\t''
+comments\t''
+created\t''
+updated\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from list" -l sort -d 'Sort text/date/status ascending, priority high-first, or timestamps newest-first' -r -f -a "id\t''
+title\t''
+project\t''
+priority\t''
+due\t''
+status\t''
+created\t''
+updated\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from list" -l field -d 'Emit one sanitized raw value per task with no headings, totals, or empty-state text' -r -f -a "id\t''
+title\t''
+url\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from list" -l web-url -d 'Browser application origin; valid only with --field url (defaults to the API origin)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from list" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from list" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from list" -l format -d 'Select human-readable, compact JSON, or pretty JSON output' -r -f -a "table\t''
@@ -1807,7 +1829,7 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_s
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from update" -l task-id -d 'Exact task UUID (legacy compatibility)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from update" -l project -d 'Project name, UUID, or unique UUID prefix' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from update" -l work-list-id -d 'Exact project UUID (legacy compatibility)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from update" -l comment-id -d 'Comment UUID' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from update" -l comment-id -d 'Comment UUID or unique UUID prefix' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from update" -l body -d 'Replacement plaintext Markdown comment body' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from update" -l input-file -d 'Read the complete camelCase comment input object from a UTF-8 JSON file' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from update" -l api-url -d 'SealTask API base URL' -r
@@ -1841,7 +1863,7 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_s
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from delete" -l task-id -d 'Exact task UUID (legacy compatibility)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from delete" -l project -d 'Project name, UUID, or unique UUID prefix' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from delete" -l work-list-id -d 'Exact project UUID (legacy compatibility)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from delete" -l comment-id -d 'Comment UUID' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from delete" -l comment-id -d 'Comment UUID or unique UUID prefix' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from delete" -l input-file -d 'Read an optional audit patch from a UTF-8 JSON file' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from delete" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from delete" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r

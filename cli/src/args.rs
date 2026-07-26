@@ -1,5 +1,5 @@
 use crate::human_input::parse_priority;
-use crate::selectors::EntitySelector;
+use crate::selectors::{EntitySelector, IdSelector};
 use chrono::{DateTime, Utc};
 use clap::{ArgAction, ArgGroup, Args, Parser, Subcommand, ValueEnum};
 use std::fmt;
@@ -200,6 +200,40 @@ pub(crate) enum CompletionShell {
     PowerShell,
 }
 
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, ValueEnum)]
+pub(crate) enum TaskListColumnArg {
+    Id,
+    Title,
+    Project,
+    #[value(name = "project-id")]
+    ProjectId,
+    Priority,
+    Due,
+    Status,
+    Comments,
+    Created,
+    Updated,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
+pub(crate) enum TaskListSortArg {
+    Id,
+    Title,
+    Project,
+    Priority,
+    Due,
+    Status,
+    Created,
+    Updated,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
+pub(crate) enum TaskListFieldArg {
+    Id,
+    Title,
+    Url,
+}
+
 #[derive(Subcommand, Debug)]
 pub(crate) enum Command {
     /// Generate a shell completion script without reading configuration or credentials.
@@ -240,9 +274,8 @@ pub(crate) enum Command {
     /// List, inspect, select, archive, or restore projects.
     #[command(name = "projects", visible_alias = "lists")]
     Projects {
-        /// Print expanded human-readable project details.
-        #[arg(long)]
-        verbose: bool,
+        #[arg(long = "verbose", hide = true)]
+        legacy_verbose: bool,
         /// Include archived projects.
         #[arg(long)]
         include_archived: bool,
@@ -359,8 +392,8 @@ pub(crate) enum ProjectsCommand {
     /// List accessible projects.
     List {
         /// Print expanded human-readable project details.
-        #[arg(long)]
-        verbose: bool,
+        #[arg(long, alias = "verbose")]
+        details: bool,
         /// Include archived projects.
         #[arg(long)]
         include_archived: bool,
@@ -454,6 +487,34 @@ pub(crate) enum TasksCommand {
         /// List assigned tasks across all accessible projects.
         #[arg(long, conflicts_with_all = ["project", "work_list_id"])]
         all: bool,
+        /// Select and order human table columns (comma-separated or repeatable).
+        #[arg(
+            long,
+            value_enum,
+            value_delimiter = ',',
+            value_name = "COLUMN",
+            conflicts_with_all = ["field", "raw"]
+        )]
+        columns: Vec<TaskListColumnArg>,
+        /// Sort text/date/status ascending, priority high-first, or timestamps newest-first.
+        #[arg(long, value_enum, value_name = "FIELD", conflicts_with = "raw")]
+        sort: Option<TaskListSortArg>,
+        /// Emit one sanitized raw value per task with no headings, totals, or empty-state text.
+        #[arg(
+            long,
+            value_enum,
+            value_name = "FIELD",
+            conflicts_with_all = ["columns", "raw"]
+        )]
+        field: Option<TaskListFieldArg>,
+        /// Browser application origin; valid only with --field url (defaults to the API origin).
+        #[arg(
+            long,
+            env = "SEALTASK_WEB_URL",
+            value_name = "ORIGIN",
+            conflicts_with = "raw"
+        )]
+        web_url: Option<String>,
         /// Read the account password from stdin when no local unlock is available.
         #[arg(long)]
         password_stdin: bool,
@@ -1170,9 +1231,9 @@ pub(crate) struct CommentUpdateArgsCli {
     /// Exact project UUID (legacy compatibility).
     #[arg(long)]
     pub(crate) work_list_id: Option<Uuid>,
-    /// Comment UUID.
+    /// Comment UUID or unique UUID prefix.
     #[arg(long)]
-    pub(crate) comment_id: Uuid,
+    pub(crate) comment_id: IdSelector,
     /// Replacement plaintext Markdown comment body.
     #[arg(long)]
     pub(crate) body: Option<String>,
@@ -1226,9 +1287,9 @@ pub(crate) struct CommentDeleteArgsCli {
     /// Exact project UUID (legacy compatibility).
     #[arg(long)]
     pub(crate) work_list_id: Option<Uuid>,
-    /// Comment UUID.
+    /// Comment UUID or unique UUID prefix.
     #[arg(long)]
-    pub(crate) comment_id: Uuid,
+    pub(crate) comment_id: IdSelector,
     /// Read an optional audit patch from a UTF-8 JSON file.
     #[arg(long, value_name = "PATH", conflicts_with = "input_stdin")]
     pub(crate) input_file: Option<PathBuf>,
@@ -1457,9 +1518,9 @@ pub(crate) struct TaskAttachmentDeleteArgsCli {
     /// Exact project UUID (legacy compatibility).
     #[arg(long)]
     pub(crate) work_list_id: Option<Uuid>,
-    /// Attachment UUID.
+    /// Attachment UUID or unique UUID prefix.
     #[arg(long)]
-    pub(crate) attachment_id: Uuid,
+    pub(crate) attachment_id: IdSelector,
     /// Read the account password from stdin when no local unlock is available.
     #[arg(long)]
     pub(crate) password_stdin: bool,
@@ -1483,9 +1544,9 @@ pub(crate) struct TaskAttachmentReadArgsCli {
     /// Exact project UUID (legacy compatibility).
     #[arg(long)]
     pub(crate) work_list_id: Option<Uuid>,
-    /// Attachment UUID.
+    /// Attachment UUID or unique UUID prefix.
     #[arg(long)]
-    pub(crate) attachment_id: Uuid,
+    pub(crate) attachment_id: IdSelector,
     /// Read the account password from stdin when no local unlock is available.
     #[arg(long)]
     pub(crate) password_stdin: bool,
@@ -1506,9 +1567,9 @@ pub(crate) struct TaskAttachmentDownloadArgsCli {
     /// Exact project UUID (legacy compatibility).
     #[arg(long)]
     pub(crate) work_list_id: Option<Uuid>,
-    /// Attachment UUID.
+    /// Attachment UUID or unique UUID prefix.
     #[arg(long)]
-    pub(crate) attachment_id: Uuid,
+    pub(crate) attachment_id: IdSelector,
     #[arg(
         long,
         help = "Current-working-directory-relative output path (absolute paths, parent traversal, and symlinks are rejected)"

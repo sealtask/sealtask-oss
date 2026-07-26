@@ -4853,7 +4853,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__projects__subcmd__list)
-            opts="-q -v -h --verbose --include-archived --password-stdin --raw --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
+            opts="-q -v -h --details --include-archived --password-stdin --raw --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -6533,7 +6533,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__tasks__subcmd__list)
-            opts="-q -v -h --project --work-list-id --include-completed --include-archived --all --password-stdin --raw --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
+            opts="-q -v -h --project --work-list-id --include-completed --include-archived --all --columns --sort --field --web-url --password-stdin --raw --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -6544,6 +6544,22 @@ _sealtask() {
                     return 0
                     ;;
                 --work-list-id)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --columns)
+                    COMPREPLY=($(compgen -W "id title project project-id priority due status comments created updated" -- "${cur}"))
+                    return 0
+                    ;;
+                --sort)
+                    COMPREPLY=($(compgen -W "id title project priority due status created updated" -- "${cur}"))
+                    return 0
+                    ;;
+                --field)
+                    COMPREPLY=($(compgen -W "id title url" -- "${cur}"))
+                    return 0
+                    ;;
+                --web-url)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;

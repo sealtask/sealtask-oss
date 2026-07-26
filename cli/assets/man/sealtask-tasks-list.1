@@ -4,7 +4,7 @@
 .SH NAME
 sealtask\-tasks\-list \- List tasks in the selected/current project, or assigned tasks when none is selected
 .SH SYNOPSIS
-\fBsealtask tasks list\fR [\fB\-\-api\-url\fR] [\fB\-\-project\fR] [\fB\-\-storage\-origin\fR] [\fB\-\-work\-list\-id\fR] [\fB\-\-include\-completed\fR] [\fB\-\-json\fR] [\fB\-\-format\fR] [\fB\-\-include\-archived\fR] [\fB\-\-all\fR] [\fB\-\-color\fR] [\fB\-\-pager\fR] [\fB\-\-password\-stdin\fR] [\fB\-\-no\-pager\fR] [\fB\-\-progress\fR] [\fB\-q\fR|\fB\-\-quiet\fR] [\fB\-\-non\-interactive\fR] [\fB\-v \fR]... [\fB\-\-debug\fR] [\fB\-\-connect\-timeout\fR] [\fB\-\-read\-timeout\fR] [\fB\-\-request\-timeout\fR] [\fB\-\-profile\fR] [\fB\-\-config\-dir\fR] [\fB\-h\fR|\fB\-\-help\fR]
+\fBsealtask tasks list\fR [\fB\-\-api\-url\fR] [\fB\-\-project\fR] [\fB\-\-storage\-origin\fR] [\fB\-\-work\-list\-id\fR] [\fB\-\-include\-completed\fR] [\fB\-\-json\fR] [\fB\-\-format\fR] [\fB\-\-include\-archived\fR] [\fB\-\-all\fR] [\fB\-\-color\fR] [\fB\-\-columns\fR] [\fB\-\-pager\fR] [\fB\-\-no\-pager\fR] [\fB\-\-sort\fR] [\fB\-\-field\fR] [\fB\-\-progress\fR] [\fB\-q\fR|\fB\-\-quiet\fR] [\fB\-\-web\-url\fR] [\fB\-\-non\-interactive\fR] [\fB\-\-password\-stdin\fR] [\fB\-v \fR]... [\fB\-\-debug\fR] [\fB\-\-connect\-timeout\fR] [\fB\-\-read\-timeout\fR] [\fB\-\-request\-timeout\fR] [\fB\-\-profile\fR] [\fB\-\-config\-dir\fR] [\fB\-h\fR|\fB\-\-help\fR]
 .SH DESCRIPTION
 List tasks in the selected/current project, or assigned tasks when none is selected
 .SH OPTIONS
@@ -28,6 +28,82 @@ Include archived tasks from the selected/current project
 .TP
 \fB\-\-all\fR
 List assigned tasks across all accessible projects
+.SH OPTIONS
+.TP
+\fB\-\-columns\fR \fI<COLUMN>\fR
+Select and order human table columns (comma\-separated or repeatable)
+.br
+
+.br
+\fIPossible values:\fR
+.RS 14
+.IP \(bu 2
+id
+.IP \(bu 2
+title
+.IP \(bu 2
+project
+.IP \(bu 2
+project\-id
+.IP \(bu 2
+priority
+.IP \(bu 2
+due
+.IP \(bu 2
+status
+.IP \(bu 2
+comments
+.IP \(bu 2
+created
+.IP \(bu 2
+updated
+.RE
+.TP
+\fB\-\-sort\fR \fI<FIELD>\fR
+Sort text/date/status ascending, priority high\-first, or timestamps newest\-first
+.br
+
+.br
+\fIPossible values:\fR
+.RS 14
+.IP \(bu 2
+id
+.IP \(bu 2
+title
+.IP \(bu 2
+project
+.IP \(bu 2
+priority
+.IP \(bu 2
+due
+.IP \(bu 2
+status
+.IP \(bu 2
+created
+.IP \(bu 2
+updated
+.RE
+.TP
+\fB\-\-field\fR \fI<FIELD>\fR
+Emit one sanitized raw value per task with no headings, totals, or empty\-state text
+.br
+
+.br
+\fIPossible values:\fR
+.RS 14
+.IP \(bu 2
+id
+.IP \(bu 2
+title
+.IP \(bu 2
+url
+.RE
+.TP
+\fB\-\-web\-url\fR \fI<ORIGIN>\fR
+Browser application origin; valid only with \-\-field url (defaults to the API origin)
+.RS
+May also be specified with the \fBSEALTASK_WEB_URL\fR environment variable.
+.RE
 .SH INPUT
 .TP
 \fB\-\-password\-stdin\fR
@@ -169,5 +245,7 @@ May also be specified with the \fBSEALTASK_CONFIG_DIR\fR environment variable.
 .SH EXTRA
 Examples:
   sealtask tasks list
-  sealtask tasks list \-\-all
-  sealtask tasks list \-\-include\-completed \-\-include\-archived
+  sealtask tasks list \-\-all \-\-sort due
+  sealtask tasks list \-\-columns project,title,due,status
+  sealtask tasks list \-\-field id
+  sealtask tasks list \-\-field url \-\-web\-url https://app.example

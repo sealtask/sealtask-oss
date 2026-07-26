@@ -20,6 +20,7 @@ mod render;
 mod resolver;
 mod selectors;
 mod table;
+mod task_list;
 mod telemetry;
 mod terminal;
 
@@ -68,6 +69,10 @@ async fn main() {
         Some(Command::Completion { .. } | Command::Man { .. })
     ) || cli.serve_unlock_daemon.is_some();
     let composable_picker = matches!(cli.command.as_ref(), Some(Command::Pick { .. }));
+    let composable_field = matches!(
+        cli.command.as_ref(),
+        Some(Command::Tasks { command }) if task_list::is_raw_field_output(command)
+    );
     let terminal = if raw_discovery {
         Ok(None)
     } else {
@@ -80,7 +85,7 @@ async fn main() {
             progress_explicit: long_option_present(&args, "--progress"),
             quiet: cli.quiet,
             format,
-            pager_allowed: !composable_picker,
+            pager_allowed: !(composable_picker || composable_field),
         })
         .map(Some)
     };
@@ -171,6 +176,27 @@ async fn run(cli: Cli, format: OutputFormat, raw_args: &[OsString]) -> CliResult
             .into());
         }
         picker::ensure_picker_terminal()?;
+    }
+
+    if let Some(Command::Tasks {
+        command:
+            args::TasksCommand::List {
+                columns,
+                field,
+                web_url,
+                ..
+            },
+    }) = cli.command.as_ref()
+    {
+        task_list::validate_output_mode(
+            format,
+            columns,
+            *field,
+            long_option_present(raw_args, "--web-url"),
+        )?;
+        if *field == Some(args::TaskListFieldArg::Url) {
+            task_list::resolve_web_origin(web_url.as_deref(), &cli.api_url)?;
+        }
     }
 
     if command_uses_editor(cli.command.as_ref()) {
@@ -264,7 +290,7 @@ async fn run(cli: Cli, format: OutputFormat, raw_args: &[OsString]) -> CliResult
         (Command::Pick { command }, Ok(runtime)) => run_pick(&runtime, command).await,
         (
             Command::Projects {
-                verbose,
+                legacy_verbose,
                 include_archived,
                 password_stdin,
                 raw,
@@ -275,7 +301,7 @@ async fn run(cli: Cli, format: OutputFormat, raw_args: &[OsString]) -> CliResult
             run_projects(
                 &runtime,
                 format,
-                verbose,
+                legacy_verbose,
                 include_archived,
                 password_stdin,
                 raw,

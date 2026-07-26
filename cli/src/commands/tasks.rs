@@ -17,13 +17,14 @@ use crate::output::{
 use crate::render::{
     print_attachment, print_delete_result, print_download_result, print_empty_collection,
     print_raw_my_tasks, print_raw_task_detail, print_raw_tasks, print_readable_attachment,
-    print_task, print_task_detail, print_task_reference_scheme_result, print_tasks,
+    print_task, print_task_detail, print_task_reference_scheme_result,
 };
 use crate::resolver::{
     ProjectLifecycle, TaskLifecycle, load_project, resolve_optional_project, resolve_project,
     resolve_section, resolve_task,
 };
-use crate::selectors::{EntitySelector, ResolvedEntity};
+use crate::selectors::{EntitySelector, IdSelector, ResolvedEntity, resolve_id_selector};
+use crate::task_list::{TaskListOptions, TaskListScope, print_task_list};
 use crate::terminal::{ProgressGuard, with_progress};
 use chrono::Utc;
 use sealtask_client_api::DeleteTaskRequest;
@@ -56,9 +57,14 @@ pub(crate) async fn run_tasks(
             include_completed,
             include_archived,
             all,
+            columns,
+            sort,
+            field,
+            web_url,
             password_stdin,
             raw,
         } => {
+            let explicit_project = project.is_some() || work_list_id.is_some();
             let resolved_project = if all {
                 None
             } else {
@@ -66,6 +72,11 @@ pub(crate) async fn run_tasks(
                     .await?
             };
             let work_list_id = resolved_project.as_ref().map(|project| project.id);
+            let scope = match resolved_project.as_ref() {
+                Some(project) if explicit_project => TaskListScope::Selected(project.clone()),
+                Some(project) => TaskListScope::Current(project.clone()),
+                None => TaskListScope::AcrossProjects,
+            };
             if include_archived && work_list_id.is_none() {
                 return Err(PublicError::validation(
                     "--include-archived requires --project, --work-list-id, or a current project; run 'sealtask projects use <PROJECT>' first",
@@ -123,15 +134,20 @@ pub(crate) async fn run_tasks(
                 )
                 .await?
             };
-            if tasks.is_empty() {
-                let message = if all || work_list_id.is_none() {
-                    "No tasks found."
-                } else {
-                    "No tasks found in this project."
-                };
-                return print_empty_collection(format, message);
-            }
-            print_tasks(&tasks, format)
+            print_task_list(
+                tasks,
+                format,
+                TaskListOptions {
+                    columns: &columns,
+                    sort,
+                    field,
+                    web_url: web_url.as_deref(),
+                    api_url: runtime.api_url(),
+                    include_completed,
+                    include_archived,
+                    scope,
+                },
+            )
         }
         TasksCommand::Get {
             task,
@@ -305,6 +321,14 @@ async fn run_task_attachments(
                 TaskLifecycle::Any,
             )
             .await?;
+            let attachment_id = resolve_attachment_target(
+                runtime,
+                project_id,
+                task.id,
+                &args.attachment_id,
+                args.password_stdin,
+            )
+            .await?;
             require_confirmation(
                 format,
                 non_interactive,
@@ -312,7 +336,7 @@ async fn run_task_attachments(
                 args.password_stdin,
                 &format!(
                     "attachment {} from {} in project {}",
-                    args.attachment_id,
+                    attachment_id,
                     entity_label("task", &task),
                     project_id
                 ),
@@ -322,7 +346,7 @@ async fn run_task_attachments(
                 runtime.delete_task_attachment(DeleteTaskAttachmentArgs {
                     work_list_id: project_id,
                     task_id: task.id,
-                    attachment_id: args.attachment_id,
+                    attachment_id,
                     password_stdin: args.password_stdin,
                 }),
             )
@@ -334,9 +358,9 @@ async fn run_task_attachments(
                     "deleted": true,
                     "workListId": project_id,
                     "taskId": task.id,
-                    "attachmentId": args.attachment_id,
+                    "attachmentId": attachment_id,
                 }),
-                &format!("Deleted attachment {}.", args.attachment_id),
+                &format!("Deleted attachment {attachment_id}."),
             )
         }
         TaskAttachmentsCommand::Read(args) => {
@@ -350,12 +374,20 @@ async fn run_task_attachments(
                 TaskLifecycle::Any,
             )
             .await?;
+            let attachment_id = resolve_attachment_target(
+                runtime,
+                project_id,
+                task.id,
+                &args.attachment_id,
+                args.password_stdin,
+            )
+            .await?;
             let attachment = with_progress(
                 "Downloading and decrypting attachment…",
                 runtime.read_task_attachment(
                     project_id,
                     task.id,
-                    args.attachment_id,
+                    attachment_id,
                     args.password_stdin,
                 ),
             )
@@ -373,12 +405,20 @@ async fn run_task_attachments(
                 TaskLifecycle::Any,
             )
             .await?;
+            let attachment_id = resolve_attachment_target(
+                runtime,
+                project_id,
+                task.id,
+                &args.attachment_id,
+                args.password_stdin,
+            )
+            .await?;
             let attachment = with_progress(
                 "Downloading and decrypting attachment…",
                 runtime.download_task_attachment(
                     project_id,
                     task.id,
-                    args.attachment_id,
+                    attachment_id,
                     args.password_stdin,
                 ),
             )
@@ -389,6 +429,44 @@ async fn run_task_attachments(
             print_download_result(format, &attachment.attachment.file_name, &output_path)
         }
     }
+}
+
+async fn resolve_attachment_target(
+    runtime: &RuntimeClient,
+    project_id: uuid::Uuid,
+    task_id: uuid::Uuid,
+    selector: &IdSelector,
+    password_stdin: bool,
+) -> CliResult<uuid::Uuid> {
+    if let Some(id) = selector.exact_id() {
+        return Ok(id);
+    }
+
+    let detail = with_progress(
+        "Resolving attachment ID…",
+        runtime.get_task(project_id, task_id, password_stdin),
+    )
+    .await?;
+    let ids = detail
+        .task
+        .attachments
+        .as_deref()
+        .unwrap_or_default()
+        .iter()
+        .map(|attachment| attachment.id)
+        .collect();
+    resolve_id_selector(
+        "attachment",
+        &format!("task {task_id} in project {project_id}"),
+        selector,
+        ids,
+        &format!(
+            "sealtask tasks get id:{} --project id:{}",
+            task_id.simple(),
+            project_id.simple()
+        ),
+    )
+    .map_err(Into::into)
 }
 
 async fn resolve_task_target(

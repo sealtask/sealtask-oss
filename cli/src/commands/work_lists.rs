@@ -45,7 +45,7 @@ pub(crate) async fn run_stats(runtime: &RuntimeClient, format: OutputFormat) -> 
 pub(crate) async fn run_projects(
     runtime: &RuntimeClient,
     format: OutputFormat,
-    verbose: bool,
+    legacy_verbose: bool,
     include_archived: bool,
     password_stdin: bool,
     raw: bool,
@@ -53,7 +53,7 @@ pub(crate) async fn run_projects(
 ) -> CliResult<()> {
     match command {
         Some(ProjectsCommand::List {
-            verbose: command_verbose,
+            details,
             include_archived: command_include_archived,
             password_stdin: command_password_stdin,
             raw: command_raw,
@@ -61,7 +61,7 @@ pub(crate) async fn run_projects(
             list_projects(
                 runtime,
                 format,
-                verbose || command_verbose,
+                legacy_verbose || details,
                 include_archived || command_include_archived,
                 password_stdin || command_password_stdin,
                 raw || command_raw,
@@ -74,7 +74,7 @@ pub(crate) async fn run_projects(
             raw: command_raw,
         }) => {
             reject_project_options(&[
-                ("--verbose", verbose),
+                ("--verbose", legacy_verbose),
                 ("--include-archived", include_archived),
             ])?;
             let password_stdin = password_stdin || command_password_stdin;
@@ -101,7 +101,7 @@ pub(crate) async fn run_projects(
             raw: command_raw,
         }) => {
             reject_project_options(&[
-                ("--verbose", verbose),
+                ("--verbose", legacy_verbose),
                 ("--include-archived", include_archived),
             ])?;
             let password_stdin = password_stdin || command_password_stdin;
@@ -129,7 +129,7 @@ pub(crate) async fn run_projects(
             raw: command_raw,
         }) => {
             reject_project_options(&[
-                ("--verbose", verbose),
+                ("--verbose", legacy_verbose),
                 ("--include-archived", include_archived),
             ])?;
             let password_stdin = password_stdin || command_password_stdin;
@@ -156,7 +156,7 @@ pub(crate) async fn run_projects(
             password_stdin: command_password_stdin,
         }) => {
             reject_project_options(&[
-                ("--verbose", verbose),
+                ("--verbose", legacy_verbose),
                 ("--include-archived", include_archived),
                 ("--raw", raw),
             ])?;
@@ -197,7 +197,7 @@ pub(crate) async fn run_projects(
         }
         Some(ProjectsCommand::Current) => {
             reject_project_options(&[
-                ("--verbose", verbose),
+                ("--verbose", legacy_verbose),
                 ("--include-archived", include_archived),
                 ("--password-stdin", password_stdin),
                 ("--raw", raw),
@@ -231,7 +231,7 @@ pub(crate) async fn run_projects(
         }
         Some(ProjectsCommand::Clear) => {
             reject_project_options(&[
-                ("--verbose", verbose),
+                ("--verbose", legacy_verbose),
                 ("--include-archived", include_archived),
                 ("--password-stdin", password_stdin),
                 ("--raw", raw),
@@ -260,7 +260,7 @@ pub(crate) async fn run_projects(
                 },
         }) => {
             reject_project_options(&[
-                ("--verbose", verbose),
+                ("--verbose", legacy_verbose),
                 ("--include-archived", include_archived),
                 ("--raw", raw),
             ])?;
@@ -283,7 +283,7 @@ pub(crate) async fn run_projects(
             list_projects(
                 runtime,
                 format,
-                verbose,
+                legacy_verbose,
                 include_archived,
                 password_stdin,
                 raw,

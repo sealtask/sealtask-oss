@@ -275,10 +275,10 @@ fn command_examples(path: &[String]) -> Option<&'static str> {
             "Examples:\n  sealtask tasks get \"$(sealtask pick task)\"\n  sealtask pick task --project \"Operations\""
         }
         "projects" => {
-            "Examples:\n  sealtask projects\n  sealtask projects --include-archived --verbose"
+            "Examples:\n  sealtask projects\n  sealtask projects list --include-archived --details"
         }
         "projects list" => {
-            "Examples:\n  sealtask projects list\n  sealtask projects list --include-archived --verbose"
+            "Examples:\n  sealtask projects list\n  sealtask projects list --details\n  sealtask projects list --include-archived --details"
         }
         "projects get" => {
             "Examples:\n  sealtask projects get \"Release Engineering\"\n  sealtask projects get id:019f42ab"
@@ -300,7 +300,7 @@ fn command_examples(path: &[String]) -> Option<&'static str> {
             "Examples:\n  sealtask tasks list\n  sealtask tasks create --title \"Ship 0.4\" --due tomorrow"
         }
         "tasks list" => {
-            "Examples:\n  sealtask tasks list\n  sealtask tasks list --all\n  sealtask tasks list --include-completed --include-archived"
+            "Examples:\n  sealtask tasks list\n  sealtask tasks list --all --sort due\n  sealtask tasks list --columns project,title,due,status\n  sealtask tasks list --field id\n  sealtask tasks list --field url --web-url https://app.example"
         }
         "tasks get" => {
             "Examples:\n  sealtask tasks get \"Prepare release notes\"\n  sealtask tasks get id:019f42ab"
@@ -323,19 +323,19 @@ fn command_examples(path: &[String]) -> Option<&'static str> {
             "Examples:\n  sealtask tasks delete \"Obsolete task\"\n  sealtask --non-interactive tasks delete id:019f42ab --yes"
         }
         "tasks attachments" => {
-            "Examples:\n  sealtask tasks attachments upload \"Ship 0.4\" --file ./release.pdf\n  sealtask tasks attachments read \"Ship 0.4\" --attachment-id 019f42ab-0000-7000-8000-000000000001"
+            "Examples:\n  sealtask tasks attachments upload \"Ship 0.4\" --file ./release.pdf\n  sealtask tasks attachments read \"Ship 0.4\" --attachment-id id:019f42ab"
         }
         "tasks attachments upload" => {
             "Examples:\n  sealtask tasks attachments upload \"Ship 0.4\" --file ./release.pdf\n  sealtask tasks attachments upload \"Ship 0.4\" --file ./notes.txt --content-type text/plain"
         }
         "tasks attachments delete" => {
-            "Examples:\n  sealtask tasks attachments delete \"Ship 0.4\" --attachment-id 019f42ab-0000-7000-8000-000000000001\n  sealtask --non-interactive tasks attachments delete \"Ship 0.4\" --attachment-id 019f42ab-0000-7000-8000-000000000001 --yes"
+            "Examples:\n  sealtask tasks attachments delete \"Ship 0.4\" --attachment-id id:019f42ab\n  sealtask --non-interactive tasks attachments delete \"Ship 0.4\" --attachment-id id:019f42ab --yes"
         }
         "tasks attachments read" => {
-            "Examples:\n  sealtask tasks attachments read \"Ship 0.4\" --attachment-id 019f42ab-0000-7000-8000-000000000001"
+            "Examples:\n  sealtask tasks attachments read \"Ship 0.4\" --attachment-id id:019f42ab"
         }
         "tasks attachments download" => {
-            "Examples:\n  sealtask tasks attachments download \"Ship 0.4\" --attachment-id 019f42ab-0000-7000-8000-000000000001\n  sealtask tasks attachments download \"Ship 0.4\" --attachment-id 019f42ab-0000-7000-8000-000000000001 --output ./release.pdf"
+            "Examples:\n  sealtask tasks attachments download \"Ship 0.4\" --attachment-id id:019f42ab\n  sealtask tasks attachments download \"Ship 0.4\" --attachment-id id:019f42ab --output ./release.pdf"
         }
         "stats" => "Examples:\n  sealtask stats\n  sealtask --json stats",
         "doctor" => {
@@ -358,10 +358,10 @@ fn command_examples(path: &[String]) -> Option<&'static str> {
             "Examples:\n  sealtask comments create \"Ship 0.4\" --body \"Ready for review\"\n  sealtask comments create \"Ship 0.4\" --body-file -\n  sealtask comments create \"Ship 0.4\" --input-file ./comment.json"
         }
         "comments update" => {
-            "Examples:\n  sealtask comments update \"Ship 0.4\" --comment-id 019f42ab-0000-7000-8000-000000000001 --body \"Approved\""
+            "Examples:\n  sealtask comments update \"Ship 0.4\" --comment-id id:019f42ab --body \"Approved\""
         }
         "comments delete" => {
-            "Examples:\n  sealtask comments delete \"Ship 0.4\" --comment-id 019f42ab-0000-7000-8000-000000000001\n  sealtask --non-interactive comments delete \"Ship 0.4\" --comment-id 019f42ab-0000-7000-8000-000000000001 --yes"
+            "Examples:\n  sealtask comments delete \"Ship 0.4\" --comment-id id:019f42ab\n  sealtask --non-interactive comments delete \"Ship 0.4\" --comment-id id:019f42ab --yes"
         }
         "notes" => {
             "Examples:\n  sealtask notes list\n  sealtask notes create --title Runbook --body \"Recovery steps\""

@@ -48,6 +48,7 @@ pub(crate) struct Column {
     alignment: Alignment,
     retention: Retention,
     preserve: bool,
+    retain: bool,
     style: Option<ColumnStyle>,
 }
 
@@ -93,6 +94,16 @@ impl Column {
         self
     }
 
+    /// Keep this column visible even when its declared minimum width does not fit.
+    ///
+    /// Unlike `preserve`, cell contents may still be ellipsized. This is used
+    /// for explicit caller-selected columns, which must never disappear.
+    #[must_use]
+    pub(crate) const fn retain(mut self) -> Self {
+        self.retain = true;
+        self
+    }
+
     #[must_use]
     pub(crate) const fn semantic(mut self, style: ColumnStyle) -> Self {
         self.style = Some(style);
@@ -114,6 +125,7 @@ impl Column {
             alignment: Alignment::Left,
             retention,
             preserve: false,
+            retain: false,
             style: None,
         }
     }
@@ -237,7 +249,7 @@ impl Table {
         {
             let Some(layout_index) = indices
                 .iter()
-                .rposition(|index| !self.columns[*index].preserve)
+                .rposition(|index| !self.columns[*index].preserve && !self.columns[*index].retain)
             else {
                 break;
             };
@@ -655,6 +667,21 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn retained_columns_never_disappear_at_physically_narrow_widths() {
+        let mut table = Table::new([
+            Column::required("First", 8, 24).retain(),
+            Column::required("Second", 8, 24).retain(),
+            Column::required("Third", 8, 24).retain(),
+        ]);
+        table.push_row(["alpha", "bravo", "charlie"]);
+
+        assert_eq!(table.layout(5).indices, [0, 1, 2]);
+        let rendered = table.render_with_width(5);
+        let header = rendered.lines().next().expect("header");
+        assert_eq!(header.split(COLUMN_SEPARATOR).count(), 3);
     }
 
     #[test]

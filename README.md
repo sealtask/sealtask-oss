@@ -135,6 +135,50 @@ sealtask tasks list
 sealtask projects clear
 ```
 
+Use `sealtask projects list --details` for expanded human-readable project
+metadata. The former `--verbose` spelling remains accepted for compatibility,
+but is hidden from help and generated discovery assets.
+
+Task lists show their effective scope on an interactive terminal: an explicitly
+selected project, the saved current project, or assigned tasks across projects.
+Across-project tables include a `Project` column by default, and empty results
+suggest commands appropriate to the active filters. Redirected and JSON output
+omit that interactive context; JSON collection output remains the same stable
+array contract.
+
+Customize human tables with an exact, ordered column list and a natural sort:
+
+```bash
+sealtask tasks list --all --columns project,title,due,status --sort due
+sealtask tasks list --columns id,title,priority,comments,updated --sort priority
+```
+
+Columns are comma-separated or repeatable and must be unique. Supported columns
+are `id`, `title`, `project`, `project-id`, `priority`, `due`, `status`,
+`comments`, `created`, and `updated`. Explicitly requested columns retain caller
+order and stay present even on a narrow terminal. Text, project, due date, and
+status sorts are ascending; priority sorts highest first; created and updated
+sort newest first. `--columns` applies only to table output and is rejected with
+JSON.
+
+For shell composition, `--field id|title|url` writes exactly one sanitized value
+per task, one per line, with no heading, total, scope, or empty-state text:
+
+```bash
+sealtask tasks list --field id
+sealtask tasks list --field title
+SEALTASK_WEB_URL=https://app.example sealtask tasks list --all --field url
+sealtask tasks list --field url --web-url https://app.example
+```
+
+IDs are emitted as reusable full `id:<32-lowercase-hex>` selectors. URLs point
+to `/workspace/work-lists/<project-id>?task=<task-id>`. The web origin must be
+an absolute credential-free HTTP(S) origin without a path, query, or fragment;
+when it is not configured, the CLI derives the origin from `SEALTASK_API_URL`.
+`--web-url` is valid only with `--field url`; `SEALTASK_WEB_URL` is consulted
+only for that field and does not affect other list modes. Raw-field output
+rejects JSON and paging so pipes remain predictable.
+
 ### Shell completion, help, and manual pages
 
 Generate native completion scripts without reading operator configuration,
@@ -286,6 +330,19 @@ sealtask tasks get "Prepare release notes"
 sealtask tasks get id:019f42ab
 sealtask notes get name:"Release checklist"
 ```
+
+Comment and attachment mutation flags are ID-only selectors and accept the same
+unique UUID prefixes shown in human tables:
+
+```bash
+sealtask comments update "Ship 0.4" --comment-id id:019f42ab --body "Approved"
+sealtask tasks attachments read "Ship 0.4" --attachment-id id:019f42ab
+```
+
+At least eight hexadecimal characters are required. Comment prefix discovery
+uses authenticated API metadata without decrypting comment bodies; attachment
+prefix discovery reads the encrypted task payload. A full UUID remains an exact
+fast path.
 
 Discover section names before creating or moving a task:
 

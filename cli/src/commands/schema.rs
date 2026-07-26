@@ -210,4 +210,56 @@ mod tests {
         assert!(json.value_names.is_empty());
         assert!(json.possible_values.is_empty());
     }
+
+    #[test]
+    fn task_list_controls_and_canonical_project_details_are_discoverable() {
+        let mut root = discovery::command();
+        root.build();
+
+        let tasks = select_command(&mut root, &["tasks".to_string(), "list".to_string()])
+            .expect("tasks list");
+        let task_schema = command_schema(tasks, "sealtask tasks list");
+        let columns = task_schema
+            .arguments
+            .iter()
+            .find(|argument| argument.long.as_deref() == Some("columns"))
+            .expect("columns argument");
+        assert_eq!(
+            columns.possible_values,
+            [
+                "id",
+                "title",
+                "project",
+                "project-id",
+                "priority",
+                "due",
+                "status",
+                "comments",
+                "created",
+                "updated",
+            ]
+        );
+        let field = task_schema
+            .arguments
+            .iter()
+            .find(|argument| argument.long.as_deref() == Some("field"))
+            .expect("field argument");
+        assert_eq!(field.possible_values, ["id", "title", "url"]);
+
+        let projects = select_command(&mut root, &["projects".to_string(), "list".to_string()])
+            .expect("projects list");
+        let project_schema = command_schema(projects, "sealtask projects list");
+        assert!(
+            project_schema
+                .arguments
+                .iter()
+                .any(|argument| argument.long.as_deref() == Some("details"))
+        );
+        assert!(
+            project_schema
+                .arguments
+                .iter()
+                .all(|argument| argument.long.as_deref() != Some("verbose"))
+        );
+    }
 }

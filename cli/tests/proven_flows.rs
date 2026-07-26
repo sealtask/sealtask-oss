@@ -239,6 +239,13 @@ async fn cli_proven_flows_round_trip_through_mock_api() {
     let created_comment_json: Value = parse_stdout_json(&create_comment_output.stdout);
     assert_eq!(created_comment_json["bodyMarkdown"], "New comment");
 
+    let comment_id_prefix = fixture
+        .comment_id
+        .simple()
+        .to_string()
+        .chars()
+        .take(8)
+        .collect::<String>();
     let update_comment_output = run_cli(
         home.path(),
         &server.base_url,
@@ -251,7 +258,7 @@ async fn cli_proven_flows_round_trip_through_mock_api() {
             "--task-id",
             &fixture.task_id.to_string(),
             "--comment-id",
-            &fixture.comment_id.to_string(),
+            &comment_id_prefix,
             "--body",
             "Updated comment",
             "--password-stdin",
@@ -458,7 +465,7 @@ async fn cli_proven_flows_round_trip_through_mock_api() {
         )["source"],
         "fixture"
     );
-    assert_eq!(state.list_comments_count, 3);
+    assert_eq!(state.list_comments_count, 4);
     assert_eq!(state.deleted_comment_id, Some(fixture.comment_id));
     assert_eq!(state.deleted_task_id, Some(fixture.task_id));
     assert_eq!(
@@ -497,6 +504,142 @@ fn cli_schema_canonicalizes_lists_alias_to_projects() {
             .expect("schema usage")
             .starts_with("Usage: sealtask projects")
     );
+}
+
+#[test]
+fn cli_task_list_composable_controls_fail_before_authentication() {
+    let home = TempDir::new().expect("temp home");
+    for (args, expected) in [
+        (
+            &["--json", "tasks", "list", "--field", "id"][..],
+            "cannot be combined with --json",
+        ),
+        (
+            &["--pager", "always", "tasks", "list", "--field", "id"][..],
+            "paging is unavailable for this raw-output command",
+        ),
+        (
+            &["tasks", "list", "--web-url", "https://app.example"][..],
+            "only used with '--field url'",
+        ),
+        (
+            &[
+                "tasks",
+                "list",
+                "--field",
+                "url",
+                "--web-url",
+                "file:///tmp/app",
+            ][..],
+            "must use HTTP or HTTPS",
+        ),
+        (
+            &["tasks", "list", "--columns", "id,title,id"][..],
+            "duplicate task-list column 'id'",
+        ),
+    ] {
+        let output = run_cli_exact(home.path(), args, None);
+        assert_eq!(output.status.code(), Some(1), "{args:?}");
+        assert!(output.stdout.is_empty(), "{args:?}: {}", output.stdout);
+        assert!(
+            output.stderr.contains(expected),
+            "{args:?}: {}",
+            output.stderr
+        );
+        assert!(
+            !output.stderr.contains("authentication"),
+            "{args:?}: {}",
+            output.stderr
+        );
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn cli_task_list_columns_and_fields_are_composable() {
+    let fixture = TestFixture::new();
+    let state = Arc::new(Mutex::new(TestState::new(fixture.clone())));
+    let server = spawn_server(state).await;
+    let home = TempDir::new().expect("temp home");
+    seed_credentials(home.path(), &fixture, &server.base_url);
+
+    let configured_web_origin = run_cli_with_operator_env(
+        home.path(),
+        &server.base_url,
+        &["tasks", "list", "--password-stdin"],
+        &[("SEALTASK_WEB_URL", "https://app.example")],
+        Some(&fixture.password),
+    );
+    assert!(
+        configured_web_origin.status.success(),
+        "SEALTASK_WEB_URL poisoned ordinary list output: {}",
+        configured_web_origin.stderr
+    );
+    assert!(configured_web_origin.stdout.contains("Existing task"));
+
+    let table = run_cli(
+        home.path(),
+        &server.base_url,
+        &[
+            "tasks",
+            "list",
+            "--all",
+            "--columns",
+            "project,title,id",
+            "--sort",
+            "title",
+            "--password-stdin",
+        ],
+        Some(&fixture.password),
+    );
+    assert!(
+        table.status.success(),
+        "task table failed: {}",
+        table.stderr
+    );
+    let header = table.stdout.lines().next().expect("table header");
+    let project = header.find("Project").expect("project header");
+    let title = header.find("Title").expect("title header");
+    let id = header.find("ID").expect("ID header");
+    assert!(project < title && title < id, "{header}");
+    assert!(table.stdout.contains("Fixture Work List"));
+    assert!(table.stdout.contains("Existing task"));
+
+    for (field, expected) in [
+        ("id", format!("id:{}\n", fixture.task_id.simple())),
+        ("title", "Existing task\n".to_string()),
+        (
+            "url",
+            format!(
+                "https://app.example/workspace/work-lists/{}?task={}\n",
+                fixture.work_list_id, fixture.task_id
+            ),
+        ),
+    ] {
+        let mut args = vec![
+            "tasks",
+            "list",
+            "--all",
+            "--field",
+            field,
+            "--password-stdin",
+        ];
+        if field == "url" {
+            args.extend(["--web-url", "https://app.example"]);
+        }
+        let output = run_cli(
+            home.path(),
+            &server.base_url,
+            &args,
+            Some(&fixture.password),
+        );
+        assert!(
+            output.status.success(),
+            "--field {field} failed: {}",
+            output.stderr
+        );
+        assert_eq!(output.stdout, expected);
+        assert!(output.stderr.is_empty());
+    }
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -560,6 +703,38 @@ async fn cli_projects_alias_context_profiles_and_sections_are_operator_friendly(
         assert!(projects[0].get("titleCiphertext").is_none());
     }
 
+    let canonical_details = run_cli(
+        home.path(),
+        &server.base_url,
+        &["projects", "list", "--details", "--password-stdin"],
+        Some(&fixture.password),
+    );
+    let legacy_list_verbose = run_cli(
+        home.path(),
+        &server.base_url,
+        &["projects", "list", "--verbose", "--password-stdin"],
+        Some(&fixture.password),
+    );
+    let legacy_parent_verbose = run_cli(
+        home.path(),
+        &server.base_url,
+        &["projects", "--verbose", "--password-stdin", "list"],
+        Some(&fixture.password),
+    );
+    for output in [
+        &canonical_details,
+        &legacy_list_verbose,
+        &legacy_parent_verbose,
+    ] {
+        assert!(
+            output.status.success(),
+            "project details failed: {}",
+            output.stderr
+        );
+        assert!(output.stderr.is_empty());
+        assert!(output.stdout.contains("Project:"));
+        assert!(output.stdout.contains("Workspace:"));
+    }
     let legacy_unscoped_tasks = run_cli(
         home.path(),
         &server.base_url,
@@ -2432,6 +2607,26 @@ fn cli_schema_and_output_formats_are_machine_discoverable() {
             .any(|argument| argument["long"] == "idempotency-key")
     );
 
+    let task_list = run_cli(
+        home.path(),
+        "https://sealtask.com",
+        &["--json", "schema", "tasks", "list"],
+        None,
+    );
+    assert!(
+        task_list.status.success(),
+        "task-list schema failed: {}",
+        task_list.stderr
+    );
+    let task_list_schema = parse_stdout_json(&task_list.stdout);
+    let field = task_list_schema["arguments"]
+        .as_array()
+        .expect("task-list arguments")
+        .iter()
+        .find(|argument| argument["long"] == "field")
+        .expect("field schema");
+    assert_eq!(field["possibleValues"], json!(["id", "title", "url"]));
+
     let pretty = run_cli(
         home.path(),
         "https://sealtask.com",
@@ -2444,7 +2639,13 @@ fn cli_schema_and_output_formats_are_machine_discoverable() {
         pretty.stderr
     );
     assert!(pretty.stdout.lines().count() > 1);
-    assert_eq!(parse_stdout_json(&pretty.stdout)["jsonContractVersion"], 2);
+    let info = parse_stdout_json(&pretty.stdout);
+    assert_eq!(info["jsonContractVersion"], 2);
+    assert_eq!(
+        info["taskListing"]["rawFields"],
+        json!(["id", "title", "url"])
+    );
+    assert_eq!(info["canonicalFlags"]["projectListDetails"], "--details");
 
     let human = run_cli(home.path(), "https://sealtask.com", &["info"], None);
     assert!(
@@ -3972,14 +4173,15 @@ async fn cli_task_detail_table_lists_attachments() {
         output.stderr
     );
     assert!(output.stdout.contains("Attachments"));
-    let attachment_id_prefix = fixture
-        .text_attachment
-        .id
-        .simple()
-        .to_string()
-        .chars()
-        .take(8)
-        .collect::<String>();
+    let attachment_id_prefix = unique_uuid_prefix(
+        fixture.text_attachment.id,
+        &[
+            fixture.text_attachment.id,
+            fixture.docx_attachment.id,
+            fixture.binary_attachment.id,
+            fixture.hostile_attachment.id,
+        ],
+    );
     assert!(
         output.stdout.contains(&attachment_id_prefix),
         "attachment table did not include the selectable ID prefix: {}",
@@ -3997,6 +4199,15 @@ async fn cli_reads_text_attachment_to_stdout() {
     let home = TempDir::new().expect("temp home");
     seed_credentials(home.path(), &fixture, &server.base_url);
 
+    let attachment_id_prefix = unique_uuid_prefix(
+        fixture.text_attachment.id,
+        &[
+            fixture.text_attachment.id,
+            fixture.docx_attachment.id,
+            fixture.binary_attachment.id,
+            fixture.hostile_attachment.id,
+        ],
+    );
     let output = run_cli(
         home.path(),
         &server.base_url,
@@ -4009,7 +4220,7 @@ async fn cli_reads_text_attachment_to_stdout() {
             "--task-id",
             &fixture.task_id.to_string(),
             "--attachment-id",
-            &fixture.text_attachment.id.to_string(),
+            &attachment_id_prefix,
             "--password-stdin",
         ],
         Some(&fixture.password),
@@ -8660,6 +8871,24 @@ fn task_attachment_ids(body: &TaskPayloadBody) -> Vec<Uuid> {
             .expect("attachment UUID")
         })
         .collect()
+}
+
+fn unique_uuid_prefix(target: Uuid, candidates: &[Uuid]) -> String {
+    let target = target.simple().to_string();
+    (8..=target.len())
+        .find(|length| {
+            candidates
+                .iter()
+                .filter(|candidate| {
+                    candidate
+                        .simple()
+                        .to_string()
+                        .starts_with(&target[..*length])
+                })
+                .count()
+                == 1
+        })
+        .map_or(target.clone(), |length| target[..length].to_string())
 }
 
 fn comment_body_ciphertext(state: &TestState) -> String {
