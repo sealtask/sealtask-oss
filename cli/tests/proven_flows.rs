@@ -21,7 +21,7 @@ use opaque_ke::{
     RegistrationResponse, ServerLogin, ServerLoginParameters, ServerRegistration, ServerSetup,
 };
 use rand_core::OsRng;
-use sealtask_client_api::{AuditPatchFieldRequest, AuditPatchRequest};
+use sealtask_client_api::{AuditPatchFieldRequest, AuditPatchRequest, CONTROL_PLANE_USER_AGENT};
 use sealtask_client_auth::{ClientCipherSuite, Credentials};
 use sealtask_client_crypto::{
     ATTACHMENT_BLOB_CONTEXT, ATTACHMENT_BLOB_CONTEXT_LABEL, ATTACHMENT_BLOB_REF_VERSION,
@@ -2510,6 +2510,620 @@ fn cli_profiles_isolate_credentials_and_support_custom_config_roots() {
     );
 }
 
+#[test]
+fn cli_operator_config_reports_resolved_timeout_values_and_sources() {
+    let home = TempDir::new().expect("temp home");
+    let output = run_cli_with_operator_env(
+        home.path(),
+        "https://operator.example.test",
+        &[
+            "--json",
+            "--connect-timeout",
+            "250ms",
+            "--read-timeout",
+            "2s",
+            "--request-timeout",
+            "1m30s",
+            "config",
+            "show",
+            "--resolved",
+        ],
+        &[],
+        None,
+    );
+
+    assert!(
+        output.status.success(),
+        "resolved config failed: {}",
+        output.stderr
+    );
+    assert!(output.stderr.is_empty());
+    let config = parse_stdout_json(&output.stdout);
+    assert_eq!(config["schemaVersion"], 1);
+    assert_eq!(config["resolved"], true);
+    assert_eq!(config["apiUrl"]["value"], "https://operator.example.test");
+    assert_eq!(config["apiUrl"]["source"], "cli");
+    assert_eq!(config["profile"]["value"], "default");
+    assert_eq!(config["profile"]["source"], "default");
+    assert_eq!(config["configDirectory"]["source"], "default");
+    assert_eq!(config["connectTimeout"]["milliseconds"], 250);
+    assert_eq!(config["connectTimeout"]["display"], "250ms");
+    assert_eq!(config["connectTimeout"]["source"], "cli");
+    assert_eq!(config["readTimeout"]["milliseconds"], 2_000);
+    assert_eq!(config["readTimeout"]["display"], "2s");
+    assert_eq!(config["readTimeout"]["source"], "cli");
+    assert_eq!(config["requestTimeout"]["milliseconds"], 90_000);
+    assert_eq!(config["requestTimeout"]["display"], "90s");
+    assert_eq!(config["requestTimeout"]["source"], "cli");
+
+    let environment = run_cli_with_operator_env(
+        home.path(),
+        "https://operator.example.test",
+        &["--json", "config", "show", "--resolved"],
+        &[("SEALTASK_READ_TIMEOUT", "3s")],
+        None,
+    );
+    assert!(
+        environment.status.success(),
+        "environment config failed: {}",
+        environment.stderr
+    );
+    let environment = parse_stdout_json(&environment.stdout);
+    assert_eq!(environment["readTimeout"]["milliseconds"], 3_000);
+    assert_eq!(environment["readTimeout"]["source"], "environment");
+
+    let shadowed_invalid_environment = run_cli_with_operator_env(
+        home.path(),
+        "https://operator.example.test",
+        &[
+            "--json",
+            "--read-timeout",
+            "4s",
+            "config",
+            "show",
+            "--resolved",
+        ],
+        &[("SEALTASK_READ_TIMEOUT", "not-a-duration")],
+        None,
+    );
+    assert!(
+        shadowed_invalid_environment.status.success(),
+        "CLI override did not shadow invalid lower-precedence environment: {}",
+        shadowed_invalid_environment.stderr
+    );
+    let shadowed_invalid_environment = parse_stdout_json(&shadowed_invalid_environment.stdout);
+    assert_eq!(
+        shadowed_invalid_environment["readTimeout"]["milliseconds"],
+        4_000
+    );
+    assert_eq!(shadowed_invalid_environment["readTimeout"]["source"], "cli");
+    assert!(
+        !home.path().join(".sealtask").exists(),
+        "read-only config inspection must not create local state"
+    );
+}
+
+#[test]
+fn cli_profile_use_persists_defaults_and_explains_environment_overrides() {
+    let home = TempDir::new().expect("temp home");
+    let select_team = run_cli_with_operator_env(
+        home.path(),
+        "https://operator.example.test",
+        &["--json", "profile", "use", "team"],
+        &[],
+        None,
+    );
+    assert!(
+        select_team.status.success(),
+        "profile use failed: {}",
+        select_team.stderr
+    );
+    let selected = parse_stdout_json(&select_team.stdout);
+    assert_eq!(selected["schemaVersion"], 1);
+    assert_eq!(selected["defaultProfile"], "team");
+    assert_eq!(selected["changed"], true);
+    assert_eq!(selected["effectiveProfileForThisCommand"], "default");
+    assert_eq!(selected["effectiveSourceForThisCommand"], "default");
+    assert_eq!(selected["overrideActive"], false);
+
+    let persisted_list = run_cli_with_operator_env(
+        home.path(),
+        "https://operator.example.test",
+        &["--json", "profile", "list"],
+        &[],
+        None,
+    );
+    assert!(
+        persisted_list.status.success(),
+        "profile list failed: {}",
+        persisted_list.stderr
+    );
+    let persisted_list = parse_stdout_json(&persisted_list.stdout);
+    assert_eq!(persisted_list["activeProfile"], "team");
+    assert_eq!(persisted_list["activeSource"], "persisted");
+    assert_eq!(persisted_list["defaultProfile"], "team");
+    assert!(
+        persisted_list["profiles"]
+            .as_array()
+            .expect("profile entries")
+            .iter()
+            .any(|profile| profile["name"] == "team" && profile["active"] == true)
+    );
+
+    let overridden = run_cli_with_operator_env(
+        home.path(),
+        "https://operator.example.test",
+        &["--json", "profile", "use", "next-default"],
+        &[("SEALTASK_PROFILE", "deployment")],
+        None,
+    );
+    assert!(
+        overridden.status.success(),
+        "profile use with override failed: {}",
+        overridden.stderr
+    );
+    let overridden = parse_stdout_json(&overridden.stdout);
+    assert_eq!(overridden["defaultProfile"], "next-default");
+    assert_eq!(overridden["effectiveProfileForThisCommand"], "deployment");
+    assert_eq!(overridden["effectiveSourceForThisCommand"], "environment");
+    assert_eq!(overridden["overrideActive"], true);
+
+    let overridden_list = run_cli_with_operator_env(
+        home.path(),
+        "https://operator.example.test",
+        &["--json", "profile", "list"],
+        &[("SEALTASK_PROFILE", "deployment")],
+        None,
+    );
+    assert!(
+        overridden_list.status.success(),
+        "overridden profile list failed: {}",
+        overridden_list.stderr
+    );
+    let overridden_list = parse_stdout_json(&overridden_list.stdout);
+    assert_eq!(overridden_list["activeProfile"], "deployment");
+    assert_eq!(overridden_list["activeSource"], "environment");
+    assert_eq!(overridden_list["defaultProfile"], "next-default");
+
+    let future_default = run_cli_with_operator_env(
+        home.path(),
+        "https://operator.example.test",
+        &["--json", "profile", "list"],
+        &[],
+        None,
+    );
+    assert!(
+        future_default.status.success(),
+        "persisted replacement profile list failed: {}",
+        future_default.stderr
+    );
+    let future_default = parse_stdout_json(&future_default.stdout);
+    assert_eq!(future_default["activeProfile"], "next-default");
+    assert_eq!(future_default["activeSource"], "persisted");
+    assert_eq!(future_default["defaultProfile"], "next-default");
+}
+
+#[test]
+fn cli_profile_lock_contention_is_bounded_and_retryable() {
+    let home = TempDir::new().expect("temp home");
+    let config_dir = home.path().join(".sealtask");
+    std::fs::create_dir_all(&config_dir).expect("create config directory");
+    let lock_path = config_dir.join("operator-settings.lock");
+    let lock_file = std::fs::OpenOptions::new()
+        .create(true)
+        .truncate(false)
+        .read(true)
+        .write(true)
+        .open(&lock_path)
+        .expect("open operator settings lock");
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+
+        std::fs::set_permissions(&lock_path, std::fs::Permissions::from_mode(0o600))
+            .expect("secure lock fixture");
+    }
+    fs2::FileExt::lock_exclusive(&lock_file).expect("hold operator settings lock");
+
+    let started_at = std::time::Instant::now();
+    let output = run_cli_with_operator_env(
+        home.path(),
+        "https://operator.example.test",
+        &["--json", "profile", "use", "blocked"],
+        &[],
+        None,
+    );
+    let elapsed = started_at.elapsed();
+    fs2::FileExt::unlock(&lock_file).expect("release operator settings lock");
+
+    assert_eq!(output.status.code(), Some(1));
+    assert!(
+        elapsed < std::time::Duration::from_secs(4),
+        "operator settings lock wait was not bounded: {elapsed:?}"
+    );
+    let error = parse_stderr_json(&output.stderr);
+    assert_eq!(error["error"]["code"], "request_timeout");
+    assert_eq!(error["error"]["retryable"], true);
+    assert!(
+        error["error"]["hint"]
+            .as_str()
+            .expect("retry hint")
+            .contains("Retry")
+    );
+    assert!(
+        error["error"]["message"]
+            .as_str()
+            .expect("lock error message")
+            .contains("other SealTask command")
+    );
+}
+
+#[test]
+fn cli_doctor_offline_json_versions_and_skips_api_checks() {
+    let home = TempDir::new().expect("temp home");
+    let output = run_cli_with_operator_env(
+        home.path(),
+        "https://unreachable.invalid",
+        &["--json", "doctor", "--offline"],
+        &[],
+        None,
+    );
+
+    assert!(
+        output.status.success(),
+        "offline doctor failed: {}",
+        output.stderr
+    );
+    assert!(output.stderr.is_empty());
+    let report = parse_stdout_json(&output.stdout);
+    assert_eq!(report["schemaVersion"], 1);
+    assert_eq!(report["options"]["offline"], true);
+    assert_eq!(report["options"]["strict"], false);
+    assert_eq!(
+        report["environment"]["apiTarget"],
+        "https://unreachable.invalid"
+    );
+    for check_id in ["api.reachability", "api.health", "api.identity"] {
+        let check = report["checks"]
+            .as_array()
+            .expect("doctor checks")
+            .iter()
+            .find(|check| check["id"] == check_id)
+            .unwrap_or_else(|| panic!("missing doctor check {check_id}"));
+        assert_eq!(check["status"], "skipped");
+    }
+    assert!(
+        report["summary"]["skipped"]
+            .as_u64()
+            .expect("skipped count")
+            >= 3
+    );
+
+    let strict = run_cli_with_operator_env(
+        home.path(),
+        "https://unreachable.invalid",
+        &["--json", "doctor", "--offline", "--strict"],
+        &[],
+        None,
+    );
+    assert_eq!(strict.status.code(), Some(1));
+    let strict_report = parse_stdout_json(&strict.stdout);
+    assert_eq!(strict_report["schemaVersion"], 1);
+    assert_eq!(strict_report["options"]["strict"], true);
+    assert_eq!(strict_report["outcome"], "failed");
+    let strict_error = parse_stderr_json(&strict.stderr);
+    assert_eq!(strict_error["error"]["code"], "validation");
+    assert!(
+        strict_error["error"]["message"]
+            .as_str()
+            .expect("strict doctor error")
+            .contains("strict diagnostics")
+    );
+
+    let settings_path = home.path().join(".sealtask/operator-settings.json");
+    std::fs::create_dir_all(settings_path.parent().expect("settings parent"))
+        .expect("create settings directory");
+    std::fs::write(&settings_path, b"{not valid JSON").expect("write corrupt settings");
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+
+        std::fs::set_permissions(&settings_path, std::fs::Permissions::from_mode(0o600))
+            .expect("secure corrupt settings");
+    }
+
+    let corrupt_settings = run_cli_with_operator_env(
+        home.path(),
+        "https://unreachable.invalid",
+        &["--json", "doctor", "--offline"],
+        &[],
+        None,
+    );
+    assert_eq!(corrupt_settings.status.code(), Some(1));
+    let corrupt_report = parse_stdout_json(&corrupt_settings.stdout);
+    let settings_check = corrupt_report["checks"]
+        .as_array()
+        .expect("doctor checks")
+        .iter()
+        .find(|check| check["id"] == "configuration.operator_settings")
+        .expect("operator settings check");
+    assert_eq!(settings_check["status"], "fail");
+    assert_eq!(settings_check["errorCode"], "operator_settings_invalid");
+    assert!(
+        settings_check["remediation"]
+            .as_str()
+            .expect("settings remediation")
+            .contains("move operator-settings.json aside")
+    );
+    assert_eq!(
+        std::fs::read(&settings_path).expect("corrupt settings preserved"),
+        b"{not valid JSON"
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn cli_doctor_online_health_is_correlated_and_identifiable_while_logged_out() {
+    let server = spawn_doctor_health_server(None).await;
+    let home = TempDir::new().expect("temp home");
+    let output =
+        run_cli_with_operator_env(home.path(), &server.base_url, &["-v", "doctor"], &[], None);
+
+    assert!(
+        output.status.success(),
+        "online doctor failed: {}",
+        output.stderr
+    );
+    assert!(output.stdout.contains("api.reachability"));
+    assert!(output.stdout.contains("api.health"));
+    assert!(output.stdout.contains("api.identity"));
+    assert!(output.stdout.contains("PASS"));
+    assert!(output.stdout.contains("SKIP"));
+    assert!(!output.stdout.contains("[sealtask]"));
+
+    let telemetry_invocation_id = telemetry_invocation_id(&output.stderr);
+    let observations = server.observations.lock().expect("observations lock");
+    assert_eq!(
+        observations.len(),
+        1,
+        "doctor should make exactly one logged-out health request"
+    );
+    let request = &observations[0];
+    assert_eq!(
+        request.user_agent.as_deref(),
+        Some(CONTROL_PLANE_USER_AGENT)
+    );
+    let request_id = request
+        .request_id
+        .as_deref()
+        .expect("health x-request-id")
+        .parse::<Uuid>()
+        .expect("health x-request-id UUID");
+    assert_eq!(request_id, telemetry_invocation_id);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn cli_doctor_reports_transport_timeout_for_stalled_health_probe() {
+    let server = spawn_doctor_health_server(Some(std::time::Duration::from_secs(5))).await;
+    let home = TempDir::new().expect("temp home");
+    let started_at = std::time::Instant::now();
+    let output = run_cli_with_operator_env(
+        home.path(),
+        &server.base_url,
+        &[
+            "--json",
+            "--connect-timeout",
+            "20ms",
+            "--read-timeout",
+            "40ms",
+            "--request-timeout",
+            "75ms",
+            "doctor",
+        ],
+        &[],
+        None,
+    );
+    let elapsed = started_at.elapsed();
+
+    assert_eq!(output.status.code(), Some(1));
+    assert!(
+        elapsed < std::time::Duration::from_secs(2),
+        "75ms request deadline took {elapsed:?}"
+    );
+    let report = parse_stdout_json(&output.stdout);
+    let reachability = report["checks"]
+        .as_array()
+        .expect("doctor checks")
+        .iter()
+        .find(|check| check["id"] == "api.reachability")
+        .expect("API reachability check");
+    assert_eq!(reachability["status"], "fail");
+    assert_eq!(reachability["errorCode"], "transport_timeout");
+    let health = report["checks"]
+        .as_array()
+        .expect("doctor checks")
+        .iter()
+        .find(|check| check["id"] == "api.health")
+        .expect("API health check");
+    assert_eq!(health["status"], "skipped");
+    assert_eq!(report["outcome"], "failed");
+    assert_eq!(
+        server.observations.lock().expect("observations lock").len(),
+        1
+    );
+    let error = parse_stderr_json(&output.stderr);
+    assert_eq!(error["error"]["code"], "validation");
+}
+
+#[test]
+fn cli_operator_telemetry_is_correlatable_stderr_only_and_json_incompatible() {
+    let home = TempDir::new().expect("temp home");
+    for flag in ["-v", "-vv", "--debug"] {
+        let output = run_cli_with_operator_env(
+            home.path(),
+            "https://operator.example.test",
+            &[flag, "info"],
+            &[],
+            None,
+        );
+        assert!(
+            output.status.success(),
+            "{flag} info failed: {}",
+            output.stderr
+        );
+        assert!(output.stdout.starts_with("SealTask CLI contract version"));
+        assert!(!output.stdout.contains("[sealtask]"));
+        assert!(output.stderr.contains("[sealtask] event=start"));
+        assert!(output.stderr.contains("[sealtask] event=finish"));
+        if flag == "-v" {
+            assert!(!output.stderr.contains("event=config"));
+        } else {
+            assert!(output.stderr.contains("event=config"));
+        }
+
+        telemetry_invocation_id(&output.stderr);
+    }
+
+    let profile_canary = "release-c-sensitive-profile";
+    let config_path_canary = home.path().join("release-c-sensitive-config-path");
+    let redacted_configuration = run_cli_with_operator_env(
+        home.path(),
+        "https://operator.example.test/private-api-path-canary",
+        &[
+            "-vv",
+            "--profile",
+            profile_canary,
+            "--config-dir",
+            config_path_canary.to_str().expect("UTF-8 config path"),
+            "info",
+        ],
+        &[],
+        None,
+    );
+    assert!(
+        redacted_configuration.status.success(),
+        "redacted config telemetry failed: {}",
+        redacted_configuration.stderr
+    );
+    assert!(!redacted_configuration.stderr.contains(profile_canary));
+    assert!(
+        !redacted_configuration
+            .stderr
+            .contains("release-c-sensitive-config-path")
+    );
+    assert!(
+        !redacted_configuration
+            .stderr
+            .contains("private-api-path-canary")
+    );
+    assert!(
+        redacted_configuration
+            .stderr
+            .contains("profile_kind=named profile_source=cli")
+    );
+    assert!(
+        redacted_configuration
+            .stderr
+            .contains("config_dir_source=cli")
+    );
+
+    let mutation_canary = "release-c-super-secret-task-canary";
+    let mutation = run_cli_with_operator_env(
+        home.path(),
+        "https://operator.example.test",
+        &[
+            "-vv",
+            "tasks",
+            "create",
+            "--work-list-id",
+            &Uuid::now_v7().to_string(),
+            "--title",
+            mutation_canary,
+            "--body",
+            mutation_canary,
+            "--password-stdin",
+        ],
+        &[],
+        Some("unused-password"),
+    );
+    assert!(!mutation.status.success());
+    assert!(!mutation.stdout.contains(mutation_canary));
+    assert!(!mutation.stderr.contains(mutation_canary));
+    assert!(mutation.stderr.contains("[sealtask] event=finish"));
+
+    for flag in ["-v", "-vv", "--debug"] {
+        let output = run_cli_with_operator_env(
+            home.path(),
+            "https://operator.example.test",
+            &["--json", flag, "info"],
+            &[],
+            None,
+        );
+        assert_eq!(output.status.code(), Some(1));
+        assert!(output.stdout.is_empty());
+        assert!(!output.stderr.contains("[sealtask]"));
+        assert_json_error_contains(&output.stderr, "cannot be combined with JSON");
+    }
+
+    let pretty_json = run_cli_with_operator_env(
+        home.path(),
+        "https://operator.example.test",
+        &["--format", "json-pretty", "--debug", "info"],
+        &[],
+        None,
+    );
+    assert_eq!(pretty_json.status.code(), Some(1));
+    assert!(pretty_json.stdout.is_empty());
+    assert!(!pretty_json.stderr.contains("[sealtask]"));
+    assert_json_error_contains(&pretty_json.stderr, "cannot be combined with JSON");
+}
+
+#[test]
+fn cli_operator_timeout_validation_is_actionable_and_precedes_network_use() {
+    let home = TempDir::new().expect("temp home");
+    let invalid_duration = run_cli_with_operator_env(
+        home.path(),
+        "https://unreachable.invalid",
+        &[
+            "--json",
+            "--connect-timeout",
+            "0s",
+            "config",
+            "show",
+            "--resolved",
+        ],
+        &[],
+        None,
+    );
+    assert_eq!(invalid_duration.status.code(), Some(1));
+    assert!(invalid_duration.stdout.is_empty());
+    assert_json_error_contains(&invalid_duration.stderr, "between 1ms and 24h");
+
+    let invalid_order = run_cli_with_operator_env(
+        home.path(),
+        "https://unreachable.invalid",
+        &[
+            "--json",
+            "--connect-timeout",
+            "500ms",
+            "--read-timeout",
+            "2s",
+            "--request-timeout",
+            "1s",
+            "config",
+            "show",
+            "--resolved",
+        ],
+        &[],
+        None,
+    );
+    assert_eq!(invalid_order.status.code(), Some(1));
+    assert!(invalid_order.stdout.is_empty());
+    assert_json_error_contains(
+        &invalid_order.stderr,
+        "API read timeout cannot exceed the overall request timeout",
+    );
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn cli_mutations_honor_human_output_and_automation_idempotency() {
     let fixture = TestFixture::new();
@@ -4865,6 +5479,29 @@ struct TestServer {
     _task: tokio::task::JoinHandle<()>,
 }
 
+struct DoctorHealthServer {
+    base_url: String,
+    observations: Arc<Mutex<Vec<DoctorHealthRequest>>>,
+    task: tokio::task::JoinHandle<()>,
+}
+
+impl Drop for DoctorHealthServer {
+    fn drop(&mut self) {
+        self.task.abort();
+    }
+}
+
+#[derive(Clone)]
+struct DoctorHealthState {
+    observations: Arc<Mutex<Vec<DoctorHealthRequest>>>,
+    response_delay: Option<std::time::Duration>,
+}
+
+struct DoctorHealthRequest {
+    user_agent: Option<String>,
+    request_id: Option<String>,
+}
+
 struct RefreshLogoutRaceServer {
     base_url: String,
     state: Arc<Mutex<RefreshLogoutRaceInner>>,
@@ -5764,6 +6401,56 @@ async fn spawn_server(state: Arc<Mutex<TestState>>) -> TestServer {
         base_url: format!("http://{}", addr),
         _task: task,
     }
+}
+
+async fn spawn_doctor_health_server(
+    response_delay: Option<std::time::Duration>,
+) -> DoctorHealthServer {
+    let observations = Arc::new(Mutex::new(Vec::new()));
+    let state = DoctorHealthState {
+        observations: Arc::clone(&observations),
+        response_delay,
+    };
+    let app = Router::new()
+        .route("/health", get(doctor_health))
+        .with_state(state);
+    let listener = TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("bind doctor health listener");
+    let address = listener.local_addr().expect("doctor health address");
+    let task = tokio::spawn(async move {
+        axum::serve(listener, app)
+            .await
+            .expect("serve doctor health app");
+    });
+
+    DoctorHealthServer {
+        base_url: format!("http://{address}"),
+        observations,
+        task,
+    }
+}
+
+async fn doctor_health(State(state): State<DoctorHealthState>, headers: HeaderMap) -> StatusCode {
+    let request = DoctorHealthRequest {
+        user_agent: headers
+            .get("user-agent")
+            .and_then(|value| value.to_str().ok())
+            .map(str::to_owned),
+        request_id: headers
+            .get("x-request-id")
+            .and_then(|value| value.to_str().ok())
+            .map(str::to_owned),
+    };
+    state
+        .observations
+        .lock()
+        .expect("observations lock")
+        .push(request);
+    if let Some(response_delay) = state.response_delay {
+        tokio::time::sleep(response_delay).await;
+    }
+    StatusCode::OK
 }
 
 async fn spawn_refresh_logout_race_server(fixture: &TestFixture) -> RefreshLogoutRaceServer {
@@ -6976,6 +7663,43 @@ fn run_cli_exact(home: &std::path::Path, args: &[&str], stdin: Option<&str>) -> 
     }
 }
 
+fn run_cli_with_operator_env(
+    home: &std::path::Path,
+    api_url: &str,
+    args: &[&str],
+    environment: &[(&str, &str)],
+    stdin: Option<&str>,
+) -> CliOutput {
+    let mut command = Command::cargo_bin("sealtask").expect("binary");
+    command.env("HOME", home);
+    for name in [
+        "SEALTASK_API_URL",
+        "SEALTASK_PROFILE",
+        "SEALTASK_CONFIG_DIR",
+        "SEALTASK_CONNECT_TIMEOUT",
+        "SEALTASK_READ_TIMEOUT",
+        "SEALTASK_REQUEST_TIMEOUT",
+    ] {
+        command.env_remove(name);
+    }
+    for (name, value) in environment {
+        command.env(name, value);
+    }
+    command.current_dir(home);
+    command.arg("--api-url").arg(api_url);
+    command.args(args);
+    if let Some(stdin) = stdin {
+        command.write_stdin(stdin.to_string());
+    }
+
+    let output = command.output().expect("run cli");
+    CliOutput {
+        status: output.status,
+        stdout: String::from_utf8(output.stdout).expect("stdout utf8"),
+        stderr: String::from_utf8(output.stderr).expect("stderr utf8"),
+    }
+}
+
 fn spawn_cli_process(home: &std::path::Path, api_url: &str, args: &[&str]) -> Child {
     let binary = assert_cmd::cargo::cargo_bin("sealtask");
     let mut command = std::process::Command::new(binary);
@@ -7606,6 +8330,24 @@ fn parse_stdout_json(stdout: &str) -> Value {
 
 fn parse_stderr_json(stderr: &str) -> Value {
     serde_json::from_str(stderr).expect("stderr JSON")
+}
+
+fn telemetry_invocation_id(stderr: &str) -> Uuid {
+    let invocation_ids = stderr
+        .split_whitespace()
+        .filter_map(|field| field.strip_prefix("invocation_id="))
+        .collect::<HashSet<_>>();
+    assert_eq!(
+        invocation_ids.len(),
+        1,
+        "telemetry lines were not correlated: {stderr}"
+    );
+    invocation_ids
+        .into_iter()
+        .next()
+        .expect("one invocation id")
+        .parse()
+        .expect("telemetry invocation UUID")
 }
 
 fn assert_json_error_message(stderr: &str, expected_message: &str) {

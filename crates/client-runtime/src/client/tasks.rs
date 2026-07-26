@@ -55,8 +55,11 @@ impl RuntimeClient {
                 "Password required to decrypt task data.",
             )
             .await?;
-        let mut client =
-            sealtask_client_api::PublicApiClient::with_credentials(&self.api_url, credentials)?;
+        let mut client = sealtask_client_api::PublicApiClient::with_credentials_and_options(
+            &self.api_url,
+            credentials,
+            self.api_transport_options,
+        )?;
 
         let work_lists = client.list_work_lists().await?;
         let mut scheme_histories = HashMap::new();
@@ -95,8 +98,11 @@ impl RuntimeClient {
                 "Password required to decrypt task data.",
             )
             .await?;
-        let mut client =
-            sealtask_client_api::PublicApiClient::with_credentials(&self.api_url, credentials)?;
+        let mut client = sealtask_client_api::PublicApiClient::with_credentials_and_options(
+            &self.api_url,
+            credentials,
+            self.api_transport_options,
+        )?;
         let work_list = client.get_work_list(work_list_id).await?;
         let scheme_history =
             load_task_reference_scheme_history(&mut client, &work_list.work_list).await;

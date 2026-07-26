@@ -17,7 +17,11 @@ pub use note_transport_limits::{
     MIN_NOTE_PAGE_ITEMS,
 };
 pub use notes::{CreateNoteRequest, DeleteNoteRequest, NotePage, NoteResponse, UpdateNoteRequest};
-pub use transport::PublicApiClient;
+pub use transport::{
+    ApiTransportOptions, CONTROL_PLANE_USER_AGENT, DEFAULT_API_CONNECT_TIMEOUT,
+    DEFAULT_API_READ_TIMEOUT, DEFAULT_API_REQUEST_TIMEOUT, PublicApiClient, RequestCorrelation,
+    build_control_plane_http_client,
+};
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};

@@ -165,6 +165,87 @@ project.
 Unlock durations accept compound values such as `30m`, `8h`, `1h30m`, and
 `2d`.
 
+### Diagnostics and operator configuration
+
+Use `doctor` for a safe, actionable view of local state and API availability:
+
+```bash
+sealtask doctor
+sealtask --json doctor
+sealtask doctor --offline
+sealtask doctor --strict
+sealtask doctor --include-keychain
+```
+
+The default run checks operator settings, configuration, credentials, session
+and unlock state, the unauthenticated API health endpoint, and authenticated
+identity when a usable session exists. It still emits a remediation report when
+`operator-settings.json` is corrupt or was written by an unsupported version.
+`--offline` guarantees that neither API probe runs.
+Failed checks exit unsuccessfully; `--strict` also makes warnings unsuccessful.
+Keychain access is opt-in because `--include-keychain` may trigger an
+operating-system prompt. JSON output is a versioned report with stable check
+IDs, error codes, and remediation text.
+
+Inspect effective configuration and manage the persisted default profile with:
+
+```bash
+sealtask config show
+sealtask config show --resolved
+sealtask --json config show --resolved
+sealtask profile list
+sealtask profile use build-agent
+```
+
+`config show --resolved` adds the source of each effective value. Resolution
+order is the command-line flag, the corresponding environment variable, the
+persisted selection or profile setting where supported, and finally the
+built-in default. A `--profile` or `SEALTASK_PROFILE` override remains active
+for the current invocation of `profile use`; the command reports that override
+so operators know to unset it. `profile list` shows both the effective profile
+and the persisted default that will take effect after an override is removed.
+
+The default profile stores credentials in `~/.sealtask`. Named profiles isolate
+credentials, project context, and unlock state beneath
+`~/.sealtask/profiles/<name>`. Use `--config-dir <path>` or
+`SEALTASK_CONFIG_DIR` to relocate the base state directory:
+
+```bash
+sealtask --profile build-agent auth status
+SEALTASK_PROFILE=build-agent sealtask tasks list --all
+SEALTASK_CONFIG_DIR=/run/sealtask-agent sealtask config show --resolved
+```
+
+Control-plane timeouts are configurable per invocation or environment:
+
+```bash
+sealtask --connect-timeout 5s --read-timeout 30s \
+  --request-timeout 1m tasks list --all
+
+SEALTASK_CONNECT_TIMEOUT=5s \
+SEALTASK_READ_TIMEOUT=30s \
+SEALTASK_REQUEST_TIMEOUT=1m \
+  sealtask tasks list --all
+```
+
+Durations accept `ms`, `s`, `m`, and `h`, including compounds such as
+`1m30s`, and must be between `1ms` and `24h`. Defaults are `10s` to connect,
+`30s` to read, and `1m` for the whole request; connect and read timeouts cannot
+exceed the request timeout. Best-effort old-session revocation during login and
+logout honors shorter request timeouts but remains capped at `5s` so local
+authentication cleanup cannot hang an operator session.
+
+For troubleshooting, `-v` writes redacted start/finish events to stderr;
+`-vv` and `--debug` also include the safe API origin, configuration sources,
+and resolved timeouts. Profile names, configuration paths, URL credentials and
+paths, and request payloads are omitted. Telemetry never occupies stdout. Each
+invocation uses its telemetry `invocation_id` as the
+`x-request-id` for all control-plane requests, which makes client and server
+logs correlatable; requests also identify the version with the stable
+`sealtask-client-api/<version>` user agent. Diagnostic telemetry cannot be
+combined with `--json` or either JSON `--format`, preserving the one-document
+JSON process contract.
+
 ## Browser WASM provenance
 
 `crates/strong-box` and `crates/strong-box-wasm` are the production source for
@@ -439,19 +520,6 @@ SEALTASK_API_URL=https://your-sealtask.example cargo run -p sealtask -- me
 Library callers construct the runtime with `RuntimeClient::new(api_url)?` for
 same-origin storage or `RuntimeClient::with_storage_origins(api_url, origins)?`
 for an explicit cross-origin storage allowlist.
-
-The default profile stores credentials in `~/.sealtask`. Named profiles keep
-credentials and their daemon/keychain identity isolated beneath
-`~/.sealtask/profiles/<name>`:
-
-```bash
-sealtask --profile build-agent --json auth status
-SEALTASK_PROFILE=build-agent sealtask --json tasks list --all
-```
-
-Use `--config-dir <path>` or `SEALTASK_CONFIG_DIR` to relocate the base state
-directory for CI or sandboxed agents. `auth status` and `info` report the
-resolved profile and directory.
 
 ## Development Notes
 

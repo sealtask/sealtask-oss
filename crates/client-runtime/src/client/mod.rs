@@ -17,7 +17,10 @@ use crate::{
     operation_cancellation::OperationCancellation,
     upload_lifecycle::{AttachmentUploadFailureReport, UploadLifecycleManager},
 };
-use sealtask_client_api::{PublicApiClient, TaskReferenceSchemeResponse, WorkListResponse};
+use sealtask_client_api::{
+    ApiTransportOptions, PublicApiClient, TaskReferenceSchemeResponse, WorkListResponse,
+    build_control_plane_http_client,
+};
 use sealtask_client_auth::{
     Credentials, load_credentials_for_url, load_persisted_data_key, normalize_api_url,
     opaque_login_finish_with_export_key, opaque_login_start, with_current_credentials,
@@ -78,6 +81,7 @@ struct CachedDataKey {
 #[derive(Debug, Clone)]
 pub struct RuntimeClient {
     pub(crate) api_url: String,
+    pub(crate) api_transport_options: ApiTransportOptions,
     pub(crate) storage_policy: StorageTransferPolicy,
     pub(crate) blocking_crypto: BlockingCryptoAdmission,
     pub(crate) upload_lifecycle: UploadLifecycleManager,
@@ -148,10 +152,27 @@ impl RuntimeClient {
         I: IntoIterator<Item = S>,
         S: AsRef<str>,
     {
+        Self::with_storage_origins_and_transport(
+            api_url,
+            storage_origins,
+            ApiTransportOptions::default(),
+        )
+    }
+
+    pub fn with_storage_origins_and_transport<I, S>(
+        api_url: impl Into<String>,
+        storage_origins: I,
+        api_transport_options: ApiTransportOptions,
+    ) -> PublicResult<Self>
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<str>,
+    {
         let api_url = normalize_api_url(&api_url.into());
         let storage_policy = StorageTransferPolicy::new(&api_url, storage_origins)?;
         Ok(Self {
             api_url,
+            api_transport_options,
             storage_policy,
             blocking_crypto: BlockingCryptoAdmission::default(),
             upload_lifecycle: UploadLifecycleManager::default(),
@@ -164,6 +185,15 @@ impl RuntimeClient {
     #[must_use]
     pub fn api_url(&self) -> &str {
         &self.api_url
+    }
+
+    #[must_use]
+    pub const fn api_transport_options(&self) -> ApiTransportOptions {
+        self.api_transport_options
+    }
+
+    pub fn control_plane_http_client(&self) -> PublicResult<reqwest::Client> {
+        build_control_plane_http_client(self.api_transport_options)
     }
 
     pub fn current_session_key(&self, credentials: &Credentials) -> PublicResult<SessionKey> {
@@ -187,7 +217,11 @@ impl RuntimeClient {
                 "session expired - run 'sealtask auth login' to authenticate",
             ));
         }
-        PublicApiClient::with_credentials(&self.api_url, credentials)
+        PublicApiClient::with_credentials_and_options(
+            &self.api_url,
+            credentials,
+            self.api_transport_options,
+        )
     }
 
     /// Waits up to `timeout` for active attachment uploads and their compensation to finish.
@@ -227,7 +261,11 @@ impl RuntimeClient {
         let data_key = self
             .load_data_key(&mut credentials, password_stdin, prompt_message)
             .await?;
-        let mut client = PublicApiClient::with_credentials(&self.api_url, credentials)?;
+        let mut client = PublicApiClient::with_credentials_and_options(
+            &self.api_url,
+            credentials,
+            self.api_transport_options,
+        )?;
         let work_list = client.get_work_list(work_list_id).await?;
         let scheme_history =
             load_task_reference_scheme_history(&mut client, &work_list.work_list).await;
@@ -272,7 +310,11 @@ impl RuntimeClient {
         if cancellation.is_cancelled() {
             return Err(PublicError::cancelled("attachment upload cancelled"));
         }
-        let mut client = PublicApiClient::with_credentials(&self.api_url, credentials)?;
+        let mut client = PublicApiClient::with_credentials_and_options(
+            &self.api_url,
+            credentials,
+            self.api_transport_options,
+        )?;
         let work_list = tokio::select! {
             biased;
             () = cancellation.cancelled() => {
@@ -383,8 +425,11 @@ impl RuntimeClient {
             }
             DataKeyCiphertextVersion::OpaqueExportKeyV2 => {
                 let (opaque_state, client_login_state) = opaque_login_start(password)?;
-                let mut client =
-                    PublicApiClient::with_credentials(&self.api_url, credentials.clone())?;
+                let mut client = PublicApiClient::with_credentials_and_options(
+                    &self.api_url,
+                    credentials.clone(),
+                    self.api_transport_options,
+                )?;
                 let challenge = client.start_opaque_export_key(&client_login_state).await?;
                 *credentials = client.into_credentials().ok_or_else(|| {
                     PublicError::unexpected(

@@ -26,7 +26,11 @@ impl RuntimeClient {
                 "Password required to decrypt work lists.",
             )
             .await?;
-        let mut client = PublicApiClient::with_credentials(&self.api_url, credentials)?;
+        let mut client = PublicApiClient::with_credentials_and_options(
+            &self.api_url,
+            credentials,
+            self.api_transport_options,
+        )?;
         let lists = client
             .list_work_lists_with_archived(include_archived)
             .await?;
@@ -49,7 +53,11 @@ impl RuntimeClient {
                 "Password required to decrypt archived work list data.",
             )
             .await?;
-        let mut client = PublicApiClient::with_credentials(&self.api_url, credentials)?;
+        let mut client = PublicApiClient::with_credentials_and_options(
+            &self.api_url,
+            credentials,
+            self.api_transport_options,
+        )?;
         let work_list = client.archive_work_list(work_list_id).await?;
         Ok(self.project_work_list_summary(work_list, Some(&data_key)))
     }
@@ -67,7 +75,11 @@ impl RuntimeClient {
                 "Password required to decrypt restored work list data.",
             )
             .await?;
-        let mut client = PublicApiClient::with_credentials(&self.api_url, credentials)?;
+        let mut client = PublicApiClient::with_credentials_and_options(
+            &self.api_url,
+            credentials,
+            self.api_transport_options,
+        )?;
         let work_list = client.unarchive_work_list(work_list_id).await?;
         Ok(self.project_work_list_summary(work_list, Some(&data_key)))
     }
@@ -85,7 +97,11 @@ impl RuntimeClient {
                 "Password required to decrypt work list data.",
             )
             .await?;
-        let mut client = PublicApiClient::with_credentials(&self.api_url, credentials)?;
+        let mut client = PublicApiClient::with_credentials_and_options(
+            &self.api_url,
+            credentials,
+            self.api_transport_options,
+        )?;
         let detail = client.get_work_list(work_list_id).await?;
         Ok(self.project_work_list_detail(detail, Some(&data_key)))
     }

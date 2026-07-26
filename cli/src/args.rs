@@ -1,7 +1,7 @@
 use crate::human_input::parse_priority;
 use crate::selectors::EntitySelector;
 use chrono::{DateTime, Utc};
-use clap::{ArgGroup, Args, Parser, Subcommand, ValueEnum};
+use clap::{ArgAction, ArgGroup, Args, Parser, Subcommand, ValueEnum};
 use std::fmt;
 use std::path::PathBuf;
 use uuid::Uuid;
@@ -63,6 +63,41 @@ pub(crate) struct Cli {
     /// Never prompt; fail with an actionable validation error when input is missing.
     #[arg(long, global = true)]
     pub(crate) non_interactive: bool,
+
+    /// Emit redacted operator telemetry to stderr; repeat for more detail.
+    #[arg(short = 'v', action = ArgAction::Count, global = true)]
+    pub(crate) verbosity: u8,
+
+    /// Emit maximum redacted diagnostic telemetry to stderr.
+    #[arg(long, global = true)]
+    pub(crate) debug: bool,
+
+    /// Maximum time to establish a control-plane connection (for example 5s).
+    #[arg(
+        long,
+        env = "SEALTASK_CONNECT_TIMEOUT",
+        global = true,
+        value_name = "DURATION"
+    )]
+    pub(crate) connect_timeout: Option<String>,
+
+    /// Maximum idle time while reading a control-plane response (for example 30s).
+    #[arg(
+        long,
+        env = "SEALTASK_READ_TIMEOUT",
+        global = true,
+        value_name = "DURATION"
+    )]
+    pub(crate) read_timeout: Option<String>,
+
+    /// Maximum total time for one control-plane request (for example 1m).
+    #[arg(
+        long,
+        env = "SEALTASK_REQUEST_TIMEOUT",
+        global = true,
+        value_name = "DURATION"
+    )]
+    pub(crate) request_timeout: Option<String>,
 
     /// Isolate credentials and unlock state under a named profile.
     #[arg(long, env = "SEALTASK_PROFILE", global = true, value_name = "NAME")]
@@ -127,6 +162,28 @@ pub(crate) enum Command {
     },
     /// Show current dashboard task counts.
     Stats,
+    /// Diagnose local state, authentication, unlock, and API connectivity.
+    Doctor {
+        /// Run local checks only and make no network requests.
+        #[arg(long)]
+        offline: bool,
+        /// Exit unsuccessfully when any check warns.
+        #[arg(long)]
+        strict: bool,
+        /// Inspect the platform keychain (may trigger an operating-system prompt).
+        #[arg(long)]
+        include_keychain: bool,
+    },
+    /// Inspect resolved operator configuration.
+    Config {
+        #[command(subcommand)]
+        command: ConfigCommand,
+    },
+    /// List profiles or change the persisted default profile.
+    Profile {
+        #[command(subcommand)]
+        command: ProfileCommand,
+    },
     #[command(hide = true)]
     Inspect {
         work_list_id: Uuid,
@@ -142,6 +199,28 @@ pub(crate) enum Command {
     Notes {
         #[command(subcommand)]
         command: NotesCommand,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub(crate) enum ConfigCommand {
+    /// Show safe configuration values and where they came from.
+    Show {
+        /// Include resolution sources and defaults.
+        #[arg(long)]
+        resolved: bool,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub(crate) enum ProfileCommand {
+    /// List known local profiles and mark the active one.
+    List,
+    /// Persist the default profile for future commands.
+    Use {
+        /// Profile name (letters, digits, '.', '_', and '-' only).
+        #[arg(value_name = "NAME")]
+        name: String,
     },
 }
 

@@ -6,27 +6,38 @@ mod output;
 mod args;
 mod attachment_output;
 mod commands;
+mod doctor;
 mod human_input;
 mod input;
 mod interaction;
+mod operator_config;
 mod output_models;
 mod project_context;
 mod render;
 mod resolver;
 mod selectors;
 mod table;
+mod telemetry;
 
 use args::{Cli, Command};
 use clap::Parser;
 use commands::{
-    run_auth, run_comments, run_info, run_lists_get, run_me, run_notes, run_projects, run_schema,
-    run_stats, run_tasks,
+    run_auth, run_comments, run_config, run_info, run_lists_get, run_me, run_notes, run_profile,
+    run_projects, run_schema, run_stats, run_tasks,
+};
+use operator_config::{
+    OperatorOverrides, parse_timeout, resolve_operator_config,
+    resolve_operator_config_for_diagnostics,
 };
 use output::{CliError, CliResult, OutputFormat, print_clap_error, print_cli_error};
+use sealtask_client_api::ApiTransportOptions;
 use sealtask_client_auth::configure_local_state;
 use sealtask_client_core::PublicError;
 use sealtask_client_runtime::{RuntimeClient, serve};
-use std::ffi::OsString;
+use std::ffi::{OsStr, OsString};
+use std::time::Duration;
+use telemetry::{Telemetry, TelemetryConfig, TelemetryLevel};
+use uuid::Uuid;
 
 const ROOT_QUICK_HELP: &str = "\
 SealTask CLI — secure task management from your terminal
@@ -47,7 +58,7 @@ async fn main() {
     let raw_format = OutputFormat::from_raw_args(&args);
     let cli = parse_cli_or_exit(&args, raw_format);
     let format = OutputFormat::from_cli(&cli);
-    match run(cli, format).await {
+    match run(cli, format, &args).await {
         Ok(()) => {}
         Err(CliError::BrokenPipe) => std::process::exit(0),
         Err(err) => {
@@ -73,7 +84,7 @@ fn exit_after_clap_error(err: clap::Error, format: OutputFormat) -> ! {
     err.exit()
 }
 
-async fn run(cli: Cli, format: OutputFormat) -> CliResult<()> {
+async fn run(cli: Cli, format: OutputFormat, raw_args: &[OsString]) -> CliResult<()> {
     if cli.command.is_none() && cli.serve_unlock_daemon.is_none() {
         if format.is_json() {
             return Err(PublicError::validation(
@@ -85,29 +96,93 @@ async fn run(cli: Cli, format: OutputFormat) -> CliResult<()> {
         return Ok(());
     }
 
-    configure_local_state(cli.config_dir.clone(), cli.profile.as_deref())?;
-
     if let Some(socket_path) = cli.serve_unlock_daemon.as_deref() {
         return serve(socket_path).await.map_err(Into::into);
     }
 
-    let runtime = RuntimeClient::with_storage_origins(&cli.api_url, &cli.storage_origin)?;
+    let telemetry_level = TelemetryLevel::from_flags(cli.verbosity, cli.debug);
+    if format.is_json() && telemetry_level.enabled() {
+        return Err(PublicError::validation(
+            "-v, -vv, and --debug write diagnostic telemetry to stderr and cannot be combined with JSON output",
+        )
+        .into());
+    }
+
+    let operator_overrides = cli_overrides(&cli, raw_args)?;
+    let resolved_config = if matches!(cli.command.as_ref(), Some(Command::Doctor { .. })) {
+        resolve_operator_config_for_diagnostics(operator_overrides)?
+    } else {
+        resolve_operator_config(operator_overrides)?
+    };
+    configure_local_state(
+        Some(resolved_config.config_dir.value.clone()),
+        Some(&resolved_config.profile.value),
+    )?;
+
+    let invocation_id = Uuid::now_v7();
+    let transport_options = ApiTransportOptions::new(
+        resolved_config.connect_timeout.value,
+        resolved_config.read_timeout.value,
+        resolved_config.request_timeout.value,
+    )?
+    .with_request_id(invocation_id);
     let command = cli
         .command
         .expect("a command is present after handling root guidance");
+    let command_name = command_name(&command);
+    let telemetry = Telemetry::start(
+        telemetry_level,
+        invocation_id,
+        command_name,
+        TelemetryConfig {
+            api_url: &resolved_config.api_url.value,
+            profile_is_default: resolved_config.uses_default_profile(),
+            profile_source: resolved_config.profile.source.as_str(),
+            config_dir_source: resolved_config.config_dir.source.as_str(),
+            timeouts: (
+                resolved_config.connect_timeout.value,
+                resolved_config.read_timeout.value,
+                resolved_config.request_timeout.value,
+            ),
+        },
+    );
 
-    match command {
-        Command::Info => run_info(&runtime, format),
-        Command::Schema { command } => run_schema(format, &command),
-        Command::Auth { command } => run_auth(&runtime, format, cli.non_interactive, command).await,
-        Command::Me => run_me(&runtime, format).await,
-        Command::Projects {
-            verbose,
-            include_archived,
-            password_stdin,
-            raw,
-            command,
-        } => {
+    let local_only = matches!(
+        &command,
+        Command::Info
+            | Command::Schema { .. }
+            | Command::Doctor { .. }
+            | Command::Config { .. }
+            | Command::Profile { .. }
+    );
+    let storage_origins = if local_only {
+        &[][..]
+    } else {
+        cli.storage_origin.as_slice()
+    };
+    let runtime = RuntimeClient::with_storage_origins_and_transport(
+        &resolved_config.api_url.value,
+        storage_origins,
+        transport_options,
+    );
+
+    let result = match (command, runtime) {
+        (Command::Info, Ok(runtime)) => run_info(&runtime, format),
+        (Command::Schema { command }, _) => run_schema(format, &command),
+        (Command::Auth { command }, Ok(runtime)) => {
+            run_auth(&runtime, format, cli.non_interactive, command).await
+        }
+        (Command::Me, Ok(runtime)) => run_me(&runtime, format).await,
+        (
+            Command::Projects {
+                verbose,
+                include_archived,
+                password_stdin,
+                raw,
+                command,
+            },
+            Ok(runtime),
+        ) => {
             run_projects(
                 &runtime,
                 format,
@@ -119,19 +194,129 @@ async fn run(cli: Cli, format: OutputFormat) -> CliResult<()> {
             )
             .await
         }
-        Command::Tasks { command } => {
+        (Command::Tasks { command }, Ok(runtime)) => {
             run_tasks(&runtime, format, cli.non_interactive, command).await
         }
-        Command::Stats => run_stats(&runtime, format).await,
-        Command::Inspect {
-            work_list_id,
-            password_stdin,
-        } => run_lists_get(&runtime, format, work_list_id, password_stdin, false).await,
-        Command::Comments { command } => {
+        (Command::Stats, Ok(runtime)) => run_stats(&runtime, format).await,
+        (
+            Command::Doctor {
+                offline,
+                strict,
+                include_keychain,
+            },
+            Ok(runtime),
+        ) => {
+            let result = doctor::run_doctor(
+                &runtime,
+                &resolved_config.config_dir.value,
+                doctor::DoctorOptions {
+                    offline,
+                    strict,
+                    include_keychain,
+                },
+            )
+            .await;
+            doctor::print_doctor_report(result.report(), format)?;
+            result
+                .status()
+                .map_err(|failure| PublicError::validation(failure.to_string()).into())
+        }
+        (Command::Config { command }, _) => run_config(format, &resolved_config, command),
+        (Command::Profile { command }, _) => run_profile(format, &resolved_config, command),
+        (
+            Command::Inspect {
+                work_list_id,
+                password_stdin,
+            },
+            Ok(runtime),
+        ) => run_lists_get(&runtime, format, work_list_id, password_stdin, false).await,
+        (Command::Comments { command }, Ok(runtime)) => {
             run_comments(&runtime, format, cli.non_interactive, command).await
         }
-        Command::Notes { command } => {
+        (Command::Notes { command }, Ok(runtime)) => {
             run_notes(&runtime, format, cli.non_interactive, command).await
         }
+        (_, Err(error)) => Err(error.into()),
+    };
+    telemetry.finish(&result);
+    result
+}
+
+fn cli_overrides(cli: &Cli, raw_args: &[OsString]) -> CliResult<OperatorOverrides> {
+    Ok(OperatorOverrides {
+        api_url: long_option_present(raw_args, "--api-url").then(|| cli.api_url.clone()),
+        profile: long_option_present(raw_args, "--profile")
+            .then(|| cli.profile.clone())
+            .flatten(),
+        config_dir: long_option_present(raw_args, "--config-dir")
+            .then(|| cli.config_dir.clone())
+            .flatten(),
+        connect_timeout: cli_timeout_override(
+            raw_args,
+            "--connect-timeout",
+            cli.connect_timeout.as_deref(),
+        )?,
+        read_timeout: cli_timeout_override(
+            raw_args,
+            "--read-timeout",
+            cli.read_timeout.as_deref(),
+        )?,
+        request_timeout: cli_timeout_override(
+            raw_args,
+            "--request-timeout",
+            cli.request_timeout.as_deref(),
+        )?,
+    })
+}
+
+fn cli_timeout_override(
+    raw_args: &[OsString],
+    option: &str,
+    value: Option<&str>,
+) -> CliResult<Option<Duration>> {
+    if !long_option_present(raw_args, option) {
+        return Ok(None);
+    }
+    let value = value
+        .ok_or_else(|| PublicError::validation(format!("{option} requires a duration value")))?;
+    parse_timeout(value)
+        .map(Some)
+        .map_err(|error| PublicError::validation(format!("invalid {option}: {error}")).into())
+}
+
+fn long_option_present(raw_args: &[OsString], option: &str) -> bool {
+    let option = OsStr::new(option);
+    for argument in raw_args.iter().skip(1) {
+        if argument == "--" {
+            break;
+        }
+        if argument == option {
+            return true;
+        }
+        if let Some(argument) = argument.to_str()
+            && let Some((name, _)) = argument.split_once('=')
+            && OsStr::new(name) == option
+        {
+            return true;
+        }
+    }
+    false
+}
+
+fn command_name(command: &Command) -> &'static str {
+    match command {
+        Command::Info => "info",
+        Command::Schema { .. } => "schema",
+        Command::Auth { .. } => "auth",
+        Command::Me => "me",
+        Command::Projects { .. } => "projects",
+        Command::Tasks { .. } => "tasks",
+        Command::Stats => "stats",
+        Command::Doctor { .. } => "doctor",
+        Command::Config { .. } => "config",
+        Command::Profile { .. } => "profile",
+        Command::Inspect { .. } => "inspect",
+        Command::Comments { .. } => "comments",
+        Command::Notes { .. } => "notes",
     }
 }

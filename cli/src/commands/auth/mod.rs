@@ -30,11 +30,18 @@ where
         })?
 }
 
-pub(super) async fn revoke_session_with_timeout<F>(revocation: F) -> PublicResult<Option<String>>
+pub(super) async fn revoke_session_with_timeout<F>(
+    request_timeout: Duration,
+    revocation: F,
+) -> PublicResult<Option<String>>
 where
     F: Future<Output = PublicResult<Option<String>>>,
 {
-    bounded_session_revocation(SESSION_REVOCATION_TIMEOUT, revocation).await
+    bounded_session_revocation(session_revocation_timeout(request_timeout), revocation).await
+}
+
+fn session_revocation_timeout(request_timeout: Duration) -> Duration {
+    request_timeout.min(SESSION_REVOCATION_TIMEOUT)
 }
 
 pub(crate) async fn run_auth(
@@ -47,16 +54,7 @@ pub(crate) async fn run_auth(
         AuthCommand::Login {
             email,
             password_stdin,
-        } => {
-            login::run(
-                format,
-                runtime.api_url(),
-                email,
-                password_stdin,
-                non_interactive,
-            )
-            .await
-        }
+        } => login::run(format, runtime, email, password_stdin, non_interactive).await,
         AuthCommand::Unlock {
             ttl,
             ttl_seconds,
@@ -95,5 +93,17 @@ mod tests {
         .expect_err("a hanging revocation must time out");
 
         assert!(error.to_string().contains("timed out"));
+    }
+
+    #[test]
+    fn test_should_cap_revocation_and_honor_shorter_request_timeouts() {
+        assert_eq!(
+            session_revocation_timeout(Duration::from_secs(60)),
+            SESSION_REVOCATION_TIMEOUT
+        );
+        assert_eq!(
+            session_revocation_timeout(Duration::from_millis(250)),
+            Duration::from_millis(250)
+        );
     }
 }

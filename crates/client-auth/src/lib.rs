@@ -532,15 +532,20 @@ pub fn config_dir() -> PublicResult<PathBuf> {
     let settings = local_state_settings()?;
     let base_dir = match settings.base_dir {
         Some(path) => path,
-        None => dirs::home_dir()
-            .map(|home| home.join(".sealtask"))
-            .ok_or_else(|| PublicError::unexpected("could not determine home directory"))?,
+        None => default_config_root()?,
     };
     if settings.profile == DEFAULT_PROFILE {
         Ok(base_dir)
     } else {
         Ok(base_dir.join("profiles").join(settings.profile))
     }
+}
+
+/// Returns the canonical base directory used for SealTask local state when no override is set.
+pub fn default_config_root() -> PublicResult<PathBuf> {
+    dirs::home_dir()
+        .map(|home| home.join(".sealtask"))
+        .ok_or_else(|| PublicError::unexpected("could not determine home directory"))
 }
 
 pub fn credentials_path() -> PublicResult<PathBuf> {
@@ -647,6 +652,28 @@ pub async fn refresh_credentials_if_needed(
     expected: &Credentials,
     access_expiry_window_seconds: i64,
 ) -> PublicResult<Credentials> {
+    refresh_credentials_if_needed_with_timeout(
+        client,
+        base_url,
+        expected,
+        access_expiry_window_seconds,
+        CREDENTIAL_REFRESH_TIMEOUT,
+    )
+    .await
+}
+
+pub async fn refresh_credentials_if_needed_with_timeout(
+    client: &reqwest::Client,
+    base_url: &str,
+    expected: &Credentials,
+    access_expiry_window_seconds: i64,
+    refresh_timeout: StdDuration,
+) -> PublicResult<Credentials> {
+    if refresh_timeout.is_zero() {
+        return Err(PublicError::validation(
+            "credential refresh timeout must be greater than zero",
+        ));
+    }
     let dir = config_dir()?;
     refresh_credentials_if_needed_in(
         &dir,
@@ -654,7 +681,7 @@ pub async fn refresh_credentials_if_needed(
         base_url,
         expected,
         access_expiry_window_seconds,
-        CREDENTIAL_REFRESH_TIMEOUT,
+        refresh_timeout,
     )
     .await
 }

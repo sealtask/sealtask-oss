@@ -40,7 +40,7 @@ impl From<PublicError> for CliError {
 }
 
 impl CliError {
-    fn code(&self) -> &'static str {
+    pub(crate) fn code(&self) -> &'static str {
         match self {
             Self::BrokenPipe => "broken_pipe",
             Self::Interrupted { .. } => "interrupted",
@@ -591,6 +591,7 @@ fn error_hint(code: &str) -> Option<&'static str> {
         }
         "conflict" => Some("Re-read the resource, reconcile the latest state, and retry."),
         "rate_limited" => Some("Wait for retryAfterSeconds when present before retrying."),
+        "request_timeout" => Some("Retry the command after the blocking condition clears."),
         "outcome_ambiguous" => {
             Some("Inspect the resource before retrying; the mutation may have committed.")
         }
@@ -669,6 +670,7 @@ mod tests {
             "request body timed out before execution; retry the request"
         );
         assert!(result.retryable);
+        assert!(result.hint.is_some());
     }
 
     #[test]

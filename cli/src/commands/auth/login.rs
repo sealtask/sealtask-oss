@@ -12,7 +12,7 @@ use sealtask_client_auth::{
     replace_credentials_atomically,
 };
 use sealtask_client_core::{PublicError, PublicResult};
-use sealtask_client_runtime::{clear_session, session_key};
+use sealtask_client_runtime::{RuntimeClient, clear_session, session_key};
 use serde::Serialize;
 use std::io::{self, Read};
 use std::time::Duration;
@@ -32,11 +32,12 @@ struct LoginResult {
 
 pub(super) async fn run(
     format: OutputFormat,
-    api_url: &str,
+    runtime: &RuntimeClient,
     email_flag: Option<String>,
     password_stdin: bool,
     non_interactive: bool,
 ) -> CliResult<()> {
+    let api_url = runtime.api_url();
     let normalized_api_url = normalize_api_url(api_url);
     let stored_credentials = load_credentials()?;
     if let Some(credentials) = stored_credentials.as_ref()
@@ -81,7 +82,7 @@ pub(super) async fn run(
     if !format.is_json() {
         write_interaction_line(format, format_args!("Authenticating..."))?;
     }
-    let client = reqwest::Client::new();
+    let client = runtime.control_plane_http_client()?;
     let auth_response = match begin_login(&client, api_url, &email, &password).await? {
         LoginOutcome::Authenticated(response) => response,
         LoginOutcome::MfaRequired {
@@ -183,11 +184,14 @@ pub(super) async fn run(
     if let Some(previous_credentials) = previous_credentials.as_ref().filter(|previous| {
         !previous.is_refresh_expired() && previous.refresh_token != credentials.refresh_token
     }) && let Some(warning) = previous_session_revoke_warning(
-        revoke_session_with_timeout(revoke_session(
-            &client,
-            &previous_credentials.api_url,
-            &previous_credentials.refresh_token,
-        ))
+        revoke_session_with_timeout(
+            runtime.api_transport_options().request_timeout(),
+            revoke_session(
+                &client,
+                &previous_credentials.api_url,
+                &previous_credentials.refresh_token,
+            ),
+        )
         .await,
     ) {
         warnings.push(warning);

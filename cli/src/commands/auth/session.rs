@@ -136,7 +136,7 @@ pub(super) async fn logout(format: OutputFormat, runtime: &RuntimeClient) -> Cli
         );
     };
 
-    let client = reqwest::Client::new();
+    let client = runtime.control_plane_http_client()?;
     let mut warnings = Vec::new();
     let mut local_warnings = Vec::new();
     let mut local_cleanup_error: Option<PublicError> = None;
@@ -161,11 +161,10 @@ pub(super) async fn logout(format: OutputFormat, runtime: &RuntimeClient) -> Cli
     public_result_with_warnings(clear_result, &local_warnings)?;
 
     if let Some(warning) = logout_revoke_warning(
-        revoke_session_with_timeout(revoke_session(
-            &client,
-            &credentials.api_url,
-            &credentials.refresh_token,
-        ))
+        revoke_session_with_timeout(
+            runtime.api_transport_options().request_timeout(),
+            revoke_session(&client, &credentials.api_url, &credentials.refresh_token),
+        )
         .await,
     ) {
         warnings.push(warning);
