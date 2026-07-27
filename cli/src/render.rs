@@ -7,12 +7,12 @@ use crate::output_models::{
     work_list_summaries_v1,
 };
 use sealtask_client_api::{
-    CurrentUserResponse, DashboardStatsResponse, TaskDetailResponse, TaskResponse,
-    WorkListDetailResponse, WorkListResponse,
+    CurrentUserResponse, DashboardStatsResponse, TaskDetailResponse, TaskReferenceSchemeResponse,
+    TaskResponse, WorkListDetailResponse, WorkListResponse,
 };
 use sealtask_client_runtime::{
-    AgentComment, AgentNote, AgentTaskDetail, AgentTaskSummary, AgentWorkListDetail,
-    AgentWorkListSummary, ReadableAttachment,
+    AgentComment, AgentNote, AgentTaskDetail, AgentTaskReferenceHistoryStatus, AgentTaskSummary,
+    AgentWorkListDetail, AgentWorkListSummary, ReadableAttachment,
 };
 use serde_json::json;
 use std::path::Path;
@@ -217,6 +217,70 @@ pub(crate) fn print_delete_result(
     )
 }
 
+pub(crate) fn print_task_reference_scheme_result(
+    scheme: &TaskReferenceSchemeResponse,
+    format: OutputFormat,
+    table_message: &str,
+) -> CliResult<()> {
+    print_simple_result(
+        format,
+        &json!({
+            "workListId": scheme.work_list_id,
+            "schemeRevisionId": scheme.scheme_revision_id,
+            "revision": scheme.revision,
+            "isRepair": scheme.is_repair,
+            "createdAt": scheme.created_at,
+            "retiredAt": scheme.retired_at,
+            "quarantinedAt": scheme.quarantined_at,
+            "quarantinedByMembershipId": scheme.quarantined_by_membership_id,
+        }),
+        "serializing task-reference scheme result should succeed",
+        table_message,
+    )
+}
+
+pub(crate) fn print_task_reference_history_status(
+    status: &AgentTaskReferenceHistoryStatus,
+    format: OutputFormat,
+) -> CliResult<()> {
+    match format {
+        OutputFormat::Json | OutputFormat::JsonPretty => print_json(
+            status,
+            format,
+            "serializing task-reference history status should succeed",
+        ),
+        OutputFormat::Table => {
+            println!(
+                "Task-reference history for {}: {:?}",
+                status.work_list_id, status.availability
+            );
+            if status.schemes.is_empty() {
+                println!("No verified scheme rows are available.");
+                return Ok(());
+            }
+            println!(
+                "{:<8}  {:<36}  {:<8}  State",
+                "Revision", "Scheme ID", "Lane"
+            );
+            println!("{}", "-".repeat(78));
+            for scheme in &status.schemes {
+                println!(
+                    "{:<8}  {:<36}  {:<8}  {}",
+                    scheme.revision,
+                    scheme.scheme_revision_id,
+                    if scheme.is_repair {
+                        "repair"
+                    } else {
+                        "ordinary"
+                    },
+                    scheme.state
+                );
+            }
+            Ok(())
+        }
+    }
+}
+
 pub(crate) fn print_empty_collection(format: OutputFormat, table_message: &str) -> CliResult<()> {
     match format {
         OutputFormat::Json | OutputFormat::JsonPretty => print_json(
@@ -385,6 +449,11 @@ pub(crate) fn print_task(task: &AgentTaskSummary, format: OutputFormat) -> CliRe
                 task.id,
                 terminal_line(task.title.as_deref().unwrap_or("<unreadable task>"))
             );
+            if let Some(reference) = task.reference.as_deref() {
+                println!("Ref:    {}", terminal_line(reference));
+            } else if task.reference_number.is_some() {
+                println!("Ref:    <reference unavailable>");
+            }
             println!(
                 "Status: {}",
                 if task.is_completed {
@@ -411,10 +480,10 @@ pub(crate) fn print_tasks(tasks: &[AgentTaskSummary], format: OutputFormat) -> C
         }
         OutputFormat::Table => {
             println!(
-                "{:<36}  {:<40}  {:<3}  {:<10}  Status",
-                "ID", "Title", "Pri", "Due"
+                "{:<14}  {:<36}  {:<32}  {:<3}  {:<10}  Status",
+                "Reference", "ID", "Title", "Pri", "Due"
             );
-            println!("{}", "-".repeat(108));
+            println!("{}", "-".repeat(120));
             for task in tasks {
                 let priority = task
                     .priority
@@ -432,9 +501,19 @@ pub(crate) fn print_tasks(tasks: &[AgentTaskSummary], format: OutputFormat) -> C
                     "Active"
                 };
                 println!(
-                    "{:<36}  {:<40}  {:<3}  {:<10}  {}",
+                    "{:<14}  {:<36}  {:<32}  {:<3}  {:<10}  {}",
+                    truncate(
+                        task.reference.as_deref().unwrap_or_else(|| {
+                            if task.reference_number.is_some() {
+                                "<reference unavailable>"
+                            } else {
+                                "-"
+                            }
+                        }),
+                        14
+                    ),
                     task.id,
-                    truncate(task.title.as_deref().unwrap_or("-"), 40),
+                    truncate(task.title.as_deref().unwrap_or("-"), 32),
                     priority,
                     due,
                     status
@@ -460,6 +539,11 @@ pub(crate) fn print_task_detail(detail: &AgentTaskDetail, format: OutputFormat) 
             println!("Task");
             println!("{}", "=".repeat(60));
             println!("ID:          {}", task.id);
+            if let Some(reference) = task.reference.as_deref() {
+                println!("Reference:   {}", terminal_line(reference));
+            } else if task.reference_number.is_some() {
+                println!("Reference:   <reference unavailable>");
+            }
             println!(
                 "Title:       {}",
                 terminal_line(task.title.as_deref().unwrap_or("-"))

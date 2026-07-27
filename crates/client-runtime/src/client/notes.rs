@@ -523,6 +523,9 @@ mod tests {
             work_list: WorkListContext {
                 work_list_title: None,
                 list_key: Some(list_key),
+                task_reference_schemes: Vec::new(),
+                current_task_reference_scheme_revision: None,
+                current_task_reference_scheme_revision_id: None,
                 read_error: None,
             },
             data_key: SymmetricKey::new([0x41; KEY_SIZE]),
@@ -1890,6 +1893,9 @@ mod tests {
             work_list: WorkListContext {
                 work_list_title: None,
                 list_key: Some(list_key),
+                task_reference_schemes: Vec::new(),
+                current_task_reference_scheme_revision: None,
+                current_task_reference_scheme_revision_id: None,
                 read_error: None,
             },
             data_key: SymmetricKey::new([0x41; KEY_SIZE]),

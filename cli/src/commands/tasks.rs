@@ -1,6 +1,7 @@
 use crate::args::{
     TaskArchiveArgsCli, TaskAttachmentsCommand, TaskCompletionArgsCli, TaskCreateArgsCli,
-    TaskDeleteArgsCli, TaskMoveArgsCli, TaskUnarchiveArgsCli, TaskUpdateArgsCli, TasksCommand,
+    TaskDeleteArgsCli, TaskMoveArgsCli, TaskReferencesCommand, TaskUnarchiveArgsCli,
+    TaskUpdateArgsCli, TasksCommand,
 };
 use crate::attachment_output::{resolve_attachment_output_path, write_attachment_file};
 use crate::input::{
@@ -13,14 +14,15 @@ use crate::output::{
 use crate::render::{
     print_attachment, print_delete_result, print_download_result, print_empty_collection,
     print_raw_my_tasks, print_raw_task_detail, print_raw_tasks, print_readable_attachment,
-    print_task, print_task_detail, print_tasks,
+    print_task, print_task_detail, print_task_reference_scheme_result, print_tasks,
 };
 use sealtask_client_api::DeleteTaskRequest;
 use sealtask_client_core::PublicError;
 use sealtask_client_core::PublicResult;
 use sealtask_client_runtime::{
     ArchiveTaskArgs, AttachmentUploadPassword, CreateTaskArgs, DeleteTaskArgs,
-    DeleteTaskAttachmentArgs, MoveTaskArgs, MoveTaskInput, OperationCancellation, RuntimeClient,
+    DeleteTaskAttachmentArgs, MoveTaskArgs, MoveTaskInput, OperationCancellation,
+    QuarantineTaskReferenceSchemeArgs, RepairTaskReferenceSchemeArgs, RuntimeClient,
     TaskCompletionArgs, UnarchiveTaskArgs, UpdateTaskArgs, UploadTaskAttachmentArgs,
 };
 use serde_json::json;
@@ -101,6 +103,55 @@ pub(crate) async fn run_tasks(
                 .await?;
             print_task_detail(&detail, format)
         }
+        TasksCommand::Resolve(args) => {
+            let detail = runtime
+                .resolve_task_reference(&args.reference, args.work_list_id, args.password_stdin)
+                .await?;
+            print_task_detail(&detail, format)
+        }
+        TasksCommand::TaskReferences { command } => match command {
+            TaskReferencesCommand::Status(args) => {
+                let status = runtime
+                    .inspect_task_reference_schemes(args.work_list_id, args.password_stdin)
+                    .await?;
+                crate::render::print_task_reference_history_status(&status, format)
+            }
+            TaskReferencesCommand::Repair(args) => {
+                let response = runtime
+                    .repair_task_reference_scheme(RepairTaskReferenceSchemeArgs {
+                        work_list_id: args.work_list_id,
+                        prefix: args.prefix,
+                        minimum_digits: args.minimum_digits,
+                        password_stdin: args.password_stdin,
+                    })
+                    .await?;
+                print_task_reference_scheme_result(
+                    &response,
+                    format,
+                    "Installed owner task-reference repair.",
+                )
+            }
+            TaskReferencesCommand::Quarantine(args) => {
+                if !args.confirm {
+                    return Err(PublicError::validation(
+                        "quarantine is irreversible; pass --confirm after verifying the exact historical scheme revision",
+                    )
+                    .into());
+                }
+                let response = runtime
+                    .quarantine_task_reference_scheme(QuarantineTaskReferenceSchemeArgs {
+                        work_list_id: args.work_list_id,
+                        scheme_revision_id: args.scheme_revision_id,
+                        password_stdin: args.password_stdin,
+                    })
+                    .await?;
+                print_task_reference_scheme_result(
+                    &response,
+                    format,
+                    "Quarantined unreadable historical task-reference scheme.",
+                )
+            }
+        },
         TasksCommand::Create(args) => create_task(runtime, format, non_interactive, args).await,
         TasksCommand::Update(args) => update_task(runtime, format, args).await,
         TasksCommand::Move(args) => move_task(runtime, format, args).await,

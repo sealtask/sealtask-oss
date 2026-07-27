@@ -1,6 +1,7 @@
 mod auth;
 mod comments;
 mod notes;
+mod task_references;
 mod tasks;
 mod work_lists;
 
@@ -16,15 +17,15 @@ use crate::{
     operation_cancellation::OperationCancellation,
     upload_lifecycle::{AttachmentUploadFailureReport, UploadLifecycleManager},
 };
-use sealtask_client_api::PublicApiClient;
+use sealtask_client_api::{PublicApiClient, TaskReferenceSchemeResponse, WorkListResponse};
 use sealtask_client_auth::{
     Credentials, load_credentials_for_url, load_persisted_data_key, normalize_api_url,
     opaque_login_finish_with_export_key, opaque_login_start, with_current_credentials,
 };
 use sealtask_client_core::{PublicError, PublicResult};
 use sealtask_client_crypto::{
-    DataKeyCiphertextVersion, SymmetricKey, data_key_ciphertext_version, decrypt_user_data_key,
-    decrypt_user_data_key_with_opaque_export_key,
+    DataKeyCiphertextVersion, SymmetricKey, TaskReferenceSchemeV1, data_key_ciphertext_version,
+    decrypt_user_data_key, decrypt_user_data_key_with_opaque_export_key,
 };
 use std::time::Duration;
 use uuid::Uuid;
@@ -83,7 +84,41 @@ pub struct RuntimeClient {
 pub(crate) struct WorkListContext {
     pub(crate) work_list_title: Option<String>,
     pub(crate) list_key: Option<SymmetricKey>,
+    pub(crate) task_reference_schemes: Vec<TaskReferenceSchemeV1>,
+    pub(crate) current_task_reference_scheme_revision: Option<i64>,
+    pub(crate) current_task_reference_scheme_revision_id: Option<Uuid>,
     pub(crate) read_error: Option<ReadError>,
+}
+
+impl WorkListContext {
+    pub(crate) fn current_task_reference_scheme(&self) -> Option<&TaskReferenceSchemeV1> {
+        let revision = self.current_task_reference_scheme_revision?;
+        let revision_id = self.current_task_reference_scheme_revision_id?;
+        self.task_reference_schemes
+            .iter()
+            .find(|scheme| scheme.revision == revision && scheme.scheme_revision_id == revision_id)
+    }
+}
+
+pub(crate) async fn load_task_reference_scheme_history(
+    client: &mut PublicApiClient,
+    work_list: &WorkListResponse,
+) -> Vec<TaskReferenceSchemeResponse> {
+    if !matches!(
+        (
+            work_list.task_references_enabled_at,
+            work_list.current_task_reference_scheme_revision,
+            work_list.current_task_reference_scheme_revision_id,
+        ),
+        (Some(_), Some(_), Some(_))
+    ) {
+        return Vec::new();
+    }
+
+    client
+        .get_task_reference_schemes(work_list.id)
+        .await
+        .unwrap_or_default()
 }
 
 #[derive(Debug, Clone)]
@@ -186,9 +221,15 @@ impl RuntimeClient {
             .await?;
         let mut client = PublicApiClient::with_credentials(&self.api_url, credentials)?;
         let work_list = client.get_work_list(work_list_id).await?;
+        let scheme_history =
+            load_task_reference_scheme_history(&mut client, &work_list.work_list).await;
         let context = UnlockedWorkListContext {
             membership_id: work_list.work_list.membership.id,
-            work_list: self.context_from_work_list_detail(&work_list, Some(&data_key)),
+            work_list: self.context_from_work_list_detail(
+                &work_list,
+                &scheme_history,
+                Some(&data_key),
+            ),
             data_key,
         };
         Ok((client, context))
@@ -227,9 +268,15 @@ impl RuntimeClient {
             }
             result = client.get_work_list(work_list_id) => result?,
         };
+        let scheme_history =
+            load_task_reference_scheme_history(&mut client, &work_list.work_list).await;
         let context = UnlockedWorkListContext {
             membership_id: work_list.work_list.membership.id,
-            work_list: self.context_from_work_list_detail(&work_list, Some(&data_key)),
+            work_list: self.context_from_work_list_detail(
+                &work_list,
+                &scheme_history,
+                Some(&data_key),
+            ),
             data_key,
         };
         Ok((client, context))

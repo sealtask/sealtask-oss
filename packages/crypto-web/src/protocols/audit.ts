@@ -92,6 +92,7 @@ export type NoteCreateContext = {
 }
 export type NoteUpdateContext = { noteTitle: string }
 export type NoteDeleteContext = { noteTitle: string }
+export type TaskReferenceSchemeContext = Record<string, never>
 
 export type AuditOperation =
   | { type: 'task.created'; context: TaskCreateContext }
@@ -129,6 +130,22 @@ export type AuditOperation =
   | { type: 'note.created'; context: NoteCreateContext }
   | { type: 'note.updated'; context: NoteUpdateContext }
   | { type: 'note.deleted'; context: NoteDeleteContext }
+  | {
+      type: 'task_reference_scheme.enabled'
+      context: TaskReferenceSchemeContext
+    }
+  | {
+      type: 'task_reference_scheme.updated'
+      context: TaskReferenceSchemeContext
+    }
+  | {
+      type: 'work_list.external_references_updated'
+      context: Record<string, never>
+    }
+  | {
+      type: 'task.external_references_updated'
+      context: Record<string, never>
+    }
 
 export const AUDIT_KINDS = {
   'task.created': 'audit.task_created',
@@ -160,6 +177,14 @@ export const AUDIT_KINDS = {
   'note.created': 'audit.note_created',
   'note.updated': 'audit.note_updated',
   'note.deleted': 'audit.note_deleted',
+  'task_reference_scheme.enabled':
+    'audit.task_reference_scheme_enabled',
+  'task_reference_scheme.updated':
+    'audit.task_reference_scheme_updated',
+  'work_list.external_references_updated':
+    'audit.work_list_external_references_updated',
+  'task.external_references_updated':
+    'audit.task_external_references_updated',
 } as const
 
 export type AuditNarrativePrimitive =
@@ -336,6 +361,22 @@ export function buildNarrativeDescriptor(
       return descriptor('features.audit.narratives.noteDeleted', {
         title: operation.context.noteTitle,
       })
+    case 'task_reference_scheme.enabled':
+      return descriptor(
+        'features.audit.narratives.taskReferenceSchemeEnabled',
+      )
+    case 'task_reference_scheme.updated':
+      return descriptor(
+        'features.audit.narratives.taskReferenceSchemeUpdated',
+      )
+    case 'work_list.external_references_updated':
+      return descriptor(
+        'features.audit.narratives.workListExternalReferencesUpdated',
+      )
+    case 'task.external_references_updated':
+      return descriptor(
+        'features.audit.narratives.taskExternalReferencesUpdated',
+      )
   }
 }
 
@@ -906,5 +947,28 @@ function buildFieldsArray(
       return [{ field: 'note', changeKind: 'update' }]
     case 'note.deleted':
       return [{ field: 'note', changeKind: 'delete' }]
+    case 'task_reference_scheme.enabled':
+      return [{ field: 'task_references', changeKind: 'set' }]
+    case 'task_reference_scheme.updated':
+      return [
+        {
+          field: 'task_reference_scheme_ciphertext',
+          changeKind: 'update',
+        },
+      ]
+    case 'work_list.external_references_updated':
+      return [
+        {
+          field: 'work_list_external_references_ciphertext',
+          changeKind: 'update',
+        },
+      ]
+    case 'task.external_references_updated':
+      return [
+        {
+          field: 'task_external_references_ciphertext',
+          changeKind: 'update',
+        },
+      ]
   }
 }

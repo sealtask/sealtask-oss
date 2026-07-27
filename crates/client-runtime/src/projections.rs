@@ -5,17 +5,18 @@ use crate::models::{
 };
 use chrono::{DateTime, Utc};
 use sealtask_client_api::{
-    CommentResponse, MembershipResponse, MyTaskResponse, TaskResponse, WorkListDetailResponse,
-    WorkListResponse,
+    CommentResponse, MembershipResponse, MyTaskResponse, TaskReferenceSchemeResponse, TaskResponse,
+    WorkListDetailResponse, WorkListResponse,
 };
 use sealtask_client_core::{PublicError, PublicResult};
 use sealtask_client_crypto::{
-    CommentPayloadBody, FlexibleValue, SymmetricKey, TaskPayloadBody, TaskPayloadRichText,
-    decode_sealed_blob, decrypt_comment_payload, decrypt_task_payload, decrypt_text_value,
-    decrypt_work_list_key, decrypt_work_list_payload, derive_work_list_key, flexible_value_to_json,
+    CommentPayloadBody, FlexibleValue, SymmetricKey, TASK_REFERENCE_REVISION_MAX, TaskPayloadBody,
+    TaskPayloadRichText, TaskReferenceSchemeV1, decode_sealed_blob, decrypt_comment_payload,
+    decrypt_task_payload, decrypt_task_reference_scheme, decrypt_text_value, decrypt_work_list_key,
+    decrypt_work_list_payload, derive_work_list_key, flexible_value_to_json,
 };
 use serde_json::Value;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
 #[derive(Debug)]
@@ -39,6 +40,8 @@ struct TaskProjectionMetadata {
     created_at: DateTime<Utc>,
     updated_at: DateTime<Utc>,
     comment_count: i64,
+    reference_number: Option<i64>,
+    reference: Option<String>,
 }
 
 #[derive(Debug)]
@@ -152,6 +155,7 @@ impl RuntimeClient {
     pub(crate) fn build_work_list_contexts(
         &self,
         work_lists: &[WorkListResponse],
+        scheme_histories: &HashMap<Uuid, Vec<TaskReferenceSchemeResponse>>,
         data_key: Option<&SymmetricKey>,
     ) -> HashMap<Uuid, WorkListContext> {
         work_lists
@@ -159,7 +163,14 @@ impl RuntimeClient {
             .map(|work_list| {
                 (
                     work_list.id,
-                    self.context_from_work_list_response(work_list, data_key),
+                    self.context_from_work_list_response(
+                        work_list,
+                        scheme_histories
+                            .get(&work_list.id)
+                            .map(Vec::as_slice)
+                            .unwrap_or_default(),
+                        data_key,
+                    ),
                 )
             })
             .collect()
@@ -168,14 +179,16 @@ impl RuntimeClient {
     pub(crate) fn context_from_work_list_detail(
         &self,
         work_list: &WorkListDetailResponse,
+        scheme_history: &[TaskReferenceSchemeResponse],
         data_key: Option<&SymmetricKey>,
     ) -> WorkListContext {
-        self.context_from_work_list_response(&work_list.work_list, data_key)
+        self.context_from_work_list_response(&work_list.work_list, scheme_history, data_key)
     }
 
     fn context_from_work_list_response(
         &self,
         work_list: &WorkListResponse,
+        scheme_history: &[TaskReferenceSchemeResponse],
         data_key: Option<&SymmetricKey>,
     ) -> WorkListContext {
         match data_key {
@@ -185,6 +198,14 @@ impl RuntimeClient {
                 &work_list.membership.work_list_key_ciphertext,
             ) {
                 Ok(list_key) => {
+                    let task_reference_schemes = decode_task_reference_schemes(
+                        &list_key,
+                        work_list.id,
+                        work_list.task_references_enabled_at.is_some(),
+                        work_list.current_task_reference_scheme_revision,
+                        work_list.current_task_reference_scheme_revision_id,
+                        scheme_history,
+                    );
                     let payload =
                         decode_work_list_payload_value(&list_key, &work_list.payload_ciphertext);
                     let title = payload
@@ -195,6 +216,11 @@ impl RuntimeClient {
                     WorkListContext {
                         work_list_title: title,
                         list_key: Some(list_key),
+                        task_reference_schemes,
+                        current_task_reference_scheme_revision: work_list
+                            .current_task_reference_scheme_revision,
+                        current_task_reference_scheme_revision_id: work_list
+                            .current_task_reference_scheme_revision_id,
                         read_error: payload
                             .err()
                             .map(|err| make_read_error("work_list_payload", err)),
@@ -203,12 +229,22 @@ impl RuntimeClient {
                 Err(err) => WorkListContext {
                     work_list_title: decode_text_fallback(&work_list.title_ciphertext),
                     list_key: None,
+                    task_reference_schemes: Vec::new(),
+                    current_task_reference_scheme_revision: work_list
+                        .current_task_reference_scheme_revision,
+                    current_task_reference_scheme_revision_id: work_list
+                        .current_task_reference_scheme_revision_id,
                     read_error: Some(make_read_error("work_list_key", err)),
                 },
             },
             None => WorkListContext {
                 work_list_title: decode_text_fallback(&work_list.title_ciphertext),
                 list_key: None,
+                task_reference_schemes: Vec::new(),
+                current_task_reference_scheme_revision: work_list
+                    .current_task_reference_scheme_revision,
+                current_task_reference_scheme_revision_id: work_list
+                    .current_task_reference_scheme_revision_id,
                 read_error: Some(ReadError {
                     code: "data_key_missing".to_string(),
                     message: "could not load data key for work list decryption".to_string(),
@@ -287,6 +323,11 @@ impl RuntimeClient {
             created_at: work_list.created_at,
             updated_at: work_list.updated_at,
             archived_at: work_list.archived_at,
+            task_references_enabled_at: work_list.task_references_enabled_at,
+            current_task_reference_scheme_revision: work_list
+                .current_task_reference_scheme_revision,
+            current_task_reference_scheme_revision_id: work_list
+                .current_task_reference_scheme_revision_id,
             membership,
             title,
             description,
@@ -333,6 +374,12 @@ impl RuntimeClient {
                 created_at: task.created_at,
                 updated_at: task.updated_at,
                 comment_count: task.comment_count,
+                reference_number: task.reference_number,
+                reference: task.reference_number.and_then(|number| {
+                    context
+                        .and_then(WorkListContext::current_task_reference_scheme)
+                        .and_then(|scheme| scheme.format_reference(number).ok())
+                }),
             },
             delegations: task.delegations,
             title_ciphertext: &task.title_ciphertext,
@@ -374,6 +421,12 @@ impl RuntimeClient {
                 created_at: task.created_at,
                 updated_at: task.updated_at,
                 comment_count: task.comment_count,
+                reference_number: task.reference_number,
+                reference: task.reference_number.and_then(|number| {
+                    context
+                        .and_then(WorkListContext::current_task_reference_scheme)
+                        .and_then(|scheme| scheme.format_reference(number).ok())
+                }),
             },
             delegations: task.delegations,
             title_ciphertext: &task.title_ciphertext,
@@ -503,6 +556,8 @@ fn project_task(input: TaskProjectionInput<'_>) -> AgentTaskSummary {
                     created_at: metadata.created_at,
                     updated_at: metadata.updated_at,
                     comment_count: metadata.comment_count,
+                    reference_number: metadata.reference_number,
+                    reference: metadata.reference,
                     title: Some(title),
                     body_markdown: rich_text.as_ref().and_then(rich_text_to_markdown),
                     body_rich_text: rich_text,
@@ -537,6 +592,8 @@ fn project_task(input: TaskProjectionInput<'_>) -> AgentTaskSummary {
                 created_at: metadata.created_at,
                 updated_at: metadata.updated_at,
                 comment_count: metadata.comment_count,
+                reference_number: metadata.reference_number,
+                reference: metadata.reference,
                 title: decode_text_fallback(title_ciphertext),
                 body_markdown: None,
                 body_rich_text: None,
@@ -570,6 +627,8 @@ fn project_task(input: TaskProjectionInput<'_>) -> AgentTaskSummary {
             created_at: metadata.created_at,
             updated_at: metadata.updated_at,
             comment_count: metadata.comment_count,
+            reference_number: metadata.reference_number,
+            reference: metadata.reference,
             title: decode_text_fallback(title_ciphertext),
             body_markdown: None,
             body_rich_text: None,
@@ -626,6 +685,147 @@ fn resolve_list_key(
 
     let work_list_key_bytes = decode_sealed_blob(membership_ciphertext)?;
     decrypt_work_list_key(data_key, &work_list_key_bytes)
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) struct TaskReferenceSchemeHistoryMetadata {
+    pub(crate) current_revision: i64,
+    pub(crate) ordinary_revision_count: usize,
+    pub(crate) repair_revision_count: usize,
+}
+
+pub(crate) fn validate_task_reference_scheme_history_metadata(
+    work_list_id: Uuid,
+    references_enabled: bool,
+    current_revision: Option<i64>,
+    current_revision_id: Option<Uuid>,
+    responses: &[TaskReferenceSchemeResponse],
+) -> Option<TaskReferenceSchemeHistoryMetadata> {
+    let (Some(current_revision), Some(current_revision_id)) =
+        (current_revision, current_revision_id)
+    else {
+        return None;
+    };
+    if !references_enabled
+        || responses.is_empty()
+        || responses.len() > usize::try_from(TASK_REFERENCE_REVISION_MAX).unwrap_or(usize::MAX)
+        || current_revision != i64::try_from(responses.len()).unwrap_or(i64::MAX)
+        || !(1..=TASK_REFERENCE_REVISION_MAX).contains(&current_revision)
+        || responses
+            .iter()
+            .any(|response| response.work_list_id != work_list_id)
+    {
+        return None;
+    }
+
+    let mut ordered = responses.iter().collect::<Vec<_>>();
+    ordered.sort_by_key(|response| response.revision);
+    if ordered.first().is_none_or(|response| response.is_repair) {
+        return None;
+    }
+    let mut response_ids = HashSet::with_capacity(responses.len());
+    let mut ordinary_revision_count = 0;
+    let mut repair_revision_count = 0;
+    for (expected_revision, response) in (1..=current_revision).zip(ordered.iter().copied()) {
+        if response.revision != expected_revision
+            || !response_ids.insert(response.scheme_revision_id)
+        {
+            return None;
+        }
+        if response.is_repair {
+            repair_revision_count += 1;
+        } else {
+            ordinary_revision_count += 1;
+        }
+        match (
+            response.quarantined_at.as_ref(),
+            response.quarantined_by_membership_id,
+        ) {
+            (None, None) => {}
+            (Some(quarantined_at), Some(_))
+                if response.revision < current_revision
+                    && response
+                        .retired_at
+                        .as_ref()
+                        .is_some_and(|retired_at| quarantined_at >= retired_at) => {}
+            _ => return None,
+        }
+    }
+    if ordinary_revision_count
+        > usize::try_from(sealtask_client_crypto::TASK_REFERENCE_ORDINARY_REVISION_MAX)
+            .unwrap_or(usize::MAX)
+        || repair_revision_count
+            > usize::try_from(sealtask_client_crypto::TASK_REFERENCE_REPAIR_REVISION_MAX)
+                .unwrap_or(usize::MAX)
+    {
+        return None;
+    }
+
+    let active = responses
+        .iter()
+        .filter(|response| response.retired_at.is_none())
+        .collect::<Vec<_>>();
+    if active.len() != 1
+        || active[0].revision != current_revision
+        || active[0].scheme_revision_id != current_revision_id
+        || active[0].quarantined_at.is_some()
+        || active[0].quarantined_by_membership_id.is_some()
+    {
+        return None;
+    }
+
+    Some(TaskReferenceSchemeHistoryMetadata {
+        current_revision,
+        ordinary_revision_count,
+        repair_revision_count,
+    })
+}
+
+fn decode_task_reference_schemes(
+    list_key: &SymmetricKey,
+    work_list_id: Uuid,
+    references_enabled: bool,
+    current_revision: Option<i64>,
+    current_revision_id: Option<Uuid>,
+    responses: &[TaskReferenceSchemeResponse],
+) -> Vec<TaskReferenceSchemeV1> {
+    let Some(metadata) = validate_task_reference_scheme_history_metadata(
+        work_list_id,
+        references_enabled,
+        current_revision,
+        current_revision_id,
+        responses,
+    ) else {
+        return Vec::new();
+    };
+
+    let mut schemes = Vec::with_capacity(responses.len());
+    for response in responses
+        .iter()
+        .filter(|response| response.quarantined_at.is_none())
+    {
+        let Ok(bytes) = decode_sealed_blob(&response.payload_ciphertext) else {
+            return Vec::new();
+        };
+        let Ok(scheme) = decrypt_task_reference_scheme(
+            list_key,
+            &bytes,
+            work_list_id,
+            response.scheme_revision_id,
+            response.revision,
+        ) else {
+            return Vec::new();
+        };
+        schemes.push(scheme);
+    }
+    schemes.sort_by_key(|scheme| scheme.revision);
+    if schemes.last().is_none_or(|scheme| {
+        scheme.revision != metadata.current_revision
+            || Some(scheme.scheme_revision_id) != current_revision_id
+    }) {
+        return Vec::new();
+    }
+    schemes
 }
 
 fn decode_work_list_payload_value(
@@ -704,6 +904,7 @@ pub(crate) fn rich_text_to_markdown(rich_text: &TaskPayloadRichText) -> Option<S
 #[cfg(test)]
 mod tests {
     use super::*;
+    use sealtask_client_crypto::encrypt_task_reference_scheme;
 
     #[test]
     fn test_should_join_non_empty_rich_text_blocks_as_markdown() {
@@ -725,6 +926,234 @@ mod tests {
         assert_eq!(
             rich_text_to_markdown(&rich_text).as_deref(),
             Some("First\n\nSecond")
+        );
+    }
+
+    fn task_reference_history(
+        count: i64,
+    ) -> (SymmetricKey, Uuid, Vec<TaskReferenceSchemeResponse>, Uuid) {
+        let list_key = SymmetricKey::new([7; 32]);
+        let work_list_id = Uuid::from_u128(0x018f_6b71_2b8a_7000_8000_0000_0000_0001);
+        let mut current_revision_id = Uuid::nil();
+        let responses = (1..=count)
+            .map(|revision| {
+                let scheme_revision_id =
+                    Uuid::from_u128(0x018f_6b71_2b8a_7000_8000_0000_0000_1000 + revision as u128);
+                current_revision_id = scheme_revision_id;
+                let scheme = TaskReferenceSchemeV1::new(
+                    work_list_id,
+                    scheme_revision_id,
+                    revision,
+                    format!("WL{revision}"),
+                    4,
+                )
+                .expect("valid test scheme");
+                let payload = encrypt_task_reference_scheme(&scheme, &list_key)
+                    .expect("scheme encryption should succeed");
+                TaskReferenceSchemeResponse {
+                    scheme_revision_id,
+                    work_list_id,
+                    revision,
+                    payload_ciphertext: payload.base64,
+                    is_repair: false,
+                    created_at: Utc::now(),
+                    retired_at: (revision != count).then(Utc::now),
+                    quarantined_at: None,
+                    quarantined_by_membership_id: None,
+                }
+            })
+            .collect();
+        (list_key, work_list_id, responses, current_revision_id)
+    }
+
+    #[test]
+    fn test_should_accept_only_a_complete_task_reference_scheme_history() {
+        let (list_key, work_list_id, responses, current_revision_id) = task_reference_history(2);
+
+        let schemes = decode_task_reference_schemes(
+            &list_key,
+            work_list_id,
+            true,
+            Some(2),
+            Some(current_revision_id),
+            &responses,
+        );
+
+        assert_eq!(
+            schemes
+                .iter()
+                .map(|scheme| scheme.revision)
+                .collect::<Vec<_>>(),
+            vec![1, 2]
+        );
+        assert_eq!(
+            schemes.last().map(|scheme| scheme.scheme_revision_id),
+            Some(current_revision_id)
+        );
+    }
+
+    #[test]
+    fn test_should_fail_closed_for_any_invalid_task_reference_scheme_row() {
+        let (list_key, work_list_id, responses, current_revision_id) = task_reference_history(2);
+
+        let mut corrupt = responses.clone();
+        corrupt[0].payload_ciphertext = "not-base64".to_string();
+        assert!(
+            decode_task_reference_schemes(
+                &list_key,
+                work_list_id,
+                true,
+                Some(2),
+                Some(current_revision_id),
+                &corrupt,
+            )
+            .is_empty()
+        );
+
+        let mut duplicate_revision = responses.clone();
+        duplicate_revision[0].revision = 2;
+        assert!(
+            decode_task_reference_schemes(
+                &list_key,
+                work_list_id,
+                true,
+                Some(2),
+                Some(current_revision_id),
+                &duplicate_revision,
+            )
+            .is_empty()
+        );
+
+        let mut duplicate_id = responses.clone();
+        duplicate_id[0].scheme_revision_id = duplicate_id[1].scheme_revision_id;
+        assert!(
+            decode_task_reference_schemes(
+                &list_key,
+                work_list_id,
+                true,
+                Some(2),
+                Some(current_revision_id),
+                &duplicate_id,
+            )
+            .is_empty()
+        );
+
+        let mut multiple_active = responses.clone();
+        multiple_active[0].retired_at = None;
+        assert!(
+            decode_task_reference_schemes(
+                &list_key,
+                work_list_id,
+                true,
+                Some(2),
+                Some(current_revision_id),
+                &multiple_active,
+            )
+            .is_empty()
+        );
+    }
+
+    #[test]
+    fn test_should_fail_closed_for_incomplete_or_mismatched_scheme_history() {
+        let (list_key, work_list_id, responses, current_revision_id) = task_reference_history(2);
+
+        assert!(
+            decode_task_reference_schemes(
+                &list_key,
+                work_list_id,
+                true,
+                Some(3),
+                Some(current_revision_id),
+                &responses,
+            )
+            .is_empty()
+        );
+        assert!(
+            decode_task_reference_schemes(
+                &list_key,
+                work_list_id,
+                true,
+                Some(2),
+                Some(Uuid::now_v7()),
+                &responses,
+            )
+            .is_empty()
+        );
+        assert!(
+            decode_task_reference_schemes(&list_key, work_list_id, true, None, None, &responses,)
+                .is_empty()
+        );
+
+        let oversized = vec![responses[0].clone(); 37];
+        assert!(
+            decode_task_reference_schemes(
+                &list_key,
+                work_list_id,
+                true,
+                Some(37),
+                Some(responses[0].scheme_revision_id),
+                &oversized,
+            )
+            .is_empty()
+        );
+    }
+
+    #[test]
+    fn test_should_exclude_only_explicitly_quarantined_rows_after_full_map_validation() {
+        let (list_key, work_list_id, mut responses, current_revision_id) =
+            task_reference_history(3);
+        responses[0].payload_ciphertext = "opaque-poison".to_string();
+        responses[0].quarantined_at = Some(Utc::now());
+        responses[0].quarantined_by_membership_id = Some(Uuid::now_v7());
+
+        let schemes = decode_task_reference_schemes(
+            &list_key,
+            work_list_id,
+            true,
+            Some(3),
+            Some(current_revision_id),
+            &responses,
+        );
+
+        assert_eq!(
+            schemes
+                .iter()
+                .map(|scheme| scheme.revision)
+                .collect::<Vec<_>>(),
+            vec![2, 3]
+        );
+
+        let mut incomplete_quarantine = responses;
+        incomplete_quarantine[0].quarantined_by_membership_id = None;
+        assert!(
+            decode_task_reference_schemes(
+                &list_key,
+                work_list_id,
+                true,
+                Some(3),
+                Some(current_revision_id),
+                &incomplete_quarantine,
+            )
+            .is_empty()
+        );
+    }
+
+    #[test]
+    fn test_should_reject_a_repair_row_as_the_enablement_revision() {
+        let (list_key, work_list_id, mut responses, current_revision_id) =
+            task_reference_history(2);
+        responses[0].is_repair = true;
+
+        assert!(
+            decode_task_reference_schemes(
+                &list_key,
+                work_list_id,
+                true,
+                Some(2),
+                Some(current_revision_id),
+                &responses,
+            )
+            .is_empty()
         );
     }
 }

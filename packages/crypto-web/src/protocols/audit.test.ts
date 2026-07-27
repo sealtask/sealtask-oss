@@ -113,4 +113,88 @@ describe('audit protocol', () => {
       }),
     ).toBe('Summary text')
   })
+
+  it('keeps task-reference audit narratives fixed and prefix-free', () => {
+    expect(
+      createAuditPatchSemantics({
+        type: 'task_reference_scheme.enabled',
+        context: {},
+      }),
+    ).toEqual({
+      fields: [{ field: 'task_references', changeKind: 'set' }],
+      envelope: {
+        kind: 'audit.task_reference_scheme_enabled',
+        version: 2,
+        body: {
+          narrativeKey:
+            'features.audit.narratives.taskReferenceSchemeEnabled',
+          narrativeOptions: undefined,
+        },
+      },
+      payloadVersion: 1,
+    })
+    expect(
+      createAuditPatchSemantics({
+        type: 'task_reference_scheme.updated',
+        context: {},
+      }),
+    ).toMatchObject({
+      fields: [
+        {
+          field: 'task_reference_scheme_ciphertext',
+          changeKind: 'update',
+        },
+      ],
+      envelope: {
+        kind: 'audit.task_reference_scheme_updated',
+        body: {
+          narrativeKey:
+            'features.audit.narratives.taskReferenceSchemeUpdated',
+        },
+      },
+    })
+  })
+
+  it('keeps external-reference audit narratives fixed and value-free', () => {
+    expect(
+      createAuditPatchSemantics({
+        type: 'work_list.external_references_updated',
+        context: {},
+      }),
+    ).toMatchObject({
+      fields: [
+        {
+          field: 'work_list_external_references_ciphertext',
+          changeKind: 'update',
+        },
+      ],
+      envelope: {
+        kind: 'audit.work_list_external_references_updated',
+        body: {
+          narrativeKey:
+            'features.audit.narratives.workListExternalReferencesUpdated',
+        },
+      },
+    })
+    expect(
+      createAuditPatchSemantics({
+        type: 'task.external_references_updated',
+        context: {},
+      }),
+    ).toMatchObject({
+      fields: [
+        {
+          field: 'task_external_references_ciphertext',
+          changeKind: 'update',
+        },
+      ],
+      envelope: {
+        kind: 'audit.task_external_references_updated',
+        body: {
+          narrativeKey:
+            'features.audit.narratives.taskExternalReferencesUpdated',
+        },
+      },
+    })
+  })
 })

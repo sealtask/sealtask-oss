@@ -3,6 +3,7 @@
 mod attachment_transport_limits;
 mod attachments;
 mod notes;
+mod task_references;
 
 pub use attachment_transport_limits::{
     MAX_ATTACHMENT_CIPHERTEXT_BYTES, MAX_ATTACHMENT_PLAINTEXT_BYTES,
@@ -17,6 +18,21 @@ pub use notes::{
     NOTE_KEY_CONTEXT, NOTE_PAYLOAD_CONTEXT, NOTE_TITLE_CONTEXT, NotePayloadBody,
     NotePayloadEnvelope, build_note_payload_envelope, decrypt_note_key, decrypt_note_payload,
     encrypt_note_key, encrypt_note_payload,
+};
+pub use task_references::{
+    EXTERNAL_REFERENCE_ITEMS_MAX, EXTERNAL_REFERENCE_LABEL_MAX_BYTES,
+    EXTERNAL_REFERENCE_SYSTEM_MAX_BYTES, EXTERNAL_REFERENCE_VALUE_MAX_BYTES,
+    ExternalReferenceItemV1, TASK_EXTERNAL_REFERENCES_CONTEXT,
+    TASK_REFERENCE_ORDINARY_REVISION_MAX, TASK_REFERENCE_PREFIX_MAX_BYTES,
+    TASK_REFERENCE_PREFIX_MIN_BYTES, TASK_REFERENCE_REPAIR_REVISION_MAX,
+    TASK_REFERENCE_REVISION_MAX, TASK_REFERENCE_SAFE_INTEGER_MAX,
+    TASK_REFERENCE_SCHEME_AEAD_CIPHERTEXT_BYTES, TASK_REFERENCE_SCHEME_CONTEXT,
+    TASK_REFERENCE_SCHEME_PLAINTEXT_BYTES, TASK_REFERENCE_SCHEME_SEALED_PAYLOAD_BYTES,
+    TASK_REFERENCE_SCHEME_STRONG_BOX_BYTES, TaskExternalReferencesV1, TaskReferenceSchemeV1,
+    WORK_LIST_EXTERNAL_REFERENCES_CONTEXT, WorkListExternalReferencesV1,
+    decrypt_task_external_references, decrypt_task_reference_scheme,
+    decrypt_work_list_external_references, encrypt_task_external_references,
+    encrypt_task_reference_scheme, encrypt_work_list_external_references,
 };
 
 use std::{fmt, io::Cursor};

@@ -1,4 +1,4 @@
-use super::RuntimeClient;
+use super::{RuntimeClient, WorkListContext, load_task_reference_scheme_history};
 use crate::inputs::{
     ArchiveTaskArgs, CreateTaskArgs, DeleteTaskArgs, MoveTaskArgs, TaskCompletionArgs,
     TaskFieldPatch, TaskUpdateInput, UnarchiveTaskArgs, UpdateTaskArgs, normalize_checklist,
@@ -12,12 +12,13 @@ use sealtask_client_api::{
 };
 use sealtask_client_core::{PublicError, PublicResult};
 use sealtask_client_crypto::{
-    ChecklistItemPayload, TASK_TITLE_CONTEXT, TaskPayloadBody, build_task_payload_envelope,
-    compute_payload_proof, compute_task_create_semantic_commitment, decode_sealed_blob,
-    decrypt_task_payload, derive_payload_binding_key, encrypt_task_payload, encrypt_text_value,
-    plaintext_rich_text,
+    ChecklistItemPayload, TASK_REFERENCE_REVISION_MAX, TASK_TITLE_CONTEXT, TaskPayloadBody,
+    build_task_payload_envelope, compute_payload_proof, compute_task_create_semantic_commitment,
+    decode_sealed_blob, decrypt_task_payload, derive_payload_binding_key, encrypt_task_payload,
+    encrypt_text_value, plaintext_rich_text,
 };
 use serde::Serialize;
+use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
 #[derive(Serialize)]
@@ -53,7 +54,15 @@ impl RuntimeClient {
 
         if all || work_list_id.is_none() {
             let work_lists = client.list_work_lists().await?;
-            let contexts = self.build_work_list_contexts(&work_lists, Some(&data_key));
+            let mut scheme_histories = HashMap::new();
+            for work_list in &work_lists {
+                let history = load_task_reference_scheme_history(&mut client, work_list).await;
+                if !history.is_empty() {
+                    scheme_histories.insert(work_list.id, history);
+                }
+            }
+            let contexts =
+                self.build_work_list_contexts(&work_lists, &scheme_histories, Some(&data_key));
             let tasks = client.get_all_my_tasks(include_completed).await?;
 
             return Ok(tasks
@@ -67,7 +76,10 @@ impl RuntimeClient {
 
         let work_list_id = work_list_id.expect("validated work list id");
         let work_list = client.get_work_list(work_list_id).await?;
-        let context = self.context_from_work_list_detail(&work_list, Some(&data_key));
+        let scheme_history =
+            load_task_reference_scheme_history(&mut client, &work_list.work_list).await;
+        let context =
+            self.context_from_work_list_detail(&work_list, &scheme_history, Some(&data_key));
         let response = client.get_tasks(work_list_id, false).await?;
         let tasks = if include_completed {
             response.tasks
@@ -101,6 +113,103 @@ impl RuntimeClient {
         let detail = client.get_task(work_list_id, task_id).await?;
 
         let task = self.project_task_summary(detail.task, Some(&context));
+        let comments = detail
+            .comments
+            .into_iter()
+            .map(|comment| self.project_comment(comment, context.list_key.as_ref()))
+            .collect();
+        Ok(AgentTaskDetail { task, comments })
+    }
+
+    pub async fn resolve_task_reference(
+        &self,
+        reference: &str,
+        work_list_id: Option<Uuid>,
+        password_stdin: bool,
+    ) -> PublicResult<AgentTaskDetail> {
+        let mut credentials = self.require_logged_in_credentials()?;
+        let data_key = self
+            .load_data_key(
+                &mut credentials,
+                password_stdin,
+                "Password required to resolve an encrypted task reference.",
+            )
+            .await?;
+        let mut client =
+            sealtask_client_api::PublicApiClient::with_credentials(&self.api_url, credentials)?;
+
+        let work_lists = if let Some(work_list_id) = work_list_id {
+            vec![client.get_work_list(work_list_id).await?.work_list]
+        } else {
+            // Archived projects remain valid UUID/numeric lookup scopes and
+            // may own a colliding private prefix. Excluding them would turn an
+            // incomplete directory into a false miss or sole auto-resolution.
+            client.list_work_lists_with_archived(true).await?
+        };
+        let mut scheme_histories = HashMap::new();
+        let mut reference_enabled_ids = HashSet::new();
+        for work_list in &work_lists {
+            match (
+                work_list.task_references_enabled_at.is_some(),
+                work_list.current_task_reference_scheme_revision,
+                work_list.current_task_reference_scheme_revision_id,
+            ) {
+                (false, None, None) => {}
+                (true, Some(revision), Some(_))
+                    if (1..=TASK_REFERENCE_REVISION_MAX).contains(&revision) =>
+                {
+                    let history = client.get_task_reference_schemes(work_list.id).await?;
+                    scheme_histories.insert(work_list.id, history);
+                    reference_enabled_ids.insert(work_list.id);
+                }
+                _ => {
+                    return Err(PublicError::unexpected(format!(
+                        "task reference metadata is incomplete for work list {}",
+                        work_list.id
+                    )));
+                }
+            }
+        }
+
+        let contexts =
+            self.build_work_list_contexts(&work_lists, &scheme_histories, Some(&data_key));
+        let mut unchecked_work_list_ids = reference_enabled_ids
+            .into_iter()
+            .filter(|work_list_id| {
+                contexts
+                    .get(work_list_id)
+                    .and_then(WorkListContext::current_task_reference_scheme)
+                    .is_none()
+            })
+            .collect::<Vec<_>>();
+        unchecked_work_list_ids.sort_unstable();
+        if !unchecked_work_list_ids.is_empty() {
+            return Err(PublicError::unexpected(format!(
+                "task reference lookup is unchecked because scheme history is unavailable for work lists {}; no definitive miss or automatic resolution was attempted",
+                unchecked_work_list_ids
+                    .iter()
+                    .map(Uuid::to_string)
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            )));
+        }
+        let (resolved_work_list_id, reference_number) =
+            resolve_task_reference_candidate(reference, work_list_id, &contexts)?;
+        let context = contexts.get(&resolved_work_list_id).ok_or_else(|| {
+            PublicError::unexpected("resolved task reference lost its work list context")
+        })?;
+
+        let detail = client
+            .get_task_by_reference_number(resolved_work_list_id, reference_number)
+            .await?;
+        if detail.task.work_list_id != resolved_work_list_id
+            || detail.task.reference_number != Some(reference_number)
+        {
+            return Err(PublicError::unexpected(
+                "task reference lookup returned mismatched public metadata",
+            ));
+        }
+        let task = self.project_task_summary(detail.task, Some(context));
         let comments = detail
             .comments
             .into_iter()
@@ -411,5 +520,118 @@ impl RuntimeClient {
         client
             .delete_task(args.work_list_id, args.task_id, &args.input)
             .await
+    }
+}
+
+fn resolve_task_reference_candidate(
+    reference: &str,
+    requested_work_list_id: Option<Uuid>,
+    contexts: &HashMap<Uuid, WorkListContext>,
+) -> PublicResult<(Uuid, i64)> {
+    let mut candidates = HashMap::new();
+    for (work_list_id, context) in contexts {
+        if requested_work_list_id.is_some_and(|requested| requested != *work_list_id)
+            || context.current_task_reference_scheme().is_none()
+        {
+            continue;
+        }
+        for scheme in &context.task_reference_schemes {
+            if let Some(reference_number) = scheme.parse_reference_number(reference) {
+                candidates.insert(*work_list_id, reference_number);
+            }
+        }
+    }
+
+    match candidates.len() {
+        0 => Err(PublicError::not_found(
+            "task reference did not match an accessible work list",
+        )),
+        1 => candidates
+            .into_iter()
+            .next()
+            .ok_or_else(|| PublicError::unexpected("task reference candidate disappeared")),
+        _ => {
+            let mut ids = candidates.keys().copied().collect::<Vec<_>>();
+            ids.sort_unstable();
+            Err(PublicError::conflict(format!(
+                "task reference is ambiguous across work lists {}; pass --work-list-id",
+                ids.iter()
+                    .map(Uuid::to_string)
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            )))
+        }
+    }
+}
+
+#[cfg(test)]
+mod task_reference_tests {
+    use super::*;
+    use sealtask_client_crypto::TaskReferenceSchemeV1;
+
+    fn reference_context(work_list_id: Uuid, prefixes: &[&str]) -> WorkListContext {
+        let schemes = prefixes
+            .iter()
+            .enumerate()
+            .map(|(index, prefix)| {
+                TaskReferenceSchemeV1::new(
+                    work_list_id,
+                    Uuid::from_u128(work_list_id.as_u128() + index as u128 + 1),
+                    index as i64 + 1,
+                    *prefix,
+                    4,
+                )
+                .expect("valid scheme")
+            })
+            .collect::<Vec<_>>();
+        let current = schemes.last().expect("at least one scheme");
+        WorkListContext {
+            work_list_title: None,
+            list_key: None,
+            task_reference_schemes: schemes.clone(),
+            current_task_reference_scheme_revision: Some(current.revision),
+            current_task_reference_scheme_revision_id: Some(current.scheme_revision_id),
+            read_error: None,
+        }
+    }
+
+    #[test]
+    fn test_should_resolve_current_and_historical_prefixes_locally() {
+        let work_list_id = Uuid::from_u128(0x1111_1111_1111_7111_8111_1111_1111_1111);
+        let contexts = HashMap::from([(
+            work_list_id,
+            reference_context(work_list_id, &["OLD", "NEW"]),
+        )]);
+
+        assert_eq!(
+            resolve_task_reference_candidate("old-0042", None, &contexts)
+                .expect("historical prefix should resolve"),
+            (work_list_id, 42)
+        );
+        assert_eq!(
+            resolve_task_reference_candidate("NEW-42", None, &contexts)
+                .expect("current prefix should resolve"),
+            (work_list_id, 42)
+        );
+    }
+
+    #[test]
+    fn test_should_report_cross_project_prefix_ambiguity() {
+        let first = Uuid::from_u128(0x1111_1111_1111_7111_8111_1111_1111_1111);
+        let second = Uuid::from_u128(0x2222_2222_2222_7222_8222_2222_2222_2222);
+        let contexts = HashMap::from([
+            (first, reference_context(first, &["OPS"])),
+            (second, reference_context(second, &["OPS"])),
+        ]);
+
+        assert!(matches!(
+            resolve_task_reference_candidate("OPS-7", None, &contexts),
+            Err(PublicError::Conflict(_))
+        ));
+        assert_eq!(
+            resolve_task_reference_candidate("OPS-7", Some(second), &contexts)
+                .expect("explicit work-list selection should disambiguate"),
+            (second, 7)
+        );
     }
 }

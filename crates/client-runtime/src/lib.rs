@@ -22,14 +22,17 @@ pub use client::RuntimeClient;
 pub use inputs::{
     ArchiveTaskArgs, AttachmentUploadPassword, CommentInput, CreateCommentArgs, CreateNoteArgs,
     CreateTaskArgs, DeleteCommentArgs, DeleteNoteArgs, DeleteTaskArgs, DeleteTaskAttachmentArgs,
-    MoveTaskArgs, MoveTaskInput, NoteCreateInput, NoteUpdateInput, TaskCompletionArgs,
+    MoveTaskArgs, MoveTaskInput, NoteCreateInput, NoteUpdateInput,
+    QuarantineTaskReferenceSchemeArgs, RepairTaskReferenceSchemeArgs, TaskCompletionArgs,
     TaskCreateInput, TaskFieldPatch, TaskUpdateInput, UnarchiveTaskArgs, UpdateCommentArgs,
     UpdateNoteArgs, UpdateTaskArgs, UploadTaskAttachmentArgs,
 };
 pub use models::{
     AgentAttachment, AgentComment, AgentDelegation, AgentMembership, AgentNote, AgentTaskDetail,
-    AgentTaskSummary, AgentWorkListDetail, AgentWorkListSummary, DownloadedAttachment, ReadError,
-    ReadableAttachment, ReadableAttachmentContentFormat, ReadableAttachmentSourceKind,
+    AgentTaskReferenceHistoryStatus, AgentTaskReferenceSchemeStatus, AgentTaskSummary,
+    AgentWorkListDetail, AgentWorkListSummary, DownloadedAttachment, ReadError, ReadableAttachment,
+    ReadableAttachmentContentFormat, ReadableAttachmentSourceKind,
+    TaskReferenceHistoryAvailability,
 };
 pub use operation_cancellation::OperationCancellation;
 pub use unlock_daemon::{

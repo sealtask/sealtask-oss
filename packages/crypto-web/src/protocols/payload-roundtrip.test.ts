@@ -1,5 +1,7 @@
+import { encode as cborEncode } from 'cbor-x'
 import { describe, expect, it } from 'vitest'
 
+import { encodeBase64 } from '../runtime/base64'
 import type { StrongBoxBridge } from '../runtime/strong-box'
 import {
   buildCommentPayloadEnvelope,
@@ -16,6 +18,7 @@ import {
 import {
   parseSealedPayload,
   parseSealedPayloadBytes,
+  parseStrictSealedPayload,
   serializeSealedPayload,
   serializeSealedPayloadBase64,
 } from './sealed-payload'
@@ -55,6 +58,35 @@ describe('sealed protocol payloads', () => {
     expect(() => parseSealedPayload('encrypted-title')).toThrow(
       'Invalid sealed payload structure',
     )
+  })
+
+  it('strictly rejects unknown, duplicate, and trailing outer fields', () => {
+    const unknown = new Uint8Array(
+      cborEncode({
+        version: 1,
+        ciphertext: new Uint8Array([1]),
+        extra: true,
+      }),
+    )
+    const valid = serializeSealedPayload({
+      version: 1,
+      ciphertext: new Uint8Array([1]),
+    })
+    const trailing = new Uint8Array(valid.byteLength + 1)
+    trailing.set(valid)
+    const duplicate = new Uint8Array([
+      0xa3,
+      0x67, 0x76, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x01,
+      0x67, 0x76, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x01,
+      0x6a, 0x63, 0x69, 0x70, 0x68, 0x65, 0x72, 0x74, 0x65, 0x78,
+      0x74, 0x41, 0x01,
+    ])
+
+    for (const bytes of [unknown, trailing, duplicate]) {
+      expect(() =>
+        parseStrictSealedPayload(encodeBase64(bytes)),
+      ).toThrow('Invalid strict sealed payload structure')
+    }
   })
 
   it('round-trips task, comment, and note envelopes with frozen contexts', async () => {

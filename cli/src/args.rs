@@ -194,6 +194,13 @@ pub(crate) enum TasksCommand {
         #[arg(long, hide = true)]
         raw: bool,
     },
+    /// Resolve an encrypted current or historical task reference locally.
+    Resolve(TaskResolveArgsCli),
+    /// Install an owner repair or explicitly quarantine unreadable history.
+    TaskReferences {
+        #[command(subcommand)]
+        command: TaskReferencesCommand,
+    },
     /// Create an encrypted task.
     Create(TaskCreateArgsCli),
     /// Patch an encrypted task; omitted fields remain unchanged.
@@ -215,6 +222,94 @@ pub(crate) enum TasksCommand {
         #[command(subcommand)]
         command: TaskAttachmentsCommand,
     },
+}
+
+#[derive(Args)]
+pub(crate) struct TaskResolveArgsCli {
+    /// Full encrypted-scheme reference, for example OPS-0042.
+    #[arg(value_name = "REFERENCE")]
+    pub(crate) reference: String,
+    /// Restrict resolution to one canonical work-list UUID.
+    #[arg(long, value_parser = parse_canonical_uuid)]
+    pub(crate) work_list_id: Option<Uuid>,
+    /// Read the account password from stdin when no local unlock is available.
+    #[arg(long)]
+    pub(crate) password_stdin: bool,
+}
+
+impl fmt::Debug for TaskResolveArgsCli {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("TaskResolveArgsCli")
+            .field("reference", &"<redacted>")
+            .field("work_list_id", &self.work_list_id)
+            .field("password_stdin", &self.password_stdin)
+            .finish()
+    }
+}
+
+#[derive(Subcommand, Debug)]
+pub(crate) enum TaskReferencesCommand {
+    /// Inspect verified history and list exact unreadable revision IDs.
+    Status(TaskReferenceStatusArgsCli),
+    /// Install a valid encrypted current scheme from reserved owner repair capacity.
+    Repair(TaskReferenceRepairArgsCli),
+    /// Irreversibly exclude one unreadable historical alias from local resolution.
+    Quarantine(TaskReferenceQuarantineArgsCli),
+}
+
+#[derive(Args, Debug)]
+pub(crate) struct TaskReferenceStatusArgsCli {
+    /// Work-list UUID whose encrypted scheme history should be inspected.
+    #[arg(long, value_parser = parse_canonical_uuid)]
+    pub(crate) work_list_id: Uuid,
+    /// Read the account password from stdin when no local unlock is available.
+    #[arg(long)]
+    pub(crate) password_stdin: bool,
+}
+
+#[derive(Args)]
+pub(crate) struct TaskReferenceRepairArgsCli {
+    /// Work-list UUID whose current encrypted scheme needs replacement.
+    #[arg(long, value_parser = parse_canonical_uuid)]
+    pub(crate) work_list_id: Uuid,
+    /// Replacement private prefix, using 2-10 uppercase ASCII letters or digits.
+    #[arg(long)]
+    pub(crate) prefix: String,
+    /// Minimum number of digits displayed after the prefix.
+    #[arg(long, default_value_t = 4, value_parser = clap::value_parser!(u8).range(1..=8))]
+    pub(crate) minimum_digits: u8,
+    /// Read the account password from stdin when no local unlock is available.
+    #[arg(long)]
+    pub(crate) password_stdin: bool,
+}
+
+impl fmt::Debug for TaskReferenceRepairArgsCli {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("TaskReferenceRepairArgsCli")
+            .field("work_list_id", &self.work_list_id)
+            .field("prefix", &"<redacted>")
+            .field("minimum_digits", &self.minimum_digits)
+            .field("password_stdin", &self.password_stdin)
+            .finish()
+    }
+}
+
+#[derive(Args, Debug)]
+pub(crate) struct TaskReferenceQuarantineArgsCli {
+    /// Work-list UUID containing the unreadable historical scheme.
+    #[arg(long, value_parser = parse_canonical_uuid)]
+    pub(crate) work_list_id: Uuid,
+    /// Exact historical scheme-revision UUID to quarantine.
+    #[arg(long, value_parser = parse_canonical_uuid)]
+    pub(crate) scheme_revision_id: Uuid,
+    /// Confirm the irreversible loss of this historical alias.
+    #[arg(long)]
+    pub(crate) confirm: bool,
+    /// Read the account password from stdin when no local unlock is available.
+    #[arg(long)]
+    pub(crate) password_stdin: bool,
 }
 
 #[derive(Subcommand, Debug)]
@@ -851,6 +946,14 @@ fn parse_priority(value: &str) -> Result<i8, String> {
     }
 }
 
+fn parse_canonical_uuid(value: &str) -> Result<Uuid, String> {
+    let parsed = Uuid::parse_str(value).map_err(|_| "must be a UUID".to_string())?;
+    if parsed.to_string() != value {
+        return Err("must be a canonical lowercase hyphenated UUID".to_string());
+    }
+    Ok(parsed)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -899,5 +1002,74 @@ mod tests {
         assert!(!update_debug.contains(update_body));
         assert!(update_debug.contains("title_present: true"));
         assert!(update_debug.contains("body_present: true"));
+    }
+
+    #[test]
+    fn task_reference_resolve_requires_canonical_uuid_and_redacts_reference_debug() {
+        let reference = "CANARY-0042";
+        let parsed = Cli::try_parse_from([
+            "sealtask",
+            "tasks",
+            "resolve",
+            reference,
+            "--work-list-id",
+            "018f4a76-c9f2-7f38-a09a-2ac748db8ee8",
+        ])
+        .expect("parse task reference resolution");
+        let debug = format!("{parsed:?}");
+        assert!(!debug.contains(reference));
+        assert!(debug.contains("<redacted>"));
+
+        assert!(
+            Cli::try_parse_from([
+                "sealtask",
+                "tasks",
+                "resolve",
+                "OPS-42",
+                "--work-list-id",
+                "018F4A76-C9F2-7F38-A09A-2AC748DB8EE8",
+            ])
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn task_reference_repair_redacts_prefix_and_quarantine_requires_explicit_confirmation_flag() {
+        let repair = Cli::try_parse_from([
+            "sealtask",
+            "tasks",
+            "task-references",
+            "repair",
+            "--work-list-id",
+            "018f4a76-c9f2-7f38-a09a-2ac748db8ee8",
+            "--prefix",
+            "CANARY",
+        ])
+        .expect("parse task reference repair");
+        let debug = format!("{repair:?}");
+        assert!(!debug.contains("CANARY"));
+        assert!(debug.contains("<redacted>"));
+
+        let quarantine = Cli::try_parse_from([
+            "sealtask",
+            "tasks",
+            "task-references",
+            "quarantine",
+            "--work-list-id",
+            "018f4a76-c9f2-7f38-a09a-2ac748db8ee8",
+            "--scheme-revision-id",
+            "018f4a76-c9f2-7f38-a09a-2ac748db8ee9",
+        ])
+        .expect("confirmation is enforced by the command runner");
+        let Command::Tasks {
+            command:
+                TasksCommand::TaskReferences {
+                    command: TaskReferencesCommand::Quarantine(args),
+                },
+        } = quarantine.command.expect("command")
+        else {
+            panic!("expected task-reference quarantine command");
+        };
+        assert!(!args.confirm);
     }
 }

@@ -201,6 +201,32 @@ pub struct DeleteTaskArgs {
     pub input: DeleteTaskRequest,
 }
 
+pub struct RepairTaskReferenceSchemeArgs {
+    pub work_list_id: Uuid,
+    pub prefix: String,
+    pub minimum_digits: u8,
+    pub password_stdin: bool,
+}
+
+impl fmt::Debug for RepairTaskReferenceSchemeArgs {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("RepairTaskReferenceSchemeArgs")
+            .field("work_list_id", &self.work_list_id)
+            .field("prefix", &"<redacted>")
+            .field("minimum_digits", &self.minimum_digits)
+            .field("password_stdin", &self.password_stdin)
+            .finish()
+    }
+}
+
+#[derive(Debug)]
+pub struct QuarantineTaskReferenceSchemeArgs {
+    pub work_list_id: Uuid,
+    pub scheme_revision_id: Uuid,
+    pub password_stdin: bool,
+}
+
 #[derive(Debug)]
 pub struct CreateCommentArgs {
     pub work_list_id: Uuid,

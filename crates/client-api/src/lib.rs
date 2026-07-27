@@ -59,6 +59,45 @@ impl PublicApiClient {
         self.get(&format!("/work-lists/{id}")).await
     }
 
+    pub async fn get_task_reference_schemes(
+        &mut self,
+        work_list_id: Uuid,
+    ) -> PublicResult<Vec<TaskReferenceSchemeResponse>> {
+        let response: TaskReferenceSchemeListResponse = self
+            .get(&format!(
+                "/work-lists/{work_list_id}/task-reference-schemes"
+            ))
+            .await?;
+        Ok(response.schemes)
+    }
+
+    pub async fn repair_task_reference_scheme(
+        &mut self,
+        work_list_id: Uuid,
+        request: &TaskReferenceSchemeMutationRequest,
+    ) -> PublicResult<TaskReferenceSchemeResponse> {
+        self.post(
+            &format!("/work-lists/{work_list_id}/task-reference-schemes/repairs"),
+            request,
+        )
+        .await
+    }
+
+    pub async fn quarantine_task_reference_scheme(
+        &mut self,
+        work_list_id: Uuid,
+        scheme_revision_id: Uuid,
+        request: &TaskReferenceSchemeQuarantineRequest,
+    ) -> PublicResult<TaskReferenceSchemeResponse> {
+        self.post(
+            &format!(
+                "/work-lists/{work_list_id}/task-reference-schemes/{scheme_revision_id}/quarantine"
+            ),
+            request,
+        )
+        .await
+    }
+
     pub async fn archive_work_list(&mut self, id: Uuid) -> PublicResult<WorkListResponse> {
         self.post(
             &format!("/work-lists/{id}/archive"),
@@ -189,6 +228,17 @@ impl PublicApiClient {
     ) -> PublicResult<TaskDetailResponse> {
         self.get(&format!("/work-lists/{work_list_id}/tasks/{task_id}"))
             .await
+    }
+
+    pub async fn get_task_by_reference_number(
+        &mut self,
+        work_list_id: Uuid,
+        reference_number: i64,
+    ) -> PublicResult<TaskDetailResponse> {
+        self.get(&format!(
+            "/work-lists/{work_list_id}/tasks/by-reference-number/{reference_number}"
+        ))
+        .await
     }
 
     pub async fn create_task(
@@ -365,6 +415,12 @@ pub struct WorkListResponse {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub archived_at: Option<DateTime<Utc>>,
+    #[serde(default)]
+    pub task_references_enabled_at: Option<DateTime<Utc>>,
+    #[serde(default)]
+    pub current_task_reference_scheme_revision: Option<i64>,
+    #[serde(default)]
+    pub current_task_reference_scheme_revision_id: Option<Uuid>,
     pub membership: MembershipResponse,
 }
 
@@ -427,6 +483,8 @@ pub struct TaskResponse {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub comment_count: i64,
+    #[serde(default)]
+    pub reference_number: Option<i64>,
     #[serde(default)]
     pub delegations: Vec<DelegationResponse>,
 }
@@ -506,7 +564,64 @@ pub struct MyTaskResponse {
     pub updated_at: DateTime<Utc>,
     pub comment_count: i64,
     #[serde(default)]
+    pub reference_number: Option<i64>,
+    #[serde(default)]
     pub delegations: Vec<DelegationResponse>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TaskReferenceSchemeResponse {
+    pub scheme_revision_id: Uuid,
+    pub work_list_id: Uuid,
+    pub revision: i64,
+    pub payload_ciphertext: SealedBlob,
+    pub is_repair: bool,
+    pub created_at: DateTime<Utc>,
+    pub retired_at: Option<DateTime<Utc>>,
+    pub quarantined_at: Option<DateTime<Utc>>,
+    pub quarantined_by_membership_id: Option<Uuid>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TaskReferenceSchemeListResponse {
+    pub schemes: Vec<TaskReferenceSchemeResponse>,
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TaskReferenceSchemeMutationRequest {
+    pub scheme_revision_id: Uuid,
+    pub expected_scheme_revision: i64,
+    pub payload_ciphertext: SealedBlob,
+    pub payload_ciphertext_proof: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub audit_patch: Option<AuditPatchRequest>,
+}
+
+impl std::fmt::Debug for TaskReferenceSchemeMutationRequest {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("TaskReferenceSchemeMutationRequest")
+            .field("scheme_revision_id", &self.scheme_revision_id)
+            .field("expected_scheme_revision", &self.expected_scheme_revision)
+            .field("payload_ciphertext", &"<redacted>")
+            .field("payload_ciphertext_proof", &"<redacted>")
+            .field(
+                "audit_patch",
+                &self.audit_patch.as_ref().map(|_| "<redacted>"),
+            )
+            .finish()
+    }
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TaskReferenceSchemeQuarantineRequest {
+    pub expected_scheme_revision: i64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub audit_patch: Option<AuditPatchRequest>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

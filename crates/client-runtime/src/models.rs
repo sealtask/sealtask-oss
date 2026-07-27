@@ -37,6 +37,9 @@ pub struct AgentWorkListSummary {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub archived_at: Option<DateTime<Utc>>,
+    pub task_references_enabled_at: Option<DateTime<Utc>>,
+    pub current_task_reference_scheme_revision: Option<i64>,
+    pub current_task_reference_scheme_revision_id: Option<Uuid>,
     pub membership: AgentMembership,
     pub title: Option<String>,
     pub description: Option<String>,
@@ -51,6 +54,38 @@ pub struct AgentWorkListDetail {
     #[serde(flatten)]
     pub work_list: AgentWorkListSummary,
     pub members: Vec<AgentMembership>,
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TaskReferenceHistoryAvailability {
+    Ready,
+    NeedsRepair,
+    NeedsQuarantine,
+    Unchecked,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AgentTaskReferenceSchemeStatus {
+    pub scheme_revision_id: Uuid,
+    pub revision: i64,
+    pub is_repair: bool,
+    pub state: String,
+    pub retired_at: Option<DateTime<Utc>>,
+    pub quarantined_at: Option<DateTime<Utc>>,
+    pub quarantined_by_membership_id: Option<Uuid>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AgentTaskReferenceHistoryStatus {
+    pub work_list_id: Uuid,
+    pub current_revision: Option<i64>,
+    pub availability: TaskReferenceHistoryAvailability,
+    pub ordinary_revision_count: Option<usize>,
+    pub repair_revision_count: Option<usize>,
+    pub schemes: Vec<AgentTaskReferenceSchemeStatus>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -90,7 +125,7 @@ impl fmt::Debug for AgentAttachment {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AgentTaskSummary {
     pub id: Uuid,
@@ -112,6 +147,8 @@ pub struct AgentTaskSummary {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub comment_count: i64,
+    pub reference_number: Option<i64>,
+    pub reference: Option<String>,
     pub title: Option<String>,
     pub body_markdown: Option<String>,
     pub body_rich_text: Option<TaskPayloadRichText>,
@@ -124,6 +161,43 @@ pub struct AgentTaskSummary {
     pub delegations: Vec<AgentDelegation>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub read_error: Option<ReadError>,
+}
+
+impl fmt::Debug for AgentTaskSummary {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("AgentTaskSummary")
+            .field("id", &self.id)
+            .field("work_list_id", &self.work_list_id)
+            .field("created_by_membership_id", &self.created_by_membership_id)
+            .field("section_id", &self.section_id)
+            .field("priority", &self.priority)
+            .field("position", &self.position)
+            .field("due_at", &self.due_at)
+            .field("start_at", &self.start_at)
+            .field("completed_at", &self.completed_at)
+            .field("archived_at", &self.archived_at)
+            .field("is_completed", &self.is_completed)
+            .field("reference_number", &self.reference_number)
+            .field("reference", &self.reference.as_ref().map(|_| Redacted))
+            .field("title_present", &self.title.is_some())
+            .field("body_markdown_present", &self.body_markdown.is_some())
+            .field("body_rich_text_present", &self.body_rich_text.is_some())
+            .field("checklist_present", &self.checklist.is_some())
+            .field(
+                "attachment_count",
+                &self.attachments.as_ref().map_or(0, Vec::len),
+            )
+            .field("references_present", &self.references.is_some())
+            .field("mentions_present", &self.mentions.is_some())
+            .field("client_meta_present", &self.client_meta.is_some())
+            .field("recurrence_state_present", &self.recurrence_state.is_some())
+            .field("delegation_count", &self.delegations.len())
+            .field("created_at", &self.created_at)
+            .field("updated_at", &self.updated_at)
+            .field("read_error_present", &self.read_error.is_some())
+            .finish()
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
