@@ -537,8 +537,26 @@ async fn await_read_or_signal<T>(
                 }
             }
         },
-        result = &mut future => Ok(Some(result)),
+        result = &mut future => {
+            match observe_coincident_credential_refresh_signal(signal, cancellation) {
+                Ok(true) => {
+                    cancellation.cancel();
+                    Err(batch_session_ambiguous_interruption(
+                        "batch credential refresh response was lost while an interruption was being delivered",
+                    ))
+                }
+                Ok(false) => Ok(Some(result)),
+                Err(error) => Err(signal_listener_error(error)),
+            }
+        },
     }
+}
+
+fn observe_coincident_credential_refresh_signal(
+    signal: &SignalReceiver,
+    cancellation: &ApiCancellationToken,
+) -> std::io::Result<bool> {
+    Ok(cancellation.credential_refresh_may_have_rotated() && signal.level()? > 0)
 }
 
 enum CredentialRefreshWait {
@@ -1359,7 +1377,32 @@ async fn run_operation(
                 }
             }
         },
-        result = &mut preparation => Some(result),
+        result = &mut preparation => {
+            match observe_coincident_credential_refresh_signal(&signal, &cancellation) {
+                Ok(true) => {
+                    credential_refresh_interrupted.store(true, Ordering::Release);
+                    cancellation.cancel();
+                    return OperationOutcome::session_ambiguous_interrupted_parts(
+                        index,
+                        operation_id,
+                        kind,
+                        Some(project_id),
+                        target_task_id,
+                    );
+                }
+                Ok(false) => Some(result),
+                Err(error) => {
+                    return OperationOutcome::failed_cli(
+                        index,
+                        operation_id,
+                        kind,
+                        Some(project_id),
+                        target_task_id,
+                        signal_listener_error(error),
+                    );
+                }
+            }
+        },
     };
     let prepared = match preparation {
         None => {
@@ -1570,7 +1613,32 @@ async fn run_operation(
                 }
             }
         },
-        result = &mut execution => result,
+        result = &mut execution => {
+            match observe_coincident_credential_refresh_signal(&signal, &cancellation) {
+                Ok(true) => {
+                    credential_refresh_interrupted.store(true, Ordering::Release);
+                    cancellation.cancel();
+                    return OperationOutcome::session_ambiguous_interrupted_parts(
+                        index,
+                        operation_id,
+                        kind,
+                        Some(project_id),
+                        target_task_id,
+                    );
+                }
+                Ok(false) => result,
+                Err(error) => {
+                    return OperationOutcome::failed_cli(
+                        index,
+                        operation_id,
+                        kind,
+                        Some(project_id),
+                        target_task_id,
+                        signal_listener_error(error),
+                    );
+                }
+            }
+        },
     };
     progress.mark_response_received();
     match execution {

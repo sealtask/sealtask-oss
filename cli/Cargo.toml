@@ -48,6 +48,7 @@ sealtask-client-runtime = { version = "0.2.1", path = "../crates/client-runtime"
 [target.'cfg(unix)'.dependencies]
 libc.workspace = true
 rustix.workspace = true
+signal-hook-registry.workspace = true
 
 [dev-dependencies]
 assert_cmd = "2.0"

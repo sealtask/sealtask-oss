@@ -3177,6 +3177,7 @@ dependencies = [
  "serde_json",
  "sha2",
  "shlex",
+ "signal-hook-registry",
  "strong-box 0.5.1",
  "tempfile",
  "terminal_size",

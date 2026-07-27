@@ -469,7 +469,13 @@ fn simultaneous_signal_and_scheduled_refresh_loss_preserve_session_ambiguity() {
     let output = wait_for_output(child, StdDuration::from_secs(10));
     let (refresh_request, later_requests) = server.join().expect("refresh server");
 
-    assert_eq!(output.status.code(), Some(130));
+    assert_eq!(
+        output.status.code(),
+        Some(130),
+        "stdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
     let stdout = String::from_utf8(output.stdout).expect("UTF-8 JSONL output");
     assert!(stdout.contains("\"code\":\"session_outcome_ambiguous\""));
     assert!(!stdout.contains("simultaneous refresh plaintext must not be sent"));

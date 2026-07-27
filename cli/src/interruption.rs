@@ -10,6 +10,10 @@ use sealtask_client_api::ApiCancellationToken;
 use sealtask_client_core::{PublicError, TransportFailureKind};
 use std::future::Future;
 use std::io;
+#[cfg(unix)]
+use std::sync::Arc;
+#[cfg(unix)]
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
 use tokio::sync::watch;
 use tokio::task::JoinHandle;
@@ -26,15 +30,22 @@ enum SignalState {
 pub(crate) struct SignalMonitor {
     receiver: watch::Receiver<SignalState>,
     task: JoinHandle<()>,
+    #[cfg(unix)]
+    registrations: UnixSignalRegistrations,
 }
 
 #[derive(Clone)]
 pub(crate) struct SignalReceiver {
     receiver: watch::Receiver<SignalState>,
+    observed_level: u8,
+    #[cfg(unix)]
+    delivered: Arc<AtomicUsize>,
 }
 
 impl Drop for SignalMonitor {
     fn drop(&mut self) {
+        #[cfg(unix)]
+        self.registrations.unregister();
         self.task.abort();
     }
 }
@@ -153,7 +164,21 @@ where
     let first_signal_result = tokio::select! {
         biased;
         result = &mut first_signal => result,
-        result = &mut operation => return result,
+        result = &mut operation => {
+            match signals.level() {
+                Ok(0) => return result,
+                Ok(_) => Ok(()),
+                Err(signal_error) => {
+                    let warning = warning_result(
+                        "signal_listener_failed",
+                        format!(
+                            "failed to inspect process interruption state after the mutation completed: {signal_error}"
+                        ),
+                    );
+                    return finish_with_warnings(format, &[warning], result);
+                }
+            }
+        },
     };
 
     if let Err(signal_error) = first_signal_result {
@@ -455,41 +480,83 @@ fn ambiguous_interruption(
 impl SignalMonitor {
     pub(crate) fn start() -> CliResult<Self> {
         let (sender, receiver) = watch::channel(SignalState::Listening);
-        let task = spawn_signal_task(sender)?;
-        Ok(Self { receiver, task })
+
+        #[cfg(unix)]
+        {
+            let delivered = Arc::new(AtomicUsize::new(0));
+            // Register the authoritative counter first so Tokio's wakeup can
+            // never publish an older generation from the same signal.
+            let registrations = UnixSignalRegistrations::install(delivered.clone())?;
+            let task = spawn_signal_task(sender, delivered.clone())?;
+            Ok(Self {
+                receiver,
+                task,
+                registrations,
+            })
+        }
+
+        #[cfg(not(unix))]
+        {
+            let task = spawn_signal_task(sender)?;
+            Ok(Self { receiver, task })
+        }
     }
 
     pub(crate) fn subscribe(&self) -> SignalReceiver {
         SignalReceiver {
             receiver: self.receiver.clone(),
+            observed_level: 0,
+            #[cfg(unix)]
+            delivered: self.registrations.delivered.clone(),
         }
     }
 }
 
 impl SignalReceiver {
     pub(crate) fn level(&self) -> io::Result<u8> {
-        signal_level(*self.receiver.borrow())
+        self.effective_level(*self.receiver.borrow())
     }
 
     pub(crate) async fn changed(&mut self) -> io::Result<u8> {
-        self.receiver
-            .changed()
-            .await
-            .map_err(|_| io::Error::other("the process interruption listener stopped"))?;
-        signal_level(*self.receiver.borrow_and_update())
+        loop {
+            let state = *self.receiver.borrow_and_update();
+            let level = self.effective_level(state)?;
+            if level > self.observed_level {
+                self.observed_level = level;
+                return Ok(level);
+            }
+            self.receiver
+                .changed()
+                .await
+                .map_err(|_| io::Error::other("the process interruption listener stopped"))?;
+        }
     }
 
     pub(crate) async fn wait_for(mut self, minimum_level: u8) -> io::Result<()> {
         loop {
-            match signal_level(*self.receiver.borrow_and_update())? {
-                level if level >= minimum_level => return Ok(()),
-                _ => {}
+            let state = *self.receiver.borrow_and_update();
+            let level = self.effective_level(state)?;
+            self.observed_level = self.observed_level.max(level);
+            if level >= minimum_level {
+                return Ok(());
             }
             if self.receiver.changed().await.is_err() {
                 return Err(io::Error::other(
                     "the process interruption listener stopped",
                 ));
             }
+        }
+    }
+
+    fn effective_level(&self, state: SignalState) -> io::Result<u8> {
+        let published = signal_level(state)?;
+        #[cfg(unix)]
+        {
+            Ok(published.max(delivered_signal_level(&self.delivered)))
+        }
+        #[cfg(not(unix))]
+        {
+            Ok(published)
         }
     }
 }
@@ -505,13 +572,90 @@ fn signal_level(state: SignalState) -> io::Result<u8> {
 }
 
 #[cfg(unix)]
-fn spawn_signal_task(sender: watch::Sender<SignalState>) -> CliResult<JoinHandle<()>> {
+// Tokio publishes signal delivery from an async task. Keep a generation
+// counter in the signal handler as the authoritative state so a concurrently
+// ready operation cannot finish in the scheduler gap before that publication.
+struct UnixSignalRegistrations {
+    delivered: Arc<AtomicUsize>,
+    interrupt: signal_hook_registry::SigId,
+    terminate: signal_hook_registry::SigId,
+    active: bool,
+}
+
+#[cfg(unix)]
+impl UnixSignalRegistrations {
+    fn install(delivered: Arc<AtomicUsize>) -> CliResult<Self> {
+        let interrupt = register_unix_signal(libc::SIGINT, delivered.clone())?;
+        let terminate = match register_unix_signal(libc::SIGTERM, delivered.clone()) {
+            Ok(registration) => registration,
+            Err(error) => {
+                signal_hook_registry::unregister(interrupt);
+                return Err(error);
+            }
+        };
+        Ok(Self {
+            delivered,
+            interrupt,
+            terminate,
+            active: true,
+        })
+    }
+
+    fn unregister(&mut self) {
+        if !self.active {
+            return;
+        }
+        signal_hook_registry::unregister(self.interrupt);
+        signal_hook_registry::unregister(self.terminate);
+        self.active = false;
+    }
+}
+
+#[cfg(unix)]
+impl Drop for UnixSignalRegistrations {
+    fn drop(&mut self) {
+        self.unregister();
+    }
+}
+
+#[cfg(unix)]
+fn register_unix_signal(
+    signal: libc::c_int,
+    delivered: Arc<AtomicUsize>,
+) -> CliResult<signal_hook_registry::SigId> {
+    // SAFETY: The handler only performs a lock-free atomic update. It neither
+    // allocates nor locks, and the captured counter remains alive until the
+    // registration is removed.
+    unsafe {
+        signal_hook_registry::register(signal, move || {
+            increment_signal_generation(&delivered);
+        })
+    }
+    .map_err(signal_install_error)
+}
+
+#[cfg(unix)]
+fn increment_signal_generation(delivered: &AtomicUsize) {
+    let _ = delivered.fetch_update(Ordering::Release, Ordering::Relaxed, |level| {
+        Some(level.saturating_add(1))
+    });
+}
+
+#[cfg(unix)]
+fn delivered_signal_level(delivered: &AtomicUsize) -> u8 {
+    delivered.load(Ordering::Acquire).min(usize::from(u8::MAX)) as u8
+}
+
+#[cfg(unix)]
+fn spawn_signal_task(
+    sender: watch::Sender<SignalState>,
+    delivered: Arc<AtomicUsize>,
+) -> CliResult<JoinHandle<()>> {
     let mut interrupt = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::interrupt())
         .map_err(signal_install_error)?;
     let mut terminate = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
         .map_err(signal_install_error)?;
     Ok(tokio::spawn(async move {
-        let mut level = 0_u8;
         loop {
             let received = tokio::select! {
                 value = interrupt.recv() => value,
@@ -521,8 +665,10 @@ fn spawn_signal_task(sender: watch::Sender<SignalState>) -> CliResult<JoinHandle
                 let _ = sender.send(SignalState::Failed);
                 return;
             }
-            level = level.saturating_add(1);
-            if sender.send(SignalState::Received(level)).is_err() {
+            if sender
+                .send(SignalState::Received(delivered_signal_level(&delivered)))
+                .is_err()
+            {
                 return;
             }
         }
@@ -673,6 +819,34 @@ mod tests {
         assert_eq!(error.exit_code(), 130);
         assert!(!error.to_string().contains("may have committed"));
         assert!(dropped.load(Ordering::Acquire));
+        assert!(cancellation.is_cancelled());
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn signal_delivered_while_ready_operation_is_polled_wins_completion_race() {
+        let (_sender, receiver) = test_signal_receiver();
+        let delivered = receiver.delivered.clone();
+        let cancellation = ApiCancellationToken::new();
+        let operation = std::future::poll_fn(move |_| {
+            increment_signal_generation(&delivered);
+            std::task::Poll::Ready(Ok(()))
+        });
+
+        let error = supervise_mutation_with_signals(
+            operation,
+            receiver,
+            Duration::from_secs(60),
+            OutputFormat::Json,
+            &cancellation,
+            || false,
+            || false,
+        )
+        .await
+        .expect_err("the synchronously delivered signal must win");
+
+        assert_eq!(error.code(), "interrupted");
+        assert_eq!(error.exit_code(), 130);
         assert!(cancellation.is_cancelled());
     }
 
@@ -922,9 +1096,49 @@ mod tests {
         assert!(!cancellation.is_cancelled());
     }
 
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn receiver_observes_each_unpublished_unix_signal_generation() {
+        let (_sender, mut receiver) = test_signal_receiver();
+        let delivered = receiver.delivered.clone();
+
+        increment_signal_generation(&delivered);
+        assert_eq!(receiver.level().expect("first signal level"), 1);
+        assert_eq!(
+            tokio::time::timeout(Duration::from_millis(10), receiver.changed())
+                .await
+                .expect("unpublished first signal must be observed synchronously")
+                .expect("first signal"),
+            1
+        );
+
+        increment_signal_generation(&delivered);
+        assert_eq!(
+            tokio::time::timeout(Duration::from_millis(10), receiver.changed())
+                .await
+                .expect("unpublished second signal must be observed synchronously")
+                .expect("second signal"),
+            2
+        );
+        assert!(
+            tokio::time::timeout(Duration::from_millis(10), receiver.clone().wait_for(2))
+                .await
+                .expect("second signal wait must not require async publication")
+                .is_ok()
+        );
+    }
+
     fn test_signal_receiver() -> (watch::Sender<SignalState>, SignalReceiver) {
         let (sender, receiver) = watch::channel(SignalState::Listening);
-        (sender, SignalReceiver { receiver })
+        (
+            sender,
+            SignalReceiver {
+                receiver,
+                observed_level: 0,
+                #[cfg(unix)]
+                delivered: Arc::new(AtomicUsize::new(0)),
+            },
+        )
     }
 
     fn pending_operation(dropped: Arc<AtomicBool>) -> impl Future<Output = CliResult<()>> {
