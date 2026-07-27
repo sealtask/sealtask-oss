@@ -3,6 +3,7 @@ use crate::args::{PickCommand, ProjectContextScopeArg};
 use crate::output::{CliResult, OutputFormat, write_stdout_line};
 use crate::picker::{PickerCandidate, pick_candidate, selector_for};
 use crate::project_context::ProjectContextScope;
+use crate::render::task_reference_title_label;
 use crate::resolver::{ProjectLifecycle, ResolvedProject, resolve_project};
 use crate::terminal::with_progress;
 use sealtask_client_core::PublicError;
@@ -68,7 +69,10 @@ pub(crate) async fn run_pick(
             .await?;
             let candidates = tasks
                 .into_iter()
-                .map(|task| PickerCandidate::new(task.id, task.title))
+                .map(|task| {
+                    let label = task_reference_title_label(&task);
+                    PickerCandidate::new(task.id, Some(label))
+                })
                 .collect::<Vec<_>>();
             if candidates.is_empty() {
                 let discovery = if include_completed && include_archived {

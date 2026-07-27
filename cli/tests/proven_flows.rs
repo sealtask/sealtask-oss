@@ -29,15 +29,15 @@ use sealtask_client_crypto::{
     ATTACHMENT_BLOB_CONTEXT, ATTACHMENT_BLOB_CONTEXT_LABEL, ATTACHMENT_BLOB_REF_VERSION,
     AttachmentBlobRef, CommentPayloadBody, FlexibleValue, NOTE_TITLE_CONTEXT,
     OPAQUE_EXPORT_KEY_BYTES, SealedPayload, StrongBoxKeyRing, SymmetricKey, TASK_TITLE_CONTEXT,
-    TaskPayloadBody, USER_DATA_KEY_CONTEXT, USER_DATA_KEY_OPAQUE_CONTEXT,
+    TaskPayloadBody, TaskReferenceSchemeV1, USER_DATA_KEY_CONTEXT, USER_DATA_KEY_OPAQUE_CONTEXT,
     USER_DATA_KEY_OPAQUE_WRAP_INFO, WORK_LIST_MEMBERSHIP_CONTEXT, WORK_LIST_PAYLOAD_CONTEXT,
     build_comment_payload_envelope, build_task_payload_envelope, compute_payload_proof,
     decode_attachment_blob_key, decrypt_attachment_bytes, decrypt_comment_payload,
     decrypt_encrypted_text_value, decrypt_note_key, decrypt_note_payload, decrypt_task_payload,
     derive_payload_binding_key,
     encode_attachment_blob_key as encode_production_attachment_blob_key, encrypt_comment_payload,
-    encrypt_task_payload, flexible_value_to_json, json_value_to_flexible, plaintext_rich_text,
-    seal_text_value, serialize_to_cbor,
+    encrypt_task_payload, encrypt_task_reference_scheme, flexible_value_to_json,
+    json_value_to_flexible, plaintext_rich_text, seal_text_value, serialize_to_cbor,
 };
 use serde::Deserialize;
 use serde_json::{Value, json};
@@ -2027,6 +2027,72 @@ async fn cli_task_selectors_natural_inputs_and_single_password_read_work_togethe
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn cli_full_task_reference_get_round_trips_through_the_offline_cache() {
+    let fixture = TestFixture::new();
+    let state = Arc::new(Mutex::new(TestState::new(fixture.clone())));
+    state.lock().expect("state lock").task_references_enabled = true;
+    let server = spawn_server(state.clone()).await;
+    let home = TempDir::new().expect("temp home");
+    let keychain_dir = TempDir::new().expect("temp keychain");
+    seed_credentials(home.path(), &fixture, &server.base_url);
+
+    let online = run_cli_with_test_keychain(
+        home.path(),
+        &server.base_url,
+        keychain_dir.path(),
+        &["--json", "tasks", "get", "oPs - 0184", "--password-stdin"],
+        Some(&fixture.password),
+    );
+    assert!(
+        online.status.success(),
+        "online reference get failed: {}",
+        online.stderr
+    );
+    let online_task = parse_stdout_json(&online.stdout);
+    assert_eq!(online_task["id"], fixture.task_id.to_string());
+    assert_eq!(online_task["reference"], "OPS-184");
+    assert_eq!(online_task["referenceNumber"], 184);
+    {
+        let state = state.lock().expect("state lock");
+        assert_eq!(state.task_reference_scheme_reads, 1);
+        assert_eq!(state.task_reference_number_reads, 1);
+        assert_eq!(
+            state.task_uuid_reads, 0,
+            "reference resolution already returned the exact decrypted task detail"
+        );
+    }
+
+    let offline = run_cli_with_test_keychain(
+        home.path(),
+        &server.base_url,
+        keychain_dir.path(),
+        &[
+            "--offline",
+            "--json",
+            "tasks",
+            "get",
+            "OPS-184",
+            "--password-stdin",
+        ],
+        Some(&fixture.password),
+    );
+    assert!(
+        offline.status.success(),
+        "offline reference get failed: {}",
+        offline.stderr
+    );
+    let offline_task = parse_stdout_json(&offline.stdout);
+    assert_eq!(offline_task["id"], fixture.task_id.to_string());
+    assert_eq!(offline_task["reference"], "OPS-184");
+    assert_eq!(offline_task["referenceNumber"], 184);
+
+    let state = state.lock().expect("state lock");
+    assert_eq!(state.task_reference_scheme_reads, 1);
+    assert_eq!(state.task_reference_number_reads, 1);
+    assert_eq!(state.task_uuid_reads, 0);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn cli_destructive_task_selector_requires_explicit_confirmation() {
     let fixture = TestFixture::new();
     let state = Arc::new(Mutex::new(TestState::new(fixture.clone())));
@@ -3412,7 +3478,10 @@ fn cli_schema_and_output_formats_are_machine_discoverable() {
         .iter()
         .find(|argument| argument["long"] == "field")
         .expect("field schema");
-    assert_eq!(field["possibleValues"], json!(["id", "title", "url"]));
+    assert_eq!(
+        field["possibleValues"],
+        json!(["reference", "id", "title", "url"])
+    );
 
     let pretty = run_cli(
         home.path(),
@@ -3429,8 +3498,38 @@ fn cli_schema_and_output_formats_are_machine_discoverable() {
     let info = parse_stdout_json(&pretty.stdout);
     assert_eq!(info["jsonContractVersion"], 2);
     assert_eq!(
+        info["taskListing"]["columns"],
+        json!([
+            "reference",
+            "id",
+            "title",
+            "project",
+            "project-id",
+            "priority",
+            "due",
+            "status",
+            "comments",
+            "created",
+            "updated"
+        ])
+    );
+    assert_eq!(
+        info["taskListing"]["sortFields"],
+        json!([
+            "reference",
+            "id",
+            "title",
+            "project",
+            "priority",
+            "due",
+            "status",
+            "created",
+            "updated"
+        ])
+    );
+    assert_eq!(
         info["taskListing"]["rawFields"],
-        json!(["id", "title", "url"])
+        json!(["reference", "id", "title", "url"])
     );
     assert_eq!(info["canonicalFlags"]["projectListDetails"], "--details");
 
@@ -3449,6 +3548,11 @@ fn cli_schema_and_output_formats_are_machine_discoverable() {
     assert!(human.stdout.contains(
         "Project activation: sealtask pick project PROJECT --scope local|global (automation-safe)"
     ));
+    assert!(
+        human
+            .stdout
+            .contains("Task lists: --columns, --sort, --field reference|id|title|url")
+    );
 }
 
 #[test]
@@ -7710,6 +7814,8 @@ struct TestFixture {
     first_section_id: Uuid,
     done_section_id: Uuid,
     task_id: Uuid,
+    task_reference_scheme_id: Uuid,
+    task_reference_scheme_ciphertext: String,
     comment_id: Uuid,
     membership_id: Uuid,
     owner_user_id: Uuid,
@@ -7752,6 +7858,10 @@ struct TestState {
     task_completed_at: Option<DateTime<Utc>>,
     task_archived_at: Option<DateTime<Utc>>,
     task_updated_at: DateTime<Utc>,
+    task_references_enabled: bool,
+    task_reference_scheme_reads: usize,
+    task_reference_number_reads: usize,
+    task_uuid_reads: usize,
     reject_next_task_update_as_conflict: bool,
     tasks_empty: bool,
     my_tasks_count: usize,
@@ -7827,6 +7937,10 @@ impl TestState {
             task_completed_at: None,
             task_archived_at: None,
             task_updated_at: Utc::now(),
+            task_references_enabled: false,
+            task_reference_scheme_reads: 0,
+            task_reference_number_reads: 0,
+            task_uuid_reads: 0,
             reject_next_task_update_as_conflict: false,
             tasks_empty: false,
             my_tasks_count: 1,
@@ -7893,6 +8007,7 @@ impl TestFixture {
         let first_section_id = Uuid::now_v7();
         let done_section_id = Uuid::now_v7();
         let task_id = Uuid::now_v7();
+        let task_reference_scheme_id = Uuid::now_v7();
         let comment_id = Uuid::now_v7();
         let membership_id = Uuid::now_v7();
         let owner_user_id = Uuid::now_v7();
@@ -7911,6 +8026,13 @@ impl TestFixture {
         };
         let work_list_key_ciphertext =
             encode_membership_key_ciphertext(&data_key, &list_key).expect("membership key");
+        let task_reference_scheme_ciphertext = encrypt_task_reference_scheme(
+            &TaskReferenceSchemeV1::new(work_list_id, task_reference_scheme_id, 1, "OPS", 3)
+                .expect("task-reference scheme"),
+            &list_key,
+        )
+        .expect("encrypt task-reference scheme")
+        .base64;
         let work_list_payload_ciphertext =
             encode_work_list_payload_ciphertext(&list_key, first_section_id, done_section_id)
                 .expect("work list payload");
@@ -8013,6 +8135,8 @@ impl TestFixture {
             first_section_id,
             done_section_id,
             task_id,
+            task_reference_scheme_id,
+            task_reference_scheme_ciphertext,
             comment_id,
             membership_id,
             owner_user_id,
@@ -8166,6 +8290,14 @@ async fn spawn_server(state: Arc<Mutex<TestState>>) -> TestServer {
         .route("/work-lists/{id}/audit-log", get(project_audit_log))
         .route("/work-lists/{id}/sse-token", post(issue_sse_token))
         .route("/work-lists/{id}/events", get(project_events))
+        .route(
+            "/work-lists/{id}/task-reference-schemes",
+            get(list_task_reference_schemes),
+        )
+        .route(
+            "/work-lists/{id}/tasks/by-reference-number/{reference_number}",
+            get(get_task_by_reference_number),
+        )
         .route("/work-lists/{id}/tasks", get(list_tasks).post(create_task))
         .route("/work-lists/{id}/notes", get(list_notes).post(create_note))
         .route(
@@ -8511,6 +8643,11 @@ async fn get_work_list(
         "timezone": "UTC",
         "sectionSnapshots": section_snapshots_json(&state),
         "archivedAt": state.work_list_archived_at,
+        "taskReferencesEnabledAt": state.task_references_enabled.then(Utc::now),
+        "currentTaskReferenceSchemeRevision": state.task_references_enabled.then_some(1),
+        "currentTaskReferenceSchemeRevisionId": state
+            .task_references_enabled
+            .then_some(state.fixture.task_reference_scheme_id),
         "createdAt": Utc::now(),
         "updatedAt": Utc::now(),
         "membership": membership_json(&state),
@@ -9057,45 +9194,56 @@ async fn get_task(
     headers: HeaderMap,
 ) -> (StatusCode, Json<serde_json::Value>) {
     authorize(&state, &headers);
-    let state = state.lock().expect("state lock");
+    let mut state = state.lock().expect("state lock");
     assert_eq!(work_list_id, state.fixture.work_list_id);
     assert_eq!(task_id, state.fixture.task_id);
+    state.task_uuid_reads += 1;
 
-    let payload = json!({
-        "id": state.fixture.task_id,
-        "workListId": state.fixture.work_list_id,
-        "createdByMembershipId": state.fixture.membership_id,
-        "titleCiphertext": state.fixture.task_title_ciphertext,
-        "payloadCiphertext": task_payload_ciphertext(&state),
-        "sectionId": state.task_section_id,
-        "priority": null,
-        "position": "a",
-        "dueAt": null,
-        "startAt": null,
-        "completedAt": state.task_completed_at,
-        "archivedAt": state.task_archived_at,
-        "isCompleted": state.task_is_completed,
-        "recurrenceId": null,
-        "recurrenceSchedule": null,
-        "recurrenceIteration": null,
-        "materializedAt": null,
-        "createdAt": Utc::now(),
-        "updatedAt": state.task_updated_at,
-        "commentCount": 1,
-        "delegations": [],
-        "comments": [
-            {
-                "id": state.fixture.comment_id,
-                "taskId": state.fixture.task_id,
-                "authorMembershipId": state.fixture.membership_id,
-                "bodyCiphertext": comment_body_ciphertext(&state),
+    (StatusCode::OK, Json(task_detail_response_json(&state)))
+}
+
+async fn get_task_by_reference_number(
+    Path((work_list_id, reference_number)): Path<(Uuid, i64)>,
+    State(state): State<Arc<Mutex<TestState>>>,
+    headers: HeaderMap,
+) -> (StatusCode, Json<serde_json::Value>) {
+    authorize(&state, &headers);
+    let mut state = state.lock().expect("state lock");
+    assert!(state.task_references_enabled);
+    assert_eq!(work_list_id, state.fixture.work_list_id);
+    assert_eq!(reference_number, 184);
+    state.task_reference_number_reads += 1;
+
+    (StatusCode::OK, Json(task_detail_response_json(&state)))
+}
+
+async fn list_task_reference_schemes(
+    Path(work_list_id): Path<Uuid>,
+    State(state): State<Arc<Mutex<TestState>>>,
+    headers: HeaderMap,
+) -> (StatusCode, Json<serde_json::Value>) {
+    authorize(&state, &headers);
+    let mut state = state.lock().expect("state lock");
+    assert!(state.task_references_enabled);
+    assert_eq!(work_list_id, state.fixture.work_list_id);
+    state.task_reference_scheme_reads += 1;
+
+    (
+        StatusCode::OK,
+        Json(json!({
+            "schemes": [{
+                "schemeRevisionId": state.fixture.task_reference_scheme_id,
+                "workListId": state.fixture.work_list_id,
+                "revision": 1,
+                "payloadCiphertext": state.fixture.task_reference_scheme_ciphertext,
+                "isRepair": false,
                 "createdAt": Utc::now(),
-                "updatedAt": Utc::now()
-            }
-        ]
-    });
-
-    (StatusCode::OK, Json(payload))
+                "retiredAt": null,
+                "quarantinedAt": null,
+                "quarantinedByMembershipId": null
+            }]
+        })),
+    )
 }
 
 async fn create_task(
@@ -10146,6 +10294,7 @@ fn task_response_json(state: &TestState) -> serde_json::Value {
         "createdAt": Utc::now(),
         "updatedAt": state.task_updated_at,
         "commentCount": 1,
+        "referenceNumber": state.task_references_enabled.then_some(184),
         "delegations": [
             {
                 "id": Uuid::now_v7(),
@@ -10154,6 +10303,43 @@ fn task_response_json(state: &TestState) -> serde_json::Value {
                 "role": "assigned",
                 "status": "pending",
                 "noteCiphertext": null,
+                "createdAt": Utc::now(),
+                "updatedAt": Utc::now()
+            }
+        ]
+    })
+}
+
+fn task_detail_response_json(state: &TestState) -> serde_json::Value {
+    json!({
+        "id": state.fixture.task_id,
+        "workListId": state.fixture.work_list_id,
+        "createdByMembershipId": state.fixture.membership_id,
+        "titleCiphertext": state.fixture.task_title_ciphertext,
+        "payloadCiphertext": task_payload_ciphertext(state),
+        "sectionId": state.task_section_id,
+        "priority": null,
+        "position": "a",
+        "dueAt": null,
+        "startAt": null,
+        "completedAt": state.task_completed_at,
+        "archivedAt": state.task_archived_at,
+        "isCompleted": state.task_is_completed,
+        "recurrenceId": null,
+        "recurrenceSchedule": null,
+        "recurrenceIteration": null,
+        "materializedAt": null,
+        "createdAt": Utc::now(),
+        "updatedAt": state.task_updated_at,
+        "commentCount": 1,
+        "referenceNumber": state.task_references_enabled.then_some(184),
+        "delegations": [],
+        "comments": [
+            {
+                "id": state.fixture.comment_id,
+                "taskId": state.fixture.task_id,
+                "authorMembershipId": state.fixture.membership_id,
+                "bodyCiphertext": comment_body_ciphertext(state),
                 "createdAt": Utc::now(),
                 "updatedAt": Utc::now()
             }
@@ -10220,6 +10406,11 @@ fn work_list_summary_json(state: &TestState) -> serde_json::Value {
         "timezone": "UTC",
         "sectionSnapshots": section_snapshots_json(state),
         "archivedAt": state.work_list_archived_at,
+        "taskReferencesEnabledAt": state.task_references_enabled.then(Utc::now),
+        "currentTaskReferenceSchemeRevision": state.task_references_enabled.then_some(1),
+        "currentTaskReferenceSchemeRevisionId": state
+            .task_references_enabled
+            .then_some(state.fixture.task_reference_scheme_id),
         "createdAt": Utc::now(),
         "updatedAt": Utc::now(),
         "membership": membership_json(state)

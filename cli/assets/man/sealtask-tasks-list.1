@@ -38,6 +38,8 @@ Select and order human table columns (comma\-separated or repeatable)
 \fIPossible values:\fR
 .RS 14
 .IP \(bu 2
+reference
+.IP \(bu 2
 id
 .IP \(bu 2
 title
@@ -60,12 +62,14 @@ updated
 .RE
 .TP
 \fB\-\-sort\fR \fI<FIELD>\fR
-Sort text/date/status ascending, priority high\-first, or timestamps newest\-first
+Sort references/text/date/status ascending, priority high\-first, or timestamps newest\-first
 .br
 
 .br
 \fIPossible values:\fR
 .RS 14
+.IP \(bu 2
+reference
 .IP \(bu 2
 id
 .IP \(bu 2
@@ -85,12 +89,14 @@ updated
 .RE
 .TP
 \fB\-\-field\fR \fI<FIELD>\fR
-Emit one sanitized raw value per task with no headings, totals, or empty\-state text
+Emit one sanitized reference, ID, title, or URL per task with no headings or totals
 .br
 
 .br
 \fIPossible values:\fR
 .RS 14
+.IP \(bu 2
+reference
 .IP \(bu 2
 id
 .IP \(bu 2
@@ -259,7 +265,8 @@ May also be specified with the \fBSEALTASK_CONFIG_DIR\fR environment variable.
 .SH EXTRA
 Examples:
   sealtask tasks list
-  sealtask tasks list \-\-all \-\-sort due
-  sealtask tasks list \-\-columns project,title,due,status
+  sealtask tasks list \-\-all \-\-sort reference
+  sealtask tasks list \-\-columns reference,project,title,due,status
+  sealtask tasks list \-\-field reference
   sealtask tasks list \-\-field id
   sealtask tasks list \-\-field url \-\-web\-url https://app.example

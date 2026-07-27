@@ -5,6 +5,7 @@ use clap::{ArgAction, ArgGroup, Args, Parser, Subcommand, ValueEnum};
 use std::fmt;
 use std::path::{Path, PathBuf};
 use uuid::Uuid;
+use zeroize::Zeroize;
 
 fn task_target_group() -> ArgGroup {
     ArgGroup::new("task_target")
@@ -224,6 +225,7 @@ pub(crate) enum CompletionShell {
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, ValueEnum)]
 pub(crate) enum TaskListColumnArg {
+    Reference,
     Id,
     Title,
     Project,
@@ -239,6 +241,7 @@ pub(crate) enum TaskListColumnArg {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
 pub(crate) enum TaskListSortArg {
+    Reference,
     Id,
     Title,
     Project,
@@ -251,6 +254,7 @@ pub(crate) enum TaskListSortArg {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
 pub(crate) enum TaskListFieldArg {
+    Reference,
     Id,
     Title,
     Url,
@@ -643,10 +647,10 @@ pub(crate) enum TasksCommand {
             conflicts_with_all = ["field", "raw"]
         )]
         columns: Vec<TaskListColumnArg>,
-        /// Sort text/date/status ascending, priority high-first, or timestamps newest-first.
+        /// Sort references/text/date/status ascending, priority high-first, or timestamps newest-first.
         #[arg(long, value_enum, value_name = "FIELD", conflicts_with = "raw")]
         sort: Option<TaskListSortArg>,
-        /// Emit one sanitized raw value per task with no headings, totals, or empty-state text.
+        /// Emit one sanitized reference, ID, title, or URL per task with no headings or totals.
         #[arg(
             long,
             value_enum,
@@ -668,10 +672,10 @@ pub(crate) enum TasksCommand {
         #[arg(long, hide = true)]
         raw: bool,
     },
-    /// Show one decrypted task, including comments and attachment metadata.
+    /// Show one decrypted task; a full reference can infer its project when no context is selected.
     #[command(group(task_target_group()))]
     Get {
-        /// Task title, UUID, or unique UUID prefix.
+        /// Current or historical reference (OPS-184), project-local #184, title, UUID, or unique UUID prefix; use name: for a reference-shaped title.
         #[arg(value_name = "TASK", conflicts_with = "task_id")]
         task: Option<EntitySelector>,
         /// Exact task UUID (legacy compatibility).
@@ -689,7 +693,7 @@ pub(crate) enum TasksCommand {
         #[arg(long, hide = true)]
         raw: bool,
     },
-    /// Resolve an encrypted current or historical task reference locally.
+    /// Resolve a current or historical task reference, failing on cross-project ambiguity.
     Resolve(TaskResolveArgsCli),
     /// Install an owner repair or explicitly quarantine unreadable history.
     TaskReferences {
@@ -741,10 +745,10 @@ pub(crate) enum TasksCommand {
 
 #[derive(Args)]
 pub(crate) struct TaskResolveArgsCli {
-    /// Full encrypted-scheme reference, for example OPS-0042.
+    /// Current or historical full SealTask reference, for example OPS-184.
     #[arg(value_name = "REFERENCE")]
     pub(crate) reference: String,
-    /// Restrict resolution to one canonical work-list UUID.
+    /// Restrict an ambiguous cross-project match to one canonical project UUID.
     #[arg(long, value_parser = parse_canonical_uuid)]
     pub(crate) work_list_id: Option<Uuid>,
     /// Read the account password from stdin when no local unlock is available.
@@ -760,6 +764,12 @@ impl fmt::Debug for TaskResolveArgsCli {
             .field("work_list_id", &self.work_list_id)
             .field("password_stdin", &self.password_stdin)
             .finish()
+    }
+}
+
+impl Drop for TaskResolveArgsCli {
+    fn drop(&mut self) {
+        self.reference.zeroize();
     }
 }
 
@@ -788,7 +798,7 @@ pub(crate) struct TaskReferenceRepairArgsCli {
     /// Work-list UUID whose current encrypted scheme needs replacement.
     #[arg(long, value_parser = parse_canonical_uuid)]
     pub(crate) work_list_id: Uuid,
-    /// Replacement private prefix, using 2-10 uppercase ASCII letters or digits.
+    /// Replacement private prefix: 2-10 uppercase ASCII letters or digits, starting with a letter.
     #[arg(long)]
     pub(crate) prefix: String,
     /// Minimum number of digits displayed after the prefix.
@@ -906,7 +916,7 @@ pub(crate) enum CommentsCommand {
         /// Exact project UUID (legacy compatibility).
         #[arg(long)]
         work_list_id: Option<Uuid>,
-        /// Task title, UUID, or unique UUID prefix.
+        /// Current or historical reference (OPS-184), project-local #184, title, UUID, or unique UUID prefix; use name: for a reference-shaped title.
         #[arg(value_name = "TASK", conflicts_with = "task_id")]
         task: Option<EntitySelector>,
         /// Exact task UUID (legacy compatibility).
@@ -1045,7 +1055,7 @@ impl fmt::Debug for TaskCreateArgsCli {
 #[derive(Args, Debug)]
 #[command(group(task_target_group()))]
 pub(crate) struct TaskEditArgsCli {
-    /// Task title, UUID, or unique UUID prefix.
+    /// Current or historical reference (OPS-184), project-local #184, title, UUID, or unique UUID prefix; use name: for a reference-shaped title.
     #[arg(value_name = "TASK", conflicts_with = "task_id")]
     pub(crate) task: Option<EntitySelector>,
     /// Exact task UUID (legacy compatibility).
@@ -1065,7 +1075,7 @@ pub(crate) struct TaskEditArgsCli {
 #[derive(Args)]
 #[command(group(task_target_group()))]
 pub(crate) struct TaskUpdateArgsCli {
-    /// Task title, UUID, or unique UUID prefix.
+    /// Current or historical reference (OPS-184), project-local #184, title, UUID, or unique UUID prefix; use name: for a reference-shaped title.
     #[arg(value_name = "TASK", conflicts_with = "task_id")]
     pub(crate) task: Option<EntitySelector>,
     /// Exact task UUID (legacy compatibility).
@@ -1219,7 +1229,7 @@ impl fmt::Debug for TaskUpdateArgsCli {
 #[derive(Args, Debug)]
 #[command(group(task_target_group()))]
 pub(crate) struct TaskMoveArgsCli {
-    /// Task title, UUID, or unique UUID prefix.
+    /// Current or historical reference (OPS-184), project-local #184, title, UUID, or unique UUID prefix; use name: for a reference-shaped title.
     #[arg(value_name = "TASK", conflicts_with = "task_id")]
     pub(crate) task: Option<EntitySelector>,
     /// Exact task UUID (legacy compatibility).
@@ -1240,7 +1250,7 @@ pub(crate) struct TaskMoveArgsCli {
     /// Place the task immediately before this task UUID.
     #[arg(long, conflicts_with = "before")]
     pub(crate) insert_before_task_id: Option<Uuid>,
-    /// Place the task immediately before this task title, UUID, or unique UUID prefix.
+    /// Place before a task selected by reference (OPS-184), project-local #184, title, UUID, or unique UUID prefix; use name: for a reference-shaped title.
     #[arg(long, conflicts_with = "insert_before_task_id")]
     pub(crate) before: Option<EntitySelector>,
     /// Read the account password from stdin when no local unlock is available.
@@ -1251,7 +1261,7 @@ pub(crate) struct TaskMoveArgsCli {
 #[derive(Args, Debug)]
 #[command(group(task_target_group()))]
 pub(crate) struct TaskCompletionArgsCli {
-    /// Task title, UUID, or unique UUID prefix.
+    /// Current or historical reference (OPS-184), project-local #184, title, UUID, or unique UUID prefix; use name: for a reference-shaped title.
     #[arg(value_name = "TASK", conflicts_with = "task_id")]
     pub(crate) task: Option<EntitySelector>,
     /// Exact task UUID (legacy compatibility).
@@ -1271,7 +1281,7 @@ pub(crate) struct TaskCompletionArgsCli {
 #[derive(Args, Debug)]
 #[command(group(task_target_group()))]
 pub(crate) struct TaskArchiveArgsCli {
-    /// Task title, UUID, or unique UUID prefix.
+    /// Current or historical reference (OPS-184), project-local #184, title, UUID, or unique UUID prefix; use name: for a reference-shaped title.
     #[arg(value_name = "TASK", conflicts_with = "task_id")]
     pub(crate) task: Option<EntitySelector>,
     /// Exact task UUID (legacy compatibility).
@@ -1291,7 +1301,7 @@ pub(crate) struct TaskArchiveArgsCli {
 #[derive(Args, Debug)]
 #[command(group(task_target_group()))]
 pub(crate) struct TaskUnarchiveArgsCli {
-    /// Task title, UUID, or unique UUID prefix.
+    /// Current or historical reference (OPS-184), project-local #184, title, UUID, or unique UUID prefix; use name: for a reference-shaped title.
     #[arg(value_name = "TASK", conflicts_with = "task_id")]
     pub(crate) task: Option<EntitySelector>,
     /// Exact task UUID (legacy compatibility).
@@ -1311,7 +1321,7 @@ pub(crate) struct TaskUnarchiveArgsCli {
 #[derive(Args, Debug)]
 #[command(group(task_target_group()))]
 pub(crate) struct TaskDeleteArgsCli {
-    /// Task title, UUID, or unique UUID prefix.
+    /// Current or historical reference (OPS-184), project-local #184, title, UUID, or unique UUID prefix; use name: for a reference-shaped title.
     #[arg(value_name = "TASK", conflicts_with = "task_id")]
     pub(crate) task: Option<EntitySelector>,
     /// Exact task UUID (legacy compatibility).
@@ -1340,7 +1350,7 @@ pub(crate) struct TaskDeleteArgsCli {
 #[derive(Args)]
 #[command(group(task_target_group()))]
 pub(crate) struct CommentCreateArgsCli {
-    /// Task title, UUID, or unique UUID prefix.
+    /// Current or historical reference (OPS-184), project-local #184, title, UUID, or unique UUID prefix; use name: for a reference-shaped title.
     #[arg(value_name = "TASK", conflicts_with = "task_id")]
     pub(crate) task: Option<EntitySelector>,
     /// Exact task UUID (legacy compatibility).
@@ -1405,7 +1415,7 @@ impl fmt::Debug for CommentCreateArgsCli {
 #[derive(Args)]
 #[command(group(task_target_group()))]
 pub(crate) struct CommentUpdateArgsCli {
-    /// Task title, UUID, or unique UUID prefix.
+    /// Current or historical reference (OPS-184), project-local #184, title, UUID, or unique UUID prefix; use name: for a reference-shaped title.
     #[arg(value_name = "TASK", conflicts_with = "task_id")]
     pub(crate) task: Option<EntitySelector>,
     /// Exact task UUID (legacy compatibility).
@@ -1461,7 +1471,7 @@ impl fmt::Debug for CommentUpdateArgsCli {
 #[derive(Args, Debug)]
 #[command(group(task_target_group()))]
 pub(crate) struct CommentDeleteArgsCli {
-    /// Task title, UUID, or unique UUID prefix.
+    /// Current or historical reference (OPS-184), project-local #184, title, UUID, or unique UUID prefix; use name: for a reference-shaped title.
     #[arg(value_name = "TASK", conflicts_with = "task_id")]
     pub(crate) task: Option<EntitySelector>,
     /// Exact task UUID (legacy compatibility).
@@ -1661,7 +1671,7 @@ pub(crate) struct NoteDeleteArgsCli {
 #[derive(Args, Debug)]
 #[command(group(task_target_group()))]
 pub(crate) struct TaskAttachmentUploadArgsCli {
-    /// Task title, UUID, or unique UUID prefix.
+    /// Current or historical reference (OPS-184), project-local #184, title, UUID, or unique UUID prefix; use name: for a reference-shaped title.
     #[arg(value_name = "TASK", conflicts_with = "task_id")]
     pub(crate) task: Option<EntitySelector>,
     /// Exact task UUID (legacy compatibility).
@@ -1692,7 +1702,7 @@ pub(crate) struct TaskAttachmentUploadArgsCli {
 #[derive(Args, Debug)]
 #[command(group(task_target_group()))]
 pub(crate) struct TaskAttachmentDeleteArgsCli {
-    /// Task title, UUID, or unique UUID prefix.
+    /// Current or historical reference (OPS-184), project-local #184, title, UUID, or unique UUID prefix; use name: for a reference-shaped title.
     #[arg(value_name = "TASK", conflicts_with = "task_id")]
     pub(crate) task: Option<EntitySelector>,
     /// Exact task UUID (legacy compatibility).
@@ -1718,7 +1728,7 @@ pub(crate) struct TaskAttachmentDeleteArgsCli {
 #[derive(Args, Debug)]
 #[command(group(task_target_group()))]
 pub(crate) struct TaskAttachmentReadArgsCli {
-    /// Task title, UUID, or unique UUID prefix.
+    /// Current or historical reference (OPS-184), project-local #184, title, UUID, or unique UUID prefix; use name: for a reference-shaped title.
     #[arg(value_name = "TASK", conflicts_with = "task_id")]
     pub(crate) task: Option<EntitySelector>,
     /// Exact task UUID (legacy compatibility).
@@ -1741,7 +1751,7 @@ pub(crate) struct TaskAttachmentReadArgsCli {
 #[derive(Args, Debug)]
 #[command(group(task_target_group()))]
 pub(crate) struct TaskAttachmentDownloadArgsCli {
-    /// Task title, UUID, or unique UUID prefix.
+    /// Current or historical reference (OPS-184), project-local #184, title, UUID, or unique UUID prefix; use name: for a reference-shaped title.
     #[arg(value_name = "TASK", conflicts_with = "task_id")]
     pub(crate) task: Option<EntitySelector>,
     /// Exact task UUID (legacy compatibility).

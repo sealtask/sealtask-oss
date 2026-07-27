@@ -4,6 +4,7 @@ use crate::output::{
     write_stderr_line, write_stdout_flushed, write_stdout_line_flushed,
 };
 use crate::output_models::{TaskSummaryV1, task_summaries_v1};
+use crate::render::task_reference_title_label;
 use crate::table::sanitize_cell;
 use crate::task_list::render_default_project_task_table;
 use crate::terminal;
@@ -256,9 +257,10 @@ impl StreamEventBurst {
     }
 }
 
-struct TaskDiff<'a> {
-    added: Vec<&'a AgentTaskSummary>,
-    updated: Vec<&'a AgentTaskSummary>,
+struct TaskDiff<'current, 'previous> {
+    added: Vec<&'current AgentTaskSummary>,
+    updated: Vec<&'current AgentTaskSummary>,
+    removed: Vec<&'previous AgentTaskSummary>,
     removed_task_ids: Vec<Uuid>,
 }
 
@@ -425,7 +427,7 @@ impl TaskWatchRenderer {
 
     fn render_append_diff(
         &mut self,
-        diff: &TaskDiff<'_>,
+        diff: &TaskDiff<'_, '_>,
         trigger: &str,
         missed_events: Option<u64>,
     ) -> CliResult<()> {
@@ -444,10 +446,11 @@ impl TaskWatchRenderer {
                 task_label(task)
             ))?;
         }
-        for task_id in &diff.removed_task_ids {
+        for task in &diff.removed {
             write_stdout_line_flushed(format_args!(
-                "{observed_at} removed id:{}",
-                task_id.simple()
+                "{observed_at} removed id:{} {}",
+                task.id.simple(),
+                task_label(task)
             ))?;
         }
         if diff.added.is_empty() && diff.updated.is_empty() && diff.removed_task_ids.is_empty() {
@@ -468,10 +471,10 @@ impl TaskWatchRenderer {
     }
 }
 
-fn task_diff<'a>(
-    previous: &[AgentTaskSummary],
-    current: &'a [AgentTaskSummary],
-) -> PublicResult<TaskDiff<'a>> {
+fn task_diff<'current, 'previous>(
+    previous: &'previous [AgentTaskSummary],
+    current: &'current [AgentTaskSummary],
+) -> PublicResult<TaskDiff<'current, 'previous>> {
     let previous_by_id = previous
         .iter()
         .map(|task| task_fingerprint(task).map(|fingerprint| (task.id, fingerprint)))
@@ -487,14 +490,15 @@ fn task_diff<'a>(
             Some(_) => {}
         }
     }
-    let removed_task_ids = previous
+    let removed = previous
         .iter()
         .filter(|task| !current_ids.contains(&task.id))
-        .map(|task| task.id)
-        .collect();
+        .collect::<Vec<_>>();
+    let removed_task_ids = removed.iter().map(|task| task.id).collect();
     Ok(TaskDiff {
         added,
         updated,
+        removed,
         removed_task_ids,
     })
 }
@@ -509,7 +513,7 @@ fn task_fingerprint(task: &AgentTaskSummary) -> PublicResult<[u8; 32]> {
 }
 
 fn task_label(task: &AgentTaskSummary) -> String {
-    sanitize_cell(task.title.as_deref().unwrap_or("<unreadable task>"))
+    sanitize_cell(&task_reference_title_label(task))
 }
 
 pub(super) fn reconnect_delay(attempt: u32, retry_after: Option<Duration>) -> Option<Duration> {
@@ -624,6 +628,26 @@ mod tests {
         assert_eq!(burst.trigger(), ("resync", Some(5)));
     }
 
+    #[test]
+    fn task_watch_labels_and_jsonl_summaries_include_decrypted_references() {
+        let task = task(Uuid::now_v7(), "one", 0);
+        assert_eq!(task_label(&task), "OPS-0031 · one");
+
+        let tasks = vec![task];
+        let record = serde_json::to_value(TaskWatchSnapshotV1 {
+            schema_version: 1,
+            record_type: "snapshot",
+            sequence: 0,
+            observed_at: Utc::now(),
+            work_list_id: tasks[0].work_list_id,
+            tasks: task_summaries_v1(&tasks),
+        })
+        .expect("task-watch snapshot");
+        assert_eq!(record["tasks"][0]["reference"], "OPS-0031");
+        assert_eq!(record["tasks"][0]["referenceNumber"], 31);
+        assert_eq!(record["tasks"][0]["id"], tasks[0].id.to_string());
+    }
+
     fn task(id: Uuid, title: &str, comment_count: i64) -> AgentTaskSummary {
         let now = Utc::now();
         AgentTaskSummary {
@@ -647,6 +671,8 @@ mod tests {
             created_at: now,
             updated_at: now,
             comment_count,
+            reference_number: Some(31),
+            reference: Some("OPS-0031".to_string()),
             title: Some(title.to_string()),
             body_markdown: None,
             body_rich_text: None,

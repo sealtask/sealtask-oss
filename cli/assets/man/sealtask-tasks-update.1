@@ -29,7 +29,7 @@ Move the task to this section UUID
 Move the task to a section name, UUID, or unique UUID prefix
 .TP
 [\fITASK\fR]
-Task title, UUID, or unique UUID prefix
+Current or historical reference (OPS\-184), project\-local #184, title, UUID, or unique UUID prefix; use name: for a reference\-shaped title
 .SH FIELDS
 .TP
 \fB\-\-title\fR \fI<TITLE>\fR
@@ -231,7 +231,7 @@ May also be specified with the \fBSEALTASK_CONFIG_DIR\fR environment variable.
 .RE
 .SH EXTRA
 Examples:
-  sealtask tasks update "Ship 0.4" \-\-priority urgent \-\-due tomorrow
+  sealtask tasks update OPS\-184 \-\-priority urgent \-\-due tomorrow
   sealtask tasks update id:019f42ab \-\-body\-file ./release.md
   sealtask tasks update id:019f42ab \-\-clear\-due\-at
   sealtask \-\-json tasks update id:019f42ab \-\-priority urgent \-\-dry\-run

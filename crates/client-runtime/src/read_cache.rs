@@ -10,8 +10,8 @@ use fs2::FileExt as _;
 use sealtask_client_api::{
     CommentResponse, MAX_COMMENTS, MAX_MEMBERS_PER_WORK_LIST, MAX_MY_TASKS,
     MAX_NOTE_COLLECTION_ITEMS, MAX_SECTIONS_PER_WORK_LIST, MAX_TASKS, MAX_WORK_LISTS,
-    MyTaskResponse, NoteResponse, TaskDetailResponse, TaskListResponse, WorkListDetailResponse,
-    WorkListResponse,
+    MyTaskResponse, NoteResponse, TaskDetailResponse, TaskListResponse,
+    TaskReferenceSchemeResponse, WorkListDetailResponse, WorkListResponse,
 };
 use sealtask_client_auth::Credentials;
 #[cfg(not(test))]
@@ -19,7 +19,8 @@ use sealtask_client_auth::with_current_credential_identity;
 use sealtask_client_core::{PublicError, PublicResult};
 use sealtask_client_crypto::{
     MAX_READ_CACHE_CIPHERTEXT_BYTES, MAX_READ_CACHE_PLAINTEXT_BYTES, ReadCacheBinding,
-    SymmetricKey, open_read_cache, seal_read_cache,
+    SymmetricKey, TASK_REFERENCE_REVISION_MAX, TASK_REFERENCE_SAFE_INTEGER_MAX, open_read_cache,
+    seal_read_cache,
 };
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
@@ -185,6 +186,9 @@ pub(crate) enum ReadCacheQuery {
     WorkList {
         work_list_id: Uuid,
     },
+    TaskReferenceSchemes {
+        work_list_id: Uuid,
+    },
     ProjectTasks {
         work_list_id: Uuid,
         include_archived: bool,
@@ -195,6 +199,10 @@ pub(crate) enum ReadCacheQuery {
     Task {
         work_list_id: Uuid,
         task_id: Uuid,
+    },
+    TaskByReferenceNumber {
+        work_list_id: Uuid,
+        reference_number: i64,
     },
     Comments {
         work_list_id: Uuid,
@@ -216,6 +224,9 @@ impl ReadCacheQuery {
                 format!("work_lists?include_archived={include_archived}")
             }
             Self::WorkList { work_list_id } => format!("work_list/{work_list_id}"),
+            Self::TaskReferenceSchemes { work_list_id } => {
+                format!("work_list/{work_list_id}/task_reference_schemes")
+            }
             Self::ProjectTasks {
                 work_list_id,
                 include_archived,
@@ -227,6 +238,10 @@ impl ReadCacheQuery {
                 work_list_id,
                 task_id,
             } => format!("work_list/{work_list_id}/task/{task_id}"),
+            Self::TaskByReferenceNumber {
+                work_list_id,
+                reference_number,
+            } => format!("work_list/{work_list_id}/task_reference/{reference_number}"),
             Self::Comments {
                 work_list_id,
                 task_id,
@@ -268,6 +283,11 @@ impl ReadCacheQuery {
             ["work_list", work_list_id] => Ok(Self::WorkList {
                 work_list_id: parse_cache_uuid(work_list_id)?,
             }),
+            ["work_list", work_list_id, "task_reference_schemes"] => {
+                Ok(Self::TaskReferenceSchemes {
+                    work_list_id: parse_cache_uuid(work_list_id)?,
+                })
+            }
             ["work_list", work_list_id, tasks]
                 if *tasks == "tasks?include_archived=false"
                     || *tasks == "tasks?include_archived=true" =>
@@ -280,6 +300,15 @@ impl ReadCacheQuery {
             ["work_list", work_list_id, "task", task_id] => Ok(Self::Task {
                 work_list_id: parse_cache_uuid(work_list_id)?,
                 task_id: parse_cache_uuid(task_id)?,
+            }),
+            [
+                "work_list",
+                work_list_id,
+                "task_reference",
+                reference_number,
+            ] => Ok(Self::TaskByReferenceNumber {
+                work_list_id: parse_cache_uuid(work_list_id)?,
+                reference_number: parse_cache_reference_number(reference_number)?,
             }),
             ["work_list", work_list_id, "task", task_id, "comments"] => Ok(Self::Comments {
                 work_list_id: parse_cache_uuid(work_list_id)?,
@@ -303,6 +332,18 @@ fn parse_cache_uuid(value: &str) -> PublicResult<Uuid> {
     Uuid::parse_str(value).map_err(|_| {
         PublicError::validation("encrypted read cache contains an invalid query identifier")
     })
+}
+
+fn parse_cache_reference_number(value: &str) -> PublicResult<i64> {
+    value
+        .parse::<i64>()
+        .ok()
+        .filter(|value| (1..=TASK_REFERENCE_SAFE_INTEGER_MAX).contains(value))
+        .ok_or_else(|| {
+            PublicError::validation(
+                "encrypted read cache contains an invalid task reference number",
+            )
+        })
 }
 
 #[derive(Clone)]
@@ -1171,6 +1212,23 @@ fn validate_snapshot_schema(key: &str, payload: &[u8]) -> PublicResult<()> {
             )?;
             ensure_cache_count(value.members.len(), MAX_MEMBERS_PER_WORK_LIST, "members")?;
         }
+        ReadCacheQuery::TaskReferenceSchemes { work_list_id } => {
+            let values: Vec<TaskReferenceSchemeResponse> = decode_snapshot_json(payload, key)?;
+            ensure_cache_count(
+                values.len(),
+                usize::try_from(TASK_REFERENCE_REVISION_MAX)
+                    .expect("task-reference revision limit fits usize"),
+                "task-reference schemes",
+            )?;
+            if values
+                .iter()
+                .any(|scheme| scheme.work_list_id != work_list_id)
+            {
+                return Err(cache_snapshot_schema_error(
+                    "task-reference scheme history does not match its cache key",
+                ));
+            }
+        }
         ReadCacheQuery::ProjectTasks {
             work_list_id,
             include_archived,
@@ -1219,6 +1277,29 @@ fn validate_snapshot_schema(key: &str, payload: &[u8]) -> PublicResult<()> {
             {
                 return Err(cache_snapshot_schema_error(
                     "task comments do not match their cached task",
+                ));
+            }
+        }
+        ReadCacheQuery::TaskByReferenceNumber {
+            work_list_id,
+            reference_number,
+        } => {
+            let value: TaskDetailResponse = decode_snapshot_json(payload, key)?;
+            if value.task.work_list_id != work_list_id
+                || value.task.reference_number != Some(reference_number)
+            {
+                return Err(cache_snapshot_schema_error(
+                    "task-reference lookup does not match its cache key",
+                ));
+            }
+            ensure_cache_count(value.comments.len(), MAX_COMMENTS, "task comments")?;
+            if value
+                .comments
+                .iter()
+                .any(|comment| comment.task_id != value.task.id)
+            {
+                return Err(cache_snapshot_schema_error(
+                    "task comments do not match their cached task reference",
                 ));
             }
         }
@@ -2111,7 +2192,7 @@ mod tests {
     use base64::Engine as _;
     use base64::engine::general_purpose::STANDARD_NO_PAD;
     use chrono::TimeDelta;
-    use sealtask_client_api::MembershipResponse;
+    use sealtask_client_api::{MembershipResponse, TaskResponse};
     use sealtask_client_crypto::{KEY_SIZE, SealedPayload};
     #[cfg(unix)]
     use std::os::unix::fs::symlink;
@@ -2209,6 +2290,9 @@ mod tests {
             created_at: now,
             updated_at: now,
             archived_at: None,
+            task_references_enabled_at: None,
+            current_task_reference_scheme_revision: None,
+            current_task_reference_scheme_revision_id: None,
             membership: MembershipResponse {
                 id: Uuid::now_v7(),
                 user_id: Uuid::now_v7(),
@@ -2225,6 +2309,57 @@ mod tests {
                 joined_at: now,
                 payload_binding_key: None,
             },
+        }
+    }
+
+    fn task_reference_scheme_fixture(
+        work_list_id: Uuid,
+        revision: i64,
+    ) -> TaskReferenceSchemeResponse {
+        TaskReferenceSchemeResponse {
+            scheme_revision_id: Uuid::now_v7(),
+            work_list_id,
+            revision,
+            payload_ciphertext: format!("sealed-{revision}"),
+            is_repair: revision > 32,
+            created_at: Utc::now(),
+            retired_at: None,
+            quarantined_at: None,
+            quarantined_by_membership_id: None,
+        }
+    }
+
+    fn task_reference_detail_fixture(
+        work_list_id: Uuid,
+        reference_number: i64,
+    ) -> TaskDetailResponse {
+        let now = Utc::now();
+        TaskDetailResponse {
+            task: TaskResponse {
+                id: Uuid::now_v7(),
+                work_list_id,
+                created_by_membership_id: Uuid::now_v7(),
+                title_ciphertext: "sealed-title".to_string(),
+                payload_ciphertext: "sealed-payload".to_string(),
+                section_id: None,
+                priority: None,
+                position: "a".to_string(),
+                due_at: None,
+                start_at: None,
+                completed_at: None,
+                archived_at: None,
+                is_completed: false,
+                recurrence_id: None,
+                recurrence_schedule: None,
+                recurrence_iteration: None,
+                materialized_at: None,
+                created_at: now,
+                updated_at: now,
+                comment_count: 0,
+                reference_number: Some(reference_number),
+                delegations: Vec::new(),
+            },
+            comments: Vec::new(),
         }
     }
 
@@ -2279,6 +2414,145 @@ mod tests {
             }],
         };
         assert!(document.validate().is_err());
+    }
+
+    #[test]
+    fn task_reference_scheme_query_is_project_bound_and_bounded() {
+        let work_list_id = Uuid::now_v7();
+        let query = ReadCacheQuery::TaskReferenceSchemes { work_list_id };
+        assert_eq!(
+            ReadCacheQuery::parse(&query.key()).expect("parse task-reference cache query"),
+            query
+        );
+
+        let valid = vec![task_reference_scheme_fixture(work_list_id, 1)];
+        validate_snapshot_schema(
+            &query.key(),
+            &serde_json::to_vec(&valid).expect("encode valid scheme history"),
+        )
+        .expect("validate matching scheme history");
+
+        let wrong_project = vec![task_reference_scheme_fixture(Uuid::now_v7(), 1)];
+        assert!(
+            validate_snapshot_schema(
+                &query.key(),
+                &serde_json::to_vec(&wrong_project).expect("encode mismatched scheme history"),
+            )
+            .is_err()
+        );
+
+        let oversized = (1..=TASK_REFERENCE_REVISION_MAX + 1)
+            .map(|revision| task_reference_scheme_fixture(work_list_id, revision))
+            .collect::<Vec<_>>();
+        assert!(
+            validate_snapshot_schema(
+                &query.key(),
+                &serde_json::to_vec(&oversized).expect("encode oversized scheme history"),
+            )
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn task_reference_scheme_history_round_trips_offline() {
+        let directory = private_temp_dir();
+        let credentials = test_credentials(false);
+        let data_key = SymmetricKey::new([0x5d; KEY_SIZE]);
+        let work_list_id = Uuid::now_v7();
+        let query = ReadCacheQuery::TaskReferenceSchemes { work_list_id };
+        let expected = vec![task_reference_scheme_fixture(work_list_id, 1)];
+        let online = ReadCacheRuntime::new(
+            ReadCacheOptions::online(directory.path(), "default").expect("online cache options"),
+        );
+        record_fixture(&online, &credentials, &data_key, &query, &expected);
+
+        let offline = ReadCacheRuntime::new(
+            ReadCacheOptions::offline(directory.path(), "default").expect("offline cache options"),
+        );
+        let actual: Vec<TaskReferenceSchemeResponse> = offline
+            .read_offline(&credentials, &data_key, &query)
+            .expect("read cached task-reference history");
+        assert_eq!(actual.len(), 1);
+        assert_eq!(actual[0].work_list_id, work_list_id);
+        assert_eq!(actual[0].revision, 1);
+    }
+
+    #[test]
+    fn task_reference_lookup_query_is_numeric_project_bound_and_schema_checked() {
+        let work_list_id = Uuid::now_v7();
+        let query = ReadCacheQuery::TaskByReferenceNumber {
+            work_list_id,
+            reference_number: 184,
+        };
+        let key = query.key();
+        assert_eq!(key, format!("work_list/{work_list_id}/task_reference/184"));
+        assert!(!key.contains("OPS"));
+        assert_eq!(
+            ReadCacheQuery::parse(&key).expect("parse task-reference lookup cache query"),
+            query
+        );
+        assert!(
+            ReadCacheQuery::parse(&format!(
+                "work_list/{work_list_id}/task_reference/{}",
+                TASK_REFERENCE_SAFE_INTEGER_MAX + 1
+            ))
+            .is_err()
+        );
+
+        let valid = task_reference_detail_fixture(work_list_id, 184);
+        validate_snapshot_schema(
+            &key,
+            &serde_json::to_vec(&valid).expect("encode valid task-reference detail"),
+        )
+        .expect("validate matching task-reference detail");
+
+        let wrong_project = task_reference_detail_fixture(Uuid::now_v7(), 184);
+        assert!(
+            validate_snapshot_schema(
+                &key,
+                &serde_json::to_vec(&wrong_project)
+                    .expect("encode wrong-project task-reference detail"),
+            )
+            .is_err()
+        );
+
+        let wrong_number = task_reference_detail_fixture(work_list_id, 185);
+        assert!(
+            validate_snapshot_schema(
+                &key,
+                &serde_json::to_vec(&wrong_number)
+                    .expect("encode wrong-number task-reference detail"),
+            )
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn task_reference_lookup_round_trips_offline_without_a_prefix_key() {
+        let directory = private_temp_dir();
+        let credentials = test_credentials(false);
+        let data_key = SymmetricKey::new([0x6d; KEY_SIZE]);
+        let work_list_id = Uuid::now_v7();
+        let query = ReadCacheQuery::TaskByReferenceNumber {
+            work_list_id,
+            reference_number: 184,
+        };
+        let expected = task_reference_detail_fixture(work_list_id, 184);
+        let expected_task_id = expected.task.id;
+        let online = ReadCacheRuntime::new(
+            ReadCacheOptions::online(directory.path(), "default").expect("online cache options"),
+        );
+        record_fixture(&online, &credentials, &data_key, &query, &expected);
+
+        let offline = ReadCacheRuntime::new(
+            ReadCacheOptions::offline(directory.path(), "default").expect("offline cache options"),
+        );
+        let actual: TaskDetailResponse = offline
+            .read_offline(&credentials, &data_key, &query)
+            .expect("read cached task-reference detail");
+        assert_eq!(actual.task.id, expected_task_id);
+        assert_eq!(actual.task.work_list_id, work_list_id);
+        assert_eq!(actual.task.reference_number, Some(184));
     }
 
     #[test]

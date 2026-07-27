@@ -16,9 +16,8 @@ context as a convenience, not an authorization boundary.
    canonical repository root and run every context-sensitive command from
    there, even if the agent started in a nested directory.
 2. Verify availability with `command -v sealtask` or the platform equivalent.
-3. Run `sealtask --json --non-interactive info` and require
-   `jsonContractVersion` 2. If it differs, stop and report that this skill and
-   CLI contract are incompatible.
+3. Run `sealtask --json --non-interactive info` and use its reported
+   capabilities together with command schema discovery.
 4. Run `sealtask --json --non-interactive auth status`.
 5. From the intended workspace root, run
    `sealtask --json --non-interactive projects current` before a project-scoped
@@ -41,12 +40,18 @@ context, output mode, or command discovery is unclear.
   inventing flags, input fields, or enum values.
 - Parse stdout and stderr separately. Branch on structured fields and process
   status, never on human message wording.
-- Use exact `id:` selectors returned by the CLI for follow-up operations.
+- Use task references for discovery when useful, then retain exact `id:`
+  selectors returned by the CLI for mutations, checkpoints, and follow-up
+  operations.
 
 Never invoke a bare picker, browser, editor workflow, or any other attended
-terminal UI. If no current project exists, list projects as JSON and resolve an
-unambiguous target. Ask the user when the choice is ambiguous. From the
-workspace root, activate it with an explicit ID and scope, normally:
+terminal UI. A full task reference such as `OPS-184` can infer its project when
+no explicit or current project exists; a project-local selector such as `#184`
+requires one. Quote `'#184'` in a shell, and use `name:OPS-184` for a literal
+reference-shaped title. If no current project exists and the command cannot
+infer one, list projects as JSON and resolve an unambiguous target. Ask the user
+when the choice is ambiguous. From the workspace root, activate it with an
+explicit ID and scope, normally:
 
 ```bash
 sealtask --json --non-interactive pick project id:<project-id> --scope local

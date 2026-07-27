@@ -1,33 +1,16 @@
 .ie \n(.g .ds Aq \(aq
 .el .ds Aq '
-.TH sealtask-tasks-complete 1  "SealTask CLI 0.2.1" "SealTask Manual"
+.TH sealtask-tasks-task-references 1  "SealTask CLI 0.2.1" "SealTask Manual"
 .SH NAME
-sealtask\-tasks\-complete \- Move a task to the final section
+sealtask\-tasks\-task\-references \- Install an owner repair or explicitly quarantine unreadable history
 .SH SYNOPSIS
-\fBsealtask tasks complete\fR [\fB\-\-api\-url\fR] [\fB\-\-task\-id\fR] [\fB\-\-project\fR] [\fB\-\-storage\-origin\fR] [\fB\-\-json\fR] [\fB\-\-work\-list\-id\fR] [\fB\-\-format\fR] [\fB\-\-password\-stdin\fR] [\fB\-\-color\fR] [\fB\-\-pager\fR] [\fB\-\-no\-pager\fR] [\fB\-\-progress\fR] [\fB\-q\fR|\fB\-\-quiet\fR] [\fB\-\-non\-interactive\fR] [\fB\-v \fR]... [\fB\-\-debug\fR] [\fB\-\-connect\-timeout\fR] [\fB\-\-read\-timeout\fR] [\fB\-\-request\-timeout\fR] [\fB\-\-retry\fR] [\fB\-\-offline\fR] [\fB\-\-profile\fR] [\fB\-\-config\-dir\fR] [\fB\-h\fR|\fB\-\-help\fR] [\fITASK\fR]
+\fBsealtask tasks task\-references\fR [\fB\-\-api\-url\fR] [\fB\-\-storage\-origin\fR] [\fB\-\-json\fR] [\fB\-\-format\fR] [\fB\-\-color\fR] [\fB\-\-pager\fR] [\fB\-\-no\-pager\fR] [\fB\-\-progress\fR] [\fB\-q\fR|\fB\-\-quiet\fR] [\fB\-\-non\-interactive\fR] [\fB\-v \fR]... [\fB\-\-debug\fR] [\fB\-\-connect\-timeout\fR] [\fB\-\-read\-timeout\fR] [\fB\-\-request\-timeout\fR] [\fB\-\-retry\fR] [\fB\-\-offline\fR] [\fB\-\-profile\fR] [\fB\-\-config\-dir\fR] [\fB\-h\fR|\fB\-\-help\fR] <\fIsubcommands\fR>
 .SH DESCRIPTION
-Move a task to the final section
+Install an owner repair or explicitly quarantine unreadable history
 .SH OPTIONS
 .TP
 \fB\-h\fR, \fB\-\-help\fR
 Print help (see a summary with \*(Aq\-h\*(Aq)
-.SH TARGET
-.TP
-\fB\-\-task\-id\fR \fI<TASK_ID>\fR
-Exact task UUID (legacy compatibility)
-.TP
-\fB\-\-project\fR \fI<PROJECT>\fR
-Project name, UUID, or unique UUID prefix
-.TP
-\fB\-\-work\-list\-id\fR \fI<WORK_LIST_ID>\fR
-Exact project UUID (legacy compatibility)
-.TP
-[\fITASK\fR]
-Current or historical reference (OPS\-184), project\-local #184, title, UUID, or unique UUID prefix; use name: for a reference\-shaped title
-.SH INPUT
-.TP
-\fB\-\-password\-stdin\fR
-Read the account password from stdin when no local unlock is available
 .SH CONNECTION
 .TP
 \fB\-\-api\-url\fR \fI<API_URL>\fR [default: https://sealtask.com]
@@ -176,6 +159,16 @@ Override the base directory used for credentials and local unlock state
 .RS
 May also be specified with the \fBSEALTASK_CONFIG_DIR\fR environment variable.
 .RE
+.SH SUBCOMMANDS
+.TP
+sealtask\-tasks\-task\-references\-status(1)
+Inspect verified history and list exact unreadable revision IDs
+.TP
+sealtask\-tasks\-task\-references\-repair(1)
+Install a valid encrypted current scheme from reserved owner repair capacity
+.TP
+sealtask\-tasks\-task\-references\-quarantine(1)
+Irreversibly exclude one unreadable historical alias from local resolution
 .SH EXTRA
 Examples:
-  sealtask tasks complete "Ship 0.4"
+  sealtask tasks task\-references status \-\-work\-list\-id 019f42ab\-0000\-7000\-8000\-000000000000

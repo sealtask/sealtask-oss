@@ -1293,7 +1293,9 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('list', 'list', [CompletionResultType]::ParameterValue, 'List tasks in the selected/current project, or assigned tasks when none is selected')
-            [CompletionResult]::new('get', 'get', [CompletionResultType]::ParameterValue, 'Show one decrypted task, including comments and attachment metadata')
+            [CompletionResult]::new('get', 'get', [CompletionResultType]::ParameterValue, 'Show one decrypted task; a full reference can infer its project when no context is selected')
+            [CompletionResult]::new('resolve', 'resolve', [CompletionResultType]::ParameterValue, 'Resolve a current or historical task reference, failing on cross-project ambiguity')
+            [CompletionResult]::new('task-references', 'task-references', [CompletionResultType]::ParameterValue, 'Install an owner repair or explicitly quarantine unreadable history')
             [CompletionResult]::new('watch', 'watch', [CompletionResultType]::ParameterValue, 'Follow authoritative task changes in one project until interrupted')
             [CompletionResult]::new('create', 'create', [CompletionResultType]::ParameterValue, 'Create an encrypted task')
             [CompletionResult]::new('edit', 'edit', [CompletionResultType]::ParameterValue, 'Edit a task''s title and Markdown body in your configured editor')
@@ -1312,8 +1314,8 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--project', '--project', [CompletionResultType]::ParameterName, 'Restrict results to a project name, UUID, or unique UUID prefix')
             [CompletionResult]::new('--work-list-id', '--work-list-id', [CompletionResultType]::ParameterName, 'Restrict results to one exact project UUID (legacy compatibility)')
             [CompletionResult]::new('--columns', '--columns', [CompletionResultType]::ParameterName, 'Select and order human table columns (comma-separated or repeatable)')
-            [CompletionResult]::new('--sort', '--sort', [CompletionResultType]::ParameterName, 'Sort text/date/status ascending, priority high-first, or timestamps newest-first')
-            [CompletionResult]::new('--field', '--field', [CompletionResultType]::ParameterName, 'Emit one sanitized raw value per task with no headings, totals, or empty-state text')
+            [CompletionResult]::new('--sort', '--sort', [CompletionResultType]::ParameterName, 'Sort references/text/date/status ascending, priority high-first, or timestamps newest-first')
+            [CompletionResult]::new('--field', '--field', [CompletionResultType]::ParameterName, 'Emit one sanitized reference, ID, title, or URL per task with no headings or totals')
             [CompletionResult]::new('--web-url', '--web-url', [CompletionResultType]::ParameterName, 'Browser application origin; valid only with --field url (defaults to the API origin)')
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
@@ -1372,6 +1374,166 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
+            break
+        }
+        'sealtask;tasks;resolve' {
+            [CompletionResult]::new('--work-list-id', '--work-list-id', [CompletionResultType]::ParameterName, 'Restrict an ambiguous cross-project match to one canonical project UUID')
+            [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
+            [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
+            [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
+            [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
+            [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
+            [CompletionResult]::new('--connect-timeout', '--connect-timeout', [CompletionResultType]::ParameterName, 'Maximum time to establish a control-plane connection (for example 5s)')
+            [CompletionResult]::new('--read-timeout', '--read-timeout', [CompletionResultType]::ParameterName, 'Maximum idle time while reading a control-plane response (for example 30s)')
+            [CompletionResult]::new('--request-timeout', '--request-timeout', [CompletionResultType]::ParameterName, 'Maximum total time for one control-plane request (for example 1m)')
+            [CompletionResult]::new('--retry', '--retry', [CompletionResultType]::ParameterName, 'Retry replay-safe API requests after transient failures')
+            [CompletionResult]::new('--profile', '--profile', [CompletionResultType]::ParameterName, 'Isolate credentials and unlock state under a named profile')
+            [CompletionResult]::new('--config-dir', '--config-dir', [CompletionResultType]::ParameterName, 'Override the base directory used for credentials and local unlock state')
+            [CompletionResult]::new('--password-stdin', '--password-stdin', [CompletionResultType]::ParameterName, 'Read the account password from stdin when no local unlock is available')
+            [CompletionResult]::new('--json', '--json', [CompletionResultType]::ParameterName, 'Emit compact JSON instead of human-readable output')
+            [CompletionResult]::new('--no-pager', '--no-pager', [CompletionResultType]::ParameterName, 'Disable paging (equivalent to --pager never)')
+            [CompletionResult]::new('-q', '-q', [CompletionResultType]::ParameterName, 'Suppress automatic paging, progress, and successful mutation acknowledgements')
+            [CompletionResult]::new('--quiet', '--quiet', [CompletionResultType]::ParameterName, 'Suppress automatic paging, progress, and successful mutation acknowledgements')
+            [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
+            [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
+            [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
+            [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
+            [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
+            break
+        }
+        'sealtask;tasks;task-references' {
+            [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
+            [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
+            [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
+            [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
+            [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
+            [CompletionResult]::new('--connect-timeout', '--connect-timeout', [CompletionResultType]::ParameterName, 'Maximum time to establish a control-plane connection (for example 5s)')
+            [CompletionResult]::new('--read-timeout', '--read-timeout', [CompletionResultType]::ParameterName, 'Maximum idle time while reading a control-plane response (for example 30s)')
+            [CompletionResult]::new('--request-timeout', '--request-timeout', [CompletionResultType]::ParameterName, 'Maximum total time for one control-plane request (for example 1m)')
+            [CompletionResult]::new('--retry', '--retry', [CompletionResultType]::ParameterName, 'Retry replay-safe API requests after transient failures')
+            [CompletionResult]::new('--profile', '--profile', [CompletionResultType]::ParameterName, 'Isolate credentials and unlock state under a named profile')
+            [CompletionResult]::new('--config-dir', '--config-dir', [CompletionResultType]::ParameterName, 'Override the base directory used for credentials and local unlock state')
+            [CompletionResult]::new('--json', '--json', [CompletionResultType]::ParameterName, 'Emit compact JSON instead of human-readable output')
+            [CompletionResult]::new('--no-pager', '--no-pager', [CompletionResultType]::ParameterName, 'Disable paging (equivalent to --pager never)')
+            [CompletionResult]::new('-q', '-q', [CompletionResultType]::ParameterName, 'Suppress automatic paging, progress, and successful mutation acknowledgements')
+            [CompletionResult]::new('--quiet', '--quiet', [CompletionResultType]::ParameterName, 'Suppress automatic paging, progress, and successful mutation acknowledgements')
+            [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
+            [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
+            [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
+            [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
+            [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
+            [CompletionResult]::new('status', 'status', [CompletionResultType]::ParameterValue, 'Inspect verified history and list exact unreadable revision IDs')
+            [CompletionResult]::new('repair', 'repair', [CompletionResultType]::ParameterValue, 'Install a valid encrypted current scheme from reserved owner repair capacity')
+            [CompletionResult]::new('quarantine', 'quarantine', [CompletionResultType]::ParameterValue, 'Irreversibly exclude one unreadable historical alias from local resolution')
+            [CompletionResult]::new('help', 'help', [CompletionResultType]::ParameterValue, 'Print this message or the help of the given subcommand(s)')
+            break
+        }
+        'sealtask;tasks;task-references;status' {
+            [CompletionResult]::new('--work-list-id', '--work-list-id', [CompletionResultType]::ParameterName, 'Work-list UUID whose encrypted scheme history should be inspected')
+            [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
+            [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
+            [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
+            [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
+            [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
+            [CompletionResult]::new('--connect-timeout', '--connect-timeout', [CompletionResultType]::ParameterName, 'Maximum time to establish a control-plane connection (for example 5s)')
+            [CompletionResult]::new('--read-timeout', '--read-timeout', [CompletionResultType]::ParameterName, 'Maximum idle time while reading a control-plane response (for example 30s)')
+            [CompletionResult]::new('--request-timeout', '--request-timeout', [CompletionResultType]::ParameterName, 'Maximum total time for one control-plane request (for example 1m)')
+            [CompletionResult]::new('--retry', '--retry', [CompletionResultType]::ParameterName, 'Retry replay-safe API requests after transient failures')
+            [CompletionResult]::new('--profile', '--profile', [CompletionResultType]::ParameterName, 'Isolate credentials and unlock state under a named profile')
+            [CompletionResult]::new('--config-dir', '--config-dir', [CompletionResultType]::ParameterName, 'Override the base directory used for credentials and local unlock state')
+            [CompletionResult]::new('--password-stdin', '--password-stdin', [CompletionResultType]::ParameterName, 'Read the account password from stdin when no local unlock is available')
+            [CompletionResult]::new('--json', '--json', [CompletionResultType]::ParameterName, 'Emit compact JSON instead of human-readable output')
+            [CompletionResult]::new('--no-pager', '--no-pager', [CompletionResultType]::ParameterName, 'Disable paging (equivalent to --pager never)')
+            [CompletionResult]::new('-q', '-q', [CompletionResultType]::ParameterName, 'Suppress automatic paging, progress, and successful mutation acknowledgements')
+            [CompletionResult]::new('--quiet', '--quiet', [CompletionResultType]::ParameterName, 'Suppress automatic paging, progress, and successful mutation acknowledgements')
+            [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
+            [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
+            [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
+            [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
+            [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
+            break
+        }
+        'sealtask;tasks;task-references;repair' {
+            [CompletionResult]::new('--work-list-id', '--work-list-id', [CompletionResultType]::ParameterName, 'Work-list UUID whose current encrypted scheme needs replacement')
+            [CompletionResult]::new('--prefix', '--prefix', [CompletionResultType]::ParameterName, 'Replacement private prefix: 2-10 uppercase ASCII letters or digits, starting with a letter')
+            [CompletionResult]::new('--minimum-digits', '--minimum-digits', [CompletionResultType]::ParameterName, 'Minimum number of digits displayed after the prefix')
+            [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
+            [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
+            [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
+            [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
+            [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
+            [CompletionResult]::new('--connect-timeout', '--connect-timeout', [CompletionResultType]::ParameterName, 'Maximum time to establish a control-plane connection (for example 5s)')
+            [CompletionResult]::new('--read-timeout', '--read-timeout', [CompletionResultType]::ParameterName, 'Maximum idle time while reading a control-plane response (for example 30s)')
+            [CompletionResult]::new('--request-timeout', '--request-timeout', [CompletionResultType]::ParameterName, 'Maximum total time for one control-plane request (for example 1m)')
+            [CompletionResult]::new('--retry', '--retry', [CompletionResultType]::ParameterName, 'Retry replay-safe API requests after transient failures')
+            [CompletionResult]::new('--profile', '--profile', [CompletionResultType]::ParameterName, 'Isolate credentials and unlock state under a named profile')
+            [CompletionResult]::new('--config-dir', '--config-dir', [CompletionResultType]::ParameterName, 'Override the base directory used for credentials and local unlock state')
+            [CompletionResult]::new('--password-stdin', '--password-stdin', [CompletionResultType]::ParameterName, 'Read the account password from stdin when no local unlock is available')
+            [CompletionResult]::new('--json', '--json', [CompletionResultType]::ParameterName, 'Emit compact JSON instead of human-readable output')
+            [CompletionResult]::new('--no-pager', '--no-pager', [CompletionResultType]::ParameterName, 'Disable paging (equivalent to --pager never)')
+            [CompletionResult]::new('-q', '-q', [CompletionResultType]::ParameterName, 'Suppress automatic paging, progress, and successful mutation acknowledgements')
+            [CompletionResult]::new('--quiet', '--quiet', [CompletionResultType]::ParameterName, 'Suppress automatic paging, progress, and successful mutation acknowledgements')
+            [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
+            [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
+            [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
+            [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
+            [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
+            break
+        }
+        'sealtask;tasks;task-references;quarantine' {
+            [CompletionResult]::new('--work-list-id', '--work-list-id', [CompletionResultType]::ParameterName, 'Work-list UUID containing the unreadable historical scheme')
+            [CompletionResult]::new('--scheme-revision-id', '--scheme-revision-id', [CompletionResultType]::ParameterName, 'Exact historical scheme-revision UUID to quarantine')
+            [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
+            [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
+            [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
+            [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
+            [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
+            [CompletionResult]::new('--connect-timeout', '--connect-timeout', [CompletionResultType]::ParameterName, 'Maximum time to establish a control-plane connection (for example 5s)')
+            [CompletionResult]::new('--read-timeout', '--read-timeout', [CompletionResultType]::ParameterName, 'Maximum idle time while reading a control-plane response (for example 30s)')
+            [CompletionResult]::new('--request-timeout', '--request-timeout', [CompletionResultType]::ParameterName, 'Maximum total time for one control-plane request (for example 1m)')
+            [CompletionResult]::new('--retry', '--retry', [CompletionResultType]::ParameterName, 'Retry replay-safe API requests after transient failures')
+            [CompletionResult]::new('--profile', '--profile', [CompletionResultType]::ParameterName, 'Isolate credentials and unlock state under a named profile')
+            [CompletionResult]::new('--config-dir', '--config-dir', [CompletionResultType]::ParameterName, 'Override the base directory used for credentials and local unlock state')
+            [CompletionResult]::new('--confirm', '--confirm', [CompletionResultType]::ParameterName, 'Confirm the irreversible loss of this historical alias')
+            [CompletionResult]::new('--password-stdin', '--password-stdin', [CompletionResultType]::ParameterName, 'Read the account password from stdin when no local unlock is available')
+            [CompletionResult]::new('--json', '--json', [CompletionResultType]::ParameterName, 'Emit compact JSON instead of human-readable output')
+            [CompletionResult]::new('--no-pager', '--no-pager', [CompletionResultType]::ParameterName, 'Disable paging (equivalent to --pager never)')
+            [CompletionResult]::new('-q', '-q', [CompletionResultType]::ParameterName, 'Suppress automatic paging, progress, and successful mutation acknowledgements')
+            [CompletionResult]::new('--quiet', '--quiet', [CompletionResultType]::ParameterName, 'Suppress automatic paging, progress, and successful mutation acknowledgements')
+            [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
+            [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
+            [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
+            [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
+            [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
+            break
+        }
+        'sealtask;tasks;task-references;help' {
+            [CompletionResult]::new('status', 'status', [CompletionResultType]::ParameterValue, 'Inspect verified history and list exact unreadable revision IDs')
+            [CompletionResult]::new('repair', 'repair', [CompletionResultType]::ParameterValue, 'Install a valid encrypted current scheme from reserved owner repair capacity')
+            [CompletionResult]::new('quarantine', 'quarantine', [CompletionResultType]::ParameterValue, 'Irreversibly exclude one unreadable historical alias from local resolution')
+            [CompletionResult]::new('help', 'help', [CompletionResultType]::ParameterValue, 'Print this message or the help of the given subcommand(s)')
+            break
+        }
+        'sealtask;tasks;task-references;help;status' {
+            break
+        }
+        'sealtask;tasks;task-references;help;repair' {
+            break
+        }
+        'sealtask;tasks;task-references;help;quarantine' {
+            break
+        }
+        'sealtask;tasks;task-references;help;help' {
             break
         }
         'sealtask;tasks;watch' {
@@ -1528,7 +1690,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--section-id', '--section-id', [CompletionResultType]::ParameterName, 'Destination section UUID')
             [CompletionResult]::new('--section', '--section', [CompletionResultType]::ParameterName, 'Destination section name, UUID, or unique UUID prefix')
             [CompletionResult]::new('--insert-before-task-id', '--insert-before-task-id', [CompletionResultType]::ParameterName, 'Place the task immediately before this task UUID')
-            [CompletionResult]::new('--before', '--before', [CompletionResultType]::ParameterName, 'Place the task immediately before this task title, UUID, or unique UUID prefix')
+            [CompletionResult]::new('--before', '--before', [CompletionResultType]::ParameterName, 'Place before a task selected by reference (OPS-184), project-local #184, title, UUID, or unique UUID prefix; use name: for a reference-shaped title')
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
             [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
@@ -1882,7 +2044,9 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
         }
         'sealtask;tasks;help' {
             [CompletionResult]::new('list', 'list', [CompletionResultType]::ParameterValue, 'List tasks in the selected/current project, or assigned tasks when none is selected')
-            [CompletionResult]::new('get', 'get', [CompletionResultType]::ParameterValue, 'Show one decrypted task, including comments and attachment metadata')
+            [CompletionResult]::new('get', 'get', [CompletionResultType]::ParameterValue, 'Show one decrypted task; a full reference can infer its project when no context is selected')
+            [CompletionResult]::new('resolve', 'resolve', [CompletionResultType]::ParameterValue, 'Resolve a current or historical task reference, failing on cross-project ambiguity')
+            [CompletionResult]::new('task-references', 'task-references', [CompletionResultType]::ParameterValue, 'Install an owner repair or explicitly quarantine unreadable history')
             [CompletionResult]::new('watch', 'watch', [CompletionResultType]::ParameterValue, 'Follow authoritative task changes in one project until interrupted')
             [CompletionResult]::new('create', 'create', [CompletionResultType]::ParameterValue, 'Create an encrypted task')
             [CompletionResult]::new('edit', 'edit', [CompletionResultType]::ParameterValue, 'Edit a task''s title and Markdown body in your configured editor')
@@ -1901,6 +2065,24 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             break
         }
         'sealtask;tasks;help;get' {
+            break
+        }
+        'sealtask;tasks;help;resolve' {
+            break
+        }
+        'sealtask;tasks;help;task-references' {
+            [CompletionResult]::new('status', 'status', [CompletionResultType]::ParameterValue, 'Inspect verified history and list exact unreadable revision IDs')
+            [CompletionResult]::new('repair', 'repair', [CompletionResultType]::ParameterValue, 'Install a valid encrypted current scheme from reserved owner repair capacity')
+            [CompletionResult]::new('quarantine', 'quarantine', [CompletionResultType]::ParameterValue, 'Irreversibly exclude one unreadable historical alias from local resolution')
+            break
+        }
+        'sealtask;tasks;help;task-references;status' {
+            break
+        }
+        'sealtask;tasks;help;task-references;repair' {
+            break
+        }
+        'sealtask;tasks;help;task-references;quarantine' {
             break
         }
         'sealtask;tasks;help;watch' {
@@ -3031,7 +3213,9 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
         }
         'sealtask;help;tasks' {
             [CompletionResult]::new('list', 'list', [CompletionResultType]::ParameterValue, 'List tasks in the selected/current project, or assigned tasks when none is selected')
-            [CompletionResult]::new('get', 'get', [CompletionResultType]::ParameterValue, 'Show one decrypted task, including comments and attachment metadata')
+            [CompletionResult]::new('get', 'get', [CompletionResultType]::ParameterValue, 'Show one decrypted task; a full reference can infer its project when no context is selected')
+            [CompletionResult]::new('resolve', 'resolve', [CompletionResultType]::ParameterValue, 'Resolve a current or historical task reference, failing on cross-project ambiguity')
+            [CompletionResult]::new('task-references', 'task-references', [CompletionResultType]::ParameterValue, 'Install an owner repair or explicitly quarantine unreadable history')
             [CompletionResult]::new('watch', 'watch', [CompletionResultType]::ParameterValue, 'Follow authoritative task changes in one project until interrupted')
             [CompletionResult]::new('create', 'create', [CompletionResultType]::ParameterValue, 'Create an encrypted task')
             [CompletionResult]::new('edit', 'edit', [CompletionResultType]::ParameterValue, 'Edit a task''s title and Markdown body in your configured editor')
@@ -3049,6 +3233,24 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             break
         }
         'sealtask;help;tasks;get' {
+            break
+        }
+        'sealtask;help;tasks;resolve' {
+            break
+        }
+        'sealtask;help;tasks;task-references' {
+            [CompletionResult]::new('status', 'status', [CompletionResultType]::ParameterValue, 'Inspect verified history and list exact unreadable revision IDs')
+            [CompletionResult]::new('repair', 'repair', [CompletionResultType]::ParameterValue, 'Install a valid encrypted current scheme from reserved owner repair capacity')
+            [CompletionResult]::new('quarantine', 'quarantine', [CompletionResultType]::ParameterValue, 'Irreversibly exclude one unreadable historical alias from local resolution')
+            break
+        }
+        'sealtask;help;tasks;task-references;status' {
+            break
+        }
+        'sealtask;help;tasks;task-references;repair' {
+            break
+        }
+        'sealtask;help;tasks;task-references;quarantine' {
             break
         }
         'sealtask;help;tasks;watch' {

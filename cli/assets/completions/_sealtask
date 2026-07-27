@@ -1511,9 +1511,9 @@ _arguments "${_arguments_options[@]}" : \
 _arguments "${_arguments_options[@]}" : \
 '(--work-list-id)--project=[Restrict results to a project name, UUID, or unique UUID prefix]:PROJECT:_default' \
 '--work-list-id=[Restrict results to one exact project UUID (legacy compatibility)]:WORK_LIST_ID:_default' \
-'(--field --raw)*--columns=[Select and order human table columns (comma-separated or repeatable)]:COLUMN:(id title project project-id priority due status comments created updated)' \
-'(--raw)--sort=[Sort text/date/status ascending, priority high-first, or timestamps newest-first]:FIELD:(id title project priority due status created updated)' \
-'(--columns --raw)--field=[Emit one sanitized raw value per task with no headings, totals, or empty-state text]:FIELD:(id title url)' \
+'(--field --raw)*--columns=[Select and order human table columns (comma-separated or repeatable)]:COLUMN:(reference id title project project-id priority due status comments created updated)' \
+'(--raw)--sort=[Sort references/text/date/status ascending, priority high-first, or timestamps newest-first]:FIELD:(reference id title project priority due status created updated)' \
+'(--columns --raw)--field=[Emit one sanitized reference, ID, title, or URL per task with no headings or totals]:FIELD:(reference id title url)' \
 '(--raw)--web-url=[Browser application origin; valid only with --field url (defaults to the API origin)]:ORIGIN:_default' \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
@@ -1573,8 +1573,195 @@ _arguments "${_arguments_options[@]}" : \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
-'::task -- Task title, UUID, or unique UUID prefix:_default' \
+'::task -- Current or historical reference (OPS-184), project-local #184, title, UUID, or unique UUID prefix; use name\: for a reference-shaped title:_default' \
 && ret=0
+;;
+(resolve)
+_arguments "${_arguments_options[@]}" : \
+'--work-list-id=[Restrict an ambiguous cross-project match to one canonical project UUID]:WORK_LIST_ID:_default' \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'--password-stdin[Read the account password from stdin when no local unlock is available]' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+':reference -- Current or historical full SealTask reference, for example OPS-184:_default' \
+&& ret=0
+;;
+(task-references)
+_arguments "${_arguments_options[@]}" : \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+":: :_sealtask__subcmd__tasks__subcmd__task-references_commands" \
+"*::: :->task-references" \
+&& ret=0
+
+    case $state in
+    (task-references)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:sealtask-tasks-task-references-command-$line[1]:"
+        case $line[1] in
+            (status)
+_arguments "${_arguments_options[@]}" : \
+'--work-list-id=[Work-list UUID whose encrypted scheme history should be inspected]:WORK_LIST_ID:_default' \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'--password-stdin[Read the account password from stdin when no local unlock is available]' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+&& ret=0
+;;
+(repair)
+_arguments "${_arguments_options[@]}" : \
+'--work-list-id=[Work-list UUID whose current encrypted scheme needs replacement]:WORK_LIST_ID:_default' \
+'--prefix=[Replacement private prefix\: 2-10 uppercase ASCII letters or digits, starting with a letter]:PREFIX:_default' \
+'--minimum-digits=[Minimum number of digits displayed after the prefix]:MINIMUM_DIGITS:_default' \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'--password-stdin[Read the account password from stdin when no local unlock is available]' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+&& ret=0
+;;
+(quarantine)
+_arguments "${_arguments_options[@]}" : \
+'--work-list-id=[Work-list UUID containing the unreadable historical scheme]:WORK_LIST_ID:_default' \
+'--scheme-revision-id=[Exact historical scheme-revision UUID to quarantine]:SCHEME_REVISION_ID:_default' \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'--confirm[Confirm the irreversible loss of this historical alias]' \
+'--password-stdin[Read the account password from stdin when no local unlock is available]' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+":: :_sealtask__subcmd__tasks__subcmd__task-references__subcmd__help_commands" \
+"*::: :->help" \
+&& ret=0
+
+    case $state in
+    (help)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:sealtask-tasks-task-references-help-command-$line[1]:"
+        case $line[1] in
+            (status)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(repair)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(quarantine)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+        esac
+    ;;
+esac
 ;;
 (watch)
 _arguments "${_arguments_options[@]}" : \
@@ -1678,7 +1865,7 @@ _arguments "${_arguments_options[@]}" : \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
-'::task -- Task title, UUID, or unique UUID prefix:_default' \
+'::task -- Current or historical reference (OPS-184), project-local #184, title, UUID, or unique UUID prefix; use name\: for a reference-shaped title:_default' \
 && ret=0
 ;;
 (update)
@@ -1726,7 +1913,7 @@ _arguments "${_arguments_options[@]}" : \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
-'::task -- Task title, UUID, or unique UUID prefix:_default' \
+'::task -- Current or historical reference (OPS-184), project-local #184, title, UUID, or unique UUID prefix; use name\: for a reference-shaped title:_default' \
 && ret=0
 ;;
 (move)
@@ -1737,7 +1924,7 @@ _arguments "${_arguments_options[@]}" : \
 '(--section)--section-id=[Destination section UUID]:SECTION_ID:_default' \
 '(--section-id)--section=[Destination section name, UUID, or unique UUID prefix]:SECTION:_default' \
 '(--before)--insert-before-task-id=[Place the task immediately before this task UUID]:INSERT_BEFORE_TASK_ID:_default' \
-'(--insert-before-task-id)--before=[Place the task immediately before this task title, UUID, or unique UUID prefix]:BEFORE:_default' \
+'(--insert-before-task-id)--before=[Place before a task selected by reference (OPS-184), project-local #184, title, UUID, or unique UUID prefix; use name\: for a reference-shaped title]:BEFORE:_default' \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
@@ -1761,7 +1948,7 @@ _arguments "${_arguments_options[@]}" : \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
-'::task -- Task title, UUID, or unique UUID prefix:_default' \
+'::task -- Current or historical reference (OPS-184), project-local #184, title, UUID, or unique UUID prefix; use name\: for a reference-shaped title:_default' \
 && ret=0
 ;;
 (complete)
@@ -1792,7 +1979,7 @@ _arguments "${_arguments_options[@]}" : \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
-'::task -- Task title, UUID, or unique UUID prefix:_default' \
+'::task -- Current or historical reference (OPS-184), project-local #184, title, UUID, or unique UUID prefix; use name\: for a reference-shaped title:_default' \
 && ret=0
 ;;
 (reopen)
@@ -1823,7 +2010,7 @@ _arguments "${_arguments_options[@]}" : \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
-'::task -- Task title, UUID, or unique UUID prefix:_default' \
+'::task -- Current or historical reference (OPS-184), project-local #184, title, UUID, or unique UUID prefix; use name\: for a reference-shaped title:_default' \
 && ret=0
 ;;
 (archive)
@@ -1854,7 +2041,7 @@ _arguments "${_arguments_options[@]}" : \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
-'::task -- Task title, UUID, or unique UUID prefix:_default' \
+'::task -- Current or historical reference (OPS-184), project-local #184, title, UUID, or unique UUID prefix; use name\: for a reference-shaped title:_default' \
 && ret=0
 ;;
 (unarchive)
@@ -1885,7 +2072,7 @@ _arguments "${_arguments_options[@]}" : \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
-'::task -- Task title, UUID, or unique UUID prefix:_default' \
+'::task -- Current or historical reference (OPS-184), project-local #184, title, UUID, or unique UUID prefix; use name\: for a reference-shaped title:_default' \
 && ret=0
 ;;
 (delete)
@@ -1919,7 +2106,7 @@ _arguments "${_arguments_options[@]}" : \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
-'::task -- Task title, UUID, or unique UUID prefix:_default' \
+'::task -- Current or historical reference (OPS-184), project-local #184, title, UUID, or unique UUID prefix; use name\: for a reference-shaped title:_default' \
 && ret=0
 ;;
 (attachments)
@@ -1987,7 +2174,7 @@ _arguments "${_arguments_options[@]}" : \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
-'::task -- Task title, UUID, or unique UUID prefix:_default' \
+'::task -- Current or historical reference (OPS-184), project-local #184, title, UUID, or unique UUID prefix; use name\: for a reference-shaped title:_default' \
 && ret=0
 ;;
 (delete)
@@ -2020,7 +2207,7 @@ _arguments "${_arguments_options[@]}" : \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
-'::task -- Task title, UUID, or unique UUID prefix:_default' \
+'::task -- Current or historical reference (OPS-184), project-local #184, title, UUID, or unique UUID prefix; use name\: for a reference-shaped title:_default' \
 && ret=0
 ;;
 (read)
@@ -2052,7 +2239,7 @@ _arguments "${_arguments_options[@]}" : \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
-'::task -- Task title, UUID, or unique UUID prefix:_default' \
+'::task -- Current or historical reference (OPS-184), project-local #184, title, UUID, or unique UUID prefix; use name\: for a reference-shaped title:_default' \
 && ret=0
 ;;
 (download)
@@ -2086,7 +2273,7 @@ _arguments "${_arguments_options[@]}" : \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
-'::task -- Task title, UUID, or unique UUID prefix:_default' \
+'::task -- Current or historical reference (OPS-184), project-local #184, title, UUID, or unique UUID prefix; use name\: for a reference-shaped title:_default' \
 && ret=0
 ;;
 (help)
@@ -2148,6 +2335,38 @@ _arguments "${_arguments_options[@]}" : \
 (get)
 _arguments "${_arguments_options[@]}" : \
 && ret=0
+;;
+(resolve)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(task-references)
+_arguments "${_arguments_options[@]}" : \
+":: :_sealtask__subcmd__tasks__subcmd__help__subcmd__task-references_commands" \
+"*::: :->task-references" \
+&& ret=0
+
+    case $state in
+    (task-references)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:sealtask-tasks-help-task-references-command-$line[1]:"
+        case $line[1] in
+            (status)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(repair)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(quarantine)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
 ;;
 (watch)
 _arguments "${_arguments_options[@]}" : \
@@ -2947,7 +3166,7 @@ _arguments "${_arguments_options[@]}" : \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
-'::task -- Task title, UUID, or unique UUID prefix:_default' \
+'::task -- Current or historical reference (OPS-184), project-local #184, title, UUID, or unique UUID prefix; use name\: for a reference-shaped title:_default' \
 && ret=0
 ;;
 (create)
@@ -2982,7 +3201,7 @@ _arguments "${_arguments_options[@]}" : \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
-'::task -- Task title, UUID, or unique UUID prefix:_default' \
+'::task -- Current or historical reference (OPS-184), project-local #184, title, UUID, or unique UUID prefix; use name\: for a reference-shaped title:_default' \
 && ret=0
 ;;
 (update)
@@ -3017,7 +3236,7 @@ _arguments "${_arguments_options[@]}" : \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
-'::task -- Task title, UUID, or unique UUID prefix:_default' \
+'::task -- Current or historical reference (OPS-184), project-local #184, title, UUID, or unique UUID prefix; use name\: for a reference-shaped title:_default' \
 && ret=0
 ;;
 (delete)
@@ -3052,7 +3271,7 @@ _arguments "${_arguments_options[@]}" : \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
-'::task -- Task title, UUID, or unique UUID prefix:_default' \
+'::task -- Current or historical reference (OPS-184), project-local #184, title, UUID, or unique UUID prefix; use name\: for a reference-shaped title:_default' \
 && ret=0
 ;;
 (help)
@@ -3571,6 +3790,38 @@ _arguments "${_arguments_options[@]}" : \
 (get)
 _arguments "${_arguments_options[@]}" : \
 && ret=0
+;;
+(resolve)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(task-references)
+_arguments "${_arguments_options[@]}" : \
+":: :_sealtask__subcmd__help__subcmd__tasks__subcmd__task-references_commands" \
+"*::: :->task-references" \
+&& ret=0
+
+    case $state in
+    (task-references)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:sealtask-help-tasks-task-references-command-$line[1]:"
+        case $line[1] in
+            (status)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(repair)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(quarantine)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
 ;;
 (watch)
 _arguments "${_arguments_options[@]}" : \
@@ -4626,7 +4877,9 @@ _sealtask__subcmd__help__subcmd__stats_commands() {
 _sealtask__subcmd__help__subcmd__tasks_commands() {
     local commands; commands=(
 'list:List tasks in the selected/current project, or assigned tasks when none is selected' \
-'get:Show one decrypted task, including comments and attachment metadata' \
+'get:Show one decrypted task; a full reference can infer its project when no context is selected' \
+'resolve:Resolve a current or historical task reference, failing on cross-project ambiguity' \
+'task-references:Install an owner repair or explicitly quarantine unreadable history' \
 'watch:Follow authoritative task changes in one project until interrupted' \
 'create:Create an encrypted task' \
 'edit:Edit a task'\''s title and Markdown body in your configured editor' \
@@ -4715,6 +4968,35 @@ _sealtask__subcmd__help__subcmd__tasks__subcmd__move_commands() {
 _sealtask__subcmd__help__subcmd__tasks__subcmd__reopen_commands() {
     local commands; commands=()
     _describe -t commands 'sealtask help tasks reopen commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__tasks__subcmd__resolve_commands] )) ||
+_sealtask__subcmd__help__subcmd__tasks__subcmd__resolve_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help tasks resolve commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__tasks__subcmd__task-references_commands] )) ||
+_sealtask__subcmd__help__subcmd__tasks__subcmd__task-references_commands() {
+    local commands; commands=(
+'status:Inspect verified history and list exact unreadable revision IDs' \
+'repair:Install a valid encrypted current scheme from reserved owner repair capacity' \
+'quarantine:Irreversibly exclude one unreadable historical alias from local resolution' \
+    )
+    _describe -t commands 'sealtask help tasks task-references commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__tasks__subcmd__task-references__subcmd__quarantine_commands] )) ||
+_sealtask__subcmd__help__subcmd__tasks__subcmd__task-references__subcmd__quarantine_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help tasks task-references quarantine commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__tasks__subcmd__task-references__subcmd__repair_commands] )) ||
+_sealtask__subcmd__help__subcmd__tasks__subcmd__task-references__subcmd__repair_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help tasks task-references repair commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__tasks__subcmd__task-references__subcmd__status_commands] )) ||
+_sealtask__subcmd__help__subcmd__tasks__subcmd__task-references__subcmd__status_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help tasks task-references status commands' commands "$@"
 }
 (( $+functions[_sealtask__subcmd__help__subcmd__tasks__subcmd__unarchive_commands] )) ||
 _sealtask__subcmd__help__subcmd__tasks__subcmd__unarchive_commands() {
@@ -5090,7 +5372,9 @@ _sealtask__subcmd__stats_commands() {
 _sealtask__subcmd__tasks_commands() {
     local commands; commands=(
 'list:List tasks in the selected/current project, or assigned tasks when none is selected' \
-'get:Show one decrypted task, including comments and attachment metadata' \
+'get:Show one decrypted task; a full reference can infer its project when no context is selected' \
+'resolve:Resolve a current or historical task reference, failing on cross-project ambiguity' \
+'task-references:Install an owner repair or explicitly quarantine unreadable history' \
 'watch:Follow authoritative task changes in one project until interrupted' \
 'create:Create an encrypted task' \
 'edit:Edit a task'\''s title and Markdown body in your configured editor' \
@@ -5207,7 +5491,9 @@ _sealtask__subcmd__tasks__subcmd__get_commands() {
 _sealtask__subcmd__tasks__subcmd__help_commands() {
     local commands; commands=(
 'list:List tasks in the selected/current project, or assigned tasks when none is selected' \
-'get:Show one decrypted task, including comments and attachment metadata' \
+'get:Show one decrypted task; a full reference can infer its project when no context is selected' \
+'resolve:Resolve a current or historical task reference, failing on cross-project ambiguity' \
+'task-references:Install an owner repair or explicitly quarantine unreadable history' \
 'watch:Follow authoritative task changes in one project until interrupted' \
 'create:Create an encrypted task' \
 'edit:Edit a task'\''s title and Markdown body in your configured editor' \
@@ -5303,6 +5589,35 @@ _sealtask__subcmd__tasks__subcmd__help__subcmd__reopen_commands() {
     local commands; commands=()
     _describe -t commands 'sealtask tasks help reopen commands' commands "$@"
 }
+(( $+functions[_sealtask__subcmd__tasks__subcmd__help__subcmd__resolve_commands] )) ||
+_sealtask__subcmd__tasks__subcmd__help__subcmd__resolve_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask tasks help resolve commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__tasks__subcmd__help__subcmd__task-references_commands] )) ||
+_sealtask__subcmd__tasks__subcmd__help__subcmd__task-references_commands() {
+    local commands; commands=(
+'status:Inspect verified history and list exact unreadable revision IDs' \
+'repair:Install a valid encrypted current scheme from reserved owner repair capacity' \
+'quarantine:Irreversibly exclude one unreadable historical alias from local resolution' \
+    )
+    _describe -t commands 'sealtask tasks help task-references commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__tasks__subcmd__help__subcmd__task-references__subcmd__quarantine_commands] )) ||
+_sealtask__subcmd__tasks__subcmd__help__subcmd__task-references__subcmd__quarantine_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask tasks help task-references quarantine commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__tasks__subcmd__help__subcmd__task-references__subcmd__repair_commands] )) ||
+_sealtask__subcmd__tasks__subcmd__help__subcmd__task-references__subcmd__repair_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask tasks help task-references repair commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__tasks__subcmd__help__subcmd__task-references__subcmd__status_commands] )) ||
+_sealtask__subcmd__tasks__subcmd__help__subcmd__task-references__subcmd__status_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask tasks help task-references status commands' commands "$@"
+}
 (( $+functions[_sealtask__subcmd__tasks__subcmd__help__subcmd__unarchive_commands] )) ||
 _sealtask__subcmd__tasks__subcmd__help__subcmd__unarchive_commands() {
     local commands; commands=()
@@ -5332,6 +5647,66 @@ _sealtask__subcmd__tasks__subcmd__move_commands() {
 _sealtask__subcmd__tasks__subcmd__reopen_commands() {
     local commands; commands=()
     _describe -t commands 'sealtask tasks reopen commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__tasks__subcmd__resolve_commands] )) ||
+_sealtask__subcmd__tasks__subcmd__resolve_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask tasks resolve commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__tasks__subcmd__task-references_commands] )) ||
+_sealtask__subcmd__tasks__subcmd__task-references_commands() {
+    local commands; commands=(
+'status:Inspect verified history and list exact unreadable revision IDs' \
+'repair:Install a valid encrypted current scheme from reserved owner repair capacity' \
+'quarantine:Irreversibly exclude one unreadable historical alias from local resolution' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'sealtask tasks task-references commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__tasks__subcmd__task-references__subcmd__help_commands] )) ||
+_sealtask__subcmd__tasks__subcmd__task-references__subcmd__help_commands() {
+    local commands; commands=(
+'status:Inspect verified history and list exact unreadable revision IDs' \
+'repair:Install a valid encrypted current scheme from reserved owner repair capacity' \
+'quarantine:Irreversibly exclude one unreadable historical alias from local resolution' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'sealtask tasks task-references help commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__tasks__subcmd__task-references__subcmd__help__subcmd__help_commands] )) ||
+_sealtask__subcmd__tasks__subcmd__task-references__subcmd__help__subcmd__help_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask tasks task-references help help commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__tasks__subcmd__task-references__subcmd__help__subcmd__quarantine_commands] )) ||
+_sealtask__subcmd__tasks__subcmd__task-references__subcmd__help__subcmd__quarantine_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask tasks task-references help quarantine commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__tasks__subcmd__task-references__subcmd__help__subcmd__repair_commands] )) ||
+_sealtask__subcmd__tasks__subcmd__task-references__subcmd__help__subcmd__repair_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask tasks task-references help repair commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__tasks__subcmd__task-references__subcmd__help__subcmd__status_commands] )) ||
+_sealtask__subcmd__tasks__subcmd__task-references__subcmd__help__subcmd__status_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask tasks task-references help status commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__tasks__subcmd__task-references__subcmd__quarantine_commands] )) ||
+_sealtask__subcmd__tasks__subcmd__task-references__subcmd__quarantine_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask tasks task-references quarantine commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__tasks__subcmd__task-references__subcmd__repair_commands] )) ||
+_sealtask__subcmd__tasks__subcmd__task-references__subcmd__repair_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask tasks task-references repair commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__tasks__subcmd__task-references__subcmd__status_commands] )) ||
+_sealtask__subcmd__tasks__subcmd__task-references__subcmd__status_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask tasks task-references status commands' commands "$@"
 }
 (( $+functions[_sealtask__subcmd__tasks__subcmd__unarchive_commands] )) ||
 _sealtask__subcmd__tasks__subcmd__unarchive_commands() {

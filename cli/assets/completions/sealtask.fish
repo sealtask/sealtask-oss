@@ -1157,52 +1157,55 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from help" -f -a "sections" -d 'Discover sections in a project'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from help" -f -a "audit" -d 'Show a bounded page of safe project audit metadata'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -l api-url -d 'SealTask API base URL' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get resolve task-references watch create edit update move complete reopen archive unarchive delete attachments help" -l api-url -d 'SealTask API base URL' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get resolve task-references watch create edit update move complete reopen archive unarchive delete attachments help" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get resolve task-references watch create edit update move complete reopen archive unarchive delete attachments help" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
 json-pretty\t''
 jsonl\t''"
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get resolve task-references watch create edit update move complete reopen archive unarchive delete attachments help" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get resolve task-references watch create edit update move complete reopen archive unarchive delete attachments help" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get resolve task-references watch create edit update move complete reopen archive unarchive delete attachments help" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
 always\t''
 never\t''"
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -l retry -d 'Retry replay-safe API requests after transient failures' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -l json -d 'Emit compact JSON instead of human-readable output'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -l no-pager -d 'Disable paging (equivalent to --pager never)'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -l offline -d 'Read only from the encrypted local snapshot and never access the network'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -s h -l help -d 'Print help (see more with \'--help\')'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -f -a "list" -d 'List tasks in the selected/current project, or assigned tasks when none is selected'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -f -a "get" -d 'Show one decrypted task, including comments and attachment metadata'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -f -a "watch" -d 'Follow authoritative task changes in one project until interrupted'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -f -a "create" -d 'Create an encrypted task'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -f -a "edit" -d 'Edit a task\'s title and Markdown body in your configured editor'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -f -a "update" -d 'Patch an encrypted task; omitted fields remain unchanged'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -f -a "move" -d 'Move a task to a section or relative position'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -f -a "complete" -d 'Move a task to the final section'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -f -a "reopen" -d 'Move a task to the first section'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -f -a "archive" -d 'Archive a task'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -f -a "unarchive" -d 'Restore an archived task'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -f -a "delete" -d 'Permanently delete a task'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -f -a "attachments" -d 'Upload, delete, read, or download encrypted task attachments'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get resolve task-references watch create edit update move complete reopen archive unarchive delete attachments help" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get resolve task-references watch create edit update move complete reopen archive unarchive delete attachments help" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get resolve task-references watch create edit update move complete reopen archive unarchive delete attachments help" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get resolve task-references watch create edit update move complete reopen archive unarchive delete attachments help" -l retry -d 'Retry replay-safe API requests after transient failures' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get resolve task-references watch create edit update move complete reopen archive unarchive delete attachments help" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get resolve task-references watch create edit update move complete reopen archive unarchive delete attachments help" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get resolve task-references watch create edit update move complete reopen archive unarchive delete attachments help" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get resolve task-references watch create edit update move complete reopen archive unarchive delete attachments help" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get resolve task-references watch create edit update move complete reopen archive unarchive delete attachments help" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get resolve task-references watch create edit update move complete reopen archive unarchive delete attachments help" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get resolve task-references watch create edit update move complete reopen archive unarchive delete attachments help" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get resolve task-references watch create edit update move complete reopen archive unarchive delete attachments help" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get resolve task-references watch create edit update move complete reopen archive unarchive delete attachments help" -l offline -d 'Read only from the encrypted local snapshot and never access the network'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get resolve task-references watch create edit update move complete reopen archive unarchive delete attachments help" -s h -l help -d 'Print help (see more with \'--help\')'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get resolve task-references watch create edit update move complete reopen archive unarchive delete attachments help" -f -a "list" -d 'List tasks in the selected/current project, or assigned tasks when none is selected'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get resolve task-references watch create edit update move complete reopen archive unarchive delete attachments help" -f -a "get" -d 'Show one decrypted task; a full reference can infer its project when no context is selected'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get resolve task-references watch create edit update move complete reopen archive unarchive delete attachments help" -f -a "resolve" -d 'Resolve a current or historical task reference, failing on cross-project ambiguity'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get resolve task-references watch create edit update move complete reopen archive unarchive delete attachments help" -f -a "task-references" -d 'Install an owner repair or explicitly quarantine unreadable history'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get resolve task-references watch create edit update move complete reopen archive unarchive delete attachments help" -f -a "watch" -d 'Follow authoritative task changes in one project until interrupted'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get resolve task-references watch create edit update move complete reopen archive unarchive delete attachments help" -f -a "create" -d 'Create an encrypted task'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get resolve task-references watch create edit update move complete reopen archive unarchive delete attachments help" -f -a "edit" -d 'Edit a task\'s title and Markdown body in your configured editor'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get resolve task-references watch create edit update move complete reopen archive unarchive delete attachments help" -f -a "update" -d 'Patch an encrypted task; omitted fields remain unchanged'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get resolve task-references watch create edit update move complete reopen archive unarchive delete attachments help" -f -a "move" -d 'Move a task to a section or relative position'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get resolve task-references watch create edit update move complete reopen archive unarchive delete attachments help" -f -a "complete" -d 'Move a task to the final section'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get resolve task-references watch create edit update move complete reopen archive unarchive delete attachments help" -f -a "reopen" -d 'Move a task to the first section'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get resolve task-references watch create edit update move complete reopen archive unarchive delete attachments help" -f -a "archive" -d 'Archive a task'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get resolve task-references watch create edit update move complete reopen archive unarchive delete attachments help" -f -a "unarchive" -d 'Restore an archived task'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get resolve task-references watch create edit update move complete reopen archive unarchive delete attachments help" -f -a "delete" -d 'Permanently delete a task'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get resolve task-references watch create edit update move complete reopen archive unarchive delete attachments help" -f -a "attachments" -d 'Upload, delete, read, or download encrypted task attachments'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get resolve task-references watch create edit update move complete reopen archive unarchive delete attachments help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from list" -l project -d 'Restrict results to a project name, UUID, or unique UUID prefix' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from list" -l work-list-id -d 'Restrict results to one exact project UUID (legacy compatibility)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from list" -l columns -d 'Select and order human table columns (comma-separated or repeatable)' -r -f -a "id\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from list" -l columns -d 'Select and order human table columns (comma-separated or repeatable)' -r -f -a "reference\t''
+id\t''
 title\t''
 project\t''
 project-id\t''
@@ -1212,7 +1215,8 @@ status\t''
 comments\t''
 created\t''
 updated\t''"
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from list" -l sort -d 'Sort text/date/status ascending, priority high-first, or timestamps newest-first' -r -f -a "id\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from list" -l sort -d 'Sort references/text/date/status ascending, priority high-first, or timestamps newest-first' -r -f -a "reference\t''
+id\t''
 title\t''
 project\t''
 priority\t''
@@ -1220,7 +1224,8 @@ due\t''
 status\t''
 created\t''
 updated\t''"
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from list" -l field -d 'Emit one sanitized raw value per task with no headings, totals, or empty-state text' -r -f -a "id\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from list" -l field -d 'Emit one sanitized reference, ID, title, or URL per task with no headings or totals' -r -f -a "reference\t''
+id\t''
 title\t''
 url\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from list" -l web-url -d 'Browser application origin; valid only with --field url (defaults to the API origin)' -r
@@ -1292,6 +1297,70 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from get" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from get" -l offline -d 'Read only from the encrypted local snapshot and never access the network'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from get" -s h -l help -d 'Print help (see more with \'--help\')'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from resolve" -l work-list-id -d 'Restrict an ambiguous cross-project match to one canonical project UUID' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from resolve" -l api-url -d 'SealTask API base URL' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from resolve" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from resolve" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
+json\t''
+json-pretty\t''
+jsonl\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from resolve" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from resolve" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from resolve" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from resolve" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from resolve" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from resolve" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from resolve" -l retry -d 'Retry replay-safe API requests after transient failures' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from resolve" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from resolve" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from resolve" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from resolve" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from resolve" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from resolve" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from resolve" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from resolve" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from resolve" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from resolve" -l offline -d 'Read only from the encrypted local snapshot and never access the network'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from resolve" -s h -l help -d 'Print help (see more with \'--help\')'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from task-references" -l api-url -d 'SealTask API base URL' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from task-references" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from task-references" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
+json\t''
+json-pretty\t''
+jsonl\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from task-references" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from task-references" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from task-references" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from task-references" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from task-references" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from task-references" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from task-references" -l retry -d 'Retry replay-safe API requests after transient failures' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from task-references" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from task-references" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from task-references" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from task-references" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from task-references" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from task-references" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from task-references" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from task-references" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from task-references" -l offline -d 'Read only from the encrypted local snapshot and never access the network'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from task-references" -s h -l help -d 'Print help (see more with \'--help\')'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from task-references" -f -a "status" -d 'Inspect verified history and list exact unreadable revision IDs'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from task-references" -f -a "repair" -d 'Install a valid encrypted current scheme from reserved owner repair capacity'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from task-references" -f -a "quarantine" -d 'Irreversibly exclude one unreadable historical alias from local resolution'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from task-references" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from watch" -l project -d 'Restrict results to a project name, UUID, or unique UUID prefix' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from watch" -l work-list-id -d 'Restrict results to one exact project UUID (legacy compatibility)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from watch" -l api-url -d 'SealTask API base URL' -r
@@ -1461,7 +1530,7 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from move" -l section-id -d 'Destination section UUID' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from move" -l section -d 'Destination section name, UUID, or unique UUID prefix' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from move" -l insert-before-task-id -d 'Place the task immediately before this task UUID' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from move" -l before -d 'Place the task immediately before this task title, UUID, or unique UUID prefix' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from move" -l before -d 'Place before a task selected by reference (OPS-184), project-local #184, title, UUID, or unique UUID prefix; use name: for a reference-shaped title' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from move" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from move" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from move" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
@@ -1695,7 +1764,9 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from attachments" -f -a "download" -d 'Decrypt an attachment and save it beneath the current directory'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from attachments" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from help" -f -a "list" -d 'List tasks in the selected/current project, or assigned tasks when none is selected'
-complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from help" -f -a "get" -d 'Show one decrypted task, including comments and attachment metadata'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from help" -f -a "get" -d 'Show one decrypted task; a full reference can infer its project when no context is selected'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from help" -f -a "resolve" -d 'Resolve a current or historical task reference, failing on cross-project ambiguity'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from help" -f -a "task-references" -d 'Install an owner repair or explicitly quarantine unreadable history'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from help" -f -a "watch" -d 'Follow authoritative task changes in one project until interrupted'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from help" -f -a "create" -d 'Create an encrypted task'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from help" -f -a "edit" -d 'Edit a task\'s title and Markdown body in your configured editor'
@@ -2716,7 +2787,9 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from projects" -f -a "sections" -d 'Discover sections in a project'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from projects" -f -a "audit" -d 'Show a bounded page of safe project audit metadata'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from tasks" -f -a "list" -d 'List tasks in the selected/current project, or assigned tasks when none is selected'
-complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from tasks" -f -a "get" -d 'Show one decrypted task, including comments and attachment metadata'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from tasks" -f -a "get" -d 'Show one decrypted task; a full reference can infer its project when no context is selected'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from tasks" -f -a "resolve" -d 'Resolve a current or historical task reference, failing on cross-project ambiguity'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from tasks" -f -a "task-references" -d 'Install an owner repair or explicitly quarantine unreadable history'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from tasks" -f -a "watch" -d 'Follow authoritative task changes in one project until interrupted'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from tasks" -f -a "create" -d 'Create an encrypted task'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from tasks" -f -a "edit" -d 'Edit a task\'s title and Markdown body in your configured editor'

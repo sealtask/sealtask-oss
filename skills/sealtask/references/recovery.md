@@ -7,8 +7,9 @@ batch execution.
 
 1. Confirm that the user authorized the exact external change.
 2. Read the target and retain its full ID and revision.
-3. Resolve names and human dates before mutation; use `--dry-run` where
-   supported when the result needs validation.
+3. Resolve task references, names, and human dates before mutation. Retain the
+   canonical task ID rather than relying on a formatted reference; use
+   `--dry-run` where supported when the result needs validation.
 4. Persist a stable idempotency key before a logical create. Reuse it only for
    an identical retry.
 5. Execute once and retain the returned ID.
@@ -43,7 +44,9 @@ outcome before deciding whether anything can be repeated.
 
 Use strict JSON Lines input and give every operation a unique stable
 `operationId`. Use explicit project and resource selectors in every record.
-Dry-run the complete input first when practical.
+Task selectors may be full references or quoted project-local numbers, but
+retain canonical task IDs from successful records. Checkpoints remain bound to
+canonical UUID metadata. Dry-run the complete input first when practical.
 
 For resumable work:
 

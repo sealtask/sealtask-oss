@@ -170,7 +170,9 @@ impl RuntimeClient {
         };
         let response = client
             .repair_task_reference_scheme(args.work_list_id, &request)
-            .await?;
+            .await;
+        self.read_cache.invalidate_for_mutation_result(&response);
+        let response = response?;
         verify_repair_response(&response, &scheme, list_key)?;
         Ok(response)
     }
@@ -251,7 +253,9 @@ impl RuntimeClient {
                     audit_patch: None,
                 },
             )
-            .await?;
+            .await;
+        self.read_cache.invalidate_for_mutation_result(&response);
+        let response = response?;
         verify_quarantine_response(&response, target, context.membership_id)?;
         Ok(response)
     }

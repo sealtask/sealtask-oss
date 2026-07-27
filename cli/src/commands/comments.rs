@@ -5,7 +5,7 @@ use crate::input::{resolve_comment_input, resolve_delete_input, validate_body_in
 use crate::interaction::require_confirmation;
 use crate::output::{CliResult, OutputFormat};
 use crate::render::{print_comment, print_comments, print_delete_result, print_empty_collection};
-use crate::resolver::{ProjectLifecycle, TaskLifecycle, resolve_project, resolve_task};
+use crate::resolver::{TaskLifecycle, resolve_task_and_project};
 use crate::selectors::{IdSelector, ResolvedEntity, resolve_id_selector};
 use crate::terminal::with_progress;
 use sealtask_client_api::DeleteCommentRequest;
@@ -29,17 +29,10 @@ pub(crate) async fn run_comments(
             task_id,
             password_stdin,
         } => {
-            let project = resolve_project(
+            let (project, task) = resolve_task_and_project(
                 runtime,
                 project.as_ref(),
                 work_list_id,
-                password_stdin,
-                ProjectLifecycle::Any,
-            )
-            .await?;
-            let task = resolve_task(
-                runtime,
-                project.id,
                 task.as_ref(),
                 task_id,
                 password_stdin,
@@ -84,17 +77,10 @@ async fn create_comment(
         args.body_file.as_deref(),
         args.password_stdin,
     )?;
-    let project = resolve_project(
+    let (project, task) = resolve_task_and_project(
         runtime,
         args.project.as_ref(),
         args.work_list_id,
-        args.password_stdin,
-        ProjectLifecycle::Any,
-    )
-    .await?;
-    let task = resolve_task(
-        runtime,
-        project.id,
         args.task.as_ref(),
         args.task_id,
         args.password_stdin,
@@ -126,17 +112,10 @@ async fn update_comment(
     format: OutputFormat,
     args: CommentUpdateArgsCli,
 ) -> CliResult<()> {
-    let project = resolve_project(
+    let (project, task) = resolve_task_and_project(
         runtime,
         args.project.as_ref(),
         args.work_list_id,
-        args.password_stdin,
-        ProjectLifecycle::Any,
-    )
-    .await?;
-    let task = resolve_task(
-        runtime,
-        project.id,
         args.task.as_ref(),
         args.task_id,
         args.password_stdin,
@@ -171,17 +150,10 @@ async fn delete_comment(
     non_interactive: bool,
     args: CommentDeleteArgsCli,
 ) -> CliResult<()> {
-    let project = resolve_project(
+    let (project, task) = resolve_task_and_project(
         runtime,
         args.project.as_ref(),
         args.work_list_id,
-        args.password_stdin,
-        ProjectLifecycle::Any,
-    )
-    .await?;
-    let task = resolve_task(
-        runtime,
-        project.id,
         args.task.as_ref(),
         args.task_id,
         args.password_stdin,

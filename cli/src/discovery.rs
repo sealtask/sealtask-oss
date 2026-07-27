@@ -224,16 +224,18 @@ fn argument_heading(path: &[String], argument: &Arg) -> &'static str {
         | "attachment_id"
         | "section"
         | "section_id"
+        | "reference"
+        | "scheme_revision_id"
         | "insert_before_task_id"
         | "before" => "Target",
         "title" | "body" | "priority" | "due_at" | "due" | "start_at" | "clear_body"
         | "clear_priority" | "clear_due_at" | "clear_start_at" | "clear_section" | "is_private"
-        | "file_name" | "content_type" => "Fields",
+        | "file_name" | "content_type" | "prefix" | "minimum_digits" => "Fields",
         "include_archived" | "include_completed" | "all" => "Filters",
         "input_file" | "input_stdin" | "body_file" | "password_stdin" | "file" => "Input",
         "format" | "json" | "verbose" | "raw" | "output" | "color" | "pager" | "no_pager"
         | "progress" | "quiet" => "Output",
-        "yes" | "force" => "Safety",
+        "yes" | "force" | "confirm" => "Safety",
         "edit" => "Interaction",
         "idempotency_key" | "ttl_seconds" => "Advanced",
         _ => "Options",
@@ -307,13 +309,28 @@ fn command_examples(path: &[String]) -> Option<&'static str> {
             "Examples:\n  sealtask projects audit\n  sealtask projects audit \"Release Engineering\" --limit 25\n  sealtask --json projects audit id:019f42ab"
         }
         "tasks" => {
-            "Examples:\n  sealtask tasks list\n  sealtask tasks create --title \"Ship 0.4\" --due tomorrow"
+            "Examples:\n  sealtask tasks list\n  sealtask tasks get OPS-184\n  sealtask tasks create --title \"Ship 0.4\" --due tomorrow"
         }
         "tasks list" => {
-            "Examples:\n  sealtask tasks list\n  sealtask tasks list --all --sort due\n  sealtask tasks list --columns project,title,due,status\n  sealtask tasks list --field id\n  sealtask tasks list --field url --web-url https://app.example"
+            "Examples:\n  sealtask tasks list\n  sealtask tasks list --all --sort reference\n  sealtask tasks list --columns reference,project,title,due,status\n  sealtask tasks list --field reference\n  sealtask tasks list --field id\n  sealtask tasks list --field url --web-url https://app.example"
         }
         "tasks get" => {
-            "Examples:\n  sealtask tasks get \"Prepare release notes\"\n  sealtask tasks get id:019f42ab"
+            "Examples:\n  sealtask tasks get OPS-184\n  sealtask tasks get '#184' --project Operations\n  sealtask tasks get name:OPS-184 --project Operations\n  sealtask tasks get id:019f42ab"
+        }
+        "tasks resolve" => {
+            "Examples:\n  sealtask tasks resolve OPS-184\n  sealtask tasks resolve OPS-184 --work-list-id 019f42ab-0000-7000-8000-000000000000"
+        }
+        "tasks task-references" => {
+            "Examples:\n  sealtask tasks task-references status --work-list-id 019f42ab-0000-7000-8000-000000000000"
+        }
+        "tasks task-references status" => {
+            "Examples:\n  sealtask tasks task-references status --work-list-id 019f42ab-0000-7000-8000-000000000000"
+        }
+        "tasks task-references repair" => {
+            "Examples:\n  sealtask tasks task-references repair --work-list-id 019f42ab-0000-7000-8000-000000000000 --prefix OPS --minimum-digits 4"
+        }
+        "tasks task-references quarantine" => {
+            "Examples:\n  sealtask tasks task-references quarantine --work-list-id 019f42ab-0000-7000-8000-000000000000 --scheme-revision-id 019f42ab-0000-7000-8000-000000000001 --confirm"
         }
         "tasks watch" => {
             "Examples:\n  sealtask tasks watch --project \"Release Engineering\"\n  sealtask --format jsonl tasks watch --work-list-id 019f42ab-0000-7000-8000-000000000000"
@@ -323,10 +340,10 @@ fn command_examples(path: &[String]) -> Option<&'static str> {
         }
         "tasks edit" => "Examples:\n  sealtask tasks edit \"Release checklist\"",
         "tasks update" => {
-            "Examples:\n  sealtask tasks update \"Ship 0.4\" --priority urgent --due tomorrow\n  sealtask tasks update id:019f42ab --body-file ./release.md\n  sealtask tasks update id:019f42ab --clear-due-at\n  sealtask --json tasks update id:019f42ab --priority urgent --dry-run"
+            "Examples:\n  sealtask tasks update OPS-184 --priority urgent --due tomorrow\n  sealtask tasks update id:019f42ab --body-file ./release.md\n  sealtask tasks update id:019f42ab --clear-due-at\n  sealtask --json tasks update id:019f42ab --priority urgent --dry-run"
         }
         "tasks move" => {
-            "Examples:\n  sealtask tasks move \"Ship 0.4\" --section Review\n  sealtask tasks move \"Ship 0.4\" --before \"Publish notes\""
+            "Examples:\n  sealtask tasks move OPS-184 --section Review\n  sealtask tasks move '#184' --before '#185' --project Operations"
         }
         "tasks complete" => "Examples:\n  sealtask tasks complete \"Ship 0.4\"",
         "tasks reopen" => "Examples:\n  sealtask tasks reopen \"Ship 0.4\"",
@@ -385,7 +402,7 @@ fn command_examples(path: &[String]) -> Option<&'static str> {
             "Examples:\n  sealtask comments list \"Ship 0.4\"\n  sealtask comments create \"Ship 0.4\" --body \"Ready for review\""
         }
         "comments list" => {
-            "Examples:\n  sealtask comments list \"Ship 0.4\"\n  sealtask --json comments list id:019f42ab"
+            "Examples:\n  sealtask comments list OPS-184\n  sealtask --json comments list id:019f42ab"
         }
         "comments create" => {
             "Examples:\n  sealtask comments create \"Ship 0.4\" --body \"Ready for review\"\n  sealtask comments create \"Ship 0.4\" --body-file -\n  sealtask comments create \"Ship 0.4\" --input-file ./comment.json"
@@ -498,6 +515,26 @@ mod tests {
         let help = create.render_long_help().to_string();
         for heading in ["Target:", "Fields:", "Input:", "Advanced:", "Examples:"] {
             assert!(help.contains(heading), "missing {heading} in:\n{help}");
+        }
+    }
+
+    #[test]
+    fn task_get_help_documents_reference_selectors_and_automation_identity() {
+        let command = command();
+        let tasks = command
+            .get_subcommands()
+            .find(|child| child.get_name() == "tasks")
+            .expect("tasks");
+        let mut get = tasks
+            .get_subcommands()
+            .find(|child| child.get_name() == "get")
+            .expect("tasks get")
+            .clone()
+            .bin_name("sealtask tasks get");
+        let help = get.render_long_help().to_string();
+
+        for expected in ["OPS-184", "#184", "name:OPS-184", "id:019f42ab"] {
+            assert!(help.contains(expected), "missing {expected:?} in:\n{help}");
         }
     }
 

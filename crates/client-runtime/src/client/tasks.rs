@@ -1,4 +1,4 @@
-use super::{RuntimeClient, WorkListContext, load_task_reference_scheme_history};
+use super::{RuntimeClient, WorkListContext};
 use crate::inputs::{
     ArchiveTaskArgs, CreateTaskArgs, DeleteTaskArgs, MoveTaskArgs, TaskCompletionArgs,
     TaskCreateIdempotencyDerivation, TaskCreateInput, TaskFieldPatch, TaskUpdateInput,
@@ -10,15 +10,15 @@ use crate::read_cache::ReadCacheQuery;
 use chrono::{DateTime, Utc};
 use sealtask_client_api::{
     ArchiveTaskRequest, BoardEventStream, CreateTaskRequest, MoveTaskRequest, MyTaskResponse,
-    PublicApiClient, TaskDetailResponse, TaskListResponse, TaskSectionBoundary,
-    UnarchiveTaskRequest, UpdateTaskRequest, WorkListResponse,
+    PublicApiClient, TaskDetailResponse, TaskListResponse, TaskReferenceSchemeResponse,
+    TaskSectionBoundary, UnarchiveTaskRequest, UpdateTaskRequest, WorkListResponse,
 };
 use sealtask_client_core::{PublicError, PublicResult};
 use sealtask_client_crypto::{
     ChecklistItemPayload, TASK_REFERENCE_REVISION_MAX, TASK_TITLE_CONTEXT, TaskPayloadBody,
     build_task_payload_envelope, compute_payload_proof, compute_task_create_semantic_commitment,
     decode_sealed_blob, decrypt_task_payload, derive_child_key, derive_payload_binding_key,
-    encrypt_task_payload, encrypt_text_value, plaintext_rich_text,
+    encrypt_task_payload, encrypt_text_value, parse_task_reference, plaintext_rich_text,
 };
 use serde::Serialize;
 use std::collections::{HashMap, HashSet};
@@ -538,6 +538,7 @@ pub struct ProjectTaskSession {
     data_key: sealtask_client_crypto::SymmetricKey,
     work_list_id: Uuid,
     context: WorkListContext,
+    scheme_history: Vec<TaskReferenceSchemeResponse>,
 }
 
 impl ProjectTaskSession {
@@ -553,6 +554,7 @@ impl ProjectTaskSession {
         include_completed: bool,
         include_archived: bool,
     ) -> PublicResult<Vec<AgentTaskSummary>> {
+        self.refresh_context().await?;
         let cache_guard = self
             .runtime
             .read_cache
@@ -586,6 +588,60 @@ impl ProjectTaskSession {
             .into_iter()
             .map(|task| self.runtime.project_task_summary(task, Some(&self.context)))
             .collect())
+    }
+
+    async fn refresh_context(&mut self) -> PublicResult<()> {
+        let cache_guard = self
+            .runtime
+            .read_cache
+            .begin_online_read(&self.credentials)?;
+        let work_list = self.client.get_work_list(self.work_list_id).await?;
+        self.runtime.read_cache.record_online(
+            cache_guard.as_ref(),
+            &self.data_key,
+            &ReadCacheQuery::WorkList {
+                work_list_id: self.work_list_id,
+            },
+            &work_list,
+        )?;
+
+        self.scheme_history = if matches!(
+            (
+                work_list.work_list.task_references_enabled_at,
+                work_list.work_list.current_task_reference_scheme_revision,
+                work_list
+                    .work_list
+                    .current_task_reference_scheme_revision_id,
+            ),
+            (Some(_), Some(_), Some(_))
+        ) {
+            match self
+                .client
+                .get_task_reference_schemes(self.work_list_id)
+                .await
+            {
+                Ok(history) => {
+                    self.runtime.read_cache.record_online(
+                        cache_guard.as_ref(),
+                        &self.data_key,
+                        &ReadCacheQuery::TaskReferenceSchemes {
+                            work_list_id: self.work_list_id,
+                        },
+                        &history,
+                    )?;
+                    history
+                }
+                Err(_) => Vec::new(),
+            }
+        } else {
+            Vec::new()
+        };
+        self.context = self.runtime.context_from_work_list_detail(
+            &work_list,
+            &self.scheme_history,
+            Some(&self.data_key),
+        );
+        Ok(())
     }
 
     /// Issue a fresh one-time stream token and connect to this project's event
@@ -681,13 +737,12 @@ impl RuntimeClient {
             (work_lists, tasks)
         };
         let mut scheme_histories = HashMap::new();
-        if !self.is_offline() {
-            let mut client = self.api_client_with_credentials(credentials.clone())?;
-            for work_list in &work_lists {
-                let history = load_task_reference_scheme_history(&mut client, work_list).await;
-                if !history.is_empty() {
-                    scheme_histories.insert(work_list.id, history);
-                }
+        for work_list in &work_lists {
+            let history = self
+                .load_read_task_reference_scheme_history(&credentials, &data_key, work_list)
+                .await;
+            if !history.is_empty() {
+                scheme_histories.insert(work_list.id, history);
             }
         }
         let contexts =
@@ -782,8 +837,31 @@ impl RuntimeClient {
                 &work_list,
             )?;
         }
-        let scheme_history =
-            load_task_reference_scheme_history(&mut client, &work_list.work_list).await;
+        let scheme_history = if matches!(
+            (
+                work_list.work_list.task_references_enabled_at,
+                work_list.work_list.current_task_reference_scheme_revision,
+                work_list
+                    .work_list
+                    .current_task_reference_scheme_revision_id,
+            ),
+            (Some(_), Some(_), Some(_))
+        ) {
+            match client.get_task_reference_schemes(work_list_id).await {
+                Ok(history) => {
+                    self.read_cache.record_online(
+                        cache_guard.as_ref(),
+                        data_key,
+                        &ReadCacheQuery::TaskReferenceSchemes { work_list_id },
+                        &history,
+                    )?;
+                    history
+                }
+                Err(_) => Vec::new(),
+            }
+        } else {
+            Vec::new()
+        };
         let context =
             self.context_from_work_list_detail(&work_list, &scheme_history, Some(data_key));
         Ok(ProjectTaskSession {
@@ -793,6 +871,7 @@ impl RuntimeClient {
             data_key: data_key.clone(),
             work_list_id,
             context,
+            scheme_history,
         })
     }
 
@@ -842,6 +921,11 @@ impl RuntimeClient {
         work_list_id: Option<Uuid>,
         password_stdin: bool,
     ) -> PublicResult<AgentTaskDetail> {
+        if parse_task_reference(reference).is_none() {
+            return Err(PublicError::validation(
+                "task reference must be a full reference such as OPS-184",
+            ));
+        }
         let mut credentials = self.require_logged_in_credentials()?;
         let data_key = self
             .load_data_key(
@@ -850,20 +934,110 @@ impl RuntimeClient {
                 "Password required to resolve an encrypted task reference.",
             )
             .await?;
-        let mut client =
-            sealtask_client_api::PublicApiClient::with_credentials(&self.api_url, credentials)?;
+        let work_lists = self
+            .load_task_reference_lookup_work_lists(&credentials, &data_key, work_list_id)
+            .await?;
+        let contexts = self
+            .load_task_reference_lookup_contexts(&credentials, &data_key, &work_lists)
+            .await?;
+        let (resolved_work_list_id, reference_number) =
+            resolve_task_reference_candidate(reference, work_list_id, &contexts)?;
+        let context = contexts.get(&resolved_work_list_id).ok_or_else(|| {
+            PublicError::unexpected("resolved task reference lost its work list context")
+        })?;
+        let detail = self
+            .load_task_by_reference_number(
+                &credentials,
+                &data_key,
+                resolved_work_list_id,
+                reference_number,
+            )
+            .await?;
+        Ok(self.project_task_detail(detail, context))
+    }
 
-        let work_lists = if let Some(work_list_id) = work_list_id {
-            vec![client.get_work_list(work_list_id).await?.work_list]
-        } else {
-            // Archived projects remain valid UUID/numeric lookup scopes and
-            // may own a colliding private prefix. Excluding them would turn an
-            // incomplete directory into a false miss or sole auto-resolution.
-            client.list_work_lists_with_archived(true).await?
+    pub async fn resolve_project_task_reference_number(
+        &self,
+        work_list_id: Uuid,
+        reference_number: i64,
+        password_stdin: bool,
+    ) -> PublicResult<AgentTaskDetail> {
+        let mut credentials = self.require_logged_in_credentials()?;
+        let data_key = self
+            .load_data_key(
+                &mut credentials,
+                password_stdin,
+                "Password required to resolve an encrypted task reference.",
+            )
+            .await?;
+        let work_lists = self
+            .load_task_reference_lookup_work_lists(&credentials, &data_key, Some(work_list_id))
+            .await?;
+        let contexts = self
+            .load_task_reference_lookup_contexts(&credentials, &data_key, &work_lists)
+            .await?;
+        let context = contexts.get(&work_list_id).ok_or_else(|| {
+            PublicError::unexpected("task reference lost its selected work list context")
+        })?;
+        let detail = self
+            .load_task_by_reference_number(&credentials, &data_key, work_list_id, reference_number)
+            .await?;
+        Ok(self.project_task_detail(detail, context))
+    }
+
+    async fn load_task_reference_lookup_work_lists(
+        &self,
+        credentials: &sealtask_client_auth::Credentials,
+        data_key: &sealtask_client_crypto::SymmetricKey,
+        work_list_id: Option<Uuid>,
+    ) -> PublicResult<Vec<WorkListResponse>> {
+        if let Some(work_list_id) = work_list_id {
+            let query = ReadCacheQuery::WorkList { work_list_id };
+            let detail: sealtask_client_api::WorkListDetailResponse = if self.is_offline() {
+                self.read_cache
+                    .read_offline(credentials, data_key, &query)?
+            } else if let Some(cached) = self.read_cache.memoized(credentials, &query)? {
+                cached
+            } else {
+                let cache_guard = self.read_cache.begin_online_read(credentials)?;
+                let mut client = self.api_client_with_credentials(credentials.clone())?;
+                let detail = client.get_work_list(work_list_id).await?;
+                self.read_cache
+                    .record_online(cache_guard.as_ref(), data_key, &query, &detail)?;
+                detail
+            };
+            return Ok(vec![detail.work_list]);
+        }
+
+        // Archived projects remain valid lookup scopes and may own a
+        // colliding private prefix. Excluding them could turn an incomplete
+        // directory into a false miss or sole auto-resolution.
+        let query = ReadCacheQuery::WorkLists {
+            include_archived: true,
         };
+        if self.is_offline() {
+            self.read_cache.read_offline(credentials, data_key, &query)
+        } else if let Some(cached) = self.read_cache.memoized(credentials, &query)? {
+            Ok(cached)
+        } else {
+            let cache_guard = self.read_cache.begin_online_read(credentials)?;
+            let mut client = self.api_client_with_credentials(credentials.clone())?;
+            let work_lists = client.list_work_lists_with_archived(true).await?;
+            self.read_cache
+                .record_online(cache_guard.as_ref(), data_key, &query, &work_lists)?;
+            Ok(work_lists)
+        }
+    }
+
+    async fn load_task_reference_lookup_contexts(
+        &self,
+        credentials: &sealtask_client_auth::Credentials,
+        data_key: &sealtask_client_crypto::SymmetricKey,
+        work_lists: &[WorkListResponse],
+    ) -> PublicResult<HashMap<Uuid, WorkListContext>> {
         let mut scheme_histories = HashMap::new();
         let mut reference_enabled_ids = HashSet::new();
-        for work_list in &work_lists {
+        for work_list in work_lists {
             match (
                 work_list.task_references_enabled_at.is_some(),
                 work_list.current_task_reference_scheme_revision,
@@ -873,7 +1047,13 @@ impl RuntimeClient {
                 (true, Some(revision), Some(_))
                     if (1..=TASK_REFERENCE_REVISION_MAX).contains(&revision) =>
                 {
-                    let history = client.get_task_reference_schemes(work_list.id).await?;
+                    let history = self
+                        .load_read_task_reference_scheme_history_strict(
+                            credentials,
+                            data_key,
+                            work_list,
+                        )
+                        .await?;
                     scheme_histories.insert(work_list.id, history);
                     reference_enabled_ids.insert(work_list.id);
                 }
@@ -886,51 +1066,59 @@ impl RuntimeClient {
             }
         }
 
-        let contexts =
-            self.build_work_list_contexts(&work_lists, &scheme_histories, Some(&data_key));
-        let mut unchecked_work_list_ids = reference_enabled_ids
-            .into_iter()
-            .filter(|work_list_id| {
-                contexts
-                    .get(work_list_id)
-                    .and_then(WorkListContext::current_task_reference_scheme)
-                    .is_none()
-            })
-            .collect::<Vec<_>>();
-        unchecked_work_list_ids.sort_unstable();
-        if !unchecked_work_list_ids.is_empty() {
-            return Err(PublicError::unexpected(format!(
-                "task reference lookup is unchecked because scheme history is unavailable for work lists {}; no definitive miss or automatic resolution was attempted",
-                unchecked_work_list_ids
-                    .iter()
-                    .map(Uuid::to_string)
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            )));
-        }
-        let (resolved_work_list_id, reference_number) =
-            resolve_task_reference_candidate(reference, work_list_id, &contexts)?;
-        let context = contexts.get(&resolved_work_list_id).ok_or_else(|| {
-            PublicError::unexpected("resolved task reference lost its work list context")
-        })?;
+        let contexts = self.build_work_list_contexts(work_lists, &scheme_histories, Some(data_key));
+        ensure_task_reference_lookup_complete(&reference_enabled_ids, &contexts)?;
+        Ok(contexts)
+    }
 
-        let detail = client
-            .get_task_by_reference_number(resolved_work_list_id, reference_number)
-            .await?;
-        if detail.task.work_list_id != resolved_work_list_id
+    async fn load_task_by_reference_number(
+        &self,
+        credentials: &sealtask_client_auth::Credentials,
+        data_key: &sealtask_client_crypto::SymmetricKey,
+        work_list_id: Uuid,
+        reference_number: i64,
+    ) -> PublicResult<TaskDetailResponse> {
+        let query = ReadCacheQuery::TaskByReferenceNumber {
+            work_list_id,
+            reference_number,
+        };
+        let detail: TaskDetailResponse = if self.is_offline() {
+            self.read_cache
+                .read_offline(credentials, data_key, &query)?
+        } else if let Some(cached) = self.read_cache.memoized(credentials, &query)? {
+            cached
+        } else {
+            let cache_guard = self.read_cache.begin_online_read(credentials)?;
+            let mut client = self.api_client_with_credentials(credentials.clone())?;
+            let detail = client
+                .get_task_by_reference_number(work_list_id, reference_number)
+                .await?;
+            self.read_cache
+                .record_online(cache_guard.as_ref(), data_key, &query, &detail)?;
+            detail
+        };
+        if detail.task.work_list_id != work_list_id
             || detail.task.reference_number != Some(reference_number)
         {
             return Err(PublicError::unexpected(
                 "task reference lookup returned mismatched public metadata",
             ));
         }
+        Ok(detail)
+    }
+
+    fn project_task_detail(
+        &self,
+        detail: TaskDetailResponse,
+        context: &WorkListContext,
+    ) -> AgentTaskDetail {
         let task = self.project_task_summary(detail.task, Some(context));
         let comments = detail
             .comments
             .into_iter()
             .map(|comment| self.project_comment(comment, context.list_key.as_ref()))
             .collect();
-        Ok(AgentTaskDetail { task, comments })
+        AgentTaskDetail { task, comments }
     }
 
     pub async fn create_task(&self, args: CreateTaskArgs) -> PublicResult<AgentTaskSummary> {
@@ -1628,6 +1816,34 @@ fn resolve_task_reference_candidate(
     }
 }
 
+fn ensure_task_reference_lookup_complete(
+    reference_enabled_ids: &HashSet<Uuid>,
+    contexts: &HashMap<Uuid, WorkListContext>,
+) -> PublicResult<()> {
+    let mut unchecked_work_list_ids = reference_enabled_ids
+        .iter()
+        .copied()
+        .filter(|work_list_id| {
+            contexts
+                .get(work_list_id)
+                .and_then(WorkListContext::current_task_reference_scheme)
+                .is_none()
+        })
+        .collect::<Vec<_>>();
+    unchecked_work_list_ids.sort_unstable();
+    if unchecked_work_list_ids.is_empty() {
+        return Ok(());
+    }
+    Err(PublicError::unexpected(format!(
+        "task reference lookup is unchecked because scheme history is unavailable for work lists {}; no definitive miss or automatic resolution was attempted",
+        unchecked_work_list_ids
+            .iter()
+            .map(Uuid::to_string)
+            .collect::<Vec<_>>()
+            .join(", ")
+    )))
+}
+
 #[cfg(test)]
 mod task_reference_tests {
     use super::*;
@@ -1651,6 +1867,7 @@ mod task_reference_tests {
         let current = schemes.last().expect("at least one scheme");
         WorkListContext {
             work_list_title: None,
+            work_list_timezone: "UTC".to_string(),
             list_key: None,
             task_reference_schemes: schemes.clone(),
             current_task_reference_scheme_revision: Some(current.revision),
@@ -1698,11 +1915,37 @@ mod task_reference_tests {
             (second, 7)
         );
     }
+
+    #[test]
+    fn test_should_fail_closed_before_using_a_false_sole_candidate() {
+        let checked = Uuid::from_u128(0x1111_1111_1111_7111_8111_1111_1111_1111);
+        let unchecked = Uuid::from_u128(0x2222_2222_2222_7222_8222_2222_2222_2222);
+        let mut unchecked_context = reference_context(unchecked, &["PRIVATE"]);
+        unchecked_context.task_reference_schemes.clear();
+        let contexts = HashMap::from([
+            (checked, reference_context(checked, &["OPS"])),
+            (unchecked, unchecked_context),
+        ]);
+
+        assert_eq!(
+            resolve_task_reference_candidate("OPS-7", None, &contexts)
+                .expect("the partial map would otherwise look definitive"),
+            (checked, 7)
+        );
+        let error =
+            ensure_task_reference_lookup_complete(&HashSet::from([checked, unchecked]), &contexts)
+                .expect_err("an unchecked enabled project must prevent auto-resolution");
+        assert!(matches!(error, PublicError::Unexpected(_)));
+        assert!(error.to_string().contains(&unchecked.to_string()));
+        assert!(!error.to_string().contains("PRIVATE"));
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use base64::Engine as _;
+    use base64::engine::general_purpose::STANDARD_NO_PAD;
     use chrono::{TimeDelta, Utc};
     use sealtask_client_api::{
         CommentResponse, CreateTaskRequest, DelegationResponse, MembershipResponse,
@@ -1711,14 +1954,14 @@ mod tests {
     };
     use sealtask_client_auth::Credentials;
     use sealtask_client_crypto::{
-        KEY_SIZE, SymmetricKey, build_task_payload_envelope, derive_work_list_key,
+        KEY_SIZE, SealedPayload, SymmetricKey, build_task_payload_envelope, derive_work_list_key,
         encrypt_task_payload,
     };
     use std::sync::{Arc, Mutex};
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
     #[tokio::test]
-    async fn project_task_session_reuses_context_and_preserves_filtering() {
+    async fn project_task_session_refreshes_context_and_preserves_filtering() {
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
             .await
             .expect("listener");
@@ -1785,7 +2028,7 @@ mod tests {
         .expect("archived task response");
         let server = tokio::spawn(async move {
             let mut request_targets = Vec::new();
-            for _ in 0..5 {
+            for _ in 0..9 {
                 let (mut stream, _) = listener.accept().await.expect("connection");
                 let request = read_http_request(&mut stream).await;
                 let target = request_target(&request);
@@ -1856,9 +2099,199 @@ mod tests {
                 .iter()
                 .filter(|target| *target == &format!("/work-lists/{work_list_id}"))
                 .count(),
-            1,
-            "the decrypted project context must be resolved only once"
+            5,
+            "the project context must be loaded initially and refreshed before every snapshot"
         );
+    }
+
+    #[tokio::test]
+    async fn task_reference_transport_sends_only_project_and_numeric_suffix() {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+            .await
+            .expect("listener");
+        let api_url = format!("http://{}", listener.local_addr().expect("address"));
+        let runtime = RuntimeClient::new(&api_url).expect("runtime");
+        let work_list_id = Uuid::now_v7();
+        let data_key = SymmetricKey::new([0x62; KEY_SIZE]);
+        let list_key = derive_work_list_key(&data_key, &work_list_id).expect("list key");
+        let mut task = task_fixture(
+            &list_key,
+            work_list_id,
+            Uuid::now_v7(),
+            "Referenced task",
+            false,
+            false,
+        );
+        task.reference_number = Some(184);
+        let expected_task_id = task.id;
+        let requests = Arc::new(Mutex::new(Vec::new()));
+        let server = spawn_http_sequence(
+            listener,
+            requests.clone(),
+            vec![MockHttpResponse::ok_json(&TaskDetailResponse {
+                task,
+                comments: Vec::new(),
+            })],
+        );
+
+        let detail = runtime
+            .load_task_by_reference_number(
+                &test_credentials(&api_url),
+                &data_key,
+                work_list_id,
+                184,
+            )
+            .await
+            .expect("resolve task by numeric reference");
+        assert_eq!(detail.task.id, expected_task_id);
+        server.await.expect("server");
+
+        let requests = requests.lock().expect("requests");
+        let request = String::from_utf8_lossy(&requests[0]);
+        assert!(
+            request.starts_with(&format!(
+                "GET /work-lists/{work_list_id}/tasks/by-reference-number/184 HTTP/"
+            )),
+            "unexpected request target: {request}"
+        );
+        assert!(!request.contains("OPS-184"));
+    }
+
+    #[tokio::test]
+    async fn malformed_task_reference_is_rejected_before_authentication() {
+        let runtime = RuntimeClient::new("http://127.0.0.1:9").expect("runtime");
+
+        let error = runtime
+            .resolve_task_reference("not-a-reference", None, false)
+            .await
+            .expect_err("malformed reference must fail locally");
+
+        assert!(matches!(error, PublicError::Validation(_)));
+        assert_eq!(
+            error.to_string(),
+            "task reference must be a full reference such as OPS-184"
+        );
+    }
+
+    #[tokio::test]
+    async fn task_reference_scheme_history_is_invocation_memoized() {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+            .await
+            .expect("listener");
+        let api_url = format!("http://{}", listener.local_addr().expect("address"));
+        let directory = tempfile::tempdir().expect("cache directory");
+        let runtime = RuntimeClient::new(&api_url)
+            .expect("runtime")
+            .with_read_cache_options(
+                crate::ReadCacheOptions::online(directory.path(), "default")
+                    .expect("cache options"),
+            )
+            .expect("runtime cache");
+        let work_list_id = Uuid::now_v7();
+        let scheme_revision_id = Uuid::now_v7();
+        let mut work_list = work_list_fixture(work_list_id).work_list;
+        work_list.task_references_enabled_at = Some(Utc::now());
+        work_list.current_task_reference_scheme_revision = Some(1);
+        work_list.current_task_reference_scheme_revision_id = Some(scheme_revision_id);
+        let response = serde_json::json!({
+            "schemes": [{
+                "schemeRevisionId": scheme_revision_id,
+                "workListId": work_list_id,
+                "revision": 1,
+                "payloadCiphertext": "opaque-scheme-ciphertext",
+                "isRepair": false,
+                "createdAt": Utc::now(),
+                "retiredAt": null,
+                "quarantinedAt": null,
+                "quarantinedByMembershipId": null
+            }]
+        });
+        let requests = Arc::new(Mutex::new(Vec::new()));
+        let server = spawn_http_sequence(
+            listener,
+            requests.clone(),
+            vec![MockHttpResponse::ok_json(&response)],
+        );
+        let credentials = test_credentials(&api_url);
+        let data_key = SymmetricKey::new([0x64; KEY_SIZE]);
+
+        let first = runtime
+            .load_read_task_reference_scheme_history_strict(&credentials, &data_key, &work_list)
+            .await
+            .expect("first scheme-history read");
+        let second = runtime
+            .load_read_task_reference_scheme_history_strict(&credentials, &data_key, &work_list)
+            .await
+            .expect("memoized scheme-history read");
+
+        assert_eq!(first.len(), 1);
+        assert_eq!(second.len(), 1);
+        assert_eq!(first[0].scheme_revision_id, scheme_revision_id);
+        assert_eq!(second[0].scheme_revision_id, scheme_revision_id);
+        server.await.expect("server");
+        let requests = requests.lock().expect("requests");
+        assert_eq!(requests.len(), 1);
+        assert!(String::from_utf8_lossy(&requests[0]).starts_with(&format!(
+            "GET /work-lists/{work_list_id}/task-reference-schemes HTTP/"
+        )));
+    }
+
+    #[tokio::test]
+    async fn task_reference_transport_rejects_mismatched_public_metadata() {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+            .await
+            .expect("listener");
+        let api_url = format!("http://{}", listener.local_addr().expect("address"));
+        let runtime = RuntimeClient::new(&api_url).expect("runtime");
+        let work_list_id = Uuid::now_v7();
+        let data_key = SymmetricKey::new([0x63; KEY_SIZE]);
+        let list_key = derive_work_list_key(&data_key, &work_list_id).expect("list key");
+        let mut wrong_project_task = task_fixture(
+            &list_key,
+            Uuid::now_v7(),
+            Uuid::now_v7(),
+            "Wrong project",
+            false,
+            false,
+        );
+        wrong_project_task.reference_number = Some(184);
+        let mut wrong_number_task = task_fixture(
+            &list_key,
+            work_list_id,
+            Uuid::now_v7(),
+            "Wrong number",
+            false,
+            false,
+        );
+        wrong_number_task.reference_number = Some(185);
+        let requests = Arc::new(Mutex::new(Vec::new()));
+        let server = spawn_http_sequence(
+            listener,
+            requests,
+            vec![
+                MockHttpResponse::ok_json(&TaskDetailResponse {
+                    task: wrong_project_task,
+                    comments: Vec::new(),
+                }),
+                MockHttpResponse::ok_json(&TaskDetailResponse {
+                    task: wrong_number_task,
+                    comments: Vec::new(),
+                }),
+            ],
+        );
+        let credentials = test_credentials(&api_url);
+
+        for mismatch in ["project", "number"] {
+            let error = runtime
+                .load_task_by_reference_number(&credentials, &data_key, work_list_id, 184)
+                .await
+                .expect_err("mismatched public reference metadata must fail");
+            assert!(
+                matches!(error, PublicError::Unexpected(_)),
+                "{mismatch} mismatch returned {error:?}"
+            );
+        }
+        server.await.expect("server");
     }
 
     #[tokio::test]
@@ -2546,6 +2979,7 @@ mod tests {
             created_at: updated_at,
             updated_at,
             comment_count: 0,
+            reference_number: None,
             delegations: Vec::new(),
         }
     }
@@ -2630,6 +3064,7 @@ mod tests {
             created_at: now,
             updated_at: now,
             comment_count: 0,
+            reference_number: None,
             delegations: Vec::new(),
         }
     }
@@ -2649,6 +3084,9 @@ mod tests {
                 created_at: now,
                 updated_at: now,
                 archived_at: None,
+                task_references_enabled_at: None,
+                current_task_reference_scheme_revision: None,
+                current_task_reference_scheme_revision_id: None,
                 membership: MembershipResponse {
                     id: Uuid::now_v7(),
                     user_id: Uuid::now_v7(),
@@ -2679,7 +3117,11 @@ mod tests {
             refresh_expires_at: Utc::now() + TimeDelta::hours(2),
             user_id: Uuid::now_v7(),
             email: "agent@example.com".to_string(),
-            data_key_ciphertext: "unused".to_string(),
+            data_key_ciphertext: STANDARD_NO_PAD.encode(
+                SealedPayload::new(vec![0x51; 48])
+                    .to_bytes()
+                    .expect("encode data-key binding fixture"),
+            ),
         }
     }
 

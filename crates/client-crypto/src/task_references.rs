@@ -3,7 +3,7 @@ use std::io::Cursor;
 use rand_core::{OsRng, RngCore};
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use uuid::Uuid;
-use zeroize::Zeroizing;
+use zeroize::{Zeroize, Zeroizing};
 
 use sealtask_client_core::{PublicError, PublicResult};
 
@@ -40,6 +40,28 @@ pub struct TaskReferenceSchemeV1 {
     pub revision: i64,
     pub prefix: String,
     pub minimum_digits: u8,
+}
+
+#[derive(Clone, Eq, PartialEq)]
+pub struct ParsedTaskReference {
+    pub prefix: String,
+    pub reference_number: i64,
+}
+
+impl std::fmt::Debug for ParsedTaskReference {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("ParsedTaskReference")
+            .field("prefix", &"<redacted>")
+            .field("reference_number", &self.reference_number)
+            .finish()
+    }
+}
+
+impl Drop for ParsedTaskReference {
+    fn drop(&mut self) {
+        self.prefix.zeroize();
+    }
 }
 
 impl std::fmt::Debug for TaskReferenceSchemeV1 {
@@ -109,20 +131,31 @@ impl TaskReferenceSchemeV1 {
         if self.validate().is_err() {
             return None;
         }
-        let (prefix, number) = reference.trim().rsplit_once(TASK_REFERENCE_SEPARATOR)?;
-        let prefix = prefix.trim();
-        let number = number.trim();
-        if !prefix.eq_ignore_ascii_case(&self.prefix)
-            || number.is_empty()
-            || !number.bytes().all(|byte| byte.is_ascii_digit())
-        {
+        let parsed = parse_task_reference(reference)?;
+        if !parsed.prefix.eq_ignore_ascii_case(&self.prefix) {
             return None;
         }
-        number
-            .parse::<i64>()
-            .ok()
-            .filter(|number| (1..=TASK_REFERENCE_SAFE_INTEGER_MAX).contains(number))
+        Some(parsed.reference_number)
     }
+}
+
+pub fn parse_task_reference(reference: &str) -> Option<ParsedTaskReference> {
+    let (prefix, number) = reference.trim().split_once(TASK_REFERENCE_SEPARATOR)?;
+    let prefix = prefix.trim().to_ascii_uppercase();
+    validate_task_reference_prefix(&prefix).ok()?;
+    let reference_number = parse_task_reference_number(number.trim())?;
+    Some(ParsedTaskReference {
+        prefix,
+        reference_number,
+    })
+}
+
+pub fn parse_project_reference_number(reference: &str) -> Option<i64> {
+    let reference = reference.trim();
+    let number = reference
+        .strip_prefix('#')
+        .map_or(reference, str::trim_start);
+    parse_task_reference_number(number)
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -383,6 +416,16 @@ fn validate_task_reference_prefix(prefix: &str) -> PublicResult<()> {
         ));
     }
     Ok(())
+}
+
+fn parse_task_reference_number(number: &str) -> Option<i64> {
+    if number.is_empty() || !number.bytes().all(|byte| byte.is_ascii_digit()) {
+        return None;
+    }
+    number
+        .parse::<i64>()
+        .ok()
+        .filter(|number| (1..=TASK_REFERENCE_SAFE_INTEGER_MAX).contains(number))
 }
 
 fn validate_envelope_header(
@@ -657,6 +700,45 @@ mod tests {
         assert_eq!(value.parse_reference_number("TAX-31"), None);
         assert_eq!(value.parse_reference_number("LAW--31"), None);
         assert_eq!(value.parse_reference_number("LAW-0"), None);
+    }
+
+    #[test]
+    fn task_reference_input_parser_matches_cross_client_grammar() {
+        assert_eq!(
+            parse_task_reference(" law - 00031 "),
+            Some(ParsedTaskReference {
+                prefix: "LAW".to_string(),
+                reference_number: 31,
+            })
+        );
+        assert_eq!(parse_project_reference_number("#00031"), Some(31));
+        assert_eq!(parse_project_reference_number("# 00031"), Some(31));
+        assert_eq!(parse_project_reference_number("00031"), Some(31));
+
+        for invalid in [
+            "L-31",
+            "LAW--31",
+            "LAW-",
+            "LAW-0",
+            "LAW-9007199254740992",
+            "LAW-３１",
+            "#0",
+            "#9007199254740992",
+            "#３１",
+        ] {
+            assert_eq!(parse_task_reference(invalid), None, "{invalid}");
+            if invalid.starts_with('#') {
+                assert_eq!(parse_project_reference_number(invalid), None, "{invalid}");
+            }
+        }
+    }
+
+    #[test]
+    fn parsed_task_reference_debug_redacts_private_prefix() {
+        let parsed = parse_task_reference("CUSTOMER42-7").expect("valid reference");
+        let debug = format!("{parsed:?}");
+        assert!(debug.contains("reference_number: 7"));
+        assert!(!debug.contains("CUSTOMER42"));
     }
 
     #[test]

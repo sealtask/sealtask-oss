@@ -22,8 +22,9 @@ use crate::render::{
     print_task, print_task_detail, print_task_reference_scheme_result,
 };
 use crate::resolver::{
-    ProjectLifecycle, TaskLifecycle, load_project, resolve_optional_project, resolve_project,
-    resolve_section, resolve_task,
+    ProjectLifecycle, ResolvedTaskAndProject, TaskLifecycle, load_project,
+    resolve_optional_project, resolve_project, resolve_section, resolve_task,
+    resolve_task_and_project, resolve_task_and_project_with_detail,
 };
 use crate::selectors::{EntitySelector, IdSelector, ResolvedEntity, resolve_id_selector};
 use crate::task_list::{TaskListOptions, TaskListScope, print_task_list};
@@ -159,17 +160,14 @@ pub(crate) async fn run_tasks(
             password_stdin,
             raw,
         } => {
-            let project = resolve_project(
+            let ResolvedTaskAndProject {
+                project,
+                task,
+                detail: resolved_detail,
+            } = resolve_task_and_project_with_detail(
                 runtime,
                 project.as_ref(),
                 work_list_id,
-                password_stdin,
-                ProjectLifecycle::Any,
-            )
-            .await?;
-            let task = resolve_task(
-                runtime,
-                project.id,
                 task.as_ref(),
                 task_id,
                 password_stdin,
@@ -183,11 +181,16 @@ pub(crate) async fn run_tasks(
                 return print_raw_task_detail(&detail, format);
             }
 
-            let detail = with_progress(
-                "Loading and decrypting task…",
-                runtime.get_task(project.id, task.id, password_stdin),
-            )
-            .await?;
+            let detail = match resolved_detail {
+                Some(detail) => detail,
+                None => {
+                    with_progress(
+                        "Loading and decrypting task…",
+                        runtime.get_task(project.id, task.id, password_stdin),
+                    )
+                    .await?
+                }
+            };
             print_task_detail(&detail, format)
         }
         TasksCommand::Resolve(args) => {
@@ -513,17 +516,10 @@ async fn resolve_task_target(
     password_stdin: bool,
     lifecycle: TaskLifecycle,
 ) -> CliResult<(uuid::Uuid, ResolvedEntity)> {
-    let project = resolve_project(
+    let (project, task) = resolve_task_and_project(
         runtime,
         project,
         work_list_id,
-        password_stdin,
-        ProjectLifecycle::Any,
-    )
-    .await?;
-    let task = resolve_task(
-        runtime,
-        project.id,
         task,
         task_id,
         password_stdin,

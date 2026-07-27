@@ -32,10 +32,10 @@ Destination section name, UUID, or unique UUID prefix
 Place the task immediately before this task UUID
 .TP
 \fB\-\-before\fR \fI<BEFORE>\fR
-Place the task immediately before this task title, UUID, or unique UUID prefix
+Place before a task selected by reference (OPS\-184), project\-local #184, title, UUID, or unique UUID prefix; use name: for a reference\-shaped title
 .TP
 [\fITASK\fR]
-Task title, UUID, or unique UUID prefix
+Current or historical reference (OPS\-184), project\-local #184, title, UUID, or unique UUID prefix; use name: for a reference\-shaped title
 .SH INPUT
 .TP
 \fB\-\-password\-stdin\fR
@@ -190,5 +190,5 @@ May also be specified with the \fBSEALTASK_CONFIG_DIR\fR environment variable.
 .RE
 .SH EXTRA
 Examples:
-  sealtask tasks move "Ship 0.4" \-\-section Review
-  sealtask tasks move "Ship 0.4" \-\-before "Publish notes"
+  sealtask tasks move OPS\-184 \-\-section Review
+  sealtask tasks move \*(Aq#184\*(Aq \-\-before \*(Aq#185\*(Aq \-\-project Operations

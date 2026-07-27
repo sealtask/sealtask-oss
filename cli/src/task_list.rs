@@ -1,6 +1,6 @@
 use crate::args::{TaskListColumnArg, TaskListFieldArg, TaskListSortArg};
 use crate::output::{CliResult, OutputFormat, terminal_line, write_stdout_line};
-use crate::render::{print_tasks, task_due_date};
+use crate::render::{print_tasks, task_due_date, task_reference_label};
 use crate::resolver::ResolvedProject;
 use crate::table::{Alignment, Column, ColumnStyle, Table, short_unique_ids};
 use crate::terminal;
@@ -208,6 +208,10 @@ fn print_fields(
             .iter()
             .map(|task| format!("id:{}", task.id.simple()))
             .collect::<Vec<_>>(),
+        TaskListFieldArg::Reference => tasks
+            .iter()
+            .map(|task| terminal_line(task_reference_label(task)))
+            .collect::<Vec<_>>(),
         TaskListFieldArg::Title => tasks
             .iter()
             .map(|task| {
@@ -344,6 +348,7 @@ fn render_task_table(
 
 fn default_columns(cross_project: bool) -> Vec<Column> {
     let mut columns = vec![
+        default_column(TaskListColumnArg::Reference),
         default_column(TaskListColumnArg::Id),
         default_column(TaskListColumnArg::Title),
     ];
@@ -359,7 +364,11 @@ fn default_columns(cross_project: bool) -> Vec<Column> {
 }
 
 fn default_column_values(cross_project: bool) -> Vec<TaskListColumnArg> {
-    let mut columns = vec![TaskListColumnArg::Id, TaskListColumnArg::Title];
+    let mut columns = vec![
+        TaskListColumnArg::Reference,
+        TaskListColumnArg::Id,
+        TaskListColumnArg::Title,
+    ];
     if cross_project {
         columns.push(TaskListColumnArg::Project);
     }
@@ -373,7 +382,8 @@ fn default_column_values(cross_project: bool) -> Vec<TaskListColumnArg> {
 
 fn default_column(column: TaskListColumnArg) -> Column {
     match column {
-        TaskListColumnArg::Id => Column::required("ID", 11, 39).preserve(),
+        TaskListColumnArg::Reference => Column::required("Reference", 11, 32).preserve(),
+        TaskListColumnArg::Id => Column::optional("ID", 11, 39, 35).preserve(),
         TaskListColumnArg::Title => Column::required("Title", 12, 60).flex(4),
         TaskListColumnArg::Project => Column::required("Project", 12, 40).flex(2),
         TaskListColumnArg::Priority => Column::optional("Pri", 3, 3, 40)
@@ -392,6 +402,7 @@ fn default_column(column: TaskListColumnArg) -> Column {
 
 fn explicit_column(column: TaskListColumnArg) -> Column {
     let column = match column {
+        TaskListColumnArg::Reference => Column::required("Reference", 11, 32).preserve(),
         TaskListColumnArg::Id => Column::required("ID", 11, 39).preserve(),
         TaskListColumnArg::Title => Column::required("Title", 8, 60).flex(4),
         TaskListColumnArg::Project => Column::required("Project", 8, 40).flex(2),
@@ -412,6 +423,7 @@ fn explicit_column(column: TaskListColumnArg) -> Column {
 
 fn column_name(column: TaskListColumnArg) -> &'static str {
     match column {
+        TaskListColumnArg::Reference => "reference",
         TaskListColumnArg::Id => "id",
         TaskListColumnArg::Title => "title",
         TaskListColumnArg::Project => "project",
@@ -432,6 +444,7 @@ fn column_value(
     column: TaskListColumnArg,
 ) -> String {
     match column {
+        TaskListColumnArg::Reference => task_reference_label(task).to_string(),
         TaskListColumnArg::Id => task_id.to_string(),
         TaskListColumnArg::Title => task.title.as_deref().unwrap_or("-").to_string(),
         TaskListColumnArg::Project => task.work_list_title.clone().unwrap_or_else(|| {
@@ -506,6 +519,7 @@ fn priority_label(priority: Option<i8>) -> String {
 fn sort_tasks(tasks: &mut [AgentTaskSummary], sort: TaskListSortArg) {
     tasks.sort_by(|left, right| {
         let primary = match sort {
+            TaskListSortArg::Reference => compare_task_references(left, right),
             TaskListSortArg::Id => left.id.cmp(&right.id),
             TaskListSortArg::Title => compare_optional_text(&left.title, &right.title),
             TaskListSortArg::Project => {
@@ -521,6 +535,26 @@ fn sort_tasks(tasks: &mut [AgentTaskSummary], sort: TaskListSortArg) {
             .then_with(|| left.work_list_id.cmp(&right.work_list_id))
             .then_with(|| left.id.cmp(&right.id))
     });
+}
+
+fn compare_task_references(left: &AgentTaskSummary, right: &AgentTaskSummary) -> Ordering {
+    match (left.reference.as_deref(), right.reference.as_deref()) {
+        (Some(left_reference), Some(right_reference)) => reference_prefix(left_reference)
+            .cmp(&reference_prefix(right_reference))
+            .then_with(|| compare_optional_asc(left.reference_number, right.reference_number))
+            .then_with(|| normalized_text(left_reference).cmp(&normalized_text(right_reference))),
+        (Some(_), None) => Ordering::Less,
+        (None, Some(_)) => Ordering::Greater,
+        (None, None) => compare_optional_asc(left.reference_number, right.reference_number),
+    }
+}
+
+fn reference_prefix(reference: &str) -> String {
+    normalized_text(
+        reference
+            .rsplit_once('-')
+            .map_or(reference, |(prefix, _)| prefix),
+    )
 }
 
 fn compare_optional_text(left: &Option<String>, right: &Option<String>) -> Ordering {
@@ -641,6 +675,117 @@ mod tests {
     }
 
     #[test]
+    fn reference_is_a_default_configurable_column_with_explicit_disabled_states() {
+        assert_eq!(
+            default_column_values(false),
+            [
+                TaskListColumnArg::Reference,
+                TaskListColumnArg::Id,
+                TaskListColumnArg::Title,
+                TaskListColumnArg::Priority,
+                TaskListColumnArg::Due,
+                TaskListColumnArg::Status,
+            ]
+        );
+
+        let now = Utc::now();
+        let mut referenced = task(
+            "01900000-0000-7000-8000-000000000001",
+            Some("Referenced"),
+            None,
+            None,
+            now,
+        );
+        referenced.reference_number = Some(31);
+        referenced.reference = Some("OPS-0031".to_string());
+        assert_eq!(
+            column_value(
+                &referenced,
+                "id:01900000",
+                &HashMap::new(),
+                TaskListColumnArg::Reference,
+            ),
+            "OPS-0031"
+        );
+
+        referenced.reference = None;
+        assert_eq!(
+            column_value(
+                &referenced,
+                "id:01900000",
+                &HashMap::new(),
+                TaskListColumnArg::Reference,
+            ),
+            "<reference unavailable>"
+        );
+        referenced.reference_number = None;
+        assert_eq!(
+            column_value(
+                &referenced,
+                "id:01900000",
+                &HashMap::new(),
+                TaskListColumnArg::Reference,
+            ),
+            "-"
+        );
+    }
+
+    #[test]
+    fn reference_sort_uses_prefix_then_numeric_ordinal_and_places_disabled_last() {
+        let now = Utc::now();
+        let mut ops_ten = task(
+            "01900000-0000-7000-8000-000000000010",
+            Some("ten"),
+            None,
+            None,
+            now,
+        );
+        ops_ten.reference_number = Some(10);
+        ops_ten.reference = Some("OPS-10".to_string());
+        let mut ops_two = task(
+            "01900000-0000-7000-8000-000000000002",
+            Some("two"),
+            None,
+            None,
+            now,
+        );
+        ops_two.reference_number = Some(2);
+        ops_two.reference = Some("OPS-2".to_string());
+        let mut legal = task(
+            "01900000-0000-7000-8000-000000000100",
+            Some("legal"),
+            None,
+            None,
+            now,
+        );
+        legal.reference_number = Some(100);
+        legal.reference = Some("LAW-100".to_string());
+        let mut unavailable = task(
+            "01900000-0000-7000-8000-000000000001",
+            Some("unavailable"),
+            None,
+            None,
+            now,
+        );
+        unavailable.reference_number = Some(1);
+        let disabled = task(
+            "01900000-0000-7000-8000-000000000099",
+            Some("disabled"),
+            None,
+            None,
+            now,
+        );
+        let mut tasks = vec![ops_ten, disabled, unavailable, legal, ops_two];
+
+        sort_tasks(&mut tasks, TaskListSortArg::Reference);
+
+        assert_eq!(
+            tasks.iter().map(task_reference_label).collect::<Vec<_>>(),
+            ["LAW-100", "OPS-2", "OPS-10", "<reference unavailable>", "-"]
+        );
+    }
+
+    #[test]
     fn natural_sorting_handles_priority_due_and_unreadable_values() {
         let now = Utc
             .with_ymd_and_hms(2026, 7, 26, 12, 0, 0)
@@ -734,6 +879,8 @@ mod tests {
             created_at: updated_at,
             updated_at,
             comment_count: 0,
+            reference_number: None,
+            reference: None,
             title: title.map(str::to_string),
             body_markdown: None,
             body_rich_text: None,

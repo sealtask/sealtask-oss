@@ -21,10 +21,10 @@ sealtask --json --non-interactive auth status
 sealtask --json --non-interactive projects current
 ```
 
-Require `jsonContractVersion` 2 from `info`. Keep stdout and stderr separate.
-Successful finite commands emit one JSON document on stdout. Warnings and
-runtime failures emit a structured envelope on stderr. Collections emit arrays,
-including `[]`.
+Use the capabilities reported by `info` and query command schemas before
+constructing calls. Keep stdout and stderr separate. Successful finite commands
+emit one JSON document on stdout. Warnings and runtime failures emit a
+structured envelope on stderr. Collections emit arrays, including `[]`.
 
 Do not run `doctor` on every request. Run
 `sealtask --json --non-interactive doctor` when authentication, unlock,
@@ -58,7 +58,9 @@ Resolve context in this order:
 1. An explicit project selector on the command.
 2. The nearest current-directory or ancestor local context.
 3. The active profile's global fallback.
-4. Cross-project assigned-task behavior where the command supports it.
+4. Cross-project inference from a full task reference where the command
+   supports it and no project context exists.
+5. Cross-project assigned-task behavior where the command supports it.
 
 Inspect the effective context from the intended workspace root with:
 
@@ -86,8 +88,21 @@ does not grant access.
 
 ## Selectors and inputs
 
-Names and unique ID prefixes are useful for discovery. Once a resource is
-resolved, retain and use the full `id:` selector from structured output.
+Task selectors accept current and historical full references such as
+`OPS-184`. Matching is case-insensitive and tolerates whitespace around the
+hyphen. With no explicit or current project, a full reference can infer its
+project; if the alias exists in more than one project, select the intended
+project explicitly and retry.
+
+Within an explicit or current project, a task can also be selected by its local
+number, for example `'#184'`. Keep the quotes in shell commands because an
+unquoted `#` starts a shell comment. Use `name:OPS-184` when the intended task
+title looks like a reference.
+
+References and unique ID prefixes are useful for discovery. Structured task
+output exposes the current formatted `reference`, the immutable project-local
+`referenceNumber`, and the canonical task `id`. Once resolved, retain and use
+the full `id:` selector for mutations, batch checkpoints, and later automation.
 
 Before composing an unfamiliar command, inspect it:
 

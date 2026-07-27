@@ -477,10 +477,24 @@ mod tests {
             read_error: None,
         };
 
+        let summary_json = serde_json::to_value(TaskSummaryV1::from(&task)).expect("v1 task JSON");
         assert_eq!(
-            serde_json::to_value(TaskSummaryV1::from(&task)).expect("v1 task JSON"),
+            summary_json,
             serde_json::to_value(&task).expect("legacy task JSON")
         );
+        assert_eq!(summary_json["reference"], "LAW-0031");
+        assert_eq!(summary_json["referenceNumber"], 31);
+        assert_eq!(summary_json["id"], task.id.to_string());
+
+        let detail = AgentTaskDetail {
+            task,
+            comments: Vec::new(),
+        };
+        let detail_json =
+            serde_json::to_value(TaskDetailV1::from(&detail)).expect("v1 task detail JSON");
+        assert_eq!(detail_json["reference"], "LAW-0031");
+        assert_eq!(detail_json["referenceNumber"], 31);
+        assert_eq!(detail_json["id"], detail.task.id.to_string());
     }
 
     #[test]

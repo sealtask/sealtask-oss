@@ -1790,6 +1790,8 @@ struct OperationOutcome {
     status: OutcomeStatus,
     project_id: Option<Uuid>,
     task_id: Option<Uuid>,
+    task_reference_number: Option<i64>,
+    task_reference: Option<String>,
     updated_at: Option<DateTime<Utc>>,
     resumed: bool,
     plan: Option<TaskMutationPlan>,
@@ -1820,6 +1822,8 @@ impl OperationOutcome {
             status: OutcomeStatus::Succeeded,
             project_id: Some(project_id),
             task_id: Some(task.id),
+            task_reference_number: task.reference_number,
+            task_reference: task.reference,
             updated_at: Some(task.updated_at),
             resumed,
             plan: None,
@@ -1841,6 +1845,8 @@ impl OperationOutcome {
             status: OutcomeStatus::Skipped,
             project_id: Some(project_id),
             task_id: Some(task_id),
+            task_reference_number: None,
+            task_reference: None,
             updated_at: Some(updated_at),
             resumed: true,
             plan: None,
@@ -1864,6 +1870,8 @@ impl OperationOutcome {
             status: OutcomeStatus::Planned,
             project_id: Some(project_id),
             task_id,
+            task_reference_number: None,
+            task_reference: None,
             updated_at: None,
             resumed: false,
             plan: Some(plan),
@@ -1903,6 +1911,8 @@ impl OperationOutcome {
             status: OutcomeStatus::Failed,
             project_id,
             task_id,
+            task_reference_number: None,
+            task_reference: None,
             updated_at: None,
             resumed: false,
             plan: None,
@@ -1930,6 +1940,8 @@ impl OperationOutcome {
             status: OutcomeStatus::Failed,
             project_id,
             task_id,
+            task_reference_number: None,
+            task_reference: None,
             updated_at: None,
             resumed: false,
             plan: None,
@@ -1973,6 +1985,8 @@ impl OperationOutcome {
             status: OutcomeStatus::Interrupted,
             project_id,
             task_id,
+            task_reference_number: None,
+            task_reference: None,
             updated_at: None,
             resumed: false,
             plan: None,
@@ -1995,6 +2009,8 @@ impl OperationOutcome {
             status: OutcomeStatus::Interrupted,
             project_id,
             task_id,
+            task_reference_number: None,
+            task_reference: None,
             updated_at: None,
             resumed: false,
             plan: None,
@@ -2020,6 +2036,8 @@ impl OperationOutcome {
             status: OutcomeStatus::Interrupted,
             project_id,
             task_id,
+            task_reference_number: None,
+            task_reference: None,
             updated_at: None,
             resumed: false,
             plan: None,
@@ -2072,6 +2090,10 @@ struct OperationRecord<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     task_id: Option<Uuid>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    task_reference_number: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    task_reference: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     updated_at: Option<DateTime<Utc>>,
     #[serde(skip_serializing_if = "is_false")]
     resumed: bool,
@@ -2079,6 +2101,25 @@ struct OperationRecord<'a> {
     plan: Option<&'a TaskMutationPlan>,
     #[serde(skip_serializing_if = "Option::is_none")]
     error: Option<&'a OperationError>,
+}
+
+fn operation_record(outcome: &OperationOutcome) -> OperationRecord<'_> {
+    OperationRecord {
+        schema_version: BATCH_OUTPUT_SCHEMA_VERSION,
+        record_type: "batch.operation",
+        input_index: outcome.index + 1,
+        operation_id: &outcome.operation_id,
+        operation: operation_name(outcome.kind),
+        status: outcome_status_name(outcome.status),
+        project_id: outcome.project_id,
+        task_id: outcome.task_id,
+        task_reference_number: outcome.task_reference_number,
+        task_reference: outcome.task_reference.as_deref(),
+        updated_at: outcome.updated_at,
+        resumed: outcome.resumed,
+        plan: outcome.plan.as_ref(),
+        error: outcome.error.as_ref(),
+    }
 }
 
 #[derive(Serialize)]
@@ -2106,27 +2147,16 @@ struct SummaryRecord<'a> {
 
 fn emit_outcome(format: OutputFormat, outcome: &OperationOutcome) -> CliResult<()> {
     match format {
-        OutputFormat::Jsonl => {
-            let record = OperationRecord {
-                schema_version: BATCH_OUTPUT_SCHEMA_VERSION,
-                record_type: "batch.operation",
-                input_index: outcome.index + 1,
-                operation_id: &outcome.operation_id,
-                operation: operation_name(outcome.kind),
-                status: outcome_status_name(outcome.status),
-                project_id: outcome.project_id,
-                task_id: outcome.task_id,
-                updated_at: outcome.updated_at,
-                resumed: outcome.resumed,
-                plan: outcome.plan.as_ref(),
-                error: outcome.error.as_ref(),
-            };
-            print_jsonl(&record, "serializing batch operation result should succeed")
-        }
+        OutputFormat::Jsonl => print_jsonl(
+            &operation_record(outcome),
+            "serializing batch operation result should succeed",
+        ),
         OutputFormat::Table => {
-            let target = outcome
-                .task_id
-                .map_or_else(|| "-".to_string(), |task_id| task_id.to_string());
+            let target = match (outcome.task_reference.as_deref(), outcome.task_id) {
+                (Some(reference), Some(task_id)) => format!("{reference} ({task_id})"),
+                (_, Some(task_id)) => task_id.to_string(),
+                _ => "-".to_string(),
+            };
             let suffix = outcome
                 .error
                 .as_ref()
@@ -2224,6 +2254,8 @@ mod tests {
             status: OutcomeStatus::Skipped,
             project_id: Some(Uuid::now_v7()),
             task_id: Some(Uuid::now_v7()),
+            task_reference_number: None,
+            task_reference: None,
             updated_at: Some(Utc::now()),
             resumed: true,
             plan: None,
@@ -2345,6 +2377,34 @@ mod tests {
             serde_json::to_string(outcome.error.as_ref().expect("error")).expect("serialize");
         assert!(!encoded.contains(canary));
         assert!(encoded.contains("\"code\":\"validation\""));
+    }
+
+    #[test]
+    fn successful_operation_records_add_reference_without_replacing_canonical_task_id() {
+        let project_id = Uuid::now_v7();
+        let task_id = Uuid::now_v7();
+        let outcome = OperationOutcome {
+            index: 0,
+            operation_id: "op-1".to_string(),
+            kind: OperationKind::TaskUpdate,
+            status: OutcomeStatus::Succeeded,
+            project_id: Some(project_id),
+            task_id: Some(task_id),
+            task_reference_number: Some(184),
+            task_reference: Some("OPS-0184".to_string()),
+            updated_at: Some(Utc::now()),
+            resumed: false,
+            plan: None,
+            error: None,
+            fatal_exit_code: None,
+        };
+
+        let record =
+            serde_json::to_value(operation_record(&outcome)).expect("serialize operation record");
+        assert_eq!(record["projectId"], project_id.to_string());
+        assert_eq!(record["taskId"], task_id.to_string());
+        assert_eq!(record["taskReferenceNumber"], 184);
+        assert_eq!(record["taskReference"], "OPS-0184");
     }
 
     #[test]

@@ -162,31 +162,39 @@ array contract.
 Customize human tables with an exact, ordered column list and a natural sort:
 
 ```bash
-sealtask tasks list --all --columns project,title,due,status --sort due
-sealtask tasks list --columns id,title,priority,comments,updated --sort priority
+sealtask tasks list --all --columns reference,project,title,due,status --sort reference
+sealtask tasks list --columns reference,id,title,priority,comments,updated --sort priority
 ```
 
 Columns are comma-separated or repeatable and must be unique. Supported columns
-are `id`, `title`, `project`, `project-id`, `priority`, `due`, `status`,
-`comments`, `created`, and `updated`. Explicitly requested columns retain caller
-order and stay present even on a narrow terminal. Text, project, due date, and
-status sorts are ascending; priority sorts highest first; created and updated
-sort newest first. `--columns` applies only to table output and is rejected with
-JSON.
+are `reference`, `id`, `title`, `project`, `project-id`, `priority`, `due`,
+`status`, `comments`, `created`, and `updated`. The current formatted task
+reference is a default column. Human output distinguishes a project with task
+references disabled (`-`) from a reference that is temporarily unavailable
+because its encrypted scheme could not be loaded. Explicitly requested columns
+retain caller order and stay present even on a narrow terminal. Reference,
+text, project, due date, and status sorts are ascending; priority sorts highest
+first; created and updated sort newest first. `--columns` applies only to table
+output and is rejected with JSON.
 
-For shell composition, `--field id|title|url` writes exactly one sanitized value
-per task, one per line, with no heading, total, scope, or empty-state text:
+For shell composition, `--field reference|id|title|url` writes exactly one
+sanitized value per task, one per line, with no heading, total, scope, or
+empty-state text:
 
 ```bash
+sealtask tasks list --field reference
 sealtask tasks list --field id
 sealtask tasks list --field title
 SEALTASK_WEB_URL=https://app.example sealtask tasks list --all --field url
 sealtask tasks list --field url --web-url https://app.example
 ```
 
-IDs are emitted as reusable full `id:<32-lowercase-hex>` selectors. URLs point
-to `/workspace/work-lists/<project-id>?task=<task-id>`. The web origin must be
-an absolute credential-free HTTP(S) origin without a path, query, or fragment;
+References are convenient for operator navigation; IDs are emitted as reusable
+full `id:<32-lowercase-hex>` selectors and remain the durable automation
+identity. JSON task models include both the current formatted `reference` and
+the immutable, project-local numeric `referenceNumber`. URLs point to
+`/workspace/work-lists/<project-id>?task=<task-id>`. The web origin must be an
+absolute credential-free HTTP(S) origin without a path, query, or fragment;
 when it is not configured, the CLI derives the origin from `SEALTASK_API_URL`.
 `--web-url` is valid only with `--field url`; `SEALTASK_WEB_URL` is consulted
 only for that field and does not affect other list modes. Raw-field output
@@ -334,6 +342,13 @@ and age of each distinct snapshot it used and confirms that no network request
 was attempted. These warnings make staleness visible but are not rollback
 protection.
 
+Reference-aware online reads cache the project's bounded verified scheme
+history and the exact task detail fetched for a numeric reference. Offline
+reference lookup uses only those encrypted snapshots and never probes the
+network; a missing project directory, scheme history, or exact task asks the
+operator to refresh that read online. Repairing or quarantining reference
+history invalidates the affected cached entries.
+
 The offline allowlist is deliberately narrow:
 
 - cached reads: `projects` / `projects list`, `projects get`,
@@ -433,20 +448,58 @@ The stdin form cannot be combined with `--password-stdin`; use a saved unlock,
 the unlock daemon, or a real body file in that case. Editor workflows reject
 `--non-interactive`; body-file workflows are designed for automation.
 
-Selectors accept an exact UUID, an exact or Unicode-normalized name, or a
-unique UUID prefix of at least eight hexadecimal digits. Use `name:<value>` or
-`id:<prefix>` to make the intended selector form explicit. Ambiguous selectors
-fail with deterministic, plaintext-free ID candidates instead of choosing
-silently:
+Project, task, and note selectors accept an exact UUID, an exact or
+Unicode-normalized name, or a unique UUID prefix of at least eight hexadecimal
+digits. Use `name:<value>` or `id:<prefix>` to make the intended selector form
+explicit. Task selectors additionally accept:
+
+- a current or historical full SealTask reference such as `OPS-184`
+- a project-local number such as `#184` when a project is explicit or current
+
+Full references are case-insensitive and may contain whitespace around `-`.
+Historical aliases keep resolving after a project's reference prefix changes.
+Quote a `#184` selector so the shell does not treat it as a comment, and use
+`name:OPS-184` when a task title itself looks like a reference. External
+reference metadata is not a task selector.
+
+An explicit project or saved current project scopes reference resolution. With
+neither, a full reference can infer its project across accessible active and
+archived projects. Duplicate aliases require an explicit `--project`; lookup
+also fails closed if every possible project history cannot be verified. Prefix
+matching happens locally against encrypted project metadata, and only the
+canonical project UUID plus numeric suffix is sent to the task endpoint.
+Archived tasks remain addressable.
+
+Ambiguous title and ID-prefix selectors likewise fail with deterministic,
+plaintext-free ID candidates instead of choosing silently:
 
 ```bash
-sealtask tasks get "Prepare release notes"
+sealtask tasks get OPS-184
+sealtask tasks get '#184' --project Operations
+sealtask tasks get name:OPS-184 --project Operations
 sealtask tasks get id:019f42ab
 sealtask notes get name:"Release checklist"
 ```
 
-Comment and attachment mutation flags are ID-only selectors and accept the same
-unique UUID prefixes shown in human tables:
+Use references for human discovery, then retain the full `id:` selector from
+structured output for later mutations, checkpoints, and other automation.
+
+For reference-only diagnosis, `tasks resolve` reports the canonical project and
+task without requiring a separate project selector. Project owners can inspect
+verified scheme history before using the explicit repair flows:
+
+```bash
+sealtask tasks resolve OPS-184
+sealtask tasks task-references status --work-list-id <project-uuid>
+```
+
+Replacement prefixes contain 2–10 uppercase ASCII letters or digits, start
+with a letter, and use 1–8 display digits. Repair and historical-alias
+quarantine are deliberate owner operations; inspect `--help` and status before
+using either.
+
+The `--comment-id` and `--attachment-id` flags remain ID-only selectors and
+accept the same unique UUID prefixes shown in human tables:
 
 ```bash
 sealtask comments update "Ship 0.4" --comment-id id:019f42ab --body "Approved"
@@ -605,7 +658,9 @@ artifact is not part of the public browser package.
 The first-party [`sealtask` Agent Skill](./skills/sealtask/SKILL.md) teaches
 compatible coding agents to discover the installed CLI contract, use
 non-interactive JSON and JSON Lines safely, resolve directory-scoped project
-context, and recover conservatively from conflicts or ambiguous mutations.
+context, use current or historical task references for discovery, retain
+canonical task IDs for automation, and recover conservatively from conflicts
+or ambiguous mutations.
 Install it from the canonical public repository with:
 
 ```bash
@@ -705,7 +760,7 @@ and either a `task.create` input or a `task.update` task selector and input:
 
 ```json
 {"schemaVersion":1,"operationId":"release-42:create-notes","type":"task.create","project":"id:019f0000-0000-7000-8000-000000000001","input":{"title":"Prepare release notes","priority":5}}
-{"schemaVersion":1,"operationId":"release-42:mark-urgent","type":"task.update","project":"id:019f0000-0000-7000-8000-000000000001","task":"id:019f0000-0000-7000-8000-000000000002","input":{"priority":8}}
+{"schemaVersion":1,"operationId":"release-42:mark-urgent","type":"task.update","project":"id:019f0000-0000-7000-8000-000000000001","task":"OPS-184","input":{"priority":8}}
 ```
 
 Unknown fields and unsupported operation types are rejected. The entire input
@@ -714,6 +769,10 @@ to 4 MiB, the input to 64 MiB and 10,000 operations, and `--jobs` to 1–16.
 Batch records cannot request passwords, editors, files, prompts, deletion, or
 attachments. Checklist fields inside `input` retain the existing encrypted
 payload spelling (`is_done`, `completed_at`, and `assignee_user_ids`).
+Task updates accept full references and quoted project-local numbers because
+every record already requires an explicit project. Successful JSONL records
+include the canonical `taskId` and, when available, additive `taskReference`
+and `taskReferenceNumber` fields; retain `taskId` for subsequent automation.
 
 ```bash
 sealtask batch run --input ./operations.jsonl --dry-run
@@ -735,6 +794,8 @@ interruption.
 Checkpoints are bound to the canonical input SHA-256 and persist only hashed
 operation IDs plus canonical UUID/revision/commitment metadata—never selectors,
 task plaintext, ciphertext, encryption material, tokens, or idempotency values.
+References supplied in batch input are therefore not promoted to checkpoint
+identity.
 Durable checkpoint/resume is currently available on Linux and macOS, where
 handle-relative atomic no-replace publication is available. Other platforms
 fail closed before touching the checkpoint path, while ordinary batch

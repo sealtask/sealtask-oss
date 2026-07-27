@@ -426,12 +426,9 @@ impl RuntimeClient {
                 .record_online(cache_guard.as_ref(), &data_key, &query, &work_list)?;
             work_list
         };
-        let scheme_history = if self.is_offline() {
-            Vec::new()
-        } else {
-            let mut client = self.api_client_with_credentials(credentials.clone())?;
-            load_task_reference_scheme_history(&mut client, &work_list.work_list).await
-        };
+        let scheme_history = self
+            .load_read_task_reference_scheme_history(&credentials, &data_key, &work_list.work_list)
+            .await;
         let context = UnlockedWorkListContext {
             membership_id: work_list.work_list.membership.id,
             work_list: self.context_from_work_list_detail(
@@ -442,6 +439,52 @@ impl RuntimeClient {
             data_key: data_key.clone(),
         };
         Ok((credentials, data_key, context))
+    }
+
+    pub(crate) async fn load_read_task_reference_scheme_history(
+        &self,
+        credentials: &Credentials,
+        data_key: &SymmetricKey,
+        work_list: &WorkListResponse,
+    ) -> Vec<TaskReferenceSchemeResponse> {
+        self.load_read_task_reference_scheme_history_strict(credentials, data_key, work_list)
+            .await
+            .unwrap_or_default()
+    }
+
+    pub(crate) async fn load_read_task_reference_scheme_history_strict(
+        &self,
+        credentials: &Credentials,
+        data_key: &SymmetricKey,
+        work_list: &WorkListResponse,
+    ) -> PublicResult<Vec<TaskReferenceSchemeResponse>> {
+        if !matches!(
+            (
+                work_list.task_references_enabled_at,
+                work_list.current_task_reference_scheme_revision,
+                work_list.current_task_reference_scheme_revision_id,
+            ),
+            (Some(_), Some(_), Some(_))
+        ) {
+            return Ok(Vec::new());
+        }
+
+        let query = ReadCacheQuery::TaskReferenceSchemes {
+            work_list_id: work_list.id,
+        };
+        if self.is_offline() {
+            return self.read_cache.read_offline(credentials, data_key, &query);
+        }
+        if let Some(cached) = self.read_cache.memoized(credentials, &query)? {
+            return Ok(cached);
+        }
+
+        let cache_guard = self.read_cache.begin_online_read(credentials)?;
+        let mut client = self.api_client_with_credentials(credentials.clone())?;
+        let history = client.get_task_reference_schemes(work_list.id).await?;
+        self.read_cache
+            .record_online(cache_guard.as_ref(), data_key, &query, &history)?;
+        Ok(history)
     }
 
     pub(crate) async fn load_unlocked_work_list_context_with_password(

@@ -25,13 +25,13 @@ pub use read_cache::{
     open_read_cache, seal_read_cache,
 };
 pub use task_references::{
-    TASK_REFERENCE_ORDINARY_REVISION_MAX, TASK_REFERENCE_PREFIX_MAX_BYTES,
+    ParsedTaskReference, TASK_REFERENCE_ORDINARY_REVISION_MAX, TASK_REFERENCE_PREFIX_MAX_BYTES,
     TASK_REFERENCE_PREFIX_MIN_BYTES, TASK_REFERENCE_REPAIR_REVISION_MAX,
     TASK_REFERENCE_REVISION_MAX, TASK_REFERENCE_SAFE_INTEGER_MAX,
     TASK_REFERENCE_SCHEME_AEAD_CIPHERTEXT_BYTES, TASK_REFERENCE_SCHEME_CONTEXT,
     TASK_REFERENCE_SCHEME_PLAINTEXT_BYTES, TASK_REFERENCE_SCHEME_SEALED_PAYLOAD_BYTES,
     TASK_REFERENCE_SCHEME_STRONG_BOX_BYTES, TaskReferenceSchemeV1, decrypt_task_reference_scheme,
-    encrypt_task_reference_scheme,
+    encrypt_task_reference_scheme, parse_project_reference_number, parse_task_reference,
 };
 
 use std::{fmt, io::Cursor};

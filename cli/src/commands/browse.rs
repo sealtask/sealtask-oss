@@ -1,6 +1,7 @@
 use crate::args::BrowseArgs;
 use crate::output::CliResult;
 use crate::picker::{PickerCandidate, pick_candidate, show_private_document};
+use crate::render::{task_reference_label, task_reference_title_label};
 use crate::terminal::with_progress;
 use sealtask_client_core::PublicError;
 use sealtask_client_runtime::{AgentTaskDetail, RuntimeClient};
@@ -36,7 +37,7 @@ pub(crate) async fn run_browse(runtime: &RuntimeClient, args: BrowseArgs) -> Cli
     .await?;
     let task_candidates = tasks
         .iter()
-        .map(|task| PickerCandidate::new(task.id, task.title.clone()))
+        .map(|task| PickerCandidate::new(task.id, Some(task_reference_title_label(task))))
         .collect::<Vec<_>>();
     if task_candidates.is_empty() {
         return Err(PublicError::validation(
@@ -56,15 +57,13 @@ pub(crate) async fn run_browse(runtime: &RuntimeClient, args: BrowseArgs) -> Cli
 
 fn private_task_document(detail: &AgentTaskDetail) -> (String, Vec<String>) {
     let task = &detail.task;
-    let title = format!(
-        "Task · {}",
-        task.title.as_deref().unwrap_or("<unreadable title>")
-    );
+    let title = format!("Task · {}", task_reference_title_label(task));
     let mut lines = vec![
         format!(
             "Title: {}",
             task.title.as_deref().unwrap_or("<unreadable title>")
         ),
+        format!("Reference: {}", task_reference_label(task)),
         format!("ID: {}", task.id),
         format!(
             "Project: {}",
@@ -180,6 +179,8 @@ mod tests {
                 created_at: Utc::now(),
                 updated_at: Utc::now(),
                 comment_count: 0,
+                reference_number: Some(31),
+                reference: Some("OPS-0031".to_string()),
                 title: Some(title_canary.to_string()),
                 body_markdown: Some(body_canary.to_string()),
                 body_rich_text: None,
@@ -197,7 +198,9 @@ mod tests {
 
         let (title, lines) = private_task_document(&detail);
         assert!(title.contains(title_canary));
+        assert!(title.contains("OPS-0031"));
         assert!(lines.iter().any(|line| line.contains(body_canary)));
+        assert!(lines.iter().any(|line| line == "Reference: OPS-0031"));
         assert!(
             !format!("{:?}", PickerCandidate::new(detail.task.id, None)).contains(title_canary)
         );

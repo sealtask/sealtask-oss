@@ -170,13 +170,14 @@ pub(crate) fn run_info(runtime: &RuntimeClient, format: OutputFormat) -> CliResu
         "manualPages": true,
         "taskListing": {
             "columns": [
-                "id", "title", "project", "project-id", "priority", "due", "status",
-                "comments", "created", "updated",
+                "reference", "id", "title", "project", "project-id", "priority", "due",
+                "status", "comments", "created", "updated",
             ],
             "sortFields": [
-                "id", "title", "project", "priority", "due", "status", "created", "updated",
+                "reference", "id", "title", "project", "priority", "due", "status",
+                "created", "updated",
             ],
-            "rawFields": ["id", "title", "url"],
+            "rawFields": ["reference", "id", "title", "url"],
             "rawFieldOutput": "newline-delimited",
             "webUrlEnvironment": "SEALTASK_WEB_URL",
             "webUrlDefault": "API origin",
@@ -247,7 +248,7 @@ pub(crate) fn run_info(runtime: &RuntimeClient, format: OutputFormat) -> CliResu
             println!(
                 "Project activation: sealtask pick project PROJECT --scope local|global (automation-safe)"
             );
-            println!("Task lists: --columns, --sort, --field id|title|url");
+            println!("Task lists: --columns, --sort, --field reference|id|title|url");
             println!("Streams: tasks watch, activity follow (--format jsonl for automation)");
             println!("Audit: projects audit [PROJECT]");
             println!("Dry runs: tasks create|update --dry-run");

@@ -433,6 +433,14 @@ pub(crate) fn print_work_lists(
                         "  Lifecycle:     {}",
                         lifecycle_label(list.archived_at.is_some())
                     );
+                    println!(
+                        "  Task refs:     {}",
+                        task_reference_status(
+                            list.task_references_enabled_at.is_some(),
+                            list.current_task_reference_scheme_revision,
+                            list.current_task_reference_scheme_revision_id,
+                        )
+                    );
                     println!("  Your role:     {}", terminal_line(&list.membership.role));
                     println!(
                         "  Your status:   {}",
@@ -501,6 +509,14 @@ pub(crate) fn print_work_list_detail(
                 "Lifecycle:   {}",
                 lifecycle_label(detail.work_list.archived_at.is_some())
             );
+            println!(
+                "Task refs:   {}",
+                task_reference_status(
+                    detail.work_list.task_references_enabled_at.is_some(),
+                    detail.work_list.current_task_reference_scheme_revision,
+                    detail.work_list.current_task_reference_scheme_revision_id,
+                )
+            );
             println!("Members:     {}", detail.members.len());
             println!(
                 "Your role:   {}",
@@ -545,11 +561,7 @@ pub(crate) fn print_task(task: &AgentTaskSummary, format: OutputFormat) -> CliRe
                         "Active"
                     }
                 );
-                if let Some(reference) = task.reference.as_deref() {
-                    println!("Ref:    {}", terminal_line(reference));
-                } else if task.reference_number.is_some() {
-                    println!("Ref:    <reference unavailable>");
-                }
+                println!("Ref:    {}", terminal_line(task_reference_label(task)));
                 if let Some(due) = task_due_detail(task) {
                     println!("Due:    {due}");
                 }
@@ -591,16 +603,7 @@ pub(crate) fn print_tasks(tasks: &[AgentTaskSummary], format: OutputFormat) -> C
                     "Active"
                 };
                 table.push_row([
-                    task.reference
-                        .as_deref()
-                        .unwrap_or_else(|| {
-                            if task.reference_number.is_some() {
-                                "<reference unavailable>"
-                            } else {
-                                "-"
-                            }
-                        })
-                        .to_string(),
+                    task_reference_label(task).to_string(),
                     id,
                     task.title.as_deref().unwrap_or("-").to_string(),
                     priority,
@@ -629,11 +632,7 @@ pub(crate) fn print_task_detail(detail: &AgentTaskDetail, format: OutputFormat) 
             println!("Task");
             println!("{}", "=".repeat(60));
             println!("ID:          {}", task.id);
-            if let Some(reference) = task.reference.as_deref() {
-                println!("Reference:   {}", terminal_line(reference));
-            } else if task.reference_number.is_some() {
-                println!("Reference:   <reference unavailable>");
-            }
+            println!("Reference:   {}", terminal_line(task_reference_label(task)));
             println!(
                 "Title:       {}",
                 terminal_line(task.title.as_deref().unwrap_or("-"))
@@ -754,6 +753,14 @@ pub(crate) fn print_raw_work_lists(
                         "  Lifecycle:     {}",
                         lifecycle_label(list.archived_at.is_some())
                     );
+                    println!(
+                        "  Task refs:     {}",
+                        task_reference_status(
+                            list.task_references_enabled_at.is_some(),
+                            list.current_task_reference_scheme_revision,
+                            list.current_task_reference_scheme_revision_id,
+                        )
+                    );
                     println!("  Your role:     {}", terminal_line(&list.membership.role));
                     println!(
                         "  Your status:   {}",
@@ -810,6 +817,14 @@ pub(crate) fn print_raw_work_list_detail(
                 "Lifecycle:   {}",
                 lifecycle_label(detail.work_list.archived_at.is_some())
             );
+            println!(
+                "Task refs:   {}",
+                task_reference_status(
+                    detail.work_list.task_references_enabled_at.is_some(),
+                    detail.work_list.current_task_reference_scheme_revision,
+                    detail.work_list.current_task_reference_scheme_revision_id,
+                )
+            );
             println!("Members:     {}", detail.members.len());
         }
     }
@@ -818,6 +833,18 @@ pub(crate) fn print_raw_work_list_detail(
 
 fn lifecycle_label(is_archived: bool) -> &'static str {
     if is_archived { "Archived" } else { "Active" }
+}
+
+fn task_reference_status(
+    enabled: bool,
+    current_revision: Option<i64>,
+    current_revision_id: Option<uuid::Uuid>,
+) -> String {
+    match (enabled, current_revision, current_revision_id) {
+        (false, None, None) => "disabled".to_string(),
+        (true, Some(revision), Some(_)) => format!("enabled (revision {revision})"),
+        _ => "enabled (metadata incomplete)".to_string(),
+    }
 }
 
 fn priority_label(priority: Option<i8>) -> String {
@@ -833,6 +860,27 @@ fn priority_label(priority: Option<i8>) -> String {
 
 pub(crate) fn task_due_date(task: &AgentTaskSummary) -> String {
     format_due_date(task.due_at, task.work_list_timezone.as_deref())
+}
+
+pub(crate) fn task_reference_label(task: &AgentTaskSummary) -> &str {
+    task.reference.as_deref().unwrap_or_else(|| {
+        if task.reference_number.is_some() {
+            "<reference unavailable>"
+        } else {
+            "-"
+        }
+    })
+}
+
+pub(crate) fn task_reference_title_label(task: &AgentTaskSummary) -> String {
+    let title = task.title.as_deref().unwrap_or("<unreadable task>");
+    match task.reference.as_deref() {
+        Some(reference) => format!("{reference} · {title}"),
+        None if task.reference_number.is_some() => {
+            format!("<reference unavailable> · {title}")
+        }
+        None => title.to_string(),
+    }
 }
 
 fn task_due_detail(task: &AgentTaskSummary) -> Option<String> {
@@ -885,6 +933,9 @@ pub(crate) fn print_raw_tasks(tasks: &[TaskResponse], format: OutputFormat) -> C
         OutputFormat::Table => {
             let ids = selectable_short_ids(&tasks.iter().map(|task| task.id).collect::<Vec<_>>());
             let mut table = Table::new([
+                Column::required("Reference #", 11, 19)
+                    .align(Alignment::Right)
+                    .preserve(),
                 Column::required("ID", 11, 39).preserve(),
                 Column::optional("Pri", 3, 3, 40)
                     .align(Alignment::Right)
@@ -904,6 +955,7 @@ pub(crate) fn print_raw_tasks(tasks: &[TaskResponse], format: OutputFormat) -> C
                     "Active"
                 };
                 table.push_row([
+                    raw_reference_number_label(task.reference_number),
                     id,
                     priority,
                     due,
@@ -941,6 +993,9 @@ pub(crate) fn print_raw_my_tasks(
                 .zip(selectable_short_ids(&distinct_project_ids))
                 .collect::<HashMap<_, _>>();
             let mut table = Table::new([
+                Column::required("Reference #", 11, 19)
+                    .align(Alignment::Right)
+                    .preserve(),
                 Column::required("Task ID", 11, 39).preserve(),
                 Column::required("Project ID", 11, 39).preserve(),
                 Column::optional("Pri", 3, 3, 40)
@@ -957,7 +1012,14 @@ pub(crate) fn print_raw_my_tasks(
                 let priority = priority_label(task.priority);
                 let due = format_utc_due_date(task.due_at);
                 let status = if task.is_completed { "Done" } else { "Active" };
-                table.push_row([task_id, project_id, priority, due, status.to_string()]);
+                table.push_row([
+                    raw_reference_number_label(task.reference_number),
+                    task_id,
+                    project_id,
+                    priority,
+                    due,
+                    status.to_string(),
+                ]);
             }
             print!("{}", table.render());
             println!("\nTotal: {} task(s)", tasks.len());
@@ -978,6 +1040,10 @@ pub(crate) fn print_raw_task_detail(
             println!("Raw Task");
             println!("{}", "=".repeat(60));
             println!("ID:          {}", detail.task.id);
+            println!(
+                "Reference #: {}",
+                raw_reference_number_label(detail.task.reference_number)
+            );
             println!("Project:     {}", detail.task.work_list_id);
             if let Some(due_at) = detail.task.due_at {
                 println!("Due (UTC):   {}", due_at.format("%Y-%m-%d %H:%M UTC"));
@@ -986,6 +1052,10 @@ pub(crate) fn print_raw_task_detail(
         }
     }
     Ok(())
+}
+
+fn raw_reference_number_label(reference_number: Option<i64>) -> String {
+    reference_number.map_or_else(|| "-".to_string(), |number| number.to_string())
 }
 
 #[cfg(test)]
@@ -1023,6 +1093,28 @@ mod tests {
     fn displayed_short_ids_force_id_selector_semantics() {
         let id = uuid::Uuid::parse_str("01900000-0000-7000-8000-000000000001").expect("UUID");
         assert_eq!(selectable_short_ids(&[id]), ["id:01900000"]);
+    }
+
+    #[test]
+    fn task_reference_labels_distinguish_enabled_unavailable_and_disabled_states() {
+        let mut task = task_summary_for_reference_test();
+        task.reference_number = Some(31);
+        task.reference = Some("LAW-0031".to_string());
+        assert_eq!(task_reference_label(&task), "LAW-0031");
+        assert_eq!(task_reference_title_label(&task), "LAW-0031 · Contract");
+
+        task.reference = None;
+        assert_eq!(task_reference_label(&task), "<reference unavailable>");
+        assert_eq!(
+            task_reference_title_label(&task),
+            "<reference unavailable> · Contract"
+        );
+
+        task.reference_number = None;
+        assert_eq!(task_reference_label(&task), "-");
+        assert_eq!(task_reference_title_label(&task), "Contract");
+        assert_eq!(raw_reference_number_label(Some(31)), "31");
+        assert_eq!(raw_reference_number_label(None), "-");
     }
 
     #[test]
@@ -1075,5 +1167,44 @@ mod tests {
             legacy_json["text"], input,
             "JSON output must preserve the decrypted text exactly"
         );
+    }
+
+    fn task_summary_for_reference_test() -> AgentTaskSummary {
+        let now = Utc::now();
+        AgentTaskSummary {
+            id: uuid::Uuid::now_v7(),
+            work_list_id: uuid::Uuid::now_v7(),
+            work_list_title: Some("Legal".to_string()),
+            work_list_timezone: Some("UTC".to_string()),
+            created_by_membership_id: uuid::Uuid::now_v7(),
+            section_id: None,
+            priority: None,
+            position: None,
+            due_at: None,
+            start_at: None,
+            completed_at: None,
+            archived_at: None,
+            is_completed: false,
+            recurrence_id: None,
+            recurrence_schedule: None,
+            recurrence_iteration: None,
+            materialized_at: None,
+            created_at: now,
+            updated_at: now,
+            comment_count: 0,
+            reference_number: None,
+            reference: None,
+            title: Some("Contract".to_string()),
+            body_markdown: None,
+            body_rich_text: None,
+            checklist: None,
+            attachments: None,
+            references: None,
+            mentions: None,
+            client_meta: None,
+            recurrence_state: None,
+            delegations: Vec::new(),
+            read_error: None,
+        }
     }
 }

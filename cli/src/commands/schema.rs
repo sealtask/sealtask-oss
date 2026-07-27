@@ -227,6 +227,7 @@ mod tests {
         assert_eq!(
             columns.possible_values,
             [
+                "reference",
                 "id",
                 "title",
                 "project",
@@ -239,12 +240,31 @@ mod tests {
                 "updated",
             ]
         );
+        let sort = task_schema
+            .arguments
+            .iter()
+            .find(|argument| argument.long.as_deref() == Some("sort"))
+            .expect("sort argument");
+        assert_eq!(
+            sort.possible_values,
+            [
+                "reference",
+                "id",
+                "title",
+                "project",
+                "priority",
+                "due",
+                "status",
+                "created",
+                "updated",
+            ]
+        );
         let field = task_schema
             .arguments
             .iter()
             .find(|argument| argument.long.as_deref() == Some("field"))
             .expect("field argument");
-        assert_eq!(field.possible_values, ["id", "title", "url"]);
+        assert_eq!(field.possible_values, ["reference", "id", "title", "url"]);
 
         let projects = select_command(&mut root, &["projects".to_string(), "list".to_string()])
             .expect("projects list");

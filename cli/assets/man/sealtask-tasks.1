@@ -165,7 +165,13 @@ sealtask\-tasks\-list(1)
 List tasks in the selected/current project, or assigned tasks when none is selected
 .TP
 sealtask\-tasks\-get(1)
-Show one decrypted task, including comments and attachment metadata
+Show one decrypted task; a full reference can infer its project when no context is selected
+.TP
+sealtask\-tasks\-resolve(1)
+Resolve a current or historical task reference, failing on cross\-project ambiguity
+.TP
+sealtask\-tasks\-task\-references(1)
+Install an owner repair or explicitly quarantine unreadable history
 .TP
 sealtask\-tasks\-watch(1)
 Follow authoritative task changes in one project until interrupted
@@ -202,4 +208,5 @@ Upload, delete, read, or download encrypted task attachments
 .SH EXTRA
 Examples:
   sealtask tasks list
+  sealtask tasks get OPS\-184
   sealtask tasks create \-\-title "Ship 0.4" \-\-due tomorrow

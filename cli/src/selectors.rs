@@ -1,5 +1,6 @@
 use sealtask_client_api::SectionSnapshotPayload;
 use sealtask_client_core::{PublicError, PublicResult};
+use sealtask_client_crypto::{parse_project_reference_number, parse_task_reference};
 use sealtask_client_runtime::AgentWorkListSummary;
 use serde::Serialize;
 use std::collections::{HashMap, HashSet};
@@ -26,6 +27,61 @@ impl EntitySelector {
                 .strip_prefix("id:")
                 .and_then(|value| Uuid::parse_str(value).ok())
         })
+    }
+
+    pub(crate) fn task_target(&self) -> PublicResult<TaskSelectorTarget<'_>> {
+        let value = self.as_str();
+        if value.starts_with("name:") || value.starts_with("id:") || self.exact_id().is_some() {
+            return Ok(TaskSelectorTarget::Entity);
+        }
+
+        if value.starts_with('#') {
+            return parse_project_reference_number(value)
+                .map(TaskSelectorTarget::ProjectReferenceNumber)
+                .ok_or_else(invalid_task_reference_selector);
+        }
+
+        if let Some(parsed) = parse_task_reference(value) {
+            return Ok(TaskSelectorTarget::FullReference {
+                reference: value,
+                reference_number: parsed.reference_number,
+            });
+        }
+
+        if looks_like_task_reference(value) {
+            return Err(invalid_task_reference_selector());
+        }
+
+        Ok(TaskSelectorTarget::Entity)
+    }
+}
+
+#[derive(Clone, Copy, Eq, PartialEq)]
+pub(crate) enum TaskSelectorTarget<'a> {
+    Entity,
+    FullReference {
+        reference: &'a str,
+        reference_number: i64,
+    },
+    ProjectReferenceNumber(i64),
+}
+
+impl fmt::Debug for TaskSelectorTarget<'_> {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Entity => formatter.write_str("TaskSelectorTarget::Entity"),
+            Self::FullReference {
+                reference_number, ..
+            } => formatter
+                .debug_struct("TaskSelectorTarget::FullReference")
+                .field("reference", &"<redacted>")
+                .field("reference_number", reference_number)
+                .finish(),
+            Self::ProjectReferenceNumber(reference_number) => formatter
+                .debug_tuple("TaskSelectorTarget::ProjectReferenceNumber")
+                .field(reference_number)
+                .finish(),
+        }
     }
 }
 
@@ -394,6 +450,27 @@ fn looks_like_id_prefix(value: &str) -> bool {
     length >= MINIMUM_ID_PREFIX_LENGTH
 }
 
+fn looks_like_task_reference(value: &str) -> bool {
+    let Some((prefix, number)) = value.trim().split_once('-') else {
+        return false;
+    };
+    let prefix = prefix.trim();
+    let number = number.trim();
+    !prefix.is_empty()
+        && prefix
+            .bytes()
+            .next()
+            .is_some_and(|byte| byte.is_ascii_alphabetic())
+        && prefix.bytes().all(|byte| byte.is_ascii_alphanumeric())
+        && (number.is_empty() || number.chars().all(char::is_numeric))
+}
+
+fn invalid_task_reference_selector() -> PublicError {
+    PublicError::validation(
+        "invalid task reference selector; expected PREFIX-NUMBER (for example OPS-184) or #NUMBER in the selected project; use 'name:<TITLE>' to select a task whose title looks like a reference",
+    )
+}
+
 fn simple_id(id: Uuid) -> String {
     id.simple().to_string()
 }
@@ -579,6 +656,9 @@ mod tests {
             created_at: now,
             updated_at: now,
             archived_at: None,
+            task_references_enabled_at: None,
+            current_task_reference_scheme_revision: None,
+            current_task_reference_scheme_revision_id: None,
             membership: AgentMembership {
                 id: Uuid::from_u128(103),
                 user_id: Uuid::from_u128(104),
@@ -607,6 +687,58 @@ mod tests {
         let debug = format!("{value:?}");
         assert_eq!(debug, "EntitySelector(<redacted>)");
         assert!(!debug.contains(value.as_str()));
+    }
+
+    #[test]
+    fn task_selectors_recognize_full_and_project_local_references() {
+        let full = selector(" law - 00184 ");
+        assert!(matches!(
+            full.task_target().expect("full reference"),
+            TaskSelectorTarget::FullReference {
+                reference_number: 184,
+                ..
+            }
+        ));
+
+        let local = selector("#00184");
+        assert_eq!(
+            local.task_target().expect("project-local reference"),
+            TaskSelectorTarget::ProjectReferenceNumber(184)
+        );
+    }
+
+    #[test]
+    fn reference_shaped_task_titles_require_the_name_escape() {
+        assert!(matches!(
+            selector("OPS-184").task_target().expect("valid reference"),
+            TaskSelectorTarget::FullReference { .. }
+        ));
+        assert_eq!(
+            selector("name:OPS-184")
+                .task_target()
+                .expect("explicit title"),
+            TaskSelectorTarget::Entity
+        );
+        assert_eq!(
+            selector("Fix-login").task_target().expect("ordinary title"),
+            TaskSelectorTarget::Entity
+        );
+
+        for invalid in ["OPS-0", "OPS-9007199254740992", "#0", "#not-a-number"] {
+            let error = selector(invalid)
+                .task_target()
+                .expect_err("reference-shaped selector must fail closed");
+            assert!(error.to_string().contains("name:<TITLE>"), "{invalid}");
+        }
+    }
+
+    #[test]
+    fn task_selector_debug_redacts_full_reference_prefix() {
+        let selector = selector("CUSTOMER42-7");
+        let target = selector.task_target().expect("full reference");
+        let debug = format!("{target:?}");
+        assert!(debug.contains("reference_number: 7"));
+        assert!(!debug.contains("CUSTOMER42"));
     }
 
     #[test]
