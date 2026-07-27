@@ -49,6 +49,9 @@ use tokio::sync::Notify;
 use uuid::Uuid;
 use zeroize::Zeroize;
 
+const CLI_READINESS_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(15);
+const MAX_CHILD_DIAGNOSTIC_BYTES: usize = 4 * 1024;
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn d6_project_audit_excludes_encrypted_payload_canaries() {
     let fixture = TestFixture::new();
@@ -107,9 +110,11 @@ async fn d6_task_watch_subscribes_then_refetches_and_sigint_exits_130() {
         ],
         &fixture.password,
     );
-    wait_for_condition("watch refetches once after the queued event burst", || {
-        state.lock().expect("state lock").d6_watch_task_reads >= 2
-    })
+    wait_for_cli_condition(
+        &mut child,
+        "watch refetches once after the queued event burst",
+        || state.lock().expect("state lock").d6_watch_task_reads >= 2,
+    )
     .await;
     tokio::time::sleep(std::time::Duration::from_millis(100)).await;
     signal_process(&mut child, libc::SIGINT);
@@ -195,7 +200,7 @@ async fn d6_activity_is_oldest_first_and_sigterm_exits_130_without_stdout_status
             "250ms",
         ],
     );
-    wait_for_condition("activity initial page and poll", || {
+    wait_for_cli_condition(&mut child, "activity initial page and poll", || {
         state.lock().expect("state lock").d6_activity_reads >= 2
     })
     .await;
@@ -9199,14 +9204,86 @@ fn spawn_cli_process_with_stdin(
     child
 }
 
-async fn wait_for_condition(description: &str, mut condition: impl FnMut() -> bool) {
-    tokio::time::timeout(std::time::Duration::from_secs(5), async {
-        while !condition() {
-            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+async fn wait_for_cli_condition(
+    child: &mut Child,
+    description: &str,
+    mut condition: impl FnMut() -> bool,
+) {
+    let deadline = tokio::time::Instant::now() + CLI_READINESS_TIMEOUT;
+    loop {
+        match child.try_wait() {
+            Ok(Some(status)) => {
+                let (stdout, stderr) = take_child_diagnostics(child);
+                panic!(
+                    "CLI exited with {status} while waiting for {description}\n\
+                     bounded stdout: {stdout:?}\n\
+                     bounded stderr: {stderr:?}"
+                );
+            }
+            Ok(None) => {}
+            Err(error) => {
+                let (status, kill_error, stdout, stderr) = terminate_child(child);
+                panic!(
+                    "could not inspect CLI while waiting for {description}: {error}; \
+                     kill error: {kill_error:?}; final status: {status:?}\n\
+                     bounded stdout: {stdout:?}\n\
+                     bounded stderr: {stderr:?}"
+                );
+            }
         }
-    })
-    .await
-    .unwrap_or_else(|_| panic!("timed out waiting for {description}"));
+        if condition() {
+            return;
+        }
+        if tokio::time::Instant::now() >= deadline {
+            let (status, kill_error, stdout, stderr) = terminate_child(child);
+            panic!(
+                "timed out after {CLI_READINESS_TIMEOUT:?} waiting for {description}; \
+                 kill error: {kill_error:?}; final status: {status:?}\n\
+                 bounded stdout: {stdout:?}\n\
+                 bounded stderr: {stderr:?}"
+            );
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+    }
+}
+
+fn terminate_child(
+    child: &mut Child,
+) -> (
+    Option<std::process::ExitStatus>,
+    Option<String>,
+    String,
+    String,
+) {
+    let kill_error = child.kill().err().map(|error| error.to_string());
+    let status = child.wait().ok();
+    let (stdout, stderr) = take_child_diagnostics(child);
+    (status, kill_error, stdout, stderr)
+}
+
+fn take_child_diagnostics(child: &mut Child) -> (String, String) {
+    (
+        bounded_child_output(child.stdout.take()),
+        bounded_child_output(child.stderr.take()),
+    )
+}
+
+fn bounded_child_output(reader: Option<impl Read>) -> String {
+    let Some(reader) = reader else {
+        return "<not captured>".to_string();
+    };
+    let mut bytes = Vec::with_capacity(MAX_CHILD_DIAGNOSTIC_BYTES + 1);
+    let mut reader = reader.take((MAX_CHILD_DIAGNOSTIC_BYTES + 1) as u64);
+    if let Err(error) = reader.read_to_end(&mut bytes) {
+        return format!("<failed to read child output: {error}>");
+    }
+    let truncated = bytes.len() > MAX_CHILD_DIAGNOSTIC_BYTES;
+    bytes.truncate(MAX_CHILD_DIAGNOSTIC_BYTES);
+    let mut output = String::from_utf8_lossy(&bytes).into_owned();
+    if truncated {
+        output.push_str("\n<output truncated>");
+    }
+    output
 }
 
 #[cfg(unix)]
