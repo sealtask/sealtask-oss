@@ -29,9 +29,10 @@ pub use note_transport_limits::{
 };
 pub use notes::{CreateNoteRequest, DeleteNoteRequest, NotePage, NoteResponse, UpdateNoteRequest};
 pub use transport::{
-    ApiTransportOptions, CONTROL_PLANE_USER_AGENT, DEFAULT_API_CONNECT_TIMEOUT,
-    DEFAULT_API_READ_TIMEOUT, DEFAULT_API_REQUEST_TIMEOUT, PublicApiClient, RequestCorrelation,
-    build_control_plane_http_client,
+    ApiCancellationToken, ApiRetryPolicy, ApiTransportOptions, CONTROL_PLANE_USER_AGENT,
+    DEFAULT_API_CONNECT_TIMEOUT, DEFAULT_API_MAX_RETRIES, DEFAULT_API_READ_TIMEOUT,
+    DEFAULT_API_REQUEST_TIMEOUT, MAX_API_RETRIES, MAX_API_RETRY_DELAY, PublicApiClient,
+    RequestCorrelation, build_control_plane_http_client,
 };
 
 use chrono::{DateTime, Utc};
@@ -229,7 +230,7 @@ impl PublicApiClient {
         &mut self,
         client_login_state: &str,
     ) -> PublicResult<OpaqueExportKeyStartResponse> {
-        self.post(
+        self.post_no_replay(
             "/auth/opaque/export-key/start",
             &OpaqueExportKeyStartRequest { client_login_state },
         )
@@ -261,8 +262,17 @@ impl PublicApiClient {
         work_list_id: Uuid,
         payload: &CreateTaskRequest,
     ) -> PublicResult<TaskResponse> {
-        self.post(&format!("/work-lists/{work_list_id}/tasks"), payload)
-            .await
+        let path = format!("/work-lists/{work_list_id}/tasks");
+        match (
+            payload.idempotency_key.is_some(),
+            payload.idempotency_commitment.is_some(),
+        ) {
+            (true, true) => self.post_replay_safe(&path, payload).await,
+            (false, false) => self.post(&path, payload).await,
+            _ => Err(PublicError::validation(
+                "task idempotency key and commitment must be provided together",
+            )),
+        }
     }
 
     pub async fn update_task(
@@ -284,11 +294,13 @@ impl PublicApiClient {
         task_id: Uuid,
         payload: &MoveTaskRequest,
     ) -> PublicResult<TaskResponse> {
-        self.post(
-            &format!("/work-lists/{work_list_id}/tasks/{task_id}/move"),
-            payload,
-        )
-        .await
+        let path = format!("/work-lists/{work_list_id}/tasks/{task_id}/move");
+        if payload.section_boundary.is_some() {
+            self.post_state_transition(&path, payload, "task completion or reopen transition")
+                .await
+        } else {
+            self.post(&path, payload).await
+        }
     }
 
     pub async fn archive_task(
@@ -297,9 +309,10 @@ impl PublicApiClient {
         task_id: Uuid,
         payload: &ArchiveTaskRequest,
     ) -> PublicResult<TaskResponse> {
-        self.post(
+        self.post_state_transition(
             &format!("/work-lists/{work_list_id}/tasks/{task_id}/archive"),
             payload,
+            "task archive",
         )
         .await
     }
@@ -310,9 +323,10 @@ impl PublicApiClient {
         task_id: Uuid,
         payload: &UnarchiveTaskRequest,
     ) -> PublicResult<TaskResponse> {
-        self.post(
+        self.post_state_transition(
             &format!("/work-lists/{work_list_id}/tasks/{task_id}/unarchive"),
             payload,
+            "task unarchive",
         )
         .await
     }
@@ -881,6 +895,39 @@ mod tests {
         (api_url, server)
     }
 
+    async fn serve_repeated_response(
+        attempts: usize,
+        status: &'static str,
+        body: &'static [u8],
+    ) -> (String, tokio::task::JoinHandle<usize>) {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+            .await
+            .expect("listener");
+        let api_url = format!("http://{}", listener.local_addr().expect("address"));
+        let server = tokio::spawn(async move {
+            for _ in 0..attempts {
+                let (mut stream, _) = listener.accept().await.expect("connection");
+                let mut request = Vec::new();
+                let mut buffer = [0_u8; 1_024];
+                while !request.windows(4).any(|window| window == b"\r\n\r\n") {
+                    let read = stream.read(&mut buffer).await.expect("request");
+                    if read == 0 {
+                        break;
+                    }
+                    request.extend_from_slice(&buffer[..read]);
+                }
+                let headers = format!(
+                    "HTTP/1.1 {status}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                    body.len()
+                );
+                stream.write_all(headers.as_bytes()).await.expect("headers");
+                stream.write_all(body).await.expect("body");
+            }
+            attempts
+        });
+        (api_url, server)
+    }
+
     async fn serve_confirmed_note_mutation_body_failure(
         failure: NoteMutationBodyFailure,
     ) -> (String, tokio::task::JoinHandle<()>) {
@@ -945,6 +992,219 @@ mod tests {
             None,
             "HTTP {status} must win over local body-read classification"
         );
+    }
+
+    fn assert_committed_note_processing_error(
+        error: &PublicError,
+        operation: &str,
+        response_processing: &str,
+    ) {
+        assert_eq!(error.code(), "committed_but_local_processing_failed");
+        let rendered = error.to_string();
+        assert!(rendered.contains(operation));
+        assert!(rendered.contains(&format!("response_processing={response_processing}")));
+        assert!(rendered.contains("fetch the resource to inspect authoritative state"));
+        assert!(rendered.contains("do not repeat the mutation"));
+    }
+
+    fn create_task_request(
+        idempotency_key: Option<&str>,
+        idempotency_commitment: Option<&str>,
+    ) -> CreateTaskRequest {
+        CreateTaskRequest {
+            title_ciphertext: "title".to_string(),
+            title_ciphertext_proof: "title-proof".to_string(),
+            payload_ciphertext: "payload".to_string(),
+            payload_ciphertext_proof: "payload-proof".to_string(),
+            attachment_ids: Vec::new(),
+            priority: None,
+            due_at: None,
+            start_at: None,
+            section_id: None,
+            idempotency_key: idempotency_key.map(str::to_string),
+            idempotency_commitment: idempotency_commitment.map(str::to_string),
+        }
+    }
+
+    #[tokio::test]
+    async fn task_create_replay_requires_a_complete_idempotency_pair() {
+        for request in [
+            create_task_request(Some("fixed-key"), None),
+            create_task_request(None, Some("fixed-commitment")),
+        ] {
+            let api_url = "https://api.example";
+            let mut client = PublicApiClient::with_credentials(api_url, test_credentials(api_url))
+                .expect("client");
+            let error = client
+                .create_task(Uuid::now_v7(), &request)
+                .await
+                .expect_err("partial idempotency metadata must be rejected locally");
+            assert_eq!(error.code(), "validation");
+            assert!(
+                error
+                    .to_string()
+                    .contains("key and commitment must be provided together")
+            );
+            assert_eq!(client.last_request_correlation(), None);
+        }
+
+        let (api_url, server) =
+            serve_repeated_response(1, "503 Service Unavailable", br#"{"error":"temporary"}"#)
+                .await;
+        let options = ApiTransportOptions::default()
+            .with_retry_policy(ApiRetryPolicy::new(1).expect("retry policy"));
+        let mut client = PublicApiClient::with_credentials_and_options(
+            &api_url,
+            test_credentials(&api_url),
+            options,
+        )
+        .expect("client");
+        let error = client
+            .create_task(Uuid::now_v7(), &create_task_request(None, None))
+            .await
+            .expect_err("non-idempotent create server failure is ambiguous");
+        assert_eq!(error.code(), "outcome_ambiguous");
+        assert_eq!(
+            client
+                .last_request_correlation()
+                .expect("correlation")
+                .attempt_count(),
+            1
+        );
+        assert_eq!(server.await.expect("server"), 1);
+
+        let (api_url, server) =
+            serve_repeated_response(2, "503 Service Unavailable", br#"{"error":"temporary"}"#)
+                .await;
+        let options = ApiTransportOptions::default()
+            .with_retry_policy(ApiRetryPolicy::new(1).expect("retry policy"));
+        let mut client = PublicApiClient::with_credentials_and_options(
+            &api_url,
+            test_credentials(&api_url),
+            options,
+        )
+        .expect("client");
+        let error = client
+            .create_task(
+                Uuid::now_v7(),
+                &create_task_request(Some("fixed-key"), Some("fixed-commitment")),
+            )
+            .await
+            .expect_err("bounded replay budget is exhausted");
+        assert_eq!(error.http_status(), Some(503));
+        assert_eq!(
+            client
+                .last_request_correlation()
+                .expect("correlation")
+                .attempt_count(),
+            2
+        );
+        assert_eq!(server.await.expect("server"), 2);
+    }
+
+    #[tokio::test]
+    async fn runtime_owned_note_and_attachment_reconciliation_stays_single_wire() {
+        let options = ApiTransportOptions::default()
+            .with_retry_policy(ApiRetryPolicy::new(MAX_API_RETRIES).expect("retry policy"));
+        let (api_url, server) =
+            serve_single_response("503 Service Unavailable", None, b"temporary".to_vec()).await;
+        let mut client = PublicApiClient::with_credentials_and_options(
+            &api_url,
+            test_credentials(&api_url),
+            options,
+        )
+        .expect("client");
+        let request = CreateNoteRequest {
+            idempotency_key: "fixed-note-key".to_string(),
+            idempotency_commitment: "fixed-note-commitment".to_string(),
+            title_ciphertext: "title".to_string(),
+            title_ciphertext_proof: "title-proof".to_string(),
+            payload_ciphertext: "payload".to_string(),
+            payload_ciphertext_proof: "payload-proof".to_string(),
+            is_private: false,
+            note_key_ciphertext: None,
+            audit_patch: None,
+        };
+        let encoded =
+            note_transport::EncodedNoteRequest::encode(&request).expect("encode note request");
+        let error = client
+            .create_note_encoded(Uuid::now_v7(), encoded)
+            .await
+            .expect("status-bearing response")
+            .decode()
+            .expect_err("server failure");
+        assert_eq!(error.http_status(), Some(503));
+        assert_eq!(
+            client
+                .last_request_correlation()
+                .expect("correlation")
+                .attempt_count(),
+            1
+        );
+        server.await.expect("server");
+
+        let (api_url, server) =
+            serve_single_response("503 Service Unavailable", None, b"temporary".to_vec()).await;
+        let mut client = PublicApiClient::with_credentials_and_options(
+            &api_url,
+            test_credentials(&api_url),
+            options,
+        )
+        .expect("client");
+        let error = client
+            .complete_attachment_upload(
+                Uuid::now_v7(),
+                Uuid::now_v7(),
+                &CompleteAttachmentUploadRequest {
+                    ciphertext_bytes: 42,
+                },
+            )
+            .await
+            .expect_err("server failure");
+        assert_eq!(error.http_status(), Some(503));
+        assert_eq!(
+            client
+                .last_request_correlation()
+                .expect("correlation")
+                .attempt_count(),
+            1
+        );
+        server.await.expect("server");
+    }
+
+    #[tokio::test]
+    async fn opaque_export_handshake_is_single_wire_and_not_a_mutation_ambiguity() {
+        const LOGIN_STATE: &str = "opaque-login-state-secret-canary";
+
+        let options = ApiTransportOptions::default()
+            .with_retry_policy(ApiRetryPolicy::new(MAX_API_RETRIES).expect("retry policy"));
+        let (api_url, server) =
+            serve_single_response("503 Service Unavailable", None, b"temporary".to_vec()).await;
+        let mut client = PublicApiClient::with_credentials_and_options(
+            &api_url,
+            test_credentials(&api_url),
+            options,
+        )
+        .expect("client");
+
+        let error = client
+            .start_opaque_export_key(LOGIN_STATE)
+            .await
+            .expect_err("handshake server failure");
+        assert_eq!(error.http_status(), Some(503));
+        assert_ne!(error.code(), "outcome_ambiguous");
+        assert_eq!(
+            client
+                .last_request_correlation()
+                .expect("correlation")
+                .attempt_count(),
+            1
+        );
+        for rendered in [error.to_string(), format!("{error:?}")] {
+            assert!(!rendered.contains(LOGIN_STATE));
+            assert!(!rendered.contains(&api_url));
+        }
+        server.await.expect("server");
     }
 
     #[test]
@@ -1050,7 +1310,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn bounded_note_mutation_preserves_known_201_across_body_failures() {
+    async fn bounded_note_create_maps_confirmed_2xx_body_failures_to_committed() {
         for failure in [
             NoteMutationBodyFailure::Oversized,
             NoteMutationBodyFailure::Truncated,
@@ -1090,16 +1350,128 @@ mod tests {
             let error = response
                 .decode()
                 .expect_err("the incomplete response body must not decode");
-            assert_eq!(
-                error.response_failure_kind(),
-                Some(failure.expected_kind()),
-                "{} response-body failure must remain a local processing error",
-                failure.label()
+            assert_committed_note_processing_error(
+                &error,
+                "note creation",
+                failure.expected_kind().code(),
             );
             assert!(
                 !error.to_string().contains(&api_url),
                 "response-body failures must not expose the request origin"
             );
+            server.await.expect("server");
+        }
+    }
+
+    #[tokio::test]
+    async fn bounded_note_create_and_update_map_confirmed_2xx_decode_failures_to_committed() {
+        for (body, expected_code) in [
+            (
+                br#"{"titleCiphertext":"unterminated""#.to_vec(),
+                "response_json_malformed",
+            ),
+            (br#"{"id":false}"#.to_vec(), "response_json_schema"),
+        ] {
+            let (api_url, server) = serve_single_response("201 Created", None, body.clone()).await;
+            let mut client =
+                PublicApiClient::with_credentials(&api_url, test_credentials(&api_url))
+                    .expect("API client");
+            let encoded = note_transport::EncodedNoteRequest::encode(&CreateNoteRequest {
+                idempotency_key: "note-confirmed-decode".to_string(),
+                idempotency_commitment: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA".to_string(),
+                title_ciphertext: "title".to_string(),
+                title_ciphertext_proof: "title-proof".to_string(),
+                payload_ciphertext: "payload".to_string(),
+                payload_ciphertext_proof: "payload-proof".to_string(),
+                is_private: false,
+                note_key_ciphertext: None,
+                audit_patch: None,
+            })
+            .expect("encode create request");
+            let error = client
+                .create_note_encoded(Uuid::now_v7(), encoded)
+                .await
+                .expect("receive status-bearing create response")
+                .decode()
+                .expect_err("malformed or schema-invalid response must not decode");
+            assert_committed_note_processing_error(&error, "note creation", expected_code);
+            assert!(!format!("{error:?}").contains(&api_url));
+            server.await.expect("server");
+
+            let (api_url, server) = serve_single_response("200 OK", None, body).await;
+            let mut client =
+                PublicApiClient::with_credentials(&api_url, test_credentials(&api_url))
+                    .expect("API client");
+            let encoded = note_transport::EncodedNoteRequest::encode(&UpdateNoteRequest {
+                title_ciphertext: Some("updated-title".to_string()),
+                ..UpdateNoteRequest::default()
+            })
+            .expect("encode update request");
+
+            let error = client
+                .update_note_encoded(Uuid::now_v7(), Uuid::now_v7(), encoded)
+                .await
+                .expect("receive status-bearing update response")
+                .decode()
+                .expect_err("malformed or schema-invalid response must not decode");
+
+            assert_committed_note_processing_error(&error, "note update", expected_code);
+            assert!(!format!("{error:?}").contains(&api_url));
+            server.await.expect("server");
+        }
+    }
+
+    #[tokio::test]
+    async fn bounded_note_update_and_delete_map_confirmed_2xx_body_failures_to_committed() {
+        for failure in [
+            NoteMutationBodyFailure::Oversized,
+            NoteMutationBodyFailure::Truncated,
+        ] {
+            let (api_url, server) =
+                serve_bounded_body_failure("200 OK", "", failure, MAX_NOTE_DECOMPRESSED_PAGE_BYTES)
+                    .await;
+            let mut client =
+                PublicApiClient::with_credentials(&api_url, test_credentials(&api_url))
+                    .expect("API client");
+            let encoded = note_transport::EncodedNoteRequest::encode(&UpdateNoteRequest {
+                title_ciphertext: Some("updated-title".to_string()),
+                ..UpdateNoteRequest::default()
+            })
+            .expect("encode update request");
+            let error = client
+                .update_note_encoded(Uuid::now_v7(), Uuid::now_v7(), encoded)
+                .await
+                .expect("receive status-bearing update response")
+                .decode()
+                .expect_err("incomplete update response must not decode");
+            assert_committed_note_processing_error(
+                &error,
+                "note update",
+                failure.expected_kind().code(),
+            );
+            assert!(!format!("{error:?}").contains(&api_url));
+            server.await.expect("server");
+
+            let (api_url, server) =
+                serve_bounded_body_failure("200 OK", "", failure, MAX_NOTE_DECOMPRESSED_PAGE_BYTES)
+                    .await;
+            let mut client =
+                PublicApiClient::with_credentials(&api_url, test_credentials(&api_url))
+                    .expect("API client");
+            let encoded = note_transport::EncodedNoteRequest::encode(&DeleteNoteRequest::default())
+                .expect("encode delete request");
+            let error = client
+                .delete_note_encoded(Uuid::now_v7(), Uuid::now_v7(), encoded)
+                .await
+                .expect("receive status-bearing delete response")
+                .decode()
+                .expect_err("incomplete delete response must not decode");
+            assert_committed_note_processing_error(
+                &error,
+                "note deletion",
+                failure.expected_kind().code(),
+            );
+            assert!(!format!("{error:?}").contains(&api_url));
             server.await.expect("server");
         }
     }
@@ -1187,7 +1559,12 @@ mod tests {
                     .delete_attachment(Uuid::now_v7(), Uuid::now_v7())
                     .await
                     .expect_err("non-success attachment no-content status must fail");
-                assert_status_first_error(&error, status);
+                if status == 408 {
+                    assert_eq!(error.code(), "outcome_ambiguous");
+                    assert_eq!(error.http_status(), None);
+                } else {
+                    assert_status_first_error(&error, status);
+                }
                 assert!(!format!("{error:?}").contains(&api_url));
                 server.await.expect("server");
             }
@@ -1395,7 +1772,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn bounded_note_delete_maps_structured_and_plain_408_as_definitive_request_timeout() {
+    async fn bounded_note_delete_maps_structured_and_plain_408_as_ambiguous() {
         let cases = [
             (
                 br#"{"error":"request_timeout","message":"body deadline elapsed; retry the request"}"#
@@ -1408,7 +1785,7 @@ mod tests {
             ),
         ];
 
-        for (body, expected_backend_code) in cases {
+        for (body, _) in cases {
             let (api_url, server) = serve_single_response("408 Request Timeout", None, body).await;
             let mut client =
                 PublicApiClient::with_credentials(&api_url, test_credentials(&api_url))
@@ -1418,14 +1795,11 @@ mod tests {
             let error = client
                 .delete_note_encoded(Uuid::now_v7(), Uuid::now_v7(), encoded)
                 .await
-                .expect("receive bounded timeout response")
-                .decode()
-                .expect_err("HTTP 408 must fail definitively");
+                .expect_err("HTTP 408 cannot prove whether a note delete committed");
 
-            assert_eq!(error.code(), "request_timeout");
-            assert_eq!(error.http_status(), Some(408));
-            assert_eq!(error.backend_error_code(), expected_backend_code);
-            assert_eq!(error.to_string(), "request timed out before completion");
+            assert_eq!(error.code(), "outcome_ambiguous");
+            assert_eq!(error.http_status(), None);
+            assert_eq!(error.backend_error_code(), None);
             server.await.expect("server");
         }
     }
@@ -1561,7 +1935,13 @@ mod tests {
             )
             .await
             .expect_err("no-content success body must be bounded");
-        assert!(error.to_string().contains("exceeds the 65536-byte limit"));
+        assert_eq!(error.code(), "committed_but_local_processing_failed");
+        assert!(
+            error
+                .to_string()
+                .contains("response_processing=response_body_too_large")
+        );
+        assert!(error.to_string().contains("do not repeat the mutation"));
         server.await.expect("server");
 
         let compressed = gzip_bytes(&oversized);
@@ -1572,12 +1952,9 @@ mod tests {
         let error = client
             .delete_attachment(Uuid::now_v7(), Uuid::now_v7())
             .await
-            .expect_err("no-content error status must survive an oversized body");
-        assert_eq!(error.http_status(), Some(500));
-        assert_eq!(
-            error.to_string(),
-            "API server could not complete the request"
-        );
+            .expect_err("attachment delete 5xx cannot prove whether deletion committed");
+        assert_eq!(error.code(), "outcome_ambiguous");
+        assert_eq!(error.http_status(), None);
         assert!(
             !error.to_string().contains(&api_url),
             "bounded response failures must not expose the request URL"

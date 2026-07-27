@@ -1500,13 +1500,22 @@ mod tests {
                 PublicApiClient::with_credentials(&api_url, test_credentials(&api_url))
                     .expect("API client");
             let encoded = EncodedNoteRequest::encode(&request).expect("encode create note request");
-            let primary = match client.create_note_encoded(work_list_id, encoded).await {
-                Ok(response) => response
-                    .decode()
-                    .expect_err("malformed success response must fail"),
-                Err(primary) => primary,
-            };
-            assert!(mutation_outcome_is_ambiguous(&primary));
+            let (primary, commit_confirmed) =
+                match client.create_note_encoded(work_list_id, encoded).await {
+                    Ok(response) => {
+                        assert!(response.is_success_status());
+                        let primary = response
+                            .decode()
+                            .expect_err("malformed success response must fail");
+                        assert_eq!(primary.code(), "committed_but_local_processing_failed");
+                        assert!(!mutation_outcome_is_ambiguous(&primary));
+                        (primary, true)
+                    }
+                    Err(primary) => {
+                        assert!(mutation_outcome_is_ambiguous(&primary));
+                        (primary, false)
+                    }
+                };
             let created = runtime
                 .reconcile_create_note(
                     &mut client,
@@ -1514,7 +1523,7 @@ mod tests {
                     request,
                     &context,
                     primary,
-                    false,
+                    commit_confirmed,
                     Duration::from_secs(1),
                     runtime
                         .blocking_crypto
@@ -1632,14 +1641,23 @@ mod tests {
                 PublicApiClient::with_credentials(&api_url, test_credentials(&api_url))
                     .expect("API client");
             let encoded = EncodedNoteRequest::encode(&request).expect("encode update note request");
-            let primary = match client
+            let (primary, commit_confirmed) = match client
                 .update_note_encoded(work_list_id, note_id, encoded)
                 .await
             {
-                Ok(response) => response
-                    .decode()
-                    .expect_err("malformed success response must fail"),
-                Err(primary) => primary,
+                Ok(response) => {
+                    assert!(response.is_success_status());
+                    let primary = response
+                        .decode()
+                        .expect_err("malformed success response must fail");
+                    assert_eq!(primary.code(), "committed_but_local_processing_failed");
+                    assert!(!mutation_outcome_is_ambiguous(&primary));
+                    (primary, true)
+                }
+                Err(primary) => {
+                    assert!(mutation_outcome_is_ambiguous(&primary));
+                    (primary, false)
+                }
             };
             let updated = runtime
                 .reconcile_update_note(
@@ -1650,7 +1668,7 @@ mod tests {
                     request,
                     &context,
                     primary,
-                    false,
+                    commit_confirmed,
                     Duration::from_secs(1),
                     runtime
                         .blocking_crypto

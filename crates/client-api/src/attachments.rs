@@ -37,7 +37,9 @@ impl PublicApiClient {
         attachment_id: Uuid,
         payload: &CompleteAttachmentUploadRequest,
     ) -> PublicResult<()> {
-        self.post_no_content_bounded(
+        // Runtime upload reconciliation already makes one exact completion
+        // retry. Keep transport single-shot so that budget stays globally bounded.
+        self.post_no_content_bounded_no_replay(
             &format!("/work-lists/{work_list_id}/attachments/{attachment_id}/complete"),
             payload,
             MAX_ATTACHMENT_CONTROL_PLANE_RESPONSE_BYTES,

@@ -312,11 +312,11 @@ fn command_examples(path: &[String]) -> Option<&'static str> {
             "Examples:\n  sealtask tasks watch --project \"Release Engineering\"\n  sealtask --format jsonl tasks watch --work-list-id 019f42ab-0000-7000-8000-000000000000"
         }
         "tasks create" => {
-            "Examples:\n  sealtask tasks create --edit\n  sealtask tasks create --title \"Ship 0.4\" --due tomorrow\n  sealtask tasks create --project Release --section Doing --priority high --title \"Publish artifacts\"\n  sealtask tasks create --input-file ./task.json"
+            "Examples:\n  sealtask tasks create --edit\n  sealtask tasks create --title \"Ship 0.4\" --due tomorrow\n  sealtask tasks create --project Release --section Doing --priority high --title \"Publish artifacts\"\n  sealtask tasks create --input-file ./task.json\n  sealtask --json tasks create --input-file ./task.json --dry-run"
         }
         "tasks edit" => "Examples:\n  sealtask tasks edit \"Release checklist\"",
         "tasks update" => {
-            "Examples:\n  sealtask tasks update \"Ship 0.4\" --priority urgent --due tomorrow\n  sealtask tasks update id:019f42ab --body-file ./release.md\n  sealtask tasks update id:019f42ab --clear-due-at"
+            "Examples:\n  sealtask tasks update \"Ship 0.4\" --priority urgent --due tomorrow\n  sealtask tasks update id:019f42ab --body-file ./release.md\n  sealtask tasks update id:019f42ab --clear-due-at\n  sealtask --json tasks update id:019f42ab --priority urgent --dry-run"
         }
         "tasks move" => {
             "Examples:\n  sealtask tasks move \"Ship 0.4\" --section Review\n  sealtask tasks move \"Ship 0.4\" --before \"Publish notes\""
@@ -346,6 +346,12 @@ fn command_examples(path: &[String]) -> Option<&'static str> {
         "stats" => "Examples:\n  sealtask stats\n  sealtask --json stats",
         "activity follow" => {
             "Examples:\n  sealtask activity follow\n  sealtask activity follow --since 30m --interval 10s\n  sealtask --format jsonl activity follow"
+        }
+        "batch" => {
+            "Examples:\n  sealtask batch run --input ./operations.jsonl --dry-run\n  sealtask --format jsonl batch run --input ./operations.jsonl"
+        }
+        "batch run" => {
+            "Examples:\n  sealtask --format jsonl batch run --input ./operations.jsonl\n  sealtask --format jsonl batch run --input - --dry-run\n  sealtask --format jsonl batch run --input ./operations.jsonl --checkpoint \"$HOME/.local/state/sealtask/batch/run.json\"\n  sealtask --format jsonl batch run --input ./operations.jsonl --checkpoint \"$HOME/.local/state/sealtask/batch/run.json\" --resume"
         }
         "doctor" => {
             "Examples:\n  sealtask doctor\n  sealtask doctor --offline\n  sealtask doctor --strict"

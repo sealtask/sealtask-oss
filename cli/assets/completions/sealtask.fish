@@ -1,6 +1,6 @@
 # Print an optspec for argparse to handle cmd's options that are independent of any subcommand.
 function __fish_sealtask_global_optspecs
-    string join \n api-url= storage-origin= json format= color= pager= no-pager progress= q/quiet non-interactive v debug connect-timeout= read-timeout= request-timeout= profile= config-dir= serve-unlock-daemon= h/help V/version
+    string join \n api-url= storage-origin= json format= color= pager= no-pager progress= q/quiet non-interactive v debug connect-timeout= read-timeout= request-timeout= retry= profile= config-dir= serve-unlock-daemon= h/help V/version
 end
 
 function __fish_sealtask_needs_command
@@ -42,6 +42,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_needs_command" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_needs_command" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_needs_command" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_needs_command" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_needs_command" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_needs_command" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_needs_command" -l serve-unlock-daemon -r -F
@@ -65,6 +66,7 @@ complete -c sealtask -n "__fish_sealtask_needs_command" -f -a "lists" -d 'List, 
 complete -c sealtask -n "__fish_sealtask_needs_command" -f -a "tasks" -d 'List, inspect, create, update, move, or delete tasks'
 complete -c sealtask -n "__fish_sealtask_needs_command" -f -a "stats" -d 'Show current dashboard task counts'
 complete -c sealtask -n "__fish_sealtask_needs_command" -f -a "activity" -d 'Inspect or continuously follow recent account activity'
+complete -c sealtask -n "__fish_sealtask_needs_command" -f -a "batch" -d 'Validate, execute, and safely resume task mutations from JSON Lines'
 complete -c sealtask -n "__fish_sealtask_needs_command" -f -a "doctor" -d 'Diagnose local state, authentication, unlock, and API connectivity'
 complete -c sealtask -n "__fish_sealtask_needs_command" -f -a "config" -d 'Inspect resolved operator configuration'
 complete -c sealtask -n "__fish_sealtask_needs_command" -f -a "profile" -d 'List profiles or change the persisted default profile'
@@ -90,6 +92,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand completion" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand completion" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand completion" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand completion" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand completion" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand completion" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand completion" -l json -d 'Emit compact JSON instead of human-readable output'
@@ -118,6 +121,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand man" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand man" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand man" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand man" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand man" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand man" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand man" -l json -d 'Emit compact JSON instead of human-readable output'
@@ -145,6 +149,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand info" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand info" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand info" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand info" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand info" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand info" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand info" -l json -d 'Emit compact JSON instead of human-readable output'
@@ -172,6 +177,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand schema" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand schema" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand schema" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand schema" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand schema" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand schema" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand schema" -l json -d 'Emit compact JSON instead of human-readable output'
@@ -199,6 +205,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and not __fish_seen_subcommand_from login unlock lock keychain logout status help" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and not __fish_seen_subcommand_from login unlock lock keychain logout status help" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and not __fish_seen_subcommand_from login unlock lock keychain logout status help" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and not __fish_seen_subcommand_from login unlock lock keychain logout status help" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and not __fish_seen_subcommand_from login unlock lock keychain logout status help" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and not __fish_seen_subcommand_from login unlock lock keychain logout status help" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and not __fish_seen_subcommand_from login unlock lock keychain logout status help" -l json -d 'Emit compact JSON instead of human-readable output'
@@ -234,6 +241,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from login" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from login" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from login" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from login" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from login" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from login" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from login" -l password-stdin -d 'Read login input from stdin: trimmed password on line 1 and optional exact authenticator or backup code on line 2'
@@ -264,6 +272,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from unlock" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from unlock" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from unlock" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from unlock" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from unlock" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from unlock" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from unlock" -l password-stdin -d 'Read the account password from stdin'
@@ -292,6 +301,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from lock" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from lock" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from lock" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from lock" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from lock" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from lock" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from lock" -l json -d 'Emit compact JSON instead of human-readable output'
@@ -319,6 +329,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from keychain" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from keychain" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from keychain" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from keychain" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from keychain" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from keychain" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from keychain" -l json -d 'Emit compact JSON instead of human-readable output'
@@ -349,6 +360,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from logout" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from logout" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from logout" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from logout" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from logout" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from logout" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from logout" -l json -d 'Emit compact JSON instead of human-readable output'
@@ -376,6 +388,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from status" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from status" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from status" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from status" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from status" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from status" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand auth; and __fish_seen_subcommand_from status" -l json -d 'Emit compact JSON instead of human-readable output'
@@ -410,6 +423,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand me" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand me" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand me" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand me" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand me" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand me" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand me" -l json -d 'Emit compact JSON instead of human-readable output'
@@ -437,6 +451,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and not __fish_seen_subcommand_from project task help" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and not __fish_seen_subcommand_from project task help" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and not __fish_seen_subcommand_from project task help" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and not __fish_seen_subcommand_from project task help" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and not __fish_seen_subcommand_from project task help" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and not __fish_seen_subcommand_from project task help" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and not __fish_seen_subcommand_from project task help" -l json -d 'Emit compact JSON instead of human-readable output'
@@ -467,6 +482,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from project" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from project" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from project" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from project" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from project" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from project" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from project" -l include-archived -d 'Include archived projects'
@@ -498,6 +514,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from task" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from task" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from task" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from task" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from task" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from task" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from task" -l include-completed -d 'Include completed tasks'
@@ -531,6 +548,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l verbose
@@ -572,6 +590,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from list" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from list" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from list" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from list" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from list" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from list" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from list" -l details -d 'Print expanded human-readable project details'
@@ -603,6 +622,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from get" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from get" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from get" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from get" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from get" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from get" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from get" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
@@ -632,6 +652,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from archive" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from archive" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from archive" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from archive" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from archive" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from archive" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from archive" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
@@ -661,6 +682,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from unarchive" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from unarchive" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from unarchive" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from unarchive" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from unarchive" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from unarchive" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from unarchive" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
@@ -690,6 +712,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from use" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from use" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from use" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from use" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from use" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from use" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from use" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
@@ -718,6 +741,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from current" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from current" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from current" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from current" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from current" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from current" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from current" -l json -d 'Emit compact JSON instead of human-readable output'
@@ -745,6 +769,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from clear" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from clear" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from clear" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from clear" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from clear" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from clear" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from clear" -l json -d 'Emit compact JSON instead of human-readable output'
@@ -772,6 +797,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from sections" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from sections" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from sections" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from sections" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from sections" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from sections" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from sections" -l json -d 'Emit compact JSON instead of human-readable output'
@@ -804,6 +830,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from audit" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from audit" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from audit" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from audit" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from audit" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from audit" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from audit" -l password-stdin -d 'Read the account password from stdin when project-name resolution needs an unlock'
@@ -842,6 +869,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l verbose
@@ -883,6 +911,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from list" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from list" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from list" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from list" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from list" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from list" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from list" -l details -d 'Print expanded human-readable project details'
@@ -914,6 +943,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from get" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from get" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from get" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from get" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from get" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from get" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from get" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
@@ -943,6 +973,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from archive" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from archive" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from archive" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from archive" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from archive" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from archive" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from archive" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
@@ -972,6 +1003,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from unarchive" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from unarchive" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from unarchive" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from unarchive" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from unarchive" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from unarchive" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from unarchive" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
@@ -1001,6 +1033,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from use" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from use" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from use" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from use" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from use" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from use" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from use" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
@@ -1029,6 +1062,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from current" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from current" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from current" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from current" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from current" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from current" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from current" -l json -d 'Emit compact JSON instead of human-readable output'
@@ -1056,6 +1090,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from clear" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from clear" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from clear" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from clear" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from clear" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from clear" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from clear" -l json -d 'Emit compact JSON instead of human-readable output'
@@ -1083,6 +1118,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from sections" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from sections" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from sections" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from sections" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from sections" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from sections" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from sections" -l json -d 'Emit compact JSON instead of human-readable output'
@@ -1115,6 +1151,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from audit" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from audit" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from audit" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from audit" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from audit" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from audit" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from audit" -l password-stdin -d 'Read the account password from stdin when project-name resolution needs an unlock'
@@ -1153,6 +1190,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and not __fish_seen_subcommand_from list get watch create edit update move complete reopen archive unarchive delete attachments help" -l json -d 'Emit compact JSON instead of human-readable output'
@@ -1218,6 +1256,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from list" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from list" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from list" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from list" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from list" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from list" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from list" -l include-completed -d 'Include tasks in completed sections'
@@ -1253,6 +1292,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from get" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from get" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from get" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from get" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from get" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from get" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from get" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
@@ -1284,6 +1324,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from watch" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from watch" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from watch" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from watch" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from watch" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from watch" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from watch" -l include-completed -d 'Include completed tasks'
@@ -1327,10 +1368,12 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from create" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from create" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from create" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from create" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from create" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from create" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from create" -l edit -d 'Open your configured editor; --title, --body, and --body-file seed its contents'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from create" -l input-stdin -d 'Read the complete camelCase task input object from stdin'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from create" -l dry-run -d 'Resolve, validate, and encrypt the request but do not create the task'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from create" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from create" -l json -d 'Emit compact JSON instead of human-readable output'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from create" -l no-pager -d 'Disable paging (equivalent to --pager never)'
@@ -1360,6 +1403,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from edit" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from edit" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from edit" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from edit" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from edit" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from edit" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from edit" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
@@ -1401,6 +1445,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from update" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from update" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from update" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from update" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from update" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from update" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from update" -l clear-body -d 'Remove the task body'
@@ -1409,6 +1454,7 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from update" -l clear-start-at -d 'Remove the start time'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from update" -l clear-section -d 'Remove the explicit section assignment'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from update" -l input-stdin -d 'Read the complete camelCase patch object from stdin'
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from update" -l dry-run -d 'Resolve, validate, and encrypt the request but do not update the task'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from update" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from update" -l json -d 'Emit compact JSON instead of human-readable output'
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from update" -l no-pager -d 'Disable paging (equivalent to --pager never)'
@@ -1442,6 +1488,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from move" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from move" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from move" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from move" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from move" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from move" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from move" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
@@ -1473,6 +1520,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from complete" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from complete" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from complete" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from complete" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from complete" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from complete" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from complete" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
@@ -1504,6 +1552,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from reopen" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from reopen" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from reopen" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from reopen" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from reopen" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from reopen" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from reopen" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
@@ -1535,6 +1584,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from archive" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from archive" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from archive" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from archive" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from archive" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from archive" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from archive" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
@@ -1566,6 +1616,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from unarchive" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from unarchive" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from unarchive" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from unarchive" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from unarchive" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from unarchive" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from unarchive" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
@@ -1598,6 +1649,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from delete" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from delete" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from delete" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from delete" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from delete" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from delete" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from delete" -l input-stdin -d 'Read an optional audit patch from stdin'
@@ -1628,6 +1680,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from attachments" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from attachments" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from attachments" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from attachments" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from attachments" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from attachments" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand tasks; and __fish_seen_subcommand_from attachments" -l json -d 'Emit compact JSON instead of human-readable output'
@@ -1674,6 +1727,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand stats" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand stats" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand stats" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand stats" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand stats" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand stats" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand stats" -l json -d 'Emit compact JSON instead of human-readable output'
@@ -1701,6 +1755,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand activity; and not __fish_seen_subcommand_from follow help" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand activity; and not __fish_seen_subcommand_from follow help" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand activity; and not __fish_seen_subcommand_from follow help" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand activity; and not __fish_seen_subcommand_from follow help" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand activity; and not __fish_seen_subcommand_from follow help" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand activity; and not __fish_seen_subcommand_from follow help" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand activity; and not __fish_seen_subcommand_from follow help" -l json -d 'Emit compact JSON instead of human-readable output'
@@ -1732,6 +1787,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand activity; and __fish_seen_subcommand_from follow" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand activity; and __fish_seen_subcommand_from follow" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand activity; and __fish_seen_subcommand_from follow" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand activity; and __fish_seen_subcommand_from follow" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand activity; and __fish_seen_subcommand_from follow" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand activity; and __fish_seen_subcommand_from follow" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand activity; and __fish_seen_subcommand_from follow" -l json -d 'Emit compact JSON instead of human-readable output'
@@ -1743,6 +1799,72 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand activity; and __fish_s
 complete -c sealtask -n "__fish_sealtask_using_subcommand activity; and __fish_seen_subcommand_from follow" -s h -l help -d 'Print help (see more with \'--help\')'
 complete -c sealtask -n "__fish_sealtask_using_subcommand activity; and __fish_seen_subcommand_from help" -f -a "follow" -d 'Follow new activity using bounded cursor catch-up polling'
 complete -c sealtask -n "__fish_sealtask_using_subcommand activity; and __fish_seen_subcommand_from help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand batch; and not __fish_seen_subcommand_from run help" -l api-url -d 'SealTask API base URL' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand batch; and not __fish_seen_subcommand_from run help" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand batch; and not __fish_seen_subcommand_from run help" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
+json\t''
+json-pretty\t''
+jsonl\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand batch; and not __fish_seen_subcommand_from run help" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand batch; and not __fish_seen_subcommand_from run help" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand batch; and not __fish_seen_subcommand_from run help" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand batch; and not __fish_seen_subcommand_from run help" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand batch; and not __fish_seen_subcommand_from run help" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand batch; and not __fish_seen_subcommand_from run help" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand batch; and not __fish_seen_subcommand_from run help" -l retry -d 'Retry replay-safe API requests after transient failures' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand batch; and not __fish_seen_subcommand_from run help" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand batch; and not __fish_seen_subcommand_from run help" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
+complete -c sealtask -n "__fish_sealtask_using_subcommand batch; and not __fish_seen_subcommand_from run help" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand batch; and not __fish_seen_subcommand_from run help" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand batch; and not __fish_seen_subcommand_from run help" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
+complete -c sealtask -n "__fish_sealtask_using_subcommand batch; and not __fish_seen_subcommand_from run help" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
+complete -c sealtask -n "__fish_sealtask_using_subcommand batch; and not __fish_seen_subcommand_from run help" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
+complete -c sealtask -n "__fish_sealtask_using_subcommand batch; and not __fish_seen_subcommand_from run help" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
+complete -c sealtask -n "__fish_sealtask_using_subcommand batch; and not __fish_seen_subcommand_from run help" -s h -l help -d 'Print help (see more with \'--help\')'
+complete -c sealtask -n "__fish_sealtask_using_subcommand batch; and not __fish_seen_subcommand_from run help" -f -a "run" -d 'Run a strict versioned JSONL task-mutation batch'
+complete -c sealtask -n "__fish_sealtask_using_subcommand batch; and not __fish_seen_subcommand_from run help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand batch; and __fish_seen_subcommand_from run" -l input -d 'JSONL input path, or \'-\' to read stdin' -r -F
+complete -c sealtask -n "__fish_sealtask_using_subcommand batch; and __fish_seen_subcommand_from run" -l jobs -d 'Maximum number of unrelated operations in flight' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand batch; and __fish_seen_subcommand_from run" -l checkpoint -d 'Durable resumable checkpoint path (Linux and macOS only)' -r -F
+complete -c sealtask -n "__fish_sealtask_using_subcommand batch; and __fish_seen_subcommand_from run" -l api-url -d 'SealTask API base URL' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand batch; and __fish_seen_subcommand_from run" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand batch; and __fish_seen_subcommand_from run" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
+json\t''
+json-pretty\t''
+jsonl\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand batch; and __fish_seen_subcommand_from run" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand batch; and __fish_seen_subcommand_from run" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand batch; and __fish_seen_subcommand_from run" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+always\t''
+never\t''"
+complete -c sealtask -n "__fish_sealtask_using_subcommand batch; and __fish_seen_subcommand_from run" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand batch; and __fish_seen_subcommand_from run" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand batch; and __fish_seen_subcommand_from run" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand batch; and __fish_seen_subcommand_from run" -l retry -d 'Retry replay-safe API requests after transient failures' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand batch; and __fish_seen_subcommand_from run" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand batch; and __fish_seen_subcommand_from run" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
+complete -c sealtask -n "__fish_sealtask_using_subcommand batch; and __fish_seen_subcommand_from run" -l continue-on-error -d 'Keep scheduling independent operations after an operation fails'
+complete -c sealtask -n "__fish_sealtask_using_subcommand batch; and __fish_seen_subcommand_from run" -l resume -d 'Resume an existing Linux/macOS checkpoint bound to the exact canonical input'
+complete -c sealtask -n "__fish_sealtask_using_subcommand batch; and __fish_seen_subcommand_from run" -l dry-run -d 'Resolve and prepare every operation without issuing mutations'
+complete -c sealtask -n "__fish_sealtask_using_subcommand batch; and __fish_seen_subcommand_from run" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand batch; and __fish_seen_subcommand_from run" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand batch; and __fish_seen_subcommand_from run" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
+complete -c sealtask -n "__fish_sealtask_using_subcommand batch; and __fish_seen_subcommand_from run" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
+complete -c sealtask -n "__fish_sealtask_using_subcommand batch; and __fish_seen_subcommand_from run" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
+complete -c sealtask -n "__fish_sealtask_using_subcommand batch; and __fish_seen_subcommand_from run" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
+complete -c sealtask -n "__fish_sealtask_using_subcommand batch; and __fish_seen_subcommand_from run" -s h -l help -d 'Print help (see more with \'--help\')'
+complete -c sealtask -n "__fish_sealtask_using_subcommand batch; and __fish_seen_subcommand_from help" -f -a "run" -d 'Run a strict versioned JSONL task-mutation batch'
+complete -c sealtask -n "__fish_sealtask_using_subcommand batch; and __fish_seen_subcommand_from help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
 complete -c sealtask -n "__fish_sealtask_using_subcommand doctor" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand doctor" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand doctor" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
@@ -1761,6 +1883,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand doctor" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand doctor" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand doctor" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand doctor" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand doctor" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand doctor" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand doctor" -l offline -d 'Run local checks only and make no network requests'
@@ -1791,6 +1914,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand config; and not __fish_seen_subcommand_from show help" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand config; and not __fish_seen_subcommand_from show help" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand config; and not __fish_seen_subcommand_from show help" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand config; and not __fish_seen_subcommand_from show help" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand config; and not __fish_seen_subcommand_from show help" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand config; and not __fish_seen_subcommand_from show help" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand config; and not __fish_seen_subcommand_from show help" -l json -d 'Emit compact JSON instead of human-readable output'
@@ -1820,6 +1944,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand config; and __fish_seen_subcommand_from show" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand config; and __fish_seen_subcommand_from show" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand config; and __fish_seen_subcommand_from show" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand config; and __fish_seen_subcommand_from show" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand config; and __fish_seen_subcommand_from show" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand config; and __fish_seen_subcommand_from show" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand config; and __fish_seen_subcommand_from show" -l resolved -d 'Include resolution sources and defaults'
@@ -1850,6 +1975,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and not __fish_seen_subcommand_from list use help" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and not __fish_seen_subcommand_from list use help" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and not __fish_seen_subcommand_from list use help" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and not __fish_seen_subcommand_from list use help" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and not __fish_seen_subcommand_from list use help" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and not __fish_seen_subcommand_from list use help" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and not __fish_seen_subcommand_from list use help" -l json -d 'Emit compact JSON instead of human-readable output'
@@ -1880,6 +2006,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and __fish_seen_subcommand_from list" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and __fish_seen_subcommand_from list" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and __fish_seen_subcommand_from list" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and __fish_seen_subcommand_from list" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and __fish_seen_subcommand_from list" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and __fish_seen_subcommand_from list" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and __fish_seen_subcommand_from list" -l json -d 'Emit compact JSON instead of human-readable output'
@@ -1907,6 +2034,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and __fish_seen_subcommand_from use" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and __fish_seen_subcommand_from use" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and __fish_seen_subcommand_from use" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and __fish_seen_subcommand_from use" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and __fish_seen_subcommand_from use" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and __fish_seen_subcommand_from use" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand profile; and __fish_seen_subcommand_from use" -l json -d 'Emit compact JSON instead of human-readable output'
@@ -1937,6 +2065,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand inspect" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand inspect" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand inspect" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand inspect" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand inspect" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand inspect" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand inspect" -l password-stdin
@@ -1965,6 +2094,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and not __fish_seen_subcommand_from list create update delete help" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and not __fish_seen_subcommand_from list create update delete help" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and not __fish_seen_subcommand_from list create update delete help" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and not __fish_seen_subcommand_from list create update delete help" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and not __fish_seen_subcommand_from list create update delete help" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and not __fish_seen_subcommand_from list create update delete help" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and not __fish_seen_subcommand_from list create update delete help" -l json -d 'Emit compact JSON instead of human-readable output'
@@ -2000,6 +2130,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from list" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from list" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from list" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from list" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from list" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from list" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from list" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
@@ -2034,6 +2165,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from create" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from create" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from create" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from create" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from create" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from create" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from create" -l input-stdin -d 'Read the complete camelCase comment input object from stdin'
@@ -2069,6 +2201,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from update" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from update" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from update" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from update" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from update" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from update" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from update" -l input-stdin -d 'Read the complete camelCase comment input object from stdin'
@@ -2103,6 +2236,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from delete" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from delete" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from delete" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from delete" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from delete" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from delete" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand comments; and __fish_seen_subcommand_from delete" -l input-stdin -d 'Read an optional audit patch from stdin'
@@ -2138,6 +2272,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create edit update delete help" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create edit update delete help" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create edit update delete help" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create edit update delete help" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create edit update delete help" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create edit update delete help" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and not __fish_seen_subcommand_from list get create edit update delete help" -l json -d 'Emit compact JSON instead of human-readable output'
@@ -2174,6 +2309,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from list" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from list" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from list" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from list" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from list" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from list" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from list" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
@@ -2205,6 +2341,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from get" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from get" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from get" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from get" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from get" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from get" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from get" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
@@ -2239,6 +2376,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from create" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from create" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from create" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from create" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from create" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from create" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from create" -l private -d 'Encrypt with a per-note key available only to the current user'
@@ -2272,6 +2410,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from edit" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from edit" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from edit" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from edit" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from edit" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from edit" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from edit" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
@@ -2306,6 +2445,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from update" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from update" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from update" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from update" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from update" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from update" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from update" -l input-stdin -d 'Read the complete camelCase note patch from stdin'
@@ -2339,6 +2479,7 @@ never\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from delete" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from delete" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from delete" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from delete" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from delete" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from delete" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from delete" -l input-stdin -d 'Read an optional audit patch from stdin'
@@ -2358,24 +2499,25 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from help" -f -a "update" -d 'Patch an encrypted note'
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from help" -f -a "delete" -d 'Permanently delete a note'
 complete -c sealtask -n "__fish_sealtask_using_subcommand notes; and __fish_seen_subcommand_from help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
-complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity doctor config profile inspect comments notes help" -f -a "completion" -d 'Generate a shell completion script without reading configuration or credentials'
-complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity doctor config profile inspect comments notes help" -f -a "man" -d 'Render a manual page for the root command or a nested command path'
-complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity doctor config profile inspect comments notes help" -f -a "info" -d 'Show machine-readable CLI capabilities and contract versions'
-complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity doctor config profile inspect comments notes help" -f -a "schema" -d 'Describe commands and arguments as human help or versioned JSON'
-complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity doctor config profile inspect comments notes help" -f -a "auth" -d 'Authenticate, inspect the session, and manage local unlock state'
-complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity doctor config profile inspect comments notes help" -f -a "me" -d 'Show the current authenticated user'
-complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity doctor config profile inspect comments notes help" -f -a "pick" -d 'Fuzzy-pick an entity while printing only a reusable opaque selector'
-complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity doctor config profile inspect comments notes help" -f -a "projects" -d 'List, inspect, select, archive, or restore projects'
-complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity doctor config profile inspect comments notes help" -f -a "tasks" -d 'List, inspect, create, update, move, or delete tasks'
-complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity doctor config profile inspect comments notes help" -f -a "stats" -d 'Show current dashboard task counts'
-complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity doctor config profile inspect comments notes help" -f -a "activity" -d 'Inspect or continuously follow recent account activity'
-complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity doctor config profile inspect comments notes help" -f -a "doctor" -d 'Diagnose local state, authentication, unlock, and API connectivity'
-complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity doctor config profile inspect comments notes help" -f -a "config" -d 'Inspect resolved operator configuration'
-complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity doctor config profile inspect comments notes help" -f -a "profile" -d 'List profiles or change the persisted default profile'
-complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity doctor config profile inspect comments notes help" -f -a "inspect"
-complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity doctor config profile inspect comments notes help" -f -a "comments" -d 'List, create, update, or delete task comments'
-complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity doctor config profile inspect comments notes help" -f -a "notes" -d 'List, inspect, create, update, or delete encrypted notes'
-complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity doctor config profile inspect comments notes help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity batch doctor config profile inspect comments notes help" -f -a "completion" -d 'Generate a shell completion script without reading configuration or credentials'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity batch doctor config profile inspect comments notes help" -f -a "man" -d 'Render a manual page for the root command or a nested command path'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity batch doctor config profile inspect comments notes help" -f -a "info" -d 'Show machine-readable CLI capabilities and contract versions'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity batch doctor config profile inspect comments notes help" -f -a "schema" -d 'Describe commands and arguments as human help or versioned JSON'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity batch doctor config profile inspect comments notes help" -f -a "auth" -d 'Authenticate, inspect the session, and manage local unlock state'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity batch doctor config profile inspect comments notes help" -f -a "me" -d 'Show the current authenticated user'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity batch doctor config profile inspect comments notes help" -f -a "pick" -d 'Fuzzy-pick an entity while printing only a reusable opaque selector'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity batch doctor config profile inspect comments notes help" -f -a "projects" -d 'List, inspect, select, archive, or restore projects'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity batch doctor config profile inspect comments notes help" -f -a "tasks" -d 'List, inspect, create, update, move, or delete tasks'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity batch doctor config profile inspect comments notes help" -f -a "stats" -d 'Show current dashboard task counts'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity batch doctor config profile inspect comments notes help" -f -a "activity" -d 'Inspect or continuously follow recent account activity'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity batch doctor config profile inspect comments notes help" -f -a "batch" -d 'Validate, execute, and safely resume task mutations from JSON Lines'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity batch doctor config profile inspect comments notes help" -f -a "doctor" -d 'Diagnose local state, authentication, unlock, and API connectivity'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity batch doctor config profile inspect comments notes help" -f -a "config" -d 'Inspect resolved operator configuration'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity batch doctor config profile inspect comments notes help" -f -a "profile" -d 'List profiles or change the persisted default profile'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity batch doctor config profile inspect comments notes help" -f -a "inspect"
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity batch doctor config profile inspect comments notes help" -f -a "comments" -d 'List, create, update, or delete task comments'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity batch doctor config profile inspect comments notes help" -f -a "notes" -d 'List, inspect, create, update, or delete encrypted notes'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity batch doctor config profile inspect comments notes help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from auth" -f -a "login" -d 'Sign in with an email and password, optionally completing MFA'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from auth" -f -a "unlock" -d 'Unlock workspace data in memory for a bounded session'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from auth" -f -a "lock" -d 'Lock workspace data and stop the in-memory unlock session'
@@ -2407,6 +2549,7 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from tasks" -f -a "delete" -d 'Permanently delete a task'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from tasks" -f -a "attachments" -d 'Upload, delete, read, or download encrypted task attachments'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from activity" -f -a "follow" -d 'Follow new activity using bounded cursor catch-up polling'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from batch" -f -a "run" -d 'Run a strict versioned JSONL task-mutation batch'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from config" -f -a "show" -d 'Show safe configuration values and where they came from'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from profile" -f -a "list" -d 'List known local profiles and mark the active one'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from profile" -f -a "use" -d 'Persist the default profile for future commands'

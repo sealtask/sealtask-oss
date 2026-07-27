@@ -42,6 +42,7 @@ pub(crate) struct TelemetryConfig<'a> {
     pub(crate) profile_source: &'a str,
     pub(crate) config_dir_source: &'a str,
     pub(crate) timeouts: (Duration, Duration, Duration),
+    pub(crate) retry_limit: u8,
 }
 
 impl Telemetry {
@@ -73,13 +74,14 @@ impl Telemetry {
         if level.traces() {
             let (connect, read, request) = config.timeouts;
             telemetry.emit(format_args!(
-                "event=config invocation_id={} api_origin={} config_dir_source={} connect_timeout_ms={} read_timeout_ms={} request_timeout_ms={}",
+                "event=config invocation_id={} api_origin={} config_dir_source={} connect_timeout_ms={} read_timeout_ms={} request_timeout_ms={} retry_limit={}",
                 telemetry.invocation_id,
                 safe_api_origin(config.api_url),
                 config.config_dir_source,
                 connect.as_millis(),
                 read.as_millis(),
-                request.as_millis()
+                request.as_millis(),
+                config.retry_limit,
             ));
         }
         telemetry

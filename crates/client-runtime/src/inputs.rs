@@ -1,13 +1,15 @@
 use chrono::{DateTime, Utc};
 use sealtask_client_api::{DeleteCommentRequest, DeleteNoteRequest, DeleteTaskRequest};
 use sealtask_client_core::{PublicError, PublicResult};
-use sealtask_client_crypto::ChecklistItemPayload;
+use sealtask_client_crypto::{
+    ChecklistItemPayload, SymmetricKey, derive_batch_task_create_idempotency_key,
+};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::collections::HashSet;
 use std::fmt;
 use std::path::PathBuf;
 use uuid::Uuid;
-use zeroize::Zeroizing;
+use zeroize::{Zeroize, Zeroizing};
 
 #[derive(Clone, Default, PartialEq, Eq)]
 pub enum TaskFieldPatch<T> {
@@ -21,14 +23,6 @@ impl<T> TaskFieldPatch<T> {
     #[must_use]
     pub fn is_unchanged(&self) -> bool {
         matches!(self, Self::Unchanged)
-    }
-
-    pub(crate) fn into_nested_option(self) -> Option<Option<T>> {
-        match self {
-            Self::Unchanged => None,
-            Self::Set(value) => Some(Some(value)),
-            Self::Clear => Some(None),
-        }
     }
 }
 
@@ -99,6 +93,56 @@ impl fmt::Debug for TaskCreateInput {
             .field("section_id", &self.section_id)
             .field("idempotency_key_present", &self.idempotency_key.is_some())
             .finish()
+    }
+}
+
+#[derive(Clone)]
+pub struct TaskCreateIdempotencyDerivation {
+    canonical_input_sha256: [u8; 32],
+    operation_id: String,
+}
+
+impl TaskCreateIdempotencyDerivation {
+    #[must_use]
+    pub fn new(canonical_input_sha256: [u8; 32], operation_id: impl Into<String>) -> Self {
+        Self {
+            canonical_input_sha256,
+            operation_id: operation_id.into(),
+        }
+    }
+
+    pub(crate) fn derive_key(
+        &self,
+        work_list_id: &Uuid,
+        list_key: &SymmetricKey,
+    ) -> PublicResult<String> {
+        derive_batch_task_create_idempotency_key(
+            &self.canonical_input_sha256,
+            &self.operation_id,
+            work_list_id,
+            list_key,
+        )
+    }
+
+    fn zeroize_material(&mut self) {
+        self.canonical_input_sha256.zeroize();
+        self.operation_id.zeroize();
+    }
+}
+
+impl fmt::Debug for TaskCreateIdempotencyDerivation {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("TaskCreateIdempotencyDerivation")
+            .field("canonical_input_sha256", &"<redacted>")
+            .field("operation_id", &"<redacted>")
+            .finish()
+    }
+}
+
+impl Drop for TaskCreateIdempotencyDerivation {
+    fn drop(&mut self) {
+        self.zeroize_material();
     }
 }
 
@@ -418,56 +462,70 @@ pub(crate) fn normalize_checklist(
     const MAX_CHECKLIST_TITLE_CHARS: usize = 1_024;
     const MAX_CHECKLIST_ASSIGNEES: usize = 16;
 
-    if items.len() > MAX_CHECKLIST_ITEMS {
-        return Err(PublicError::validation(format!(
-            "checklist cannot exceed {MAX_CHECKLIST_ITEMS} entries"
-        )));
-    }
-
-    let mut item_ids = HashSet::with_capacity(items.len());
-    for (index, item) in items.iter_mut().enumerate() {
-        let item_id = Uuid::parse_str(&item.id).map_err(|_| {
-            PublicError::validation(format!("checklist[{index}].id must be a UUID"))
-        })?;
-        if !item_ids.insert(item_id) {
+    let result = (|| {
+        if items.len() > MAX_CHECKLIST_ITEMS {
             return Err(PublicError::validation(format!(
-                "checklist[{index}].id is duplicated"
+                "checklist cannot exceed {MAX_CHECKLIST_ITEMS} entries"
             )));
         }
 
-        let normalized_title = item.title.trim();
-        if normalized_title.is_empty()
-            || normalized_title.chars().count() > MAX_CHECKLIST_TITLE_CHARS
-        {
-            return Err(PublicError::validation(format!(
-                "checklist[{index}].title must contain between 1 and {MAX_CHECKLIST_TITLE_CHARS} characters"
-            )));
-        }
-        item.title = normalized_title.to_string();
-        if !item.is_done {
-            item.completed_at = None;
-        }
-
-        if let Some(assignees) = item.assignee_user_ids.as_ref() {
-            if assignees.len() > MAX_CHECKLIST_ASSIGNEES {
+        let mut item_ids = HashSet::with_capacity(items.len());
+        for (index, item) in items.iter_mut().enumerate() {
+            let item_id = Uuid::parse_str(&item.id).map_err(|_| {
+                PublicError::validation(format!("checklist[{index}].id must be a UUID"))
+            })?;
+            if !item_ids.insert(item_id) {
                 return Err(PublicError::validation(format!(
-                    "checklist[{index}].assignee_user_ids cannot exceed {MAX_CHECKLIST_ASSIGNEES} entries"
+                    "checklist[{index}].id is duplicated"
                 )));
             }
-            let mut assignee_ids = HashSet::with_capacity(assignees.len());
-            for (assignee_index, assignee) in assignees.iter().enumerate() {
-                let assignee_id = Uuid::parse_str(assignee).map_err(|_| {
-                    PublicError::validation(format!(
-                        "checklist[{index}].assignee_user_ids[{assignee_index}] must be a UUID"
-                    ))
-                })?;
-                if !assignee_ids.insert(assignee_id) {
+
+            let normalized_title = item.title.trim();
+            if normalized_title.is_empty()
+                || normalized_title.chars().count() > MAX_CHECKLIST_TITLE_CHARS
+            {
+                return Err(PublicError::validation(format!(
+                    "checklist[{index}].title must contain between 1 and {MAX_CHECKLIST_TITLE_CHARS} characters"
+                )));
+            }
+            item.title = normalized_title.to_string();
+            if !item.is_done {
+                item.completed_at = None;
+            }
+
+            if let Some(assignees) = item.assignee_user_ids.as_ref() {
+                if assignees.len() > MAX_CHECKLIST_ASSIGNEES {
                     return Err(PublicError::validation(format!(
-                        "checklist[{index}].assignee_user_ids[{assignee_index}] is duplicated"
+                        "checklist[{index}].assignee_user_ids cannot exceed {MAX_CHECKLIST_ASSIGNEES} entries"
                     )));
+                }
+                let mut assignee_ids = HashSet::with_capacity(assignees.len());
+                for (assignee_index, assignee) in assignees.iter().enumerate() {
+                    let assignee_id = Uuid::parse_str(assignee).map_err(|_| {
+                        PublicError::validation(format!(
+                            "checklist[{index}].assignee_user_ids[{assignee_index}] must be a UUID"
+                        ))
+                    })?;
+                    if !assignee_ids.insert(assignee_id) {
+                        return Err(PublicError::validation(format!(
+                            "checklist[{index}].assignee_user_ids[{assignee_index}] is duplicated"
+                        )));
+                    }
                 }
             }
         }
+
+        Ok(())
+    })();
+    if let Err(error) = result {
+        for item in &mut items {
+            item.id.zeroize();
+            item.title.zeroize();
+            if let Some(assignees) = item.assignee_user_ids.as_mut() {
+                assignees.iter_mut().for_each(Zeroize::zeroize);
+            }
+        }
+        return Err(error);
     }
 
     Ok(items)
@@ -602,5 +660,20 @@ mod tests {
             format!("{:?}", TaskFieldPatch::Set(body.to_string())),
             "Set(<redacted>)"
         );
+    }
+
+    #[test]
+    fn task_create_idempotency_derivation_redacts_and_zeroizes_material() {
+        let operation_id = "batch-operation-debug-canary";
+        let mut derivation = TaskCreateIdempotencyDerivation::new([0xab; 32], operation_id);
+
+        let debug = format!("{derivation:?}");
+        assert!(debug.contains("<redacted>"));
+        assert!(!debug.contains(operation_id));
+        assert!(!debug.contains("171"));
+
+        derivation.zeroize_material();
+        assert_eq!(derivation.canonical_input_sha256, [0; 32]);
+        assert!(derivation.operation_id.is_empty());
     }
 }

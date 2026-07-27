@@ -4,7 +4,7 @@
 .SH NAME
 sealtask\-notes\-get \- Show one decrypted note
 .SH SYNOPSIS
-\fBsealtask notes get\fR [\fB\-\-api\-url\fR] [\fB\-\-note\-id\fR] [\fB\-\-project\fR] [\fB\-\-storage\-origin\fR] [\fB\-\-json\fR] [\fB\-\-work\-list\-id\fR] [\fB\-\-format\fR] [\fB\-\-password\-stdin\fR] [\fB\-\-color\fR] [\fB\-\-pager\fR] [\fB\-\-no\-pager\fR] [\fB\-\-progress\fR] [\fB\-q\fR|\fB\-\-quiet\fR] [\fB\-\-non\-interactive\fR] [\fB\-v \fR]... [\fB\-\-debug\fR] [\fB\-\-connect\-timeout\fR] [\fB\-\-read\-timeout\fR] [\fB\-\-request\-timeout\fR] [\fB\-\-profile\fR] [\fB\-\-config\-dir\fR] [\fB\-h\fR|\fB\-\-help\fR] [\fINOTE\fR]
+\fBsealtask notes get\fR [\fB\-\-api\-url\fR] [\fB\-\-note\-id\fR] [\fB\-\-project\fR] [\fB\-\-storage\-origin\fR] [\fB\-\-json\fR] [\fB\-\-work\-list\-id\fR] [\fB\-\-format\fR] [\fB\-\-password\-stdin\fR] [\fB\-\-color\fR] [\fB\-\-pager\fR] [\fB\-\-no\-pager\fR] [\fB\-\-progress\fR] [\fB\-q\fR|\fB\-\-quiet\fR] [\fB\-\-non\-interactive\fR] [\fB\-v \fR]... [\fB\-\-debug\fR] [\fB\-\-connect\-timeout\fR] [\fB\-\-read\-timeout\fR] [\fB\-\-request\-timeout\fR] [\fB\-\-retry\fR] [\fB\-\-profile\fR] [\fB\-\-config\-dir\fR] [\fB\-h\fR|\fB\-\-help\fR] [\fINOTE\fR]
 .SH DESCRIPTION
 Show one decrypted note
 .SH OPTIONS
@@ -151,6 +151,13 @@ Emit redacted operator telemetry to stderr; repeat for more detail
 .TP
 \fB\-\-debug\fR
 Emit maximum redacted diagnostic telemetry to stderr
+.SH OPTIONS
+.TP
+\fB\-\-retry\fR \fI<COUNT>\fR [default: 2]
+Retry replay\-safe API requests after transient failures
+.RS
+May also be specified with the \fBSEALTASK_RETRY\fR environment variable.
+.RE
 .SH PROFILE
 .TP
 \fB\-\-profile\fR \fI<NAME>\fR

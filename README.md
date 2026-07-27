@@ -554,6 +554,92 @@ clears a nullable field, and a value sets it. The equivalent flag form provides
 the CLI; a concurrent change returns a conflict so the agent can re-read,
 reconcile, and retry instead of silently overwriting newer state.
 
+Preview a task create or update with `--dry-run`. The CLI still authenticates,
+resolves selectors, validates and normalizes fields, and prepares the encrypted
+request, but prints a versioned `taskMutationPlan` whose `willMutate` field is
+`false` instead of sending the mutation:
+
+```bash
+sealtask --json tasks create --input-file ./task.json --dry-run
+sealtask --json tasks update id:019f42ab --priority urgent --dry-run
+```
+
+For resumable automation, `batch run` accepts strict JSON Lines schema version
+1. Each line has a unique safe `operationId`, an explicit `project` selector,
+and either a `task.create` input or a `task.update` task selector and input:
+
+```json
+{"schemaVersion":1,"operationId":"release-42:create-notes","type":"task.create","project":"id:019f0000-0000-7000-8000-000000000001","input":{"title":"Prepare release notes","priority":5}}
+{"schemaVersion":1,"operationId":"release-42:mark-urgent","type":"task.update","project":"id:019f0000-0000-7000-8000-000000000001","task":"id:019f0000-0000-7000-8000-000000000002","input":{"priority":8}}
+```
+
+Unknown fields and unsupported operation types are rejected. The entire input
+is parsed and validated before authentication or mutation. One line is limited
+to 4 MiB, the input to 64 MiB and 10,000 operations, and `--jobs` to 1–16.
+Batch records cannot request passwords, editors, files, prompts, deletion, or
+attachments. Checklist fields inside `input` retain the existing encrypted
+payload spelling (`is_done`, `completed_at`, and `assignee_user_ids`).
+
+```bash
+sealtask batch run --input ./operations.jsonl --dry-run
+sealtask --format jsonl batch run --input ./operations.jsonl --jobs 8 \
+  --continue-on-error
+sealtask --format jsonl batch run --input ./operations.jsonl \
+  --checkpoint "$HOME/.local/state/sealtask/batch/release-42.json"
+sealtask --format jsonl batch run --input ./operations.jsonl \
+  --checkpoint "$HOME/.local/state/sealtask/batch/release-42.json" --resume
+```
+
+Table output prints sanitized per-operation lines and one summary for humans.
+`--format jsonl` flushes versioned operation records and exactly one summary;
+finite JSON formats are rejected. Exit status is `0` for complete success or a
+successful dry run, `1` for validation/total failure, `3` for partial success
+with `--continue-on-error`, `4` for checkpoint safety conflicts, and `130` for
+interruption.
+
+Checkpoints are bound to the canonical input SHA-256 and persist only hashed
+operation IDs plus canonical UUID/revision/commitment metadata—never selectors,
+task plaintext, ciphertext, encryption material, tokens, or idempotency values.
+Durable checkpoint/resume is currently available on Linux and macOS, where
+handle-relative atomic no-replace publication is available. Other platforms
+fail closed before touching the checkpoint path, while ordinary batch
+execution and dry runs remain available.
+The parent directory chain created by the CLI is private (`0700` on POSIX);
+checkpoint and lock files must be regular, non-symlink private files (`0600`).
+Every supplied parent component must be a real directory rather than a
+symlink, and `..` components are rejected before path normalization. On macOS,
+use a real path such as `/private/tmp/...` instead of the `/tmp/...` alias when
+keeping a checkpoint outside the home directory.
+Transitions are appended to a bounded, fsynced JSONL journal under one
+exclusive lock; recovery ignores only an incomplete final record, and
+occasional atomic compaction keeps the journal at or below 8 MiB. New
+checkpoints are published with one atomic no-replace rename, so neither an
+existing checkpoint nor a crash-visible second hard link can be introduced.
+A resume skips confirmed successes, safely replays creates through
+project-keyed deterministic idempotency, and accepts a started update only
+against its exact checkpointed revision and change commitment. Do not edit or
+delete a checkpoint after an interrupted run until its in-flight state is
+understood.
+
+For ordinary one-shot project, task, comment, and note mutations, SIGINT or
+SIGTERM cancels promptly while no durable request is in flight. If a mutation
+request is active, the first signal waits up to 30 seconds for a definitive
+response instead of dropping it. A second signal, or the grace deadline, exits
+`130` with a typed `ambiguous` outcome only while that request is still active
+and tells the operator to inspect the resource before retrying because the
+mutation may have committed. If credentials are rotating when the first signal
+arrives, the CLI first lets the replacement session persist, then cancels
+before sending the requested resource mutation; forcing that boundary reports
+the session outcome as ambiguous instead of claiming the resource changed.
+
+For batches, the first signal stops new scheduling and safe preparation/retry
+waits while allowing an already-started mutation and terminal checkpoint write
+to reach a durable boundary. Credential rotation follows the same durable
+session boundary: a forced second signal or grace timeout reports a
+session-ambiguous outcome with login guidance and never claims that a resource
+mutation was sent. A second signal otherwise forces bounded cleanup. Resume with
+the exact same input and checkpoint after either interruption.
+
 ```bash
 cargo run -p sealtask -- --json --non-interactive tasks complete \
   --work-list-id <list-id> --task-id <task-id>
@@ -632,10 +718,12 @@ Upload paths are resolved only beneath the CLI's already-open current working
 directory. They must be relative, must name regular files directly, and cannot
 contain parent traversal; absolute paths and symbolic links (including
 intermediate directory links) are rejected.
-Pressing Ctrl-C is observed before the upload and between its bounded
+SIGINT and SIGTERM are observed before the upload and between its bounded
 side-effecting stages. A storage PUT that has already started is awaited to its
 bounded result before the CLI makes a bounded attempt to release the
-server-side reservation.
+server-side reservation. A second interrupt or cleanup-grace timeout returns
+exit `130` with an `ambiguous` outcome so automation never treats an
+unconfirmed reservation or link as a clean cancellation.
 
 Presigned upload and download capabilities are accepted only for explicitly
 trusted storage origins. The API origin is trusted automatically. If your

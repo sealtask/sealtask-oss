@@ -55,8 +55,10 @@ impl PublicApiClient {
         encoded_payload: EncodedNoteRequest<CreateNoteRequest>,
     ) -> PublicResult<EncodedNoteResponse<NoteResponse>> {
         let path = format!("/work-lists/{work_list_id}/notes");
+        // Runtime note reconciliation owns the durable retry budget. Keep this
+        // transport call single-shot so the two retry loops cannot multiply.
         let response = self
-            .send_json_bytes_bounded_body(
+            .send_no_replay_json_bytes_bounded_body(
                 reqwest::Method::POST,
                 &path,
                 encoded_payload.into_body(),

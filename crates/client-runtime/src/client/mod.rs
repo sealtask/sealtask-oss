@@ -5,7 +5,7 @@ mod task_references;
 mod tasks;
 mod work_lists;
 
-pub use tasks::ProjectTaskSession;
+pub use tasks::{PreparedTaskCreate, PreparedTaskUpdate, ProjectTaskSession, TaskMutationPlan};
 
 use crate::blocking_crypto::BlockingCryptoAdmission;
 use crate::models::ReadError;
@@ -20,8 +20,8 @@ use crate::{
     upload_lifecycle::{AttachmentUploadFailureReport, UploadLifecycleManager},
 };
 use sealtask_client_api::{
-    ApiTransportOptions, PublicApiClient, TaskReferenceSchemeResponse, WorkListResponse,
-    build_control_plane_http_client,
+    ApiCancellationToken, ApiTransportOptions, PublicApiClient, TaskReferenceSchemeResponse,
+    WorkListResponse, build_control_plane_http_client,
 };
 use sealtask_client_auth::{
     Credentials, load_credentials_for_url, load_persisted_data_key, normalize_api_url,
@@ -84,6 +84,7 @@ struct CachedDataKey {
 pub struct RuntimeClient {
     pub(crate) api_url: String,
     pub(crate) api_transport_options: ApiTransportOptions,
+    pub(crate) api_cancellation_token: Option<ApiCancellationToken>,
     pub(crate) storage_policy: StorageTransferPolicy,
     pub(crate) blocking_crypto: BlockingCryptoAdmission,
     pub(crate) upload_lifecycle: UploadLifecycleManager,
@@ -175,6 +176,7 @@ impl RuntimeClient {
         Ok(Self {
             api_url,
             api_transport_options,
+            api_cancellation_token: None,
             storage_policy,
             blocking_crypto: BlockingCryptoAdmission::default(),
             upload_lifecycle: UploadLifecycleManager::default(),
@@ -192,6 +194,21 @@ impl RuntimeClient {
     #[must_use]
     pub const fn api_transport_options(&self) -> ApiTransportOptions {
         self.api_transport_options
+    }
+
+    /// Installs cooperative API cancellation for this runtime clone's work.
+    #[must_use]
+    pub fn with_api_cancellation_token(
+        mut self,
+        api_cancellation_token: ApiCancellationToken,
+    ) -> Self {
+        self.api_cancellation_token = Some(api_cancellation_token);
+        self
+    }
+
+    #[must_use]
+    pub fn api_cancellation_token(&self) -> Option<ApiCancellationToken> {
+        self.api_cancellation_token.clone()
     }
 
     pub fn control_plane_http_client(&self) -> PublicResult<reqwest::Client> {
@@ -219,11 +236,22 @@ impl RuntimeClient {
                 "session expired - run 'sealtask auth login' to authenticate",
             ));
         }
-        PublicApiClient::with_credentials_and_options(
+        self.api_client_with_credentials(credentials)
+    }
+
+    pub(crate) fn api_client_with_credentials(
+        &self,
+        credentials: Credentials,
+    ) -> PublicResult<PublicApiClient> {
+        let client = PublicApiClient::with_credentials_and_options(
             &self.api_url,
             credentials,
             self.api_transport_options,
-        )
+        )?;
+        Ok(match self.api_cancellation_token.clone() {
+            Some(token) => client.with_cancellation_token(token),
+            None => client,
+        })
     }
 
     /// Waits up to `timeout` for active attachment uploads and their compensation to finish.
@@ -263,11 +291,7 @@ impl RuntimeClient {
         let data_key = self
             .load_data_key(&mut credentials, password_stdin, prompt_message)
             .await?;
-        let mut client = PublicApiClient::with_credentials_and_options(
-            &self.api_url,
-            credentials,
-            self.api_transport_options,
-        )?;
+        let mut client = self.api_client_with_credentials(credentials)?;
         let work_list = client.get_work_list(work_list_id).await?;
         let scheme_history =
             load_task_reference_scheme_history(&mut client, &work_list.work_list).await;
@@ -312,11 +336,7 @@ impl RuntimeClient {
         if cancellation.is_cancelled() {
             return Err(PublicError::cancelled("attachment upload cancelled"));
         }
-        let mut client = PublicApiClient::with_credentials_and_options(
-            &self.api_url,
-            credentials,
-            self.api_transport_options,
-        )?;
+        let mut client = self.api_client_with_credentials(credentials)?;
         let work_list = tokio::select! {
             biased;
             () = cancellation.cancelled() => {
@@ -427,11 +447,7 @@ impl RuntimeClient {
             }
             DataKeyCiphertextVersion::OpaqueExportKeyV2 => {
                 let (opaque_state, client_login_state) = opaque_login_start(password)?;
-                let mut client = PublicApiClient::with_credentials_and_options(
-                    &self.api_url,
-                    credentials.clone(),
-                    self.api_transport_options,
-                )?;
+                let mut client = self.api_client_with_credentials(credentials.clone())?;
                 let challenge = client.start_opaque_export_key(&client_login_state).await?;
                 *credentials = client.into_credentials().ok_or_else(|| {
                     PublicError::unexpected(
@@ -498,6 +514,21 @@ mod tests {
     use base64::engine::general_purpose::STANDARD_NO_PAD;
     use sealtask_client_crypto::{DATA_KEY_SALT_BYTES, SealedPayload};
     use std::sync::atomic::{AtomicBool, Ordering};
+
+    #[test]
+    fn api_client_factory_propagates_the_invocation_cancellation_token() {
+        let cancellation = ApiCancellationToken::new();
+        let runtime = RuntimeClient::new("http://127.0.0.1:9")
+            .expect("runtime")
+            .with_api_cancellation_token(cancellation.clone());
+
+        let client = runtime
+            .api_client_with_credentials(test_legacy_credentials())
+            .expect("API client");
+
+        assert_eq!(runtime.api_cancellation_token(), Some(cancellation.clone()));
+        assert_eq!(client.cancellation_token(), Some(cancellation));
+    }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn non_upload_legacy_password_kdf_keeps_the_tokio_worker_responsive() {

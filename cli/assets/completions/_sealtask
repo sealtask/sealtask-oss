@@ -24,6 +24,7 @@ _sealtask() {
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--serve-unlock-daemon=[]:SERVE_UNLOCK_DAEMON:_files' \
@@ -58,6 +59,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
@@ -84,6 +86,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
@@ -109,6 +112,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
@@ -133,6 +137,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
@@ -158,6 +163,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
@@ -191,6 +197,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--password-stdin[Read login input from stdin\: trimmed password on line 1 and optional exact authenticator or backup code on line 2]' \
@@ -218,6 +225,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--password-stdin[Read the account password from stdin]' \
@@ -243,6 +251,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
@@ -267,6 +276,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
@@ -299,6 +309,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--password-stdin[Read the account password from stdin]' \
@@ -324,6 +335,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
@@ -380,6 +392,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
@@ -404,6 +417,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
@@ -496,6 +510,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
@@ -520,6 +535,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
@@ -552,6 +568,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--include-archived[Include archived projects]' \
@@ -580,6 +597,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--include-completed[Include completed tasks]' \
@@ -639,6 +657,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--verbose[]' \
@@ -675,6 +694,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--details[Print expanded human-readable project details]' \
@@ -703,6 +723,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
@@ -730,6 +751,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
@@ -757,6 +779,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
@@ -784,6 +807,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
@@ -810,6 +834,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
@@ -834,6 +859,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
@@ -858,6 +884,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
@@ -892,6 +919,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
@@ -948,6 +976,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--password-stdin[Read the account password from stdin when project-name resolution needs an unlock]' \
@@ -1050,6 +1079,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--verbose[]' \
@@ -1086,6 +1116,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--details[Print expanded human-readable project details]' \
@@ -1114,6 +1145,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
@@ -1141,6 +1173,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
@@ -1168,6 +1201,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
@@ -1195,6 +1229,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
@@ -1221,6 +1256,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
@@ -1245,6 +1281,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
@@ -1269,6 +1306,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
@@ -1303,6 +1341,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
@@ -1359,6 +1398,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--password-stdin[Read the account password from stdin when project-name resolution needs an unlock]' \
@@ -1461,6 +1501,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
@@ -1499,6 +1540,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--include-completed[Include tasks in completed sections]' \
@@ -1531,6 +1573,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
@@ -1560,6 +1603,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--include-completed[Include completed tasks]' \
@@ -1600,10 +1644,12 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--input-file --input-stdin)--edit[Open your configured editor; --title, --body, and --body-file seed its contents]' \
 '(--input-file --password-stdin --title --body --body-file --edit --priority --due-at --due --start-at --section-id --section --idempotency-key)--input-stdin[Read the complete camelCase task input object from stdin]' \
+'--dry-run[Resolve, validate, and encrypt the request but do not create the task]' \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
@@ -1630,6 +1676,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
@@ -1669,6 +1716,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--body-file)--clear-body[Remove the task body]' \
@@ -1677,6 +1725,7 @@ _arguments "${_arguments_options[@]}" : \
 '--clear-start-at[Remove the start time]' \
 '--clear-section[Remove the explicit section assignment]' \
 '(--input-file --password-stdin --title --body --body-file --clear-body --priority --clear-priority --due-at --due --clear-due-at --start-at --clear-start-at --section-id --section --clear-section)--input-stdin[Read the complete camelCase patch object from stdin]' \
+'--dry-run[Resolve, validate, and encrypt the request but do not update the task]' \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
@@ -1708,6 +1757,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
@@ -1737,6 +1787,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
@@ -1766,6 +1817,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
@@ -1795,6 +1847,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
@@ -1824,6 +1877,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
@@ -1854,6 +1908,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--input-file)--input-stdin[Read an optional audit patch from stdin]' \
@@ -1882,6 +1937,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
@@ -1920,6 +1976,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
@@ -1950,6 +2007,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
@@ -1981,6 +2039,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
@@ -2012,6 +2071,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--force[Replace an existing output file]' \
@@ -2183,6 +2243,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
@@ -2207,6 +2268,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
@@ -2241,6 +2303,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
@@ -2282,6 +2345,98 @@ esac
     ;;
 esac
 ;;
+(batch)
+_arguments "${_arguments_options[@]}" : \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+":: :_sealtask__subcmd__batch_commands" \
+"*::: :->batch" \
+&& ret=0
+
+    case $state in
+    (batch)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:sealtask-batch-command-$line[1]:"
+        case $line[1] in
+            (run)
+_arguments "${_arguments_options[@]}" : \
+'--input=[JSONL input path, or '\''-'\'' to read stdin]:PATH:_files' \
+'--jobs=[Maximum number of unrelated operations in flight]:COUNT:_default' \
+'--checkpoint=[Durable resumable checkpoint path (Linux and macOS only)]:PATH:_files' \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'--continue-on-error[Keep scheduling independent operations after an operation fails]' \
+'--resume[Resume an existing Linux/macOS checkpoint bound to the exact canonical input]' \
+'(--checkpoint --resume)--dry-run[Resolve and prepare every operation without issuing mutations]' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+":: :_sealtask__subcmd__batch__subcmd__help_commands" \
+"*::: :->help" \
+&& ret=0
+
+    case $state in
+    (help)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:sealtask-batch-help-command-$line[1]:"
+        case $line[1] in
+            (run)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+        esac
+    ;;
+esac
+;;
 (doctor)
 _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
@@ -2293,6 +2448,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--offline[Run local checks only and make no network requests]' \
@@ -2320,6 +2476,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
@@ -2352,6 +2509,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--resolved[Include resolution sources and defaults]' \
@@ -2405,6 +2563,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
@@ -2437,6 +2596,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
@@ -2461,6 +2621,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
@@ -2518,6 +2679,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--password-stdin[]' \
@@ -2544,6 +2706,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
@@ -2579,6 +2742,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
@@ -2611,6 +2775,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--input-file --password-stdin --body --body-file)--input-stdin[Read the complete camelCase comment input object from stdin]' \
@@ -2644,6 +2809,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--input-file --password-stdin --body)--input-stdin[Read the complete camelCase comment input object from stdin]' \
@@ -2676,6 +2842,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--input-file)--input-stdin[Read an optional audit patch from stdin]' \
@@ -2744,6 +2911,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
@@ -2778,6 +2946,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
@@ -2806,6 +2975,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
@@ -2838,6 +3008,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--private[Encrypt with a per-note key available only to the current user]' \
@@ -2868,6 +3039,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
@@ -2900,6 +3072,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--input-file --password-stdin --title --body)--input-stdin[Read the complete camelCase note patch from stdin]' \
@@ -2931,6 +3104,7 @@ _arguments "${_arguments_options[@]}" : \
 '--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
 '--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
 '--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
 '(--input-file)--input-stdin[Read an optional audit patch from stdin]' \
@@ -3300,6 +3474,26 @@ _arguments "${_arguments_options[@]}" : \
     ;;
 esac
 ;;
+(batch)
+_arguments "${_arguments_options[@]}" : \
+":: :_sealtask__subcmd__help__subcmd__batch_commands" \
+"*::: :->batch" \
+&& ret=0
+
+    case $state in
+    (batch)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:sealtask-help-batch-command-$line[1]:"
+        case $line[1] in
+            (run)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
 (doctor)
 _arguments "${_arguments_options[@]}" : \
 && ret=0
@@ -3452,6 +3646,7 @@ _sealtask_commands() {
 'tasks:List, inspect, create, update, move, or delete tasks' \
 'stats:Show current dashboard task counts' \
 'activity:Inspect or continuously follow recent account activity' \
+'batch:Validate, execute, and safely resume task mutations from JSON Lines' \
 'doctor:Diagnose local state, authentication, unlock, and API connectivity' \
 'config:Inspect resolved operator configuration' \
 'profile:List profiles or change the persisted default profile' \
@@ -3635,6 +3830,37 @@ _sealtask__subcmd__auth__subcmd__unlock_commands() {
     local commands; commands=()
     _describe -t commands 'sealtask auth unlock commands' commands "$@"
 }
+(( $+functions[_sealtask__subcmd__batch_commands] )) ||
+_sealtask__subcmd__batch_commands() {
+    local commands; commands=(
+'run:Run a strict versioned JSONL task-mutation batch' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'sealtask batch commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__batch__subcmd__help_commands] )) ||
+_sealtask__subcmd__batch__subcmd__help_commands() {
+    local commands; commands=(
+'run:Run a strict versioned JSONL task-mutation batch' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'sealtask batch help commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__batch__subcmd__help__subcmd__help_commands] )) ||
+_sealtask__subcmd__batch__subcmd__help__subcmd__help_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask batch help help commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__batch__subcmd__help__subcmd__run_commands] )) ||
+_sealtask__subcmd__batch__subcmd__help__subcmd__run_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask batch help run commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__batch__subcmd__run_commands] )) ||
+_sealtask__subcmd__batch__subcmd__run_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask batch run commands' commands "$@"
+}
 (( $+functions[_sealtask__subcmd__comments_commands] )) ||
 _sealtask__subcmd__comments_commands() {
     local commands; commands=(
@@ -3757,6 +3983,7 @@ _sealtask__subcmd__help_commands() {
 'tasks:List, inspect, create, update, move, or delete tasks' \
 'stats:Show current dashboard task counts' \
 'activity:Inspect or continuously follow recent account activity' \
+'batch:Validate, execute, and safely resume task mutations from JSON Lines' \
 'doctor:Diagnose local state, authentication, unlock, and API connectivity' \
 'config:Inspect resolved operator configuration' \
 'profile:List profiles or change the persisted default profile' \
@@ -3833,6 +4060,18 @@ _sealtask__subcmd__help__subcmd__auth__subcmd__status_commands() {
 _sealtask__subcmd__help__subcmd__auth__subcmd__unlock_commands() {
     local commands; commands=()
     _describe -t commands 'sealtask help auth unlock commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__batch_commands] )) ||
+_sealtask__subcmd__help__subcmd__batch_commands() {
+    local commands; commands=(
+'run:Run a strict versioned JSONL task-mutation batch' \
+    )
+    _describe -t commands 'sealtask help batch commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__batch__subcmd__run_commands] )) ||
+_sealtask__subcmd__help__subcmd__batch__subcmd__run_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help batch run commands' commands "$@"
 }
 (( $+functions[_sealtask__subcmd__help__subcmd__comments_commands] )) ||
 _sealtask__subcmd__help__subcmd__comments_commands() {

@@ -3,7 +3,7 @@ use crate::selectors::{EntitySelector, IdSelector};
 use chrono::{DateTime, Utc};
 use clap::{ArgAction, ArgGroup, Args, Parser, Subcommand, ValueEnum};
 use std::fmt;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use uuid::Uuid;
 
 fn task_target_group() -> ArgGroup {
@@ -144,6 +144,17 @@ pub(crate) struct Cli {
         value_name = "DURATION"
     )]
     pub(crate) request_timeout: Option<String>,
+
+    /// Retry replay-safe API requests after transient failures.
+    #[arg(
+        long,
+        env = "SEALTASK_RETRY",
+        global = true,
+        default_value_t = 2,
+        value_name = "COUNT",
+        value_parser = clap::value_parser!(u8).range(0..=10)
+    )]
+    pub(crate) retry: u8,
 
     /// Isolate credentials and unlock state under a named profile.
     #[arg(long, env = "SEALTASK_PROFILE", global = true, value_name = "NAME")]
@@ -300,6 +311,11 @@ pub(crate) enum Command {
         #[command(subcommand)]
         command: ActivityCommand,
     },
+    /// Validate, execute, and safely resume task mutations from JSON Lines.
+    Batch {
+        #[command(subcommand)]
+        command: BatchCommand,
+    },
     /// Diagnose local state, authentication, unlock, and API connectivity.
     Doctor {
         /// Run local checks only and make no network requests.
@@ -338,6 +354,54 @@ pub(crate) enum Command {
         #[command(subcommand)]
         command: NotesCommand,
     },
+}
+
+#[derive(Subcommand, Debug)]
+pub(crate) enum BatchCommand {
+    /// Run a strict versioned JSONL task-mutation batch.
+    Run(BatchRunArgs),
+}
+
+#[derive(Args)]
+pub(crate) struct BatchRunArgs {
+    /// JSONL input path, or '-' to read stdin.
+    #[arg(long, value_name = "PATH", required = true)]
+    pub(crate) input: PathBuf,
+    /// Maximum number of unrelated operations in flight.
+    #[arg(
+        long,
+        value_name = "COUNT",
+        default_value_t = 4,
+        value_parser = clap::value_parser!(u8).range(1..=16)
+    )]
+    pub(crate) jobs: u8,
+    /// Keep scheduling independent operations after an operation fails.
+    #[arg(long)]
+    pub(crate) continue_on_error: bool,
+    /// Durable resumable checkpoint path (Linux and macOS only).
+    #[arg(long, value_name = "PATH")]
+    pub(crate) checkpoint: Option<PathBuf>,
+    /// Resume an existing Linux/macOS checkpoint bound to the exact canonical input.
+    #[arg(long)]
+    pub(crate) resume: bool,
+    /// Resolve and prepare every operation without issuing mutations.
+    #[arg(long, conflicts_with_all = ["checkpoint", "resume"])]
+    pub(crate) dry_run: bool,
+}
+
+impl fmt::Debug for BatchRunArgs {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("BatchRunArgs")
+            .field("input_stdin", &(self.input == Path::new("-")))
+            .field("input_path_present", &(self.input != Path::new("-")))
+            .field("jobs", &self.jobs)
+            .field("continue_on_error", &self.continue_on_error)
+            .field("checkpoint_present", &self.checkpoint.is_some())
+            .field("resume", &self.resume)
+            .field("dry_run", &self.dry_run)
+            .finish()
+    }
 }
 
 #[derive(Subcommand, Debug)]
@@ -890,6 +954,9 @@ pub(crate) struct TaskCreateArgsCli {
         ]
     )]
     pub(crate) input_stdin: bool,
+    /// Resolve, validate, and encrypt the request but do not create the task.
+    #[arg(long)]
+    pub(crate) dry_run: bool,
     /// Read the account password from stdin when no local unlock is available.
     #[arg(long)]
     pub(crate) password_stdin: bool,
@@ -914,6 +981,7 @@ impl fmt::Debug for TaskCreateArgsCli {
             .field("idempotency_key_present", &self.idempotency_key.is_some())
             .field("input_file_present", &self.input_file.is_some())
             .field("input_stdin", &self.input_stdin)
+            .field("dry_run", &self.dry_run)
             .field("password_stdin", &self.password_stdin)
             .finish()
     }
@@ -1055,6 +1123,9 @@ pub(crate) struct TaskUpdateArgsCli {
         ]
     )]
     pub(crate) input_stdin: bool,
+    /// Resolve, validate, and encrypt the request but do not update the task.
+    #[arg(long)]
+    pub(crate) dry_run: bool,
     /// Read the account password from stdin when no local unlock is available.
     #[arg(long)]
     pub(crate) password_stdin: bool,
@@ -1084,6 +1155,7 @@ impl fmt::Debug for TaskUpdateArgsCli {
             .field("clear_section", &self.clear_section)
             .field("input_file_present", &self.input_file.is_some())
             .field("input_stdin", &self.input_stdin)
+            .field("dry_run", &self.dry_run)
             .field("password_stdin", &self.password_stdin)
             .finish()
     }
@@ -2053,5 +2125,30 @@ mod tests {
                 "conflicting body input parsed successfully"
             );
         }
+    }
+
+    #[test]
+    fn batch_paths_are_redacted_from_debug_output() {
+        let input_canary = "batch-input-secret-canary.jsonl";
+        let checkpoint_canary = "batch-checkpoint-secret-canary.json";
+        let parsed = Cli::try_parse_from([
+            "sealtask",
+            "batch",
+            "run",
+            "--input",
+            input_canary,
+            "--checkpoint",
+            checkpoint_canary,
+            "--jobs",
+            "8",
+            "--continue-on-error",
+        ])
+        .expect("parse batch");
+        let debug = format!("{parsed:?}");
+        assert!(!debug.contains(input_canary));
+        assert!(!debug.contains(checkpoint_canary));
+        assert!(debug.contains("input_path_present: true"));
+        assert!(debug.contains("checkpoint_present: true"));
+        assert!(debug.contains("jobs: 8"));
     }
 }

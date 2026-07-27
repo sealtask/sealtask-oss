@@ -4,7 +4,7 @@
 .SH NAME
 sealtask\-activity\-follow \- Follow new activity using bounded cursor catch\-up polling
 .SH SYNOPSIS
-\fBsealtask activity follow\fR [\fB\-\-api\-url\fR] [\fB\-\-interval\fR] [\fB\-\-since\fR] [\fB\-\-storage\-origin\fR] [\fB\-\-json\fR] [\fB\-\-format\fR] [\fB\-\-color\fR] [\fB\-\-pager\fR] [\fB\-\-no\-pager\fR] [\fB\-\-progress\fR] [\fB\-q\fR|\fB\-\-quiet\fR] [\fB\-\-non\-interactive\fR] [\fB\-v \fR]... [\fB\-\-debug\fR] [\fB\-\-connect\-timeout\fR] [\fB\-\-read\-timeout\fR] [\fB\-\-request\-timeout\fR] [\fB\-\-profile\fR] [\fB\-\-config\-dir\fR] [\fB\-h\fR|\fB\-\-help\fR]
+\fBsealtask activity follow\fR [\fB\-\-api\-url\fR] [\fB\-\-interval\fR] [\fB\-\-since\fR] [\fB\-\-storage\-origin\fR] [\fB\-\-json\fR] [\fB\-\-format\fR] [\fB\-\-color\fR] [\fB\-\-pager\fR] [\fB\-\-no\-pager\fR] [\fB\-\-progress\fR] [\fB\-q\fR|\fB\-\-quiet\fR] [\fB\-\-non\-interactive\fR] [\fB\-v \fR]... [\fB\-\-debug\fR] [\fB\-\-connect\-timeout\fR] [\fB\-\-read\-timeout\fR] [\fB\-\-request\-timeout\fR] [\fB\-\-retry\fR] [\fB\-\-profile\fR] [\fB\-\-config\-dir\fR] [\fB\-h\fR|\fB\-\-help\fR]
 .SH DESCRIPTION
 Follow new activity using bounded cursor catch\-up polling
 .SH OPTIONS
@@ -18,6 +18,12 @@ Delay between activity polls (for example 2s or 1m)
 .TP
 \fB\-\-since\fR \fI<DURATION>\fR [default: 10m]
 Emit recent history from this window before following new events
+.TP
+\fB\-\-retry\fR \fI<COUNT>\fR [default: 2]
+Retry replay\-safe API requests after transient failures
+.RS
+May also be specified with the \fBSEALTASK_RETRY\fR environment variable.
+.RE
 .SH CONNECTION
 .TP
 \fB\-\-api\-url\fR \fI<API_URL>\fR [default: https://sealtask.com]

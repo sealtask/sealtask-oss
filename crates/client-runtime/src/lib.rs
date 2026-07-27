@@ -18,14 +18,16 @@ mod storage;
 mod unlock_daemon;
 mod upload_lifecycle;
 
-pub use client::{ProjectTaskSession, RuntimeClient};
+pub use client::{
+    PreparedTaskCreate, PreparedTaskUpdate, ProjectTaskSession, RuntimeClient, TaskMutationPlan,
+};
 pub use inputs::{
     ArchiveTaskArgs, AttachmentUploadPassword, CommentInput, CreateCommentArgs, CreateNoteArgs,
     CreateTaskArgs, DeleteCommentArgs, DeleteNoteArgs, DeleteTaskArgs, DeleteTaskAttachmentArgs,
     MoveTaskArgs, MoveTaskInput, NoteCreateInput, NoteUpdateInput,
     QuarantineTaskReferenceSchemeArgs, RepairTaskReferenceSchemeArgs, TaskCompletionArgs,
-    TaskCreateInput, TaskFieldPatch, TaskUpdateInput, UnarchiveTaskArgs, UpdateCommentArgs,
-    UpdateNoteArgs, UpdateTaskArgs, UploadTaskAttachmentArgs,
+    TaskCreateIdempotencyDerivation, TaskCreateInput, TaskFieldPatch, TaskUpdateInput,
+    UnarchiveTaskArgs, UpdateCommentArgs, UpdateNoteArgs, UpdateTaskArgs, UploadTaskAttachmentArgs,
 };
 pub use models::{
     AgentAttachment, AgentComment, AgentDelegation, AgentMembership, AgentNote, AgentTaskDetail,

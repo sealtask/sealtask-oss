@@ -828,7 +828,7 @@ mod tests {
             (
                 "408 Request Timeout",
                 br#"{"error":"request_timeout","message":"secret timeout detail"}"#,
-                "request_timeout",
+                "outcome_ambiguous",
             ),
             (
                 "429 Too Many Requests",
@@ -904,7 +904,7 @@ mod tests {
                 PublicError::OutcomeAmbiguous { operation, details }
                     if operation == "attachment upload initiation"
                         && details.contains(&format!("operation_id={operation_id}"))
-                        && details.contains("primary=transport_other")
+                        && details.contains("primary=outcome_ambiguous")
                         && details.contains(&format!("retry={retry_cause}"))
                         && details.contains("original initiation may have committed")
                         && !details.contains("secret")
@@ -2709,7 +2709,7 @@ mod tests {
             PublicError::OutcomeAmbiguous { operation, details }
                 if operation == "attachment upload cleanup"
                     && details.contains("primary=api_mutation")
-                    && details.contains("cleanup=http_server_error")
+                    && details.contains("cleanup=outcome_ambiguous")
                     && details.contains("reconciliation=api_read")
         ));
         assert_eq!(

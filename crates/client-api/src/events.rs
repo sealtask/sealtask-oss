@@ -290,7 +290,7 @@ impl fmt::Debug for BoardEventStream {
 impl PublicApiClient {
     pub async fn issue_project_sse_token(&mut self, work_list_id: Uuid) -> PublicResult<SseToken> {
         let token: SseToken = self
-            .post_bounded(
+            .post_bounded_no_replay(
                 &format!("/work-lists/{work_list_id}/sse-token"),
                 &IssueSseTokenRequest {},
                 MAX_SSE_TOKEN_RESPONSE_BYTES,

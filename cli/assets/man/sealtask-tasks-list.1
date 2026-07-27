@@ -4,7 +4,7 @@
 .SH NAME
 sealtask\-tasks\-list \- List tasks in the selected/current project, or assigned tasks when none is selected
 .SH SYNOPSIS
-\fBsealtask tasks list\fR [\fB\-\-api\-url\fR] [\fB\-\-project\fR] [\fB\-\-storage\-origin\fR] [\fB\-\-work\-list\-id\fR] [\fB\-\-include\-completed\fR] [\fB\-\-json\fR] [\fB\-\-format\fR] [\fB\-\-include\-archived\fR] [\fB\-\-all\fR] [\fB\-\-color\fR] [\fB\-\-columns\fR] [\fB\-\-pager\fR] [\fB\-\-no\-pager\fR] [\fB\-\-sort\fR] [\fB\-\-field\fR] [\fB\-\-progress\fR] [\fB\-q\fR|\fB\-\-quiet\fR] [\fB\-\-web\-url\fR] [\fB\-\-non\-interactive\fR] [\fB\-\-password\-stdin\fR] [\fB\-v \fR]... [\fB\-\-debug\fR] [\fB\-\-connect\-timeout\fR] [\fB\-\-read\-timeout\fR] [\fB\-\-request\-timeout\fR] [\fB\-\-profile\fR] [\fB\-\-config\-dir\fR] [\fB\-h\fR|\fB\-\-help\fR]
+\fBsealtask tasks list\fR [\fB\-\-api\-url\fR] [\fB\-\-project\fR] [\fB\-\-storage\-origin\fR] [\fB\-\-work\-list\-id\fR] [\fB\-\-include\-completed\fR] [\fB\-\-json\fR] [\fB\-\-format\fR] [\fB\-\-include\-archived\fR] [\fB\-\-all\fR] [\fB\-\-color\fR] [\fB\-\-columns\fR] [\fB\-\-pager\fR] [\fB\-\-no\-pager\fR] [\fB\-\-sort\fR] [\fB\-\-field\fR] [\fB\-\-progress\fR] [\fB\-q\fR|\fB\-\-quiet\fR] [\fB\-\-web\-url\fR] [\fB\-\-non\-interactive\fR] [\fB\-\-password\-stdin\fR] [\fB\-v \fR]... [\fB\-\-debug\fR] [\fB\-\-connect\-timeout\fR] [\fB\-\-read\-timeout\fR] [\fB\-\-request\-timeout\fR] [\fB\-\-retry\fR] [\fB\-\-profile\fR] [\fB\-\-config\-dir\fR] [\fB\-h\fR|\fB\-\-help\fR]
 .SH DESCRIPTION
 List tasks in the selected/current project, or assigned tasks when none is selected
 .SH OPTIONS
@@ -103,6 +103,12 @@ url
 Browser application origin; valid only with \-\-field url (defaults to the API origin)
 .RS
 May also be specified with the \fBSEALTASK_WEB_URL\fR environment variable.
+.RE
+.TP
+\fB\-\-retry\fR \fI<COUNT>\fR [default: 2]
+Retry replay\-safe API requests after transient failures
+.RS
+May also be specified with the \fBSEALTASK_RETRY\fR environment variable.
 .RE
 .SH INPUT
 .TP

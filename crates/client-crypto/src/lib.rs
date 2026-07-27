@@ -661,6 +661,39 @@ pub fn compute_task_create_semantic_commitment(
     Ok(STANDARD_NO_PAD.encode(mac.finalize().into_bytes()))
 }
 
+/// Derives the server-visible idempotency key for an implicit batch task create.
+///
+/// The canonical input digest and operation ID are local equality-sensitive
+/// material. A project-key-derived HMAC keeps them opaque to the API while
+/// preserving deterministic retries for the same project and canonical batch.
+pub fn derive_batch_task_create_idempotency_key(
+    canonical_input_sha256: &[u8; 32],
+    operation_id: &str,
+    work_list_id: &uuid::Uuid,
+    list_key: &SymmetricKey,
+) -> PublicResult<String> {
+    type IdempotencyMac = Hmac<Sha256>;
+
+    let derivation_key = derive_child_key(
+        list_key,
+        "sealtask.batch.task-create.idempotency-key.key.v1",
+    )?;
+    let mut mac = IdempotencyMac::new_from_slice(derivation_key.as_bytes()).map_err(|err| {
+        PublicError::crypto(format!(
+            "failed to create batch task idempotency HMAC: {err}"
+        ))
+    })?;
+    mac.update(b"sealtask.batch.task-create.idempotency-key.payload.v1\0");
+    mac.update(work_list_id.as_bytes());
+    mac.update(canonical_input_sha256);
+    mac.update(&(operation_id.len() as u64).to_be_bytes());
+    mac.update(operation_id.as_bytes());
+    Ok(format!(
+        "batch:v2:{}",
+        URL_SAFE_NO_PAD.encode(mac.finalize().into_bytes())
+    ))
+}
+
 /// Computes an opaque, stable commitment for a logical note-create request.
 ///
 /// The list-key-derived MAC lets a retry use freshly randomized ciphertext
@@ -1022,6 +1055,81 @@ mod tests {
         assert_ne!(first, changed);
         assert_ne!(first, other_project);
         assert_eq!(STANDARD_NO_PAD.decode(first).expect("base64").len(), 32);
+    }
+
+    #[test]
+    fn batch_task_create_idempotency_is_keyed_stable_and_project_scoped() {
+        let digest = [0xab; 32];
+        let operation_id = "plaintext-operation-id-canary";
+        let first_project = uuid::Uuid::from_u128(1);
+        let second_project = uuid::Uuid::from_u128(2);
+        let data_key = SymmetricKey::new([0x41; KEY_SIZE]);
+        let first_key = derive_work_list_key(&data_key, &first_project).expect("first list key");
+        let second_key = derive_work_list_key(&data_key, &second_project).expect("second list key");
+        let unrelated_key = SymmetricKey::new([0x42; KEY_SIZE]);
+
+        let first = derive_batch_task_create_idempotency_key(
+            &digest,
+            operation_id,
+            &first_project,
+            &first_key,
+        )
+        .expect("first derivation");
+        let retry = derive_batch_task_create_idempotency_key(
+            &digest,
+            operation_id,
+            &first_project,
+            &first_key,
+        )
+        .expect("retry derivation");
+        let other_project = derive_batch_task_create_idempotency_key(
+            &digest,
+            operation_id,
+            &second_project,
+            &second_key,
+        )
+        .expect("other project derivation");
+        let other_project_same_key = derive_batch_task_create_idempotency_key(
+            &digest,
+            operation_id,
+            &second_project,
+            &first_key,
+        )
+        .expect("other project with same key derivation");
+        let other_operation = derive_batch_task_create_idempotency_key(
+            &digest,
+            "different-operation",
+            &first_project,
+            &first_key,
+        )
+        .expect("other operation derivation");
+        let other_unlocked_key = derive_batch_task_create_idempotency_key(
+            &digest,
+            operation_id,
+            &first_project,
+            &unrelated_key,
+        )
+        .expect("other unlocked key derivation");
+
+        assert_eq!(first, retry);
+        assert_ne!(first, other_project);
+        assert_ne!(
+            first, other_project_same_key,
+            "the project identifier must be part of the keyed payload"
+        );
+        assert_ne!(first, other_operation);
+        assert_ne!(
+            first, other_unlocked_key,
+            "the server-visible value must depend on secret project key material"
+        );
+        assert!(first.starts_with("batch:v2:"));
+        assert!(first.len() <= 128);
+        assert!(first.bytes().all(|byte| {
+            byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.' | b':')
+        }));
+        assert!(!first.contains(operation_id));
+        assert!(!first.contains(&"ab".repeat(32)));
+        assert!(!first.contains(&URL_SAFE_NO_PAD.encode(digest)));
     }
 
     #[test]

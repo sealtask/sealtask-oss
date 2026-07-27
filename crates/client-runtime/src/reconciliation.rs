@@ -31,9 +31,10 @@ impl ReconciliationCause {
 
 pub(crate) fn mutation_outcome_is_ambiguous(error: &PublicError) -> bool {
     match error {
-        PublicError::Unexpected(_) | PublicError::Response { .. } | PublicError::Transport(_) => {
-            true
-        }
+        PublicError::Unexpected(_)
+        | PublicError::Response { .. }
+        | PublicError::Transport(_)
+        | PublicError::OutcomeAmbiguous { .. } => true,
         PublicError::Http(failure) => failure.kind() == HttpFailureKind::Server,
         _ => false,
     }
@@ -140,6 +141,16 @@ mod tests {
                 "{operation} guidance must describe a safe request retry"
             );
         }
+    }
+
+    #[test]
+    fn explicit_transport_ambiguity_enters_higher_level_reconciliation() {
+        let error = PublicError::outcome_ambiguous(
+            "attachment deletion",
+            "the server may have applied the request",
+        );
+
+        assert!(mutation_outcome_is_ambiguous(&error));
     }
 
     #[test]

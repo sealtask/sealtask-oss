@@ -18,6 +18,7 @@ use sealtask_client_crypto::{
 use serde_json::Value;
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
+use zeroize::Zeroize;
 
 #[derive(Debug)]
 struct TaskProjectionMetadata {
@@ -354,10 +355,15 @@ impl RuntimeClient {
 
     pub(crate) fn project_task_summary(
         &self,
-        task: TaskResponse,
+        mut task: TaskResponse,
         context: Option<&WorkListContext>,
     ) -> AgentTaskSummary {
-        project_task(TaskProjectionInput {
+        for delegation in &mut task.delegations {
+            if let Some(note_ciphertext) = delegation.note_ciphertext.as_mut() {
+                note_ciphertext.zeroize();
+            }
+        }
+        let projected = project_task(TaskProjectionInput {
             metadata: TaskProjectionMetadata {
                 id: task.id,
                 work_list_id: task.work_list_id,
@@ -391,7 +397,10 @@ impl RuntimeClient {
             payload_ciphertext: &task.payload_ciphertext,
             list_key: context.and_then(|item| item.list_key.as_ref()),
             inherited_error: context.and_then(|item| item.read_error.clone()),
-        })
+        });
+        task.title_ciphertext.zeroize();
+        task.payload_ciphertext.zeroize();
+        projected
     }
 
     pub(crate) fn project_my_task_summary(

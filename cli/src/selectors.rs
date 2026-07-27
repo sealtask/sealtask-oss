@@ -7,6 +7,7 @@ use std::fmt;
 use std::str::FromStr;
 use unicode_normalization::UnicodeNormalization;
 use uuid::Uuid;
+use zeroize::Zeroize;
 
 const MINIMUM_ID_PREFIX_LENGTH: usize = 8;
 const MAXIMUM_SELECTOR_BYTES: usize = 1_024;
@@ -84,6 +85,12 @@ impl FromStr for IdSelector {
 impl fmt::Debug for EntitySelector {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str("EntitySelector(<redacted>)")
+    }
+}
+
+impl Drop for EntitySelector {
+    fn drop(&mut self) {
+        self.0.zeroize();
     }
 }
 

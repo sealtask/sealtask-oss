@@ -11,8 +11,10 @@ use crate::input::{
     resolve_task_update_input, validate_body_input,
 };
 use crate::interaction::require_confirmation;
+use crate::interruption::SignalMonitor;
 use crate::output::{
-    CliError, CliResult, OutputFormat, WarningResult, finish_with_warnings, warning_result,
+    CliError, CliResult, OutputFormat, WarningResult, finish_with_warnings, print_json,
+    warning_result,
 };
 use crate::render::{
     print_attachment, print_delete_result, print_download_result, print_empty_collection,
@@ -25,7 +27,7 @@ use crate::resolver::{
 };
 use crate::selectors::{EntitySelector, IdSelector, ResolvedEntity, resolve_id_selector};
 use crate::task_list::{TaskListOptions, TaskListScope, print_task_list};
-use crate::terminal::{ProgressGuard, with_progress};
+use crate::terminal::{self, ProgressGuard, with_progress};
 use chrono::Utc;
 use sealtask_client_api::DeleteTaskRequest;
 use sealtask_client_core::PublicError;
@@ -34,7 +36,7 @@ use sealtask_client_runtime::{
     ArchiveTaskArgs, AttachmentUploadPassword, CreateTaskArgs, DeleteTaskArgs,
     DeleteTaskAttachmentArgs, MoveTaskArgs, MoveTaskInput, OperationCancellation,
     QuarantineTaskReferenceSchemeArgs, RepairTaskReferenceSchemeArgs, RuntimeClient,
-    TaskCompletionArgs, TaskFieldPatch, UnarchiveTaskArgs, UpdateTaskArgs,
+    TaskCompletionArgs, TaskFieldPatch, TaskMutationPlan, UnarchiveTaskArgs, UpdateTaskArgs,
     UploadTaskAttachmentArgs,
 };
 use serde_json::json;
@@ -304,6 +306,7 @@ async fn run_task_attachments(
             };
             let cancellation = OperationCancellation::new();
             let progress = ProgressGuard::start("Uploading and linking attachment…");
+            let signal_monitor = SignalMonitor::start()?;
             let supervised = supervise_attachment_upload(
                 runtime.upload_task_attachment_with_cancellation(
                     UploadTaskAttachmentArgs {
@@ -316,8 +319,8 @@ async fn run_task_attachments(
                     },
                     cancellation.clone(),
                 ),
-                tokio::signal::ctrl_c(),
-                tokio::signal::ctrl_c(),
+                signal_monitor.subscribe().wait_for(1),
+                signal_monitor.subscribe().wait_for(2),
                 cancellation,
                 ATTACHMENT_UPLOAD_CANCELLATION_GRACE,
                 Some(&progress),
@@ -329,8 +332,15 @@ async fn run_task_attachments(
                     print_attachment(&attachment, format)
                 }
                 AttachmentUploadOutcome::Completed(Err(error)) => Err(error.into()),
-                AttachmentUploadOutcome::Interrupted { message } => {
-                    return Err(CliError::interrupted(message, &supervised.warnings));
+                AttachmentUploadOutcome::Interrupted {
+                    message,
+                    outcome_ambiguous,
+                } => {
+                    return Err(if outcome_ambiguous {
+                        CliError::interrupted_ambiguous(message, &supervised.warnings)
+                    } else {
+                        CliError::interrupted(message, &supervised.warnings)
+                    });
                 }
             };
             finish_with_warnings(format, &supervised.warnings, result)
@@ -552,7 +562,10 @@ struct SupervisedAttachmentUpload<T> {
 
 enum AttachmentUploadOutcome<T> {
     Completed(PublicResult<T>),
-    Interrupted { message: String },
+    Interrupted {
+        message: String,
+        outcome_ambiguous: bool,
+    },
 }
 
 async fn supervise_attachment_upload<T, U, S1, S2>(
@@ -584,8 +597,8 @@ where
     let mut warnings = Vec::new();
     if let Err(signal_error) = first_signal_result {
         warnings.push(warning_result(
-            "ctrl_c_listener_failed",
-            format!("failed to listen for Ctrl-C: {signal_error}"),
+            "signal_listener_failed",
+            format!("failed to listen for process interruption: {signal_error}"),
         ));
         return SupervisedAttachmentUpload {
             outcome: AttachmentUploadOutcome::Completed(upload.await),
@@ -600,7 +613,7 @@ where
     warnings.push(warning_result(
         "attachment_upload_cancellation_requested",
         format!(
-            "Ctrl-C received; waiting up to {} seconds for attachment cleanup (press Ctrl-C again to stop waiting)",
+            "interrupt received; waiting up to {} seconds for attachment cleanup (interrupt again to stop waiting)",
             cancellation_grace.as_secs()
         ),
     ));
@@ -616,6 +629,7 @@ where
                 let outcome = if matches!(result, Err(PublicError::Cancelled(_))) {
                     AttachmentUploadOutcome::Interrupted {
                         message: "attachment upload interrupted".to_string(),
+                        outcome_ambiguous: false,
                     }
                 } else {
                     AttachmentUploadOutcome::Completed(result)
@@ -627,19 +641,20 @@ where
                     Ok(()) => {
                         warnings.push(warning_result(
                             "attachment_upload_cancellation_forced",
-                            "second Ctrl-C received before attachment cleanup completed; the backend may need to expire the pending upload".to_string(),
+                            "second interrupt received before attachment cleanup completed; the backend may need to expire the pending upload".to_string(),
                         ));
                         return SupervisedAttachmentUpload {
                             outcome: AttachmentUploadOutcome::Interrupted {
                                 message: "attachment upload interrupted before cleanup completed".to_string(),
+                                outcome_ambiguous: true,
                             },
                             warnings,
                         };
                     }
                     Err(signal_error) => {
                         warnings.push(warning_result(
-                            "ctrl_c_listener_failed",
-                            format!("failed to listen for a second Ctrl-C: {signal_error}"),
+                            "signal_listener_failed",
+                            format!("failed to listen for a second process interruption: {signal_error}"),
                         ));
                         second_listener_active = false;
                     }
@@ -653,6 +668,7 @@ where
                 return SupervisedAttachmentUpload {
                     outcome: AttachmentUploadOutcome::Interrupted {
                         message: "attachment upload interrupted before cleanup completed".to_string(),
+                        outcome_ambiguous: true,
                     },
                     warnings,
                 };
@@ -721,19 +737,27 @@ async fn create_task(
                 .id,
         );
     }
-    if non_interactive && input.idempotency_key.is_none() {
+    if non_interactive && !args.dry_run && input.idempotency_key.is_none() {
         return Err(PublicError::validation(
             "--non-interactive tasks create requires --idempotency-key or input field idempotencyKey",
         )
         .into());
     }
-    let created = with_progress(
-        "Creating task…",
-        runtime.create_task(CreateTaskArgs {
+    let prepared = with_progress(
+        "Preparing task…",
+        runtime.prepare_task_create(CreateTaskArgs {
             work_list_id: project.id,
             input,
             password_stdin: args.password_stdin,
         }),
+    )
+    .await?;
+    if args.dry_run {
+        return print_task_mutation_plan(prepared.plan(), format);
+    }
+    let created = with_progress(
+        "Creating task…",
+        runtime.execute_prepared_task_create(prepared),
     )
     .await?;
     print_task(&created, format)
@@ -847,9 +871,9 @@ async fn update_task(
                 .id,
         );
     }
-    let updated = with_progress(
-        "Updating task…",
-        runtime.update_task(UpdateTaskArgs {
+    let prepared = with_progress(
+        "Preparing task update…",
+        runtime.prepare_task_update(UpdateTaskArgs {
             work_list_id: project_id,
             task_id: task.id,
             input,
@@ -857,7 +881,64 @@ async fn update_task(
         }),
     )
     .await?;
+    if args.dry_run {
+        return print_task_mutation_plan(prepared.plan(), format);
+    }
+    let updated = with_progress(
+        "Updating task…",
+        runtime.execute_prepared_task_update(prepared),
+    )
+    .await?;
     print_task(&updated, format)
+}
+
+fn print_task_mutation_plan(plan: &TaskMutationPlan, format: OutputFormat) -> CliResult<()> {
+    match format {
+        OutputFormat::Json | OutputFormat::JsonPretty | OutputFormat::Jsonl => {
+            print_json(plan, format, "task mutation plan must serialize")
+        }
+        OutputFormat::Table => {
+            println!(
+                "{}",
+                terminal::style_stdout(
+                    "Task mutation dry run",
+                    crate::terminal::StyleRole::Heading
+                )
+            );
+            println!("Action: {}", plan.action);
+            println!("Project: {}", plan.project_id);
+            if let Some(task_id) = plan.task_id {
+                println!("Task: {task_id}");
+            }
+            if let Some(section_id) = plan.section_id {
+                println!("Section: {section_id}");
+            }
+            if let Some(expected_updated_at) = plan.expected_updated_at {
+                println!("Expected revision: {expected_updated_at}");
+            }
+            let changed_fields = if plan.changed_fields.is_empty() {
+                "(none)".to_string()
+            } else {
+                plan.changed_fields.join(", ")
+            };
+            println!(
+                "Would change: {} ({} field(s): {changed_fields})",
+                if plan.would_change { "yes" } else { "no" },
+                plan.changed_field_count
+            );
+            println!(
+                "Idempotency protected: {}",
+                if plan.idempotency_protected {
+                    "yes"
+                } else {
+                    "no"
+                }
+            );
+            println!("Change commitment: {}", plan.change_commitment);
+            println!("Mutation sent: no");
+            Ok(())
+        }
+    }
 }
 
 async fn move_task(
@@ -1090,7 +1171,7 @@ mod tests {
             AttachmentUploadOutcome::Completed(Ok(7))
         ));
         assert_eq!(supervised.warnings.len(), 1);
-        assert_eq!(supervised.warnings[0].code(), "ctrl_c_listener_failed");
+        assert_eq!(supervised.warnings[0].code(), "signal_listener_failed");
         assert!(
             supervised.warnings[0]
                 .message()
@@ -1132,7 +1213,7 @@ mod tests {
                 && primary == "primary category"
                 && cleanup == "cleanup category"
         ));
-        assert_eq!(supervised.warnings[0].code(), "ctrl_c_listener_failed");
+        assert_eq!(supervised.warnings[0].code(), "signal_listener_failed");
         assert!(
             supervised.warnings[0]
                 .message()
@@ -1174,7 +1255,10 @@ mod tests {
 
         assert!(matches!(
             supervised.outcome,
-            AttachmentUploadOutcome::Interrupted { .. }
+            AttachmentUploadOutcome::Interrupted {
+                outcome_ambiguous: false,
+                ..
+            }
         ));
         assert_eq!(
             supervised.warnings[0].code(),
@@ -1216,7 +1300,10 @@ mod tests {
 
         assert!(matches!(
             supervised.outcome,
-            AttachmentUploadOutcome::Interrupted { .. }
+            AttachmentUploadOutcome::Interrupted {
+                outcome_ambiguous: false,
+                ..
+            }
         ));
         assert_eq!(reads.load(Ordering::Acquire), 1);
     }
@@ -1243,7 +1330,10 @@ mod tests {
 
         assert!(matches!(
             supervised.outcome,
-            AttachmentUploadOutcome::Interrupted { .. }
+            AttachmentUploadOutcome::Interrupted {
+                outcome_ambiguous: true,
+                ..
+            }
         ));
         assert!(
             supervised
@@ -1275,7 +1365,10 @@ mod tests {
 
         assert!(matches!(
             supervised.outcome,
-            AttachmentUploadOutcome::Interrupted { .. }
+            AttachmentUploadOutcome::Interrupted {
+                outcome_ambiguous: true,
+                ..
+            }
         ));
         assert!(
             supervised

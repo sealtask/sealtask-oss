@@ -10,7 +10,12 @@
 use crate::note_transport_limits::{
     MAX_NOTE_DECOMPRESSED_PAGE_BYTES, MAX_NOTE_MUTATION_REQUEST_BYTES,
 };
-use crate::{BoundedHttpResponse, decode_bounded_json, map_api_error_with_retry_after};
+use crate::{
+    BoundedHttpResponse, decode_bounded_json, map_api_error_with_retry_after,
+    transport::{
+        ActiveRequestBoundaryGuard, RequestSemantics, successful_mutation_processing_error,
+    },
+};
 use sealtask_client_core::{PublicError, PublicResult};
 use serde::{Serialize, de::DeserializeOwned};
 use std::any::type_name;
@@ -94,6 +99,8 @@ pub struct EncodedNoteResponse<T: NoteResponsePayload> {
     retry_after: Option<Duration>,
     received_len: usize,
     body: PublicResult<Vec<u8>>,
+    semantics: RequestSemantics,
+    request_guard: Option<ActiveRequestBoundaryGuard>,
     marker: PhantomData<fn() -> T>,
 }
 
@@ -110,6 +117,8 @@ impl<T: NoteResponsePayload> EncodedNoteResponse<T> {
             retry_after: None,
             received_len: response.1.len(),
             body: Ok(response.1),
+            semantics: RequestSemantics::Read,
+            request_guard: None,
             marker: PhantomData,
         })
     }
@@ -118,15 +127,17 @@ impl<T: NoteResponsePayload> EncodedNoteResponse<T> {
         let status = response.status().as_u16();
         let retry_after = response.retry_after();
         let received_len = response.received_len();
-        let body = response
-            .into_body()
-            .and_then(|body| validate_response_size(&body).map(|()| body));
+        let semantics = response.semantics();
+        let (body, request_guard) = response.into_body_with_guard();
+        let body = body.and_then(|body| validate_response_size(&body).map(|()| body));
         Self {
             path,
             status,
             retry_after,
             received_len,
             body,
+            semantics,
+            request_guard,
             marker: PhantomData,
         }
     }
@@ -141,7 +152,9 @@ impl<T: NoteResponsePayload> EncodedNoteResponse<T> {
         let status = response.status().as_u16();
         let retry_after = response.retry_after();
         let received_len = response.received_len();
-        let body = response.into_body()?;
+        let semantics = response.semantics();
+        let (body, request_guard) = response.into_body_with_guard();
+        let body = body?;
         validate_response_size(&body)?;
         Ok(Self {
             path,
@@ -149,6 +162,8 @@ impl<T: NoteResponsePayload> EncodedNoteResponse<T> {
             retry_after,
             received_len,
             body: Ok(body),
+            semantics,
+            request_guard,
             marker: PhantomData,
         })
     }
@@ -175,16 +190,26 @@ impl<T: NoteResponsePayload> EncodedNoteResponse<T> {
         T::decode(self)
     }
 
-    fn into_success_body(self) -> PublicResult<(String, Vec<u8>)> {
+    fn into_success_body(
+        self,
+    ) -> PublicResult<(
+        String,
+        Vec<u8>,
+        RequestSemantics,
+        Option<ActiveRequestBoundaryGuard>,
+    )> {
         let Self {
             path,
             status,
             retry_after,
             body,
+            semantics,
+            request_guard,
             ..
         } = self;
         if (200..300).contains(&status) {
-            body.map(|body| (path, body))
+            body.map_err(|error| successful_mutation_processing_error(semantics, error))
+                .map(|body| (path, body, semantics, request_guard))
         } else {
             match body {
                 Ok(body) => {
@@ -225,9 +250,10 @@ pub(crate) fn decode_json_response<T>(response: EncodedNoteResponse<T>) -> Publi
 where
     T: NoteResponsePayload + DeserializeOwned,
 {
-    let (path, body) = response.into_success_body()?;
+    let (path, body, semantics, _request_guard) = response.into_success_body()?;
     let _ = path;
     decode_bounded_json(&body)
+        .map_err(|error| successful_mutation_processing_error(semantics, error))
 }
 
 fn validate_request_size(body: &[u8]) -> PublicResult<()> {

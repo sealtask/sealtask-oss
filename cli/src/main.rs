@@ -12,6 +12,7 @@ mod editor;
 mod human_input;
 mod input;
 mod interaction;
+mod interruption;
 mod live_output;
 mod operator_config;
 mod output_models;
@@ -28,15 +29,15 @@ mod terminal;
 use args::{Cli, Command};
 use clap::FromArgMatches;
 use commands::{
-    run_activity, run_auth, run_comments, run_config, run_info, run_lists_get, run_me, run_notes,
-    run_pick, run_profile, run_projects, run_schema, run_stats, run_tasks,
+    run_activity, run_auth, run_batch, run_comments, run_config, run_info, run_lists_get, run_me,
+    run_notes, run_pick, run_profile, run_projects, run_schema, run_stats, run_tasks,
 };
 use operator_config::{
     OperatorOverrides, parse_timeout, resolve_operator_config,
     resolve_operator_config_for_diagnostics,
 };
 use output::{CliError, CliResult, OutputFormat, print_clap_error, print_cli_error};
-use sealtask_client_api::ApiTransportOptions;
+use sealtask_client_api::{ApiCancellationToken, ApiRetryPolicy, ApiTransportOptions};
 use sealtask_client_auth::configure_local_state;
 use sealtask_client_core::PublicError;
 use sealtask_client_runtime::{RuntimeClient, serve};
@@ -75,6 +76,8 @@ async fn main() {
         Some(Command::Tasks { command }) if task_list::is_raw_field_output(command)
     );
     let streaming = command_is_streaming(cli.command.as_ref());
+    let guarded_mutation = interruption::needs_mutation_supervision(cli.command.as_ref());
+    let cancellation = ApiCancellationToken::new();
     let terminal = if raw_discovery {
         Ok(None)
     } else {
@@ -93,7 +96,16 @@ async fn main() {
     };
     let result = match terminal {
         Ok(terminal) => {
-            let result = run(cli, format, &args).await;
+            let result = if guarded_mutation {
+                interruption::supervise_mutation(
+                    run(cli, format, &args, cancellation.clone()),
+                    cancellation,
+                    format,
+                )
+                .await
+            } else {
+                run(cli, format, &args, cancellation).await
+            };
             let terminal_result = terminal.map_or(Ok(()), TerminalSession::finish);
             match (result, terminal_result) {
                 (Err(error), _) => Err(error),
@@ -130,7 +142,12 @@ fn exit_after_clap_error(err: clap::Error, format: OutputFormat) -> ! {
     err.exit()
 }
 
-async fn run(cli: Cli, format: OutputFormat, raw_args: &[OsString]) -> CliResult<()> {
+async fn run(
+    cli: Cli,
+    format: OutputFormat,
+    raw_args: &[OsString],
+    cancellation: ApiCancellationToken,
+) -> CliResult<()> {
     if cli.command.is_none() && cli.serve_unlock_daemon.is_none() {
         if format.is_json() {
             return Err(PublicError::validation(
@@ -238,6 +255,7 @@ async fn run(cli: Cli, format: OutputFormat, raw_args: &[OsString]) -> CliResult
         resolved_config.read_timeout.value,
         resolved_config.request_timeout.value,
     )?
+    .with_retry_policy(ApiRetryPolicy::new(cli.retry)?)
     .with_request_id(invocation_id);
     let command = cli
         .command
@@ -257,6 +275,7 @@ async fn run(cli: Cli, format: OutputFormat, raw_args: &[OsString]) -> CliResult
                 resolved_config.read_timeout.value,
                 resolved_config.request_timeout.value,
             ),
+            retry_limit: cli.retry,
         },
     );
 
@@ -279,7 +298,8 @@ async fn run(cli: Cli, format: OutputFormat, raw_args: &[OsString]) -> CliResult
         &resolved_config.api_url.value,
         storage_origins,
         transport_options,
-    );
+    )
+    .map(|runtime| runtime.with_api_cancellation_token(cancellation));
 
     let result = match (command, runtime) {
         (Command::Info, Ok(runtime)) => run_info(&runtime, format),
@@ -320,6 +340,7 @@ async fn run(cli: Cli, format: OutputFormat, raw_args: &[OsString]) -> CliResult
         (Command::Activity { command }, Ok(runtime)) => {
             run_activity(&runtime, format, command).await
         }
+        (Command::Batch { command }, Ok(runtime)) => run_batch(&runtime, format, command).await,
         (
             Command::Doctor {
                 offline,
@@ -472,6 +493,7 @@ fn command_name(command: &Command) -> &'static str {
         Command::Tasks { .. } => "tasks",
         Command::Stats => "stats",
         Command::Activity { .. } => "activity",
+        Command::Batch { .. } => "batch",
         Command::Doctor { .. } => "doctor",
         Command::Config { .. } => "config",
         Command::Profile { .. } => "profile",
@@ -488,7 +510,7 @@ fn command_is_streaming(command: Option<&Command>) -> bool {
             command: args::TasksCommand::Watch { .. },
         }) | Some(Command::Activity {
             command: args::ActivityCommand::Follow { .. },
-        })
+        }) | Some(Command::Batch { .. })
     )
 }
 

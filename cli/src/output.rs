@@ -11,9 +11,16 @@ pub(crate) type CliResult<T> = Result<T, CliError>;
 #[derive(Debug)]
 pub(crate) enum CliError {
     BrokenPipe,
+    BatchStatus {
+        code: &'static str,
+        message: String,
+        exit_code: i32,
+    },
     Interrupted {
         message: String,
         warnings: Vec<WarningResult>,
+        outcome_ambiguous: bool,
+        hint: Option<&'static str>,
     },
     Public(PublicError),
     PublicWithWarnings {
@@ -28,6 +35,7 @@ impl fmt::Display for CliError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::BrokenPipe => write!(f, "broken pipe"),
+            Self::BatchStatus { message, .. } => message.fmt(f),
             Self::Interrupted { message, .. } => message.fmt(f),
             Self::Public(error) | Self::PublicWithWarnings { error, .. } => error.fmt(f),
         }
@@ -44,6 +52,7 @@ impl CliError {
     pub(crate) fn code(&self) -> &'static str {
         match self {
             Self::BrokenPipe => "broken_pipe",
+            Self::BatchStatus { code, .. } => code,
             Self::Interrupted { .. } => "interrupted",
             Self::Public(error) | Self::PublicWithWarnings { error, .. } => error.code(),
         }
@@ -68,14 +77,66 @@ impl CliError {
         Self::Interrupted {
             message: message.into(),
             warnings: warnings.to_vec(),
+            outcome_ambiguous: false,
+            hint: None,
+        }
+    }
+
+    pub(crate) fn interrupted_ambiguous(
+        message: impl Into<String>,
+        warnings: &[WarningResult],
+    ) -> Self {
+        Self::Interrupted {
+            message: message.into(),
+            warnings: warnings.to_vec(),
+            outcome_ambiguous: true,
+            hint: None,
+        }
+    }
+
+    pub(crate) fn interrupted_session_ambiguous(
+        message: impl Into<String>,
+        warnings: &[WarningResult],
+    ) -> Self {
+        Self::Interrupted {
+            message: message.into(),
+            warnings: warnings.to_vec(),
+            outcome_ambiguous: true,
+            hint: Some(
+                "The server may have rotated the session; run 'sealtask auth login' if authentication no longer works.",
+            ),
+        }
+    }
+
+    pub(crate) fn batch_partial_failure(message: impl Into<String>) -> Self {
+        Self::BatchStatus {
+            code: "batch_partial_failure",
+            message: message.into(),
+            exit_code: 3,
+        }
+    }
+
+    pub(crate) fn checkpoint_conflict(message: impl Into<String>) -> Self {
+        Self::BatchStatus {
+            code: "checkpoint_conflict",
+            message: message.into(),
+            exit_code: 4,
+        }
+    }
+
+    pub(crate) fn checkpoint_io(message: impl Into<String>) -> Self {
+        Self::BatchStatus {
+            code: "checkpoint_io",
+            message: message.into(),
+            exit_code: 4,
         }
     }
 
     pub(crate) fn exit_code(&self) -> i32 {
-        if matches!(self, Self::Interrupted { .. }) {
-            130
-        } else {
-            1
+        match self {
+            Self::Interrupted { .. } => 130,
+            Self::BatchStatus { exit_code, .. } => *exit_code,
+            _ => 1,
         }
     }
 
@@ -98,9 +159,21 @@ impl CliError {
                 result.http_status = error.http_status();
                 result.outcome = public_error_outcome(error);
             }
-            Self::Interrupted { .. } => {
-                result.outcome = Some("interrupted");
+            Self::Interrupted {
+                outcome_ambiguous,
+                hint,
+                ..
+            } => {
+                if *outcome_ambiguous {
+                    result.outcome = Some("ambiguous");
+                    result.hint = hint.or(Some(
+                        "Inspect the resource before retrying; the mutation may have committed.",
+                    ));
+                } else {
+                    result.outcome = Some("interrupted");
+                }
             }
+            Self::BatchStatus { .. } => {}
             Self::BrokenPipe => {}
         }
         result
@@ -458,15 +531,20 @@ pub(crate) fn finish_with_warnings<T>(
             Ok(value)
         }
         Err(CliError::BrokenPipe) => Err(CliError::BrokenPipe),
+        Err(error @ CliError::BatchStatus { .. }) => Err(error),
         Err(CliError::Interrupted {
             message,
             warnings: existing,
+            outcome_ambiguous,
+            hint,
         }) => {
             let mut combined = warnings.to_vec();
             combined.extend(existing);
             Err(CliError::Interrupted {
                 message,
                 warnings: combined,
+                outcome_ambiguous,
+                hint,
             })
         }
         Err(CliError::Public(error)) => Err(CliError::with_warnings(error, warnings)),
@@ -656,6 +734,15 @@ fn error_hint(code: &str) -> Option<&'static str> {
         "committed_but_local_processing_failed" => {
             Some("Fetch the committed resource instead of repeating the mutation.")
         }
+        "checkpoint_conflict" => Some(
+            "Use the exact original input and checkpoint; inspect ownership and permissions before changing either file.",
+        ),
+        "checkpoint_io" => Some(
+            "Inspect checkpoint disk space and permissions; do not delete it until in-flight mutation state is understood.",
+        ),
+        "batch_partial_failure" => Some(
+            "Inspect streamed operation failures, then resume with the exact same input and checkpoint.",
+        ),
         "validation" => Some("Review command help and the rejected input field."),
         _ => None,
     }
@@ -766,6 +853,24 @@ mod tests {
         .error_result();
         assert_eq!(ambiguous.outcome, Some("ambiguous"));
         assert!(!ambiguous.retryable);
+    }
+
+    #[test]
+    fn exhausted_replay_safe_transient_failures_remain_retryable_in_output() {
+        for kind in [
+            sealtask_client_core::ResponseFailureKind::BodyRead,
+            sealtask_client_core::ResponseFailureKind::BodyTruncated,
+            sealtask_client_core::ResponseFailureKind::Transport,
+        ] {
+            let result =
+                CliError::from(PublicError::response(kind, "response failed")).error_result();
+            assert!(result.retryable, "{} should be retryable", result.code);
+        }
+        assert!(
+            CliError::from(PublicError::http(503, None, None))
+                .error_result()
+                .retryable
+        );
     }
 
     impl Write for AlwaysFailWriter {
@@ -891,9 +996,41 @@ mod tests {
         })
         .expect("JSON error envelope");
         assert_eq!(document["error"]["code"], "interrupted");
+        assert_eq!(document["error"]["outcome"], "interrupted");
         assert_eq!(
             document["warnings"][0]["code"],
             "attachment_upload_cancellation_timed_out"
+        );
+    }
+
+    #[test]
+    fn forced_mutation_interruption_reports_an_ambiguous_outcome() {
+        let error =
+            CliError::interrupted_ambiguous("stopped before a definitive mutation response", &[]);
+        let result = error.error_result();
+
+        assert_eq!(error.exit_code(), 130);
+        assert_eq!(result.code, "interrupted");
+        assert_eq!(result.outcome, Some("ambiguous"));
+        assert!(
+            result
+                .hint
+                .is_some_and(|hint| hint.contains("may have committed"))
+        );
+    }
+
+    #[test]
+    fn forced_credential_refresh_interruption_uses_session_recovery_guidance() {
+        let error =
+            CliError::interrupted_session_ambiguous("session rotation may be ambiguous", &[]);
+        let result = error.error_result();
+
+        assert_eq!(result.outcome, Some("ambiguous"));
+        assert!(result.hint.is_some_and(|hint| hint.contains("auth login")));
+        assert!(
+            result
+                .hint
+                .is_none_or(|hint| !hint.contains("resource") && !hint.contains("mutation"))
         );
     }
 

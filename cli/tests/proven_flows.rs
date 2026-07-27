@@ -293,7 +293,8 @@ async fn cli_proven_flows_round_trip_through_mock_api() {
         home.path(),
         &server.base_url,
         &[
-            "--json",
+            "--format",
+            "json-pretty",
             "tasks",
             "update",
             "--work-list-id",
@@ -1252,6 +1253,432 @@ async fn cli_project_task_lists_include_archived_only_with_a_project_scope() {
     assert_eq!(
         state.lock().expect("state lock").list_task_include_archived,
         [false, true, true, true, true]
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn task_dry_runs_emit_secret_safe_plans_without_post_or_patch() {
+    let fixture = TestFixture::new();
+    let state = Arc::new(Mutex::new(TestState::new(fixture.clone())));
+    let server = spawn_server(state.clone()).await;
+    let home = TempDir::new().expect("temp home");
+    seed_credentials(home.path(), &fixture, &server.base_url);
+
+    let create_canary = "dry-run-create-plaintext-canary";
+    let create = run_cli(
+        home.path(),
+        &server.base_url,
+        &[
+            "--json",
+            "--quiet",
+            "--non-interactive",
+            "tasks",
+            "create",
+            "--work-list-id",
+            &fixture.work_list_id.to_string(),
+            "--title",
+            create_canary,
+            "--dry-run",
+            "--password-stdin",
+        ],
+        Some(&fixture.password),
+    );
+    assert!(
+        create.status.success(),
+        "task create dry run failed: {}",
+        create.stderr
+    );
+    assert!(!create.stdout.contains(create_canary));
+    let create_plan = parse_stdout_json(&create.stdout);
+    assert_eq!(create_plan["schemaVersion"], 1);
+    assert_eq!(create_plan["type"], "taskMutationPlan");
+    assert_eq!(create_plan["action"], "task.create");
+    assert_eq!(create_plan["projectId"], fixture.work_list_id.to_string());
+    assert_eq!(create_plan["wouldChange"], true);
+    assert_eq!(create_plan["willMutate"], false);
+    assert_eq!(create_plan["idempotencyProtected"], false);
+    assert_eq!(create_plan["changedFields"], json!(["title"]));
+    assert!(create_plan["changeCommitment"].is_string());
+    assert!(
+        state
+            .lock()
+            .expect("state lock")
+            .created_task_request
+            .is_none(),
+        "dry run must not POST a task"
+    );
+
+    let quiet_table = run_cli(
+        home.path(),
+        &server.base_url,
+        &[
+            "--quiet",
+            "tasks",
+            "create",
+            "--work-list-id",
+            &fixture.work_list_id.to_string(),
+            "--title",
+            create_canary,
+            "--dry-run",
+            "--password-stdin",
+        ],
+        Some(&fixture.password),
+    );
+    assert!(
+        quiet_table.status.success(),
+        "quiet table dry run failed: {}",
+        quiet_table.stderr
+    );
+    assert!(quiet_table.stdout.contains("Task mutation dry run"));
+    assert!(quiet_table.stdout.contains("Mutation sent: no"));
+    assert!(!quiet_table.stdout.contains(create_canary));
+
+    let update_canary = "dry-run-update-plaintext-canary";
+    let update = run_cli(
+        home.path(),
+        &server.base_url,
+        &[
+            "--format",
+            "json-pretty",
+            "tasks",
+            "update",
+            "--task-id",
+            &fixture.task_id.to_string(),
+            "--work-list-id",
+            &fixture.work_list_id.to_string(),
+            "--title",
+            update_canary,
+            "--dry-run",
+            "--password-stdin",
+        ],
+        Some(&fixture.password),
+    );
+    assert!(
+        update.status.success(),
+        "task update dry run failed: {}",
+        update.stderr
+    );
+    assert!(!update.stdout.contains(update_canary));
+    let update_plan = parse_stdout_json(&update.stdout);
+    assert_eq!(update_plan["action"], "task.update");
+    assert_eq!(update_plan["taskId"], fixture.task_id.to_string());
+    assert_eq!(update_plan["changedFields"], json!(["title"]));
+    assert_eq!(update_plan["wouldChange"], true);
+    assert_eq!(update_plan["willMutate"], false);
+    assert!(update_plan["expectedUpdatedAt"].is_string());
+    assert!(
+        state
+            .lock()
+            .expect("state lock")
+            .updated_task_request
+            .is_none(),
+        "dry run must not PATCH a task"
+    );
+
+    let no_op = run_cli(
+        home.path(),
+        &server.base_url,
+        &[
+            "--json",
+            "tasks",
+            "update",
+            "--task-id",
+            &fixture.task_id.to_string(),
+            "--work-list-id",
+            &fixture.work_list_id.to_string(),
+            "--title",
+            "Existing task",
+            "--dry-run",
+            "--password-stdin",
+        ],
+        Some(&fixture.password),
+    );
+    assert!(
+        no_op.status.success(),
+        "task no-op dry run failed: {}",
+        no_op.stderr
+    );
+    let no_op_plan = parse_stdout_json(&no_op.stdout);
+    assert_eq!(no_op_plan["wouldChange"], false);
+    assert_eq!(no_op_plan["changedFieldCount"], 0);
+    assert_eq!(no_op_plan["changedFields"], json!([]));
+    assert!(
+        state
+            .lock()
+            .expect("state lock")
+            .updated_task_request
+            .is_none(),
+        "no-op dry run must not PATCH a task"
+    );
+}
+
+#[cfg(unix)]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn d7_first_sigint_waits_for_a_definitive_task_create_response() {
+    let fixture = TestFixture::new();
+    let committed = Arc::new(Notify::new());
+    let release_response = Arc::new(Notify::new());
+    let state = Arc::new(Mutex::new(TestState::new(fixture.clone())));
+    {
+        let mut state = state.lock().expect("state lock");
+        state.d7_task_create_committed = Some(committed.clone());
+        state.d7_task_create_release_response = Some(release_response.clone());
+    }
+    let server = spawn_server(state.clone()).await;
+    let home = TempDir::new().expect("temp home");
+    seed_credentials(home.path(), &fixture, &server.base_url);
+
+    let mut child = spawn_cli_process_with_stdin(
+        home.path(),
+        &server.base_url,
+        &[
+            "--json",
+            "tasks",
+            "create",
+            "--work-list-id",
+            &fixture.work_list_id.to_string(),
+            "--title",
+            "Graceful interrupt",
+            "--password-stdin",
+        ],
+        &fixture.password,
+    );
+    tokio::time::timeout(std::time::Duration::from_secs(5), committed.notified())
+        .await
+        .expect("task create should commit before its response is released");
+    signal_process(&mut child, libc::SIGINT);
+    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    assert!(
+        child.try_wait().expect("poll CLI process").is_none(),
+        "the first interrupt must keep waiting for a definitive response"
+    );
+
+    release_response.notify_one();
+    let output = wait_for_cli_process(child).await;
+    assert!(
+        output.status.success(),
+        "stdout: {}\nstderr: {}",
+        output.stdout,
+        output.stderr
+    );
+    assert_eq!(
+        parse_stdout_json(&output.stdout)["title"],
+        "Graceful interrupt"
+    );
+    let warnings = output
+        .stderr
+        .lines()
+        .map(|line| serde_json::from_str::<Value>(line).expect("JSON warning envelope"))
+        .collect::<Vec<_>>();
+    assert_eq!(warnings.len(), 1, "stderr: {}", output.stderr);
+    assert_eq!(
+        warnings[0]["warnings"][0]["code"],
+        "mutation_interruption_deferred"
+    );
+    assert!(
+        state
+            .lock()
+            .expect("state lock")
+            .created_task_request
+            .is_some()
+    );
+}
+
+#[cfg(unix)]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn d7_second_sigint_exits_130_with_an_ambiguous_mutation_outcome() {
+    let fixture = TestFixture::new();
+    let committed = Arc::new(Notify::new());
+    let release_response = Arc::new(Notify::new());
+    let state = Arc::new(Mutex::new(TestState::new(fixture.clone())));
+    {
+        let mut state = state.lock().expect("state lock");
+        state.d7_task_create_committed = Some(committed.clone());
+        state.d7_task_create_release_response = Some(release_response.clone());
+    }
+    let server = spawn_server(state).await;
+    let home = TempDir::new().expect("temp home");
+    seed_credentials(home.path(), &fixture, &server.base_url);
+
+    let mut child = spawn_cli_process_with_stdin(
+        home.path(),
+        &server.base_url,
+        &[
+            "--format",
+            "json-pretty",
+            "tasks",
+            "create",
+            "--work-list-id",
+            &fixture.work_list_id.to_string(),
+            "--title",
+            "Ambiguous interrupt",
+            "--password-stdin",
+        ],
+        &fixture.password,
+    );
+    tokio::time::timeout(std::time::Duration::from_secs(5), committed.notified())
+        .await
+        .expect("task create should commit before its response is released");
+    let release_if_signals_are_missed = release_response.clone();
+    let fallback_release = tokio::spawn(async move {
+        tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+        release_if_signals_are_missed.notify_one();
+    });
+    signal_process(&mut child, libc::SIGINT);
+    // Distinct pending Unix signals cannot coalesce. The monitor installs both
+    // handlers synchronously and keeps both streams registered for the entire
+    // operation, so this proves there is no listener re-registration gap.
+    signal_process(&mut child, libc::SIGTERM);
+    let output = wait_for_cli_process(child).await;
+    release_response.notify_one();
+    fallback_release.abort();
+
+    assert_eq!(
+        output.status.code(),
+        Some(130),
+        "stdout: {}\nstderr: {}",
+        output.stdout,
+        output.stderr
+    );
+    assert!(output.stdout.is_empty(), "stdout: {}", output.stdout);
+    let envelope =
+        serde_json::from_str::<Value>(&output.stderr).expect("one JSON-pretty stderr document");
+    assert_eq!(
+        envelope["warnings"][0]["code"],
+        "mutation_interruption_deferred"
+    );
+    assert_eq!(envelope["error"]["code"], "interrupted");
+    assert_eq!(envelope["error"]["outcome"], "ambiguous");
+    assert_eq!(
+        envelope["warnings"][1]["code"],
+        "mutation_interruption_forced"
+    );
+}
+
+#[cfg(unix)]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn d7_batch_forced_interrupt_reports_each_in_flight_post_and_patch_as_ambiguous() {
+    let fixture = TestFixture::new();
+    let create_committed = Arc::new(Notify::new());
+    let create_release = Arc::new(Notify::new());
+    let update_committed = Arc::new(Notify::new());
+    let update_release = Arc::new(Notify::new());
+    let state = Arc::new(Mutex::new(TestState::new(fixture.clone())));
+    {
+        let mut state = state.lock().expect("state lock");
+        state.d7_task_create_committed = Some(create_committed.clone());
+        state.d7_task_create_release_response = Some(create_release.clone());
+        state.d7_task_update_committed = Some(update_committed.clone());
+        state.d7_task_update_release_response = Some(update_release.clone());
+    }
+    let server = spawn_server(state).await;
+    let home = TempDir::new().expect("temp home");
+    seed_credentials(home.path(), &fixture, &server.base_url);
+    let unlock = run_cli(
+        home.path(),
+        &server.base_url,
+        &["auth", "unlock", "--ttl-seconds", "300", "--password-stdin"],
+        Some(&fixture.password),
+    );
+    assert!(unlock.status.success(), "unlock failed: {}", unlock.stderr);
+
+    let input = home.path().join("forced-batch.jsonl");
+    std::fs::write(
+        &input,
+        format!(
+            concat!(
+                "{{\"schemaVersion\":1,\"operationId\":\"forced-create\",\"type\":\"task.create\",",
+                "\"project\":\"id:{}\",\"input\":{{\"title\":\"forced-create-canary\"}}}}\n",
+                "{{\"schemaVersion\":1,\"operationId\":\"forced-update\",\"type\":\"task.update\",",
+                "\"project\":\"id:{}\",\"task\":\"id:{}\",",
+                "\"input\":{{\"title\":\"forced-update-canary\"}}}}\n"
+            ),
+            fixture.work_list_id, fixture.work_list_id, fixture.task_id
+        ),
+    )
+    .expect("write batch input");
+
+    let mut child = spawn_cli_process(
+        home.path(),
+        &server.base_url,
+        &[
+            "--format",
+            "jsonl",
+            "batch",
+            "run",
+            "--input",
+            input.to_str().expect("batch input path"),
+            "--jobs",
+            "2",
+        ],
+    );
+    tokio::time::timeout(std::time::Duration::from_secs(5), async {
+        tokio::join!(create_committed.notified(), update_committed.notified());
+    })
+    .await
+    .expect("both batch mutations should commit before responses are released");
+
+    let fallback_create_release = create_release.clone();
+    let fallback_update_release = update_release.clone();
+    let fallback_release = tokio::spawn(async move {
+        tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+        fallback_create_release.notify_one();
+        fallback_update_release.notify_one();
+    });
+    signal_process(&mut child, libc::SIGINT);
+    signal_process(&mut child, libc::SIGTERM);
+    let output = wait_for_cli_process(child).await;
+    create_release.notify_one();
+    update_release.notify_one();
+    fallback_release.abort();
+    let lock = run_cli(home.path(), &server.base_url, &["auth", "lock"], None);
+    assert!(lock.status.success(), "lock failed: {}", lock.stderr);
+
+    assert_eq!(
+        output.status.code(),
+        Some(130),
+        "stdout: {}\nstderr: {}",
+        output.stdout,
+        output.stderr
+    );
+    assert!(!output.stdout.contains("forced-create-canary"));
+    assert!(!output.stdout.contains("forced-update-canary"));
+    assert!(!output.stderr.contains("forced-create-canary"));
+    assert!(!output.stderr.contains("forced-update-canary"));
+
+    let records = output
+        .stdout
+        .lines()
+        .map(|line| serde_json::from_str::<Value>(line).expect("compact JSONL batch record"))
+        .collect::<Vec<_>>();
+    assert_eq!(records.len(), 3, "stdout: {}", output.stdout);
+    for (record, operation_id) in records[..2].iter().zip(["forced-create", "forced-update"]) {
+        assert_eq!(record["type"], "batch.operation");
+        assert_eq!(record["operationId"], operation_id);
+        assert_eq!(record["status"], "interrupted");
+        assert_eq!(record["error"]["code"], "outcome_ambiguous");
+    }
+    assert_eq!(records[0]["operation"], "task.create");
+    assert_eq!(records[1]["operation"], "task.update");
+    assert_eq!(records[1]["taskId"], fixture.task_id.to_string());
+
+    let summary = &records[2];
+    assert_eq!(summary["type"], "batch.summary");
+    assert_eq!(summary["total"], 2);
+    assert_eq!(summary["succeeded"], 0);
+    assert_eq!(summary["failed"], 0);
+    assert_eq!(summary["notRun"], 0);
+    assert_eq!(summary["interruptedCount"], 2);
+    assert_eq!(summary["interrupted"], true);
+
+    let error: Value = serde_json::from_str(&output.stderr).expect("typed JSONL stderr error");
+    assert_eq!(error["error"]["code"], "interrupted");
+    assert_eq!(error["error"]["outcome"], "ambiguous");
+    assert!(
+        !error["error"]["message"]
+            .as_str()
+            .expect("error message")
+            .contains("checkpoint")
     );
 }
 
@@ -6829,6 +7256,10 @@ struct TestState {
     d6_watch_task_reads: usize,
     d6_watch_call_order: Vec<&'static str>,
     d6_activity_reads: usize,
+    d7_task_create_committed: Option<Arc<Notify>>,
+    d7_task_create_release_response: Option<Arc<Notify>>,
+    d7_task_update_committed: Option<Arc<Notify>>,
+    d7_task_update_release_response: Option<Arc<Notify>>,
     base_url: Option<String>,
 }
 
@@ -6900,6 +7331,10 @@ impl TestState {
             d6_watch_task_reads: 0,
             d6_watch_call_order: Vec::new(),
             d6_activity_reads: 0,
+            d7_task_create_committed: None,
+            d7_task_create_release_response: None,
+            d7_task_update_committed: None,
+            d7_task_update_release_response: None,
             base_url: None,
         }
     }
@@ -8138,54 +8573,67 @@ async fn create_task(
     Json(payload_json): Json<Value>,
 ) -> (StatusCode, Json<serde_json::Value>) {
     authorize(&state, &headers);
-    let mut state = state.lock().expect("state lock");
-    assert_eq!(work_list_id, state.fixture.work_list_id);
-    let payload: CreateTaskRequestBody =
-        serde_json::from_value(payload_json.clone()).expect("task create request");
-    state.created_task_request = Some(payload_json.clone());
+    let (response, committed, release_response) = {
+        let mut state = state.lock().expect("state lock");
+        assert_eq!(work_list_id, state.fixture.work_list_id);
+        let payload: CreateTaskRequestBody =
+            serde_json::from_value(payload_json.clone()).expect("task create request");
+        state.created_task_request = Some(payload_json.clone());
 
-    let title_bytes = decode_b64(&payload.title_ciphertext);
-    let title_proof =
-        compute_payload_proof(&title_bytes, &state.fixture.binding_key).expect("title proof");
-    assert_eq!(title_proof, payload.title_ciphertext_proof);
+        let title_bytes = decode_b64(&payload.title_ciphertext);
+        let title_proof =
+            compute_payload_proof(&title_bytes, &state.fixture.binding_key).expect("title proof");
+        assert_eq!(title_proof, payload.title_ciphertext_proof);
 
-    let payload_bytes = decode_b64(&payload.payload_ciphertext);
-    let payload_proof =
-        compute_payload_proof(&payload_bytes, &state.fixture.binding_key).expect("payload proof");
-    assert_eq!(payload_proof, payload.payload_ciphertext_proof);
+        let payload_bytes = decode_b64(&payload.payload_ciphertext);
+        let payload_proof = compute_payload_proof(&payload_bytes, &state.fixture.binding_key)
+            .expect("payload proof");
+        assert_eq!(payload_proof, payload.payload_ciphertext_proof);
 
-    let decrypted = decrypt_task_payload(&state.fixture.list_key, &payload_bytes)
-        .expect("decrypt created task");
-    assert_eq!(
-        decrypt_encrypted_text_value(&title_bytes, &state.fixture.list_key, TASK_TITLE_CONTEXT,)
-            .expect("decrypt created task title"),
-        decrypted.body.title
-    );
-    state.created_task_body = Some(decrypted.body.clone());
+        let decrypted = decrypt_task_payload(&state.fixture.list_key, &payload_bytes)
+            .expect("decrypt created task");
+        assert_eq!(
+            decrypt_encrypted_text_value(&title_bytes, &state.fixture.list_key, TASK_TITLE_CONTEXT,)
+                .expect("decrypt created task title"),
+            decrypted.body.title
+        );
+        state.created_task_body = Some(decrypted.body.clone());
 
-    let response = json!({
-        "id": Uuid::now_v7(),
-        "workListId": state.fixture.work_list_id,
-        "createdByMembershipId": state.fixture.membership_id,
-        "titleCiphertext": payload.title_ciphertext,
-        "payloadCiphertext": payload.payload_ciphertext,
-        "sectionId": payload_json.get("sectionId").cloned().unwrap_or(Value::Null),
-        "priority": payload_json.get("priority").cloned().unwrap_or(Value::Null),
-        "position": "b",
-        "dueAt": payload_json.get("dueAt").cloned().unwrap_or(Value::Null),
-        "startAt": payload_json.get("startAt").cloned().unwrap_or(Value::Null),
-        "completedAt": null,
-        "archivedAt": null,
-        "isCompleted": false,
-        "recurrenceId": null,
-        "recurrenceSchedule": null,
-        "recurrenceIteration": null,
-        "materializedAt": null,
-        "createdAt": Utc::now(),
-        "updatedAt": Utc::now(),
-        "commentCount": 0,
-        "delegations": []
-    });
+        let response = json!({
+            "id": Uuid::now_v7(),
+            "workListId": state.fixture.work_list_id,
+            "createdByMembershipId": state.fixture.membership_id,
+            "titleCiphertext": payload.title_ciphertext,
+            "payloadCiphertext": payload.payload_ciphertext,
+            "sectionId": payload_json.get("sectionId").cloned().unwrap_or(Value::Null),
+            "priority": payload_json.get("priority").cloned().unwrap_or(Value::Null),
+            "position": "b",
+            "dueAt": payload_json.get("dueAt").cloned().unwrap_or(Value::Null),
+            "startAt": payload_json.get("startAt").cloned().unwrap_or(Value::Null),
+            "completedAt": null,
+            "archivedAt": null,
+            "isCompleted": false,
+            "recurrenceId": null,
+            "recurrenceSchedule": null,
+            "recurrenceIteration": null,
+            "materializedAt": null,
+            "createdAt": Utc::now(),
+            "updatedAt": Utc::now(),
+            "commentCount": 0,
+            "delegations": []
+        });
+        (
+            response,
+            state.d7_task_create_committed.clone(),
+            state.d7_task_create_release_response.clone(),
+        )
+    };
+    if let Some(committed) = committed {
+        committed.notify_one();
+    }
+    if let Some(release_response) = release_response {
+        release_response.notified().await;
+    }
 
     (StatusCode::OK, Json(response))
 }
@@ -8197,108 +8645,121 @@ async fn update_task(
     Json(payload_json): Json<Value>,
 ) -> (StatusCode, Json<serde_json::Value>) {
     authorize(&state, &headers);
-    let mut state = state.lock().expect("state lock");
-    assert_eq!(work_list_id, state.fixture.work_list_id);
-    assert_eq!(task_id, state.fixture.task_id);
-    let payload: UpdateTaskRequestBody =
-        serde_json::from_value(payload_json.clone()).expect("task update request");
-    assert_eq!(payload.expected_updated_at, Some(state.task_updated_at));
-    state.updated_task_request = Some(payload_json.clone());
-    if state.reject_next_task_update_as_conflict {
-        state.reject_next_task_update_as_conflict = false;
-        return (
-            StatusCode::CONFLICT,
-            Json(json!({
-                "error": "conflict",
-                "message": "task changed while it was being edited; reload and try again"
-            })),
-        );
-    }
-
-    if let Some(payload_ciphertext) = payload.payload_ciphertext.as_ref() {
-        let payload_bytes = decode_b64(payload_ciphertext);
-        let payload_proof = compute_payload_proof(&payload_bytes, &state.fixture.binding_key)
-            .expect("payload proof");
-        assert_eq!(
-            payload.payload_ciphertext_proof.as_deref(),
-            Some(payload_proof.as_str())
-        );
-
-        let decrypted = decrypt_task_payload(&state.fixture.list_key, &payload_bytes)
-            .expect("decrypt updated task");
-        state.updated_task_body = Some(decrypted.body.clone());
-        if let Some(attachment_ids) = payload.attachment_ids.as_ref() {
-            let payload_ids = task_attachment_ids(&decrypted.body);
-            assert_eq!(
-                payload_ids.iter().copied().collect::<HashSet<_>>(),
-                attachment_ids.iter().copied().collect::<HashSet<_>>()
+    let (response, committed, release_response) = {
+        let mut state = state.lock().expect("state lock");
+        assert_eq!(work_list_id, state.fixture.work_list_id);
+        assert_eq!(task_id, state.fixture.task_id);
+        let payload: UpdateTaskRequestBody =
+            serde_json::from_value(payload_json.clone()).expect("task update request");
+        assert_eq!(payload.expected_updated_at, Some(state.task_updated_at));
+        state.updated_task_request = Some(payload_json.clone());
+        if state.reject_next_task_update_as_conflict {
+            state.reject_next_task_update_as_conflict = false;
+            return (
+                StatusCode::CONFLICT,
+                Json(json!({
+                    "error": "conflict",
+                    "message": "task changed while it was being edited; reload and try again"
+                })),
             );
-            let previous_ids = task_attachment_ids(&state.current_task_body);
-            for removed in previous_ids
-                .into_iter()
-                .filter(|id| !payload_ids.contains(id))
-            {
-                state.deleted_attachment_ids.push(removed);
-                state.attachment_uploads.remove(&removed);
-                state.completed_attachment_ids.remove(&removed);
-            }
-            for added in payload_ids
-                .iter()
-                .filter(|id| !task_attachment_ids(&state.current_task_body).contains(id))
-            {
-                assert!(
-                    state.completed_attachment_ids.contains(added),
-                    "new task attachment must be completed before attachment"
-                );
-            }
         }
-        state.current_task_body = decrypted.body.clone();
+
+        if let Some(payload_ciphertext) = payload.payload_ciphertext.as_ref() {
+            let payload_bytes = decode_b64(payload_ciphertext);
+            let payload_proof = compute_payload_proof(&payload_bytes, &state.fixture.binding_key)
+                .expect("payload proof");
+            assert_eq!(
+                payload.payload_ciphertext_proof.as_deref(),
+                Some(payload_proof.as_str())
+            );
+
+            let decrypted = decrypt_task_payload(&state.fixture.list_key, &payload_bytes)
+                .expect("decrypt updated task");
+            state.updated_task_body = Some(decrypted.body.clone());
+            if let Some(attachment_ids) = payload.attachment_ids.as_ref() {
+                let payload_ids = task_attachment_ids(&decrypted.body);
+                assert_eq!(
+                    payload_ids.iter().copied().collect::<HashSet<_>>(),
+                    attachment_ids.iter().copied().collect::<HashSet<_>>()
+                );
+                let previous_ids = task_attachment_ids(&state.current_task_body);
+                for removed in previous_ids
+                    .into_iter()
+                    .filter(|id| !payload_ids.contains(id))
+                {
+                    state.deleted_attachment_ids.push(removed);
+                    state.attachment_uploads.remove(&removed);
+                    state.completed_attachment_ids.remove(&removed);
+                }
+                for added in payload_ids
+                    .iter()
+                    .filter(|id| !task_attachment_ids(&state.current_task_body).contains(id))
+                {
+                    assert!(
+                        state.completed_attachment_ids.contains(added),
+                        "new task attachment must be completed before attachment"
+                    );
+                }
+            }
+            state.current_task_body = decrypted.body.clone();
+        }
+
+        if let Some(title_ciphertext) = payload.title_ciphertext.as_ref() {
+            let title_bytes = decode_b64(title_ciphertext);
+            let title_proof = compute_payload_proof(&title_bytes, &state.fixture.binding_key)
+                .expect("title proof");
+            assert_eq!(
+                payload.title_ciphertext_proof.as_deref(),
+                Some(title_proof.as_str())
+            );
+            assert_eq!(
+                decrypt_encrypted_text_value(
+                    &title_bytes,
+                    &state.fixture.list_key,
+                    TASK_TITLE_CONTEXT,
+                )
+                .expect("decrypt updated task title"),
+                state.current_task_body.title
+            );
+        }
+
+        state.task_updated_at += Duration::milliseconds(1);
+
+        let response = json!({
+            "id": state.fixture.task_id,
+            "workListId": state.fixture.work_list_id,
+            "createdByMembershipId": state.fixture.membership_id,
+            "titleCiphertext": payload.title_ciphertext.unwrap_or_else(|| state.fixture.task_title_ciphertext.clone()),
+            "payloadCiphertext": task_payload_ciphertext(&state),
+            "sectionId": payload_json.get("sectionId").cloned().unwrap_or_else(|| json!(state.task_section_id)),
+            "priority": payload_json.get("priority").cloned().unwrap_or(Value::Null),
+            "position": "a",
+            "dueAt": payload_json.get("dueAt").cloned().unwrap_or(Value::Null),
+            "startAt": payload_json.get("startAt").cloned().unwrap_or(Value::Null),
+            "completedAt": null,
+            "archivedAt": null,
+            "isCompleted": false,
+            "recurrenceId": null,
+            "recurrenceSchedule": null,
+            "recurrenceIteration": null,
+            "materializedAt": null,
+            "createdAt": Utc::now(),
+            "updatedAt": state.task_updated_at,
+            "commentCount": 1,
+            "delegations": []
+        });
+        (
+            response,
+            state.d7_task_update_committed.clone(),
+            state.d7_task_update_release_response.clone(),
+        )
+    };
+    if let Some(committed) = committed {
+        committed.notify_one();
     }
-
-    if let Some(title_ciphertext) = payload.title_ciphertext.as_ref() {
-        let title_bytes = decode_b64(title_ciphertext);
-        let title_proof =
-            compute_payload_proof(&title_bytes, &state.fixture.binding_key).expect("title proof");
-        assert_eq!(
-            payload.title_ciphertext_proof.as_deref(),
-            Some(title_proof.as_str())
-        );
-        assert_eq!(
-            decrypt_encrypted_text_value(
-                &title_bytes,
-                &state.fixture.list_key,
-                TASK_TITLE_CONTEXT,
-            )
-            .expect("decrypt updated task title"),
-            state.current_task_body.title
-        );
+    if let Some(release_response) = release_response {
+        release_response.notified().await;
     }
-
-    state.task_updated_at += Duration::milliseconds(1);
-
-    let response = json!({
-        "id": state.fixture.task_id,
-        "workListId": state.fixture.work_list_id,
-        "createdByMembershipId": state.fixture.membership_id,
-        "titleCiphertext": payload.title_ciphertext.unwrap_or_else(|| state.fixture.task_title_ciphertext.clone()),
-        "payloadCiphertext": task_payload_ciphertext(&state),
-        "sectionId": payload_json.get("sectionId").cloned().unwrap_or_else(|| json!(state.task_section_id)),
-        "priority": payload_json.get("priority").cloned().unwrap_or(Value::Null),
-        "position": "a",
-        "dueAt": payload_json.get("dueAt").cloned().unwrap_or(Value::Null),
-        "startAt": payload_json.get("startAt").cloned().unwrap_or(Value::Null),
-        "completedAt": null,
-        "archivedAt": null,
-        "isCompleted": false,
-        "recurrenceId": null,
-        "recurrenceSchedule": null,
-        "recurrenceIteration": null,
-        "materializedAt": null,
-        "createdAt": Utc::now(),
-        "updatedAt": state.task_updated_at,
-        "commentCount": 1,
-        "delegations": []
-    });
 
     (StatusCode::OK, Json(response))
 }
