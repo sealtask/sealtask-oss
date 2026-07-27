@@ -121,6 +121,8 @@ impl TaskReferenceSchemeV1 {
             return None;
         }
         let (prefix, number) = reference.trim().rsplit_once(TASK_REFERENCE_SEPARATOR)?;
+        let prefix = prefix.trim();
+        let number = number.trim();
         if !prefix.eq_ignore_ascii_case(&self.prefix)
             || number.is_empty()
             || !number.bytes().all(|byte| byte.is_ascii_digit())
@@ -976,6 +978,8 @@ mod tests {
         assert_eq!(value.format_reference(31).expect("format"), "LAW-0031");
         assert_eq!(value.parse_reference_number("law-31"), Some(31));
         assert_eq!(value.parse_reference_number(" LAW-0031 "), Some(31));
+        assert_eq!(value.parse_reference_number(" law - 00031 "), Some(31));
+        assert_eq!(value.parse_reference_number("LAW\t-\n31"), Some(31));
         assert_eq!(value.parse_reference_number("TAX-31"), None);
         assert_eq!(value.parse_reference_number("LAW--31"), None);
         assert_eq!(value.parse_reference_number("LAW-0"), None);
