@@ -1,0 +1,4 @@
+interface:
+  display_name: "SealTask"
+  short_description: "Manage SealTask work safely from agents"
+  default_prompt: "Use $sealtask to inspect the current project and help me manage its tasks safely."

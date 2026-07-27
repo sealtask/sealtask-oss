@@ -7,6 +7,9 @@ description = "CLI for working with SealTask tasks, comments, and encrypted work
 repository = "https://github.com/sealtask/sealtask-oss"
 homepage = "https://sealtask.com"
 readme = "../README.md"
+# This workspace-only integration test validates the sibling Agent Skill,
+# which is distributed from the repository root rather than the crate archive.
+exclude = ["tests/agent_skill_contract.rs"]
 keywords = ["sealtask", "cli", "tasks", "productivity", "agents"]
 categories = ["command-line-utilities", "api-bindings"]
 publish = ["crates-io"]

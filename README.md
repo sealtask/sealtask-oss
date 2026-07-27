@@ -86,6 +86,7 @@ crates/strong-box-wasm/  # browser WASM ABI and cryptographic bindings
 packages/crypto-web/     # production browser crypto and trust engine
 artifacts/strong-box-wasm/
                         # canonical WASM byte and strict build manifest
+skills/sealtask/         # first-party portable Agent Skill
 scripts/build-strong-box-wasm.sh
                         # pinned build/update/verification entrypoint
 .github/workflows/ci.yml
@@ -492,6 +493,10 @@ The default run checks operator settings, configuration, credentials, session
 and unlock state, the unauthenticated API health endpoint, and authenticated
 identity when a usable session exists. It still emits a remediation report when
 `operator-settings.json` is corrupt or was written by an unsupported version.
+Project-context diagnostics follow the same canonical nearest-directory,
+ancestor, then profile-global resolution as normal commands. JSON reports the
+effective `contextPath`, `contextScope`, and `contextInherited` state and checks
+the saved API/account binding when matching credentials are readable.
 `--offline` guarantees that neither API probe runs.
 Failed checks exit unsuccessfully; `--strict` also makes warnings unsuccessful.
 Keychain access is opt-in because `--include-keychain` may trigger an
@@ -594,6 +599,23 @@ HPKE migration vectors are intentionally separate. New writes use RFC 9180's
 X25519 KEM ID `0x0020`; the browser retains decrypt-only support for the two
 historical `0x0010` SealTask dialects. The old plaintext-CBOR development
 artifact is not part of the public browser package.
+
+## Agent Skill
+
+The first-party [`sealtask` Agent Skill](./skills/sealtask/SKILL.md) teaches
+compatible coding agents to discover the installed CLI contract, use
+non-interactive JSON and JSON Lines safely, resolve directory-scoped project
+context, and recover conservatively from conflicts or ambiguous mutations.
+Install it from the canonical public repository with:
+
+```bash
+npx skills add sealtask/sealtask-oss --skill sealtask
+```
+
+The skill operates as the signed-in user and does not create an agent identity,
+expand authorization, or turn project context into a security boundary. The
+native CLI remains the source of truth through `sealtask --json info` and
+`sealtask --json schema`.
 
 ## Agent task automation
 
