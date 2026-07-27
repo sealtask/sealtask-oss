@@ -704,7 +704,7 @@ fn cli_task_list_composable_controls_fail_before_authentication() {
         ),
         (
             &["--pager", "always", "tasks", "list", "--field", "id"][..],
-            "paging is unavailable for this raw-output command",
+            "paging is unavailable for this interactive or raw-output command",
         ),
         (
             &["tasks", "list", "--web-url", "https://app.example"][..],
@@ -968,22 +968,28 @@ async fn cli_projects_alias_context_profiles_and_sections_are_operator_friendly(
         home.path(),
         &server.base_url,
         &[
+            "--non-interactive",
             "--json",
-            "projects",
-            "use",
+            "pick",
+            "project",
             "Fixture Work List",
+            "--scope",
+            "global",
             "--password-stdin",
         ],
         Some(&fixture.password),
     );
     assert!(
         select.status.success(),
-        "projects use failed: {}",
+        "pick project failed: {}",
         select.stderr
     );
     let selected = parse_stdout_json(&select.stdout);
     assert_eq!(selected["projectId"], fixture.work_list_id.to_string());
     assert_eq!(selected["changed"], true);
+    assert_eq!(selected["scope"], "global");
+    assert_eq!(selected["profile"], "default");
+    assert!(selected["directory"].is_null());
 
     let current = run_cli(
         home.path(),
@@ -999,7 +1005,174 @@ async fn cli_projects_alias_context_profiles_and_sections_are_operator_friendly(
     let current = parse_stdout_json(&current.stdout);
     assert_eq!(current["schemaVersion"], 1);
     assert_eq!(current["projectId"], fixture.work_list_id.to_string());
+    assert_eq!(current["scope"], "global");
+    assert!(current["directory"].is_null());
+    assert_eq!(current["inherited"], false);
     assert_eq!(current["profile"], "default");
+
+    let workspace = home.path().join("source/project");
+    let nested_workspace = workspace.join("src/nested");
+    std::fs::create_dir_all(&nested_workspace).expect("create nested project directory");
+    let local_select = run_cli_in_dir(
+        home.path(),
+        &workspace,
+        &server.base_url,
+        &[
+            "--non-interactive",
+            "--json",
+            "pick",
+            "project",
+            "Fixture Work List",
+            "--scope",
+            "local",
+            "--password-stdin",
+        ],
+        Some(&fixture.password),
+    );
+    assert!(
+        local_select.status.success(),
+        "local project selection failed: {}",
+        local_select.stderr
+    );
+    let local_select = parse_stdout_json(&local_select.stdout);
+    assert_eq!(local_select["projectId"], fixture.work_list_id.to_string());
+    assert_eq!(local_select["scope"], "local");
+    assert_eq!(
+        local_select["directory"],
+        workspace
+            .canonicalize()
+            .expect("canonical workspace")
+            .display()
+            .to_string()
+    );
+
+    let human_reselect = run_cli_in_dir(
+        home.path(),
+        &workspace,
+        &server.base_url,
+        &[
+            "--non-interactive",
+            "pick",
+            "project",
+            &fixture.work_list_id.to_string(),
+        ],
+        None,
+    );
+    assert!(
+        human_reselect.status.success(),
+        "human project re-selection failed: {}",
+        human_reselect.stderr
+    );
+    assert!(
+        human_reselect
+            .stdout
+            .contains("Current project already selected:")
+    );
+    assert!(human_reselect.stdout.contains("Scope: local ("));
+    assert!(
+        human_reselect
+            .stdout
+            .contains(&workspace.display().to_string())
+    );
+    assert!(human_reselect.stdout.contains("Next: sealtask tasks list"));
+
+    let inherited_current = run_cli_in_dir(
+        home.path(),
+        &nested_workspace,
+        &server.base_url,
+        &["--json", "projects", "current"],
+        None,
+    );
+    assert!(
+        inherited_current.status.success(),
+        "inherited project context failed: {}",
+        inherited_current.stderr
+    );
+    let inherited_current = parse_stdout_json(&inherited_current.stdout);
+    assert_eq!(
+        inherited_current["projectId"],
+        fixture.work_list_id.to_string()
+    );
+    assert_eq!(inherited_current["scope"], "local");
+    assert_eq!(inherited_current["inherited"], true);
+    assert_eq!(
+        inherited_current["directory"],
+        workspace
+            .canonicalize()
+            .expect("canonical workspace")
+            .display()
+            .to_string()
+    );
+
+    let inherited_tasks = run_cli_in_dir(
+        home.path(),
+        &nested_workspace,
+        &server.base_url,
+        &["--json", "tasks", "list", "--password-stdin"],
+        Some(&fixture.password),
+    );
+    assert!(
+        inherited_tasks.status.success(),
+        "tasks did not inherit local project context: {}",
+        inherited_tasks.stderr
+    );
+    assert_eq!(
+        parse_stdout_json(&inherited_tasks.stdout)[0]["workListId"],
+        fixture.work_list_id.to_string()
+    );
+
+    let inherited_notes = run_cli_in_dir(
+        home.path(),
+        &nested_workspace,
+        &server.base_url,
+        &["--json", "notes", "list", "--password-stdin"],
+        Some(&fixture.password),
+    );
+    assert!(
+        inherited_notes.status.success(),
+        "notes did not inherit local project context: {}",
+        inherited_notes.stderr
+    );
+    assert!(
+        parse_stdout_json(&inherited_notes.stdout).is_array(),
+        "notes list must remain a JSON collection"
+    );
+
+    let clear_local = run_cli_in_dir(
+        home.path(),
+        &nested_workspace,
+        &server.base_url,
+        &["--json", "projects", "clear"],
+        None,
+    );
+    assert!(
+        clear_local.status.success(),
+        "local project clear failed: {}",
+        clear_local.stderr
+    );
+    let clear_local = parse_stdout_json(&clear_local.stdout);
+    assert_eq!(clear_local["changed"], true);
+    assert_eq!(clear_local["scope"], "local");
+
+    let global_fallback = run_cli_in_dir(
+        home.path(),
+        &nested_workspace,
+        &server.base_url,
+        &["--json", "projects", "current"],
+        None,
+    );
+    assert!(
+        global_fallback.status.success(),
+        "global project fallback failed: {}",
+        global_fallback.stderr
+    );
+    let global_fallback = parse_stdout_json(&global_fallback.stdout);
+    assert_eq!(
+        global_fallback["projectId"],
+        fixture.work_list_id.to_string()
+    );
+    assert_eq!(global_fallback["scope"], "global");
+    assert_eq!(global_fallback["inherited"], false);
 
     let tasks_in_current_project = run_cli(
         home.path(),
@@ -1190,8 +1363,8 @@ async fn cli_project_task_lists_include_archived_only_with_a_project_scope() {
         &server.base_url,
         &[
             "--json",
-            "projects",
-            "use",
+            "pick",
+            "project",
             "Fixture Work List",
             "--password-stdin",
         ],
@@ -2689,8 +2862,8 @@ async fn cli_work_list_archive_lifecycle_preserves_active_only_defaults() {
         &server.base_url,
         &[
             "--json",
-            "projects",
-            "use",
+            "pick",
+            "project",
             &fixture.work_list_id.to_string(),
         ],
         None,
@@ -3393,8 +3566,28 @@ fn cli_terminal_policies_are_explicit_machine_safe_and_quiet_when_requested() {
 }
 
 #[test]
-fn cli_fuzzy_picker_is_raw_private_and_automation_safe() {
+fn cli_fuzzy_picker_is_private_explicit_and_automation_safe() {
     let home = TempDir::new().expect("temp home");
+
+    let project_help = run_cli_exact(home.path(), &["pick", "project", "--help"], None);
+    assert!(
+        project_help.status.success(),
+        "project picker help failed: {}",
+        project_help.stderr
+    );
+    for expected in [
+        "Pick or resolve a project and save it as current",
+        "[PROJECT]",
+        "--scope <SCOPE>",
+        "--print-selector",
+        "sealtask pick project \"Release Engineering\" --scope global",
+    ] {
+        assert!(
+            project_help.stdout.contains(expected),
+            "missing {expected:?} in:\n{}",
+            project_help.stdout
+        );
+    }
 
     let help = run_cli_exact(home.path(), &["pick", "task", "--help"], None);
     assert!(help.status.success(), "picker help failed: {}", help.stderr);
@@ -3412,6 +3605,33 @@ fn cli_fuzzy_picker_is_raw_private_and_automation_safe() {
     }
     assert!(!home.path().join(".sealtask").exists());
 
+    let missing_selection = run_cli_exact(home.path(), &["pick", "project"], None);
+    assert_eq!(missing_selection.status.code(), Some(1));
+    assert!(missing_selection.stdout.is_empty());
+    assert!(missing_selection.stderr.contains("interactive selection"));
+
+    let conflicting_selection = run_cli_exact(
+        home.path(),
+        &["pick", "project", "--scope", "local", "--print-selector"],
+        None,
+    );
+    assert_eq!(conflicting_selection.status.code(), Some(2));
+    assert!(conflicting_selection.stdout.is_empty());
+    assert!(conflicting_selection.stderr.contains("cannot be used with"));
+
+    let archived_without_selector = run_cli_exact(
+        home.path(),
+        &["pick", "project", "--include-archived"],
+        None,
+    );
+    assert_eq!(archived_without_selector.status.code(), Some(2));
+    assert!(archived_without_selector.stdout.is_empty());
+    assert!(
+        archived_without_selector
+            .stderr
+            .contains("--print-selector")
+    );
+
     let non_interactive =
         run_cli_exact(home.path(), &["--non-interactive", "pick", "project"], None);
     assert_eq!(non_interactive.status.code(), Some(1));
@@ -3424,8 +3644,7 @@ fn cli_fuzzy_picker_is_raw_private_and_automation_safe() {
     assert!(!home.path().join(".sealtask").exists());
 
     for args in [
-        &["--json", "pick", "project"][..],
-        &["--format", "json", "pick", "project"][..],
+        &["--json", "pick", "project", "--print-selector"][..],
         &["--format", "json-pretty", "pick", "task"][..],
     ] {
         let output = run_cli_exact(home.path(), args, None);
@@ -3438,6 +3657,23 @@ fn cli_fuzzy_picker_is_raw_private_and_automation_safe() {
                 .as_str()
                 .expect("picker error message")
                 .contains("one raw reusable selector")
+        );
+    }
+
+    for args in [
+        &["--json", "pick", "project"][..],
+        &["--format", "json", "pick", "project"][..],
+    ] {
+        let output = run_cli_exact(home.path(), args, None);
+        assert_eq!(output.status.code(), Some(1), "{args:?}: {}", output.stderr);
+        assert!(output.stdout.is_empty(), "{args:?}: {}", output.stdout);
+        let error = parse_stderr_json(&output.stderr);
+        assert_eq!(error["error"]["code"], "validation");
+        assert!(
+            error["error"]["message"]
+                .as_str()
+                .expect("project picker error message")
+                .contains("pass PROJECT explicitly")
         );
     }
     assert!(!home.path().join(".sealtask").exists());
@@ -3459,7 +3695,11 @@ fn cli_fuzzy_picker_is_raw_private_and_automation_safe() {
     );
     assert!(!schema.to_string().contains("Fixture Work List"));
 
-    let argv_query = run_cli_exact(home.path(), &["pick", "project", "secret query"], None);
+    let argv_query = run_cli_exact(
+        home.path(),
+        &["pick", "project", "Operations", "unexpected"],
+        None,
+    );
     assert_eq!(argv_query.status.code(), Some(2));
     assert!(argv_query.stdout.is_empty());
     assert!(argv_query.stderr.contains("unexpected argument"));
@@ -3470,8 +3710,10 @@ fn cli_fuzzy_picker_is_raw_private_and_automation_safe() {
     assert!(
         forced_pager
             .stderr
-            .contains("paging is unavailable for this raw-output command")
+            .contains("paging is unavailable for this interactive or raw-output command")
     );
+
+    assert!(!home.path().join(".sealtask").exists());
 
     let completion = run_cli_exact(home.path(), &["completion", "bash"], None);
     assert!(completion.status.success());

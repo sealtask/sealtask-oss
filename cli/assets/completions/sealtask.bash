@@ -409,9 +409,6 @@ _sealtask() {
             sealtask__subcmd__help__subcmd__projects,unarchive)
                 cmd="sealtask__subcmd__help__subcmd__projects__subcmd__unarchive"
                 ;;
-            sealtask__subcmd__help__subcmd__projects,use)
-                cmd="sealtask__subcmd__help__subcmd__projects__subcmd__use"
-                ;;
             sealtask__subcmd__help__subcmd__projects__subcmd__sections,list)
                 cmd="sealtask__subcmd__help__subcmd__projects__subcmd__sections__subcmd__list"
                 ;;
@@ -571,9 +568,6 @@ _sealtask() {
             sealtask__subcmd__projects,unarchive)
                 cmd="sealtask__subcmd__projects__subcmd__unarchive"
                 ;;
-            sealtask__subcmd__projects,use)
-                cmd="sealtask__subcmd__projects__subcmd__use"
-                ;;
             sealtask__subcmd__projects__subcmd__help,archive)
                 cmd="sealtask__subcmd__projects__subcmd__help__subcmd__archive"
                 ;;
@@ -600,9 +594,6 @@ _sealtask() {
                 ;;
             sealtask__subcmd__projects__subcmd__help,unarchive)
                 cmd="sealtask__subcmd__projects__subcmd__help__subcmd__unarchive"
-                ;;
-            sealtask__subcmd__projects__subcmd__help,use)
-                cmd="sealtask__subcmd__projects__subcmd__help__subcmd__use"
                 ;;
             sealtask__subcmd__projects__subcmd__help__subcmd__sections,list)
                 cmd="sealtask__subcmd__projects__subcmd__help__subcmd__sections__subcmd__list"
@@ -3724,7 +3715,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__help__subcmd__projects)
-            opts="list get archive unarchive use current clear sections audit"
+            opts="list get archive unarchive current clear sections audit"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -3850,20 +3841,6 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__help__subcmd__projects__subcmd__unarchive)
-            opts=""
-            if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
-                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-                return 0
-            fi
-            case "${prev}" in
-                *)
-                    COMPREPLY=()
-                    ;;
-            esac
-            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-            return 0
-            ;;
-        sealtask__subcmd__help__subcmd__projects__subcmd__use)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -5170,12 +5147,16 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__pick__subcmd__project)
-            opts="-q -v -h --include-archived --password-stdin --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --retry --offline --profile --config-dir --help"
+            opts="-q -v -h --include-archived --scope --print-selector --password-stdin --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --retry --offline --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
             fi
             case "${prev}" in
+                --scope)
+                    COMPREPLY=($(compgen -W "local global" -- "${cur}"))
+                    return 0
+                    ;;
                 --api-url)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
@@ -5544,7 +5525,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__projects)
-            opts="-q -v -h --verbose --include-archived --password-stdin --raw --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --retry --offline --profile --config-dir --help list get archive unarchive use current clear sections audit help"
+            opts="-q -v -h --verbose --include-archived --password-stdin --raw --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --retry --offline --profile --config-dir --help list get archive unarchive current clear sections audit help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -5742,12 +5723,16 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__projects__subcmd__clear)
-            opts="-q -v -h --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --retry --offline --profile --config-dir --help"
+            opts="-q -v -h --scope --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --retry --offline --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
             fi
             case "${prev}" in
+                --scope)
+                    COMPREPLY=($(compgen -W "local global" -- "${cur}"))
+                    return 0
+                    ;;
                 --api-url)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
@@ -5804,12 +5789,16 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__projects__subcmd__current)
-            opts="-q -v -h --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --retry --offline --profile --config-dir --help"
+            opts="-q -v -h --scope --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --retry --offline --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
             fi
             case "${prev}" in
+                --scope)
+                    COMPREPLY=($(compgen -W "local global" -- "${cur}"))
+                    return 0
+                    ;;
                 --api-url)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
@@ -5928,7 +5917,7 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__projects__subcmd__help)
-            opts="list get archive unarchive use current clear sections audit help"
+            opts="list get archive unarchive current clear sections audit help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -6068,20 +6057,6 @@ _sealtask() {
             return 0
             ;;
         sealtask__subcmd__projects__subcmd__help__subcmd__unarchive)
-            opts=""
-            if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
-                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-                return 0
-            fi
-            case "${prev}" in
-                *)
-                    COMPREPLY=()
-                    ;;
-            esac
-            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-            return 0
-            ;;
-        sealtask__subcmd__projects__subcmd__help__subcmd__use)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -6333,68 +6308,6 @@ _sealtask() {
             ;;
         sealtask__subcmd__projects__subcmd__unarchive)
             opts="-q -v -h --password-stdin --raw --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --retry --offline --profile --config-dir --help"
-            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
-                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-                return 0
-            fi
-            case "${prev}" in
-                --api-url)
-                    COMPREPLY=($(compgen -f "${cur}"))
-                    return 0
-                    ;;
-                --storage-origin)
-                    COMPREPLY=($(compgen -f "${cur}"))
-                    return 0
-                    ;;
-                --format)
-                    COMPREPLY=($(compgen -W "table json json-pretty jsonl" -- "${cur}"))
-                    return 0
-                    ;;
-                --color)
-                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
-                    return 0
-                    ;;
-                --pager)
-                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
-                    return 0
-                    ;;
-                --progress)
-                    COMPREPLY=($(compgen -W "auto always never" -- "${cur}"))
-                    return 0
-                    ;;
-                --connect-timeout)
-                    COMPREPLY=($(compgen -f "${cur}"))
-                    return 0
-                    ;;
-                --read-timeout)
-                    COMPREPLY=($(compgen -f "${cur}"))
-                    return 0
-                    ;;
-                --request-timeout)
-                    COMPREPLY=($(compgen -f "${cur}"))
-                    return 0
-                    ;;
-                --retry)
-                    COMPREPLY=($(compgen -f "${cur}"))
-                    return 0
-                    ;;
-                --profile)
-                    COMPREPLY=($(compgen -f "${cur}"))
-                    return 0
-                    ;;
-                --config-dir)
-                    COMPREPLY=($(compgen -f "${cur}"))
-                    return 0
-                    ;;
-                *)
-                    COMPREPLY=()
-                    ;;
-            esac
-            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-            return 0
-            ;;
-        sealtask__subcmd__projects__subcmd__use)
-            opts="-q -v -h --password-stdin --api-url --storage-origin --json --format --color --pager --no-pager --progress --quiet --non-interactive --debug --connect-timeout --read-timeout --request-timeout --retry --offline --profile --config-dir --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0

@@ -81,7 +81,7 @@ pub(crate) async fn run_tasks(
             };
             if include_archived && work_list_id.is_none() {
                 return Err(PublicError::validation(
-                    "--include-archived requires --project, --work-list-id, or a current project; run 'sealtask projects use <PROJECT>' first",
+                    "--include-archived requires --project, --work-list-id, or a current project; run 'sealtask pick project' to choose one interactively",
                 )
                 .into());
             }

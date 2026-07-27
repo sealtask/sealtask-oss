@@ -115,7 +115,7 @@ cargo run -p sealtask -- --help
 cargo run -p sealtask -- auth unlock --password-stdin
 cargo run -p sealtask -- auth keychain store --password-stdin
 cargo run -p sealtask -- projects list
-cargo run -p sealtask -- projects use "Release Engineering"
+cargo run -p sealtask -- pick project "Release Engineering"
 cargo run -p sealtask -- tasks get "Prepare release notes"
 cargo run -p sealtask -- --json tasks list --all
 ```
@@ -124,16 +124,28 @@ cargo run -p sealtask -- --json tasks list --all
 
 `projects` is the canonical command name. The historical `lists` spelling
 remains a visible compatibility alias, and existing API/JSON fields such as
-`workListId` remain stable. Select a profile-local current project once to omit
-the project scope from subsequent task, note, comment, and attachment commands:
+`workListId` remain stable. Select a current project once to omit the project
+scope from subsequent task, note, comment, and attachment commands:
 
 ```bash
 sealtask projects list
-sealtask projects use "Release Engineering"
+sealtask pick project
 sealtask projects current
 sealtask tasks list
 sealtask projects clear
 ```
+
+`pick project` opens the private in-process picker and activates the selection.
+Pass a selector (`sealtask pick project "Release Engineering"`) when the target
+is already known or supplied by automation.
+
+Project context resolves from the nearest saved directory context to the active
+profile's global fallback. Selection defaults to `local` whenever the current
+directory is not exactly `$HOME`, and to `global` at `$HOME`; override that with
+`--scope local` or `--scope global`. Local associations are stored under the
+private profile configuration rather than written into repositories. Every
+selection and `projects current` result reports the effective scope and local
+directory.
 
 Use `sealtask projects list --details` for expanded human-readable project
 metadata. The former `--verbose` spelling remains accepted for compatibility,
@@ -258,7 +270,10 @@ the same decrypted content that would otherwise be printed to the terminal.
 temporary file, shell completion, or external selector process:
 
 ```bash
-project="$(sealtask pick project)"
+sealtask pick project
+sealtask pick project --scope global
+
+project="$(sealtask pick project --print-selector)"
 sealtask projects get "$project"
 
 task="$(sealtask pick task)"
@@ -269,19 +284,22 @@ sealtask tasks get "$task" --project "Operations"
 ```
 
 The search interface reads and writes the controlling terminal, even while
-stdout is captured by command substitution. On success stdout contains exactly
-one reusable `id:<32-lowercase-hex>` selector and a newline; decrypted titles
-remain confined to the in-process picker and terminal display. `pick project`
-shows active projects by default, while `--include-archived` expands the set.
-`pick task` uses the saved current project unless `--project` is supplied, and
-offers `--include-completed` and `--include-archived`.
+stdout is captured by command substitution. A normal `pick project` saves the
+selection and reports its scope. The explicit `--print-selector` mode instead
+prints exactly one reusable `id:<32-lowercase-hex>` selector and a newline
+without changing context; add `--include-archived` there to broaden the set.
+Decrypted titles remain confined to the in-process picker and terminal display.
+`pick task` remains selector-only, uses the effective current project unless
+`--project` is supplied, and offers `--include-completed` and
+`--include-archived`.
 
-Because that single-line selector is a raw composition protocol, `pick` rejects
-JSON output, `--non-interactive`, and forced paging before fetching candidates.
-It never discovers or invokes `fzf` (or another external chooser), and generated
-shell completion remains static so decrypted names are never fetched while the
-shell is completing a command. Pass an exact UUID, `id:<prefix>`, or exact name
-directly in automation.
+Interactive and selector-only picker forms reject JSON output,
+`--non-interactive`, and forced paging before fetching candidates. Direct
+project activation is automation-safe:
+`sealtask --non-interactive --json pick project PROJECT --scope local|global`.
+The CLI never discovers or invokes `fzf` (or another external chooser), and
+generated shell completion remains static so decrypted names are never fetched
+while the shell is completing a command.
 
 ### Release D8: encrypted read cache and offline mode
 
@@ -320,7 +338,8 @@ The offline allowlist is deliberately narrow:
 - cached reads: `projects` / `projects list`, `projects get`,
   `projects sections list`, `tasks list`, `tasks get`, `comments list`,
   `notes list`, and `notes get`
-- attended cached discovery: `pick project`, `pick task`, and `browse`
+- attended cached discovery: `pick project --print-selector`, `pick task`, and
+  `browse`
 - local cache and session inspection: `cache status`, `cache verify`,
   `cache clear`, `auth status`, `doctor`, and `projects current`
 - local discovery and configuration: `info`, `schema`, `config`, `profile`,

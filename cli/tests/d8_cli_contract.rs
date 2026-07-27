@@ -37,6 +37,8 @@ fn offline_rejects_mutations_and_uncached_surfaces_before_authentication() {
         vec!["--offline", "--json", "me"],
         vec!["--offline", "--json", "stats"],
         vec!["--offline", "--json", "projects", "audit"],
+        vec!["--offline", "--json", "pick", "project"],
+        vec!["--offline", "--json", "pick", "project", "id:018f4a76"],
         vec![
             "--offline",
             "--json",

@@ -25,7 +25,7 @@ fn note_target_group() -> ArgGroup {
     name = "sealtask",
     version,
     about = "CLI for working with SealTask tasks, comments, notes, attachments, and decrypted workspace data",
-    after_help = "Get started:\n  sealtask auth login\n  sealtask auth status\n  sealtask projects list\n  sealtask tasks list --all\n\nRun 'sealtask help <command>' for command-specific help."
+    after_help = "Get started:\n  sealtask auth login\n  sealtask auth unlock\n  sealtask pick project\n  sealtask tasks list\n\nRun 'sealtask help <command>' for command-specific help."
 )]
 pub(crate) struct Cli {
     /// SealTask API base URL.
@@ -183,6 +183,12 @@ pub(crate) enum OutputArg {
     Jsonl,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
+pub(crate) enum ProjectContextScopeArg {
+    Local,
+    Global,
+}
+
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, ValueEnum)]
 pub(crate) enum ColorArg {
     #[default]
@@ -282,12 +288,12 @@ pub(crate) enum Command {
     },
     /// Show the current authenticated user.
     Me,
-    /// Fuzzy-pick an entity while printing only a reusable opaque selector.
+    /// Choose or resolve a project to activate, or interactively print a task selector.
     Pick {
         #[command(subcommand)]
         command: PickCommand,
     },
-    /// List, inspect, select, archive, or restore projects.
+    /// List, inspect, archive, or restore projects and inspect saved context.
     #[command(name = "projects", visible_alias = "lists")]
     Projects {
         #[arg(long = "verbose", hide = true)]
@@ -463,11 +469,25 @@ pub(crate) enum ProfileCommand {
 
 #[derive(Subcommand, Debug)]
 pub(crate) enum PickCommand {
-    /// Pick an accessible project.
+    /// Pick or resolve a project and save it as current.
     Project {
-        /// Include archived projects.
-        #[arg(long)]
+        /// Active project name, UUID, or unique UUID prefix; omit to choose interactively.
+        #[arg(value_name = "PROJECT", conflicts_with = "print_selector")]
+        project: Option<EntitySelector>,
+        /// Include archived projects when printing a selector.
+        #[arg(long, requires = "print_selector")]
         include_archived: bool,
+        /// Save for this directory or as the active profile's global fallback.
+        #[arg(
+            long,
+            value_enum,
+            value_name = "SCOPE",
+            conflicts_with = "print_selector"
+        )]
+        scope: Option<ProjectContextScopeArg>,
+        /// Print only a reusable selector without changing project context.
+        #[arg(long)]
+        print_selector: bool,
         /// Read the account password from stdin when no local unlock is available.
         #[arg(long)]
         password_stdin: bool,
@@ -538,18 +558,18 @@ pub(crate) enum ProjectsCommand {
         #[arg(long, hide = true)]
         raw: bool,
     },
-    /// Save a project as the current project for this profile.
-    Use {
-        /// Active project name, UUID, or unique UUID prefix.
-        project: EntitySelector,
-        /// Read the account password from stdin when no local unlock is available.
-        #[arg(long)]
-        password_stdin: bool,
+    /// Show the effective current project without accessing the network.
+    Current {
+        /// Inspect only the nearest local layer or the active profile's global fallback.
+        #[arg(long, value_enum, value_name = "SCOPE")]
+        scope: Option<ProjectContextScopeArg>,
     },
-    /// Show the saved current project without accessing the network.
-    Current,
-    /// Clear the saved current project.
-    Clear,
+    /// Clear one saved context layer while preserving other fallback layers.
+    Clear {
+        /// Clear the nearest local layer or the active profile's global fallback.
+        #[arg(long, value_enum, value_name = "SCOPE")]
+        scope: Option<ProjectContextScopeArg>,
+    },
     /// Discover sections in a project.
     Sections {
         #[command(subcommand)]

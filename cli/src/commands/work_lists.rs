@@ -1,14 +1,17 @@
-use crate::args::{ProjectSectionsCommand, ProjectsCommand};
+use crate::args::{ProjectContextScopeArg, ProjectSectionsCommand, ProjectsCommand};
 use crate::commands::audit_output::print_audit_page;
 use crate::output::{
     CliResult, OutputFormat, mutation_output_enabled, print_json, print_simple_result,
 };
-use crate::project_context::{clear_current_project, load_current_project, save_current_project};
+use crate::project_context::{
+    ProjectContextMutation, ProjectContextScope, ResolvedProjectContext, clear_current_project,
+    load_project_context, save_current_project,
+};
 use crate::render::{
     print_empty_collection, print_project_sections, print_raw_work_list_detail,
     print_raw_work_lists, print_stats, print_user, print_work_list_detail, print_work_lists,
 };
-use crate::resolver::{ProjectLifecycle, list_sections, resolve_project};
+use crate::resolver::{ProjectLifecycle, ResolvedProject, list_sections, resolve_project};
 use crate::table::sanitize_cell;
 use crate::terminal::with_progress;
 use sealtask_client_auth::active_profile;
@@ -22,6 +25,9 @@ use uuid::Uuid;
 struct CurrentProjectResult<'a> {
     schema_version: u8,
     project_id: Option<Uuid>,
+    scope: Option<ProjectContextScope>,
+    directory: Option<String>,
+    inherited: bool,
     profile: String,
     api_base_url: &'a str,
 }
@@ -31,6 +37,10 @@ struct CurrentProjectResult<'a> {
 struct ProjectContextMutationResult {
     project_id: Option<Uuid>,
     changed: bool,
+    scope: ProjectContextScope,
+    directory: Option<String>,
+    inherited: bool,
+    profile: String,
 }
 
 pub(crate) async fn run_me(runtime: &RuntimeClient, format: OutputFormat) -> CliResult<()> {
@@ -152,61 +162,25 @@ pub(crate) async fn run_projects(
             )
             .await
         }
-        Some(ProjectsCommand::Use {
-            project,
-            password_stdin: command_password_stdin,
-        }) => {
-            reject_project_options(&[
-                ("--verbose", legacy_verbose),
-                ("--include-archived", include_archived),
-                ("--raw", raw),
-            ])?;
-            let password_stdin = password_stdin || command_password_stdin;
-            let project = resolve_project(
-                runtime,
-                Some(&project),
-                None,
-                password_stdin,
-                ProjectLifecycle::Active,
-            )
-            .await?;
-            let mut client = runtime.authenticated_api_client()?;
-            let target =
-                with_progress("Loading project…", client.get_work_list(project.id)).await?;
-            if target.work_list.archived_at.is_some() {
-                return Err(PublicError::validation(
-                    "an archived project cannot be selected as current; restore it first with 'sealtask projects unarchive <PROJECT>'",
-                )
-                .into());
-            }
-            let changed = save_current_project(runtime.api_url(), project.id)?;
-            let label = human_project_label(project.title.as_deref(), project.id);
-            let message = if changed {
-                format!("Current project: {label}")
-            } else {
-                format!("Current project already selected: {label}")
-            };
-            print_simple_result(
-                format,
-                &ProjectContextMutationResult {
-                    project_id: Some(project.id),
-                    changed,
-                },
-                "serializing current-project result should succeed",
-                &message,
-            )
-        }
-        Some(ProjectsCommand::Current) => {
+        Some(ProjectsCommand::Current { scope }) => {
             reject_project_options(&[
                 ("--verbose", legacy_verbose),
                 ("--include-archived", include_archived),
                 ("--password-stdin", password_stdin),
                 ("--raw", raw),
             ])?;
-            let project_id = load_current_project(runtime.api_url())?;
+            let requested_scope = scope.map(context_scope);
+            let context = load_project_context(runtime.api_url(), requested_scope)?;
+            let project_id = context.as_ref().map(|context| context.project_id);
             let result = CurrentProjectResult {
                 schema_version: 1,
                 project_id,
+                scope: context
+                    .as_ref()
+                    .map(|context| context.scope)
+                    .or(requested_scope),
+                directory: context_directory(context.as_ref()),
+                inherited: context.as_ref().is_some_and(|context| context.inherited),
                 profile: active_profile()?,
                 api_base_url: runtime.api_url(),
             };
@@ -219,37 +193,52 @@ pub(crate) async fn run_projects(
                 OutputFormat::Table => match project_id {
                     Some(project_id) => {
                         println!("Current project: {project_id}");
+                        if let Some(context) = context.as_ref() {
+                            println!("Scope: {}", context_scope_label(context));
+                        }
                         Ok(())
                     }
                     None => {
-                        println!(
-                            "No current project. Run 'sealtask projects use <PROJECT>' to select one."
-                        );
+                        let scope = requested_scope
+                            .map_or("the local/global context hierarchy".to_string(), |scope| {
+                                format!("the {} scope", scope_name(scope))
+                            });
+                        println!("No current project in {scope}.\nNext: sealtask pick project");
                         Ok(())
                     }
                 },
             }
         }
-        Some(ProjectsCommand::Clear) => {
+        Some(ProjectsCommand::Clear { scope }) => {
             reject_project_options(&[
                 ("--verbose", legacy_verbose),
                 ("--include-archived", include_archived),
                 ("--password-stdin", password_stdin),
                 ("--raw", raw),
             ])?;
-            let changed = clear_current_project()?;
+            let mutation = clear_current_project(scope.map(context_scope))?;
+            let profile = active_profile()?;
+            let scope_label = mutation_scope_label(&mutation, &profile);
+            let outcome = if mutation.changed {
+                format!("Cleared the current project from {scope_label}.")
+            } else {
+                format!("No current project was saved in {scope_label}.")
+            };
+            let message = format!(
+                "{outcome}\nOther context layers remain unchanged.\nNext: sealtask projects current"
+            );
             print_simple_result(
                 format,
                 &ProjectContextMutationResult {
                     project_id: None,
-                    changed,
+                    changed: mutation.changed,
+                    scope: mutation.scope,
+                    directory: mutation_directory(&mutation),
+                    inherited: mutation.inherited,
+                    profile,
                 },
                 "serializing current-project clear result should succeed",
-                if changed {
-                    "Cleared the current project."
-                } else {
-                    "No current project was saved."
-                },
+                &message,
             )
         }
         Some(ProjectsCommand::Sections {
@@ -323,11 +312,116 @@ pub(crate) async fn run_projects(
     }
 }
 
+pub(crate) async fn activate_project(
+    runtime: &RuntimeClient,
+    format: OutputFormat,
+    project: ResolvedProject,
+    scope: Option<ProjectContextScope>,
+) -> CliResult<()> {
+    let mut client = runtime.authenticated_api_client()?;
+    let target = with_progress("Loading project…", client.get_work_list(project.id)).await?;
+    if target.work_list.archived_at.is_some() {
+        return Err(PublicError::validation(
+            "an archived project cannot be selected as current; restore it first with 'sealtask projects unarchive <PROJECT>'",
+        )
+        .into());
+    }
+
+    let mutation = save_current_project(runtime.api_url(), project.id, scope)?;
+    let profile = active_profile()?;
+    let label = human_project_label(project.title.as_deref(), project.id);
+    let selection = if mutation.changed {
+        format!("Current project: {label}")
+    } else {
+        format!("Current project already selected: {label}")
+    };
+    let message = format!(
+        "{selection}\nScope: {}\nNext: sealtask tasks list",
+        mutation_scope_label(&mutation, &profile)
+    );
+    print_simple_result(
+        format,
+        &ProjectContextMutationResult {
+            project_id: Some(project.id),
+            changed: mutation.changed,
+            scope: mutation.scope,
+            directory: mutation_directory(&mutation),
+            inherited: mutation.inherited,
+            profile,
+        },
+        "serializing current-project result should succeed",
+        &message,
+    )
+}
+
 fn human_project_label(title: Option<&str>, project_id: Uuid) -> String {
     title.map_or_else(
         || project_id.to_string(),
         |title| format!("\"{}\" ({project_id})", sanitize_cell(title)),
     )
+}
+
+fn context_scope(scope: ProjectContextScopeArg) -> ProjectContextScope {
+    match scope {
+        ProjectContextScopeArg::Local => ProjectContextScope::Local,
+        ProjectContextScopeArg::Global => ProjectContextScope::Global,
+    }
+}
+
+fn context_directory(context: Option<&ResolvedProjectContext>) -> Option<String> {
+    context
+        .and_then(|context| context.directory.as_ref())
+        .map(|directory| directory.display().to_string())
+}
+
+fn mutation_directory(mutation: &ProjectContextMutation) -> Option<String> {
+    mutation
+        .directory
+        .as_ref()
+        .map(|directory| directory.display().to_string())
+}
+
+fn context_scope_label(context: &ResolvedProjectContext) -> String {
+    match context.scope {
+        ProjectContextScope::Local => {
+            let directory = context
+                .directory
+                .as_ref()
+                .map(|directory| sanitize_cell(&directory.display().to_string()))
+                .unwrap_or_else(|| "<unknown directory>".to_string());
+            if context.inherited {
+                format!("local ({directory}, inherited)")
+            } else {
+                format!("local ({directory})")
+            }
+        }
+        ProjectContextScope::Global => "global (active profile fallback)".to_string(),
+    }
+}
+
+fn mutation_scope_label(mutation: &ProjectContextMutation, profile: &str) -> String {
+    match mutation.scope {
+        ProjectContextScope::Local => mutation
+            .directory
+            .as_ref()
+            .map(|directory| {
+                format!(
+                    "local ({})",
+                    sanitize_cell(&directory.display().to_string())
+                )
+            })
+            .unwrap_or_else(|| "local".to_string()),
+        ProjectContextScope::Global => {
+            format!("global (profile \"{}\")", sanitize_cell(profile))
+        }
+    }
+}
+
+fn scope_name(scope: ProjectContextScope) -> &'static str {
+    match scope {
+        ProjectContextScope::Local => "local",
+        ProjectContextScope::Global => "global",
+    }
 }
 
 fn reject_project_options(options: &[(&str, bool)]) -> PublicResult<()> {

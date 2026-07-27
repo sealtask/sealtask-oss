@@ -52,9 +52,9 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('schema', 'schema', [CompletionResultType]::ParameterValue, 'Describe commands and arguments as human help or versioned JSON')
             [CompletionResult]::new('auth', 'auth', [CompletionResultType]::ParameterValue, 'Authenticate, inspect the session, and manage local unlock state')
             [CompletionResult]::new('me', 'me', [CompletionResultType]::ParameterValue, 'Show the current authenticated user')
-            [CompletionResult]::new('pick', 'pick', [CompletionResultType]::ParameterValue, 'Fuzzy-pick an entity while printing only a reusable opaque selector')
-            [CompletionResult]::new('projects', 'projects', [CompletionResultType]::ParameterValue, 'List, inspect, select, archive, or restore projects')
-            [CompletionResult]::new('lists', 'lists', [CompletionResultType]::ParameterValue, 'List, inspect, select, archive, or restore projects')
+            [CompletionResult]::new('pick', 'pick', [CompletionResultType]::ParameterValue, 'Choose or resolve a project to activate, or interactively print a task selector')
+            [CompletionResult]::new('projects', 'projects', [CompletionResultType]::ParameterValue, 'List, inspect, archive, or restore projects and inspect saved context')
+            [CompletionResult]::new('lists', 'lists', [CompletionResultType]::ParameterValue, 'List, inspect, archive, or restore projects and inspect saved context')
             [CompletionResult]::new('tasks', 'tasks', [CompletionResultType]::ParameterValue, 'List, inspect, create, update, move, or delete tasks')
             [CompletionResult]::new('stats', 'stats', [CompletionResultType]::ParameterValue, 'Show current dashboard task counts')
             [CompletionResult]::new('activity', 'activity', [CompletionResultType]::ParameterValue, 'Inspect or continuously follow recent account activity')
@@ -514,12 +514,13 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
-            [CompletionResult]::new('project', 'project', [CompletionResultType]::ParameterValue, 'Pick an accessible project')
+            [CompletionResult]::new('project', 'project', [CompletionResultType]::ParameterValue, 'Pick or resolve a project and save it as current')
             [CompletionResult]::new('task', 'task', [CompletionResultType]::ParameterValue, 'Pick a task in the selected/current project')
             [CompletionResult]::new('help', 'help', [CompletionResultType]::ParameterValue, 'Print this message or the help of the given subcommand(s)')
             break
         }
         'sealtask;pick;project' {
+            [CompletionResult]::new('--scope', '--scope', [CompletionResultType]::ParameterName, 'Save for this directory or as the active profile''s global fallback')
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
             [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
@@ -532,7 +533,8 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--retry', '--retry', [CompletionResultType]::ParameterName, 'Retry replay-safe API requests after transient failures')
             [CompletionResult]::new('--profile', '--profile', [CompletionResultType]::ParameterName, 'Isolate credentials and unlock state under a named profile')
             [CompletionResult]::new('--config-dir', '--config-dir', [CompletionResultType]::ParameterName, 'Override the base directory used for credentials and local unlock state')
-            [CompletionResult]::new('--include-archived', '--include-archived', [CompletionResultType]::ParameterName, 'Include archived projects')
+            [CompletionResult]::new('--include-archived', '--include-archived', [CompletionResultType]::ParameterName, 'Include archived projects when printing a selector')
+            [CompletionResult]::new('--print-selector', '--print-selector', [CompletionResultType]::ParameterName, 'Print only a reusable selector without changing project context')
             [CompletionResult]::new('--password-stdin', '--password-stdin', [CompletionResultType]::ParameterName, 'Read the account password from stdin when no local unlock is available')
             [CompletionResult]::new('--json', '--json', [CompletionResultType]::ParameterName, 'Emit compact JSON instead of human-readable output')
             [CompletionResult]::new('--no-pager', '--no-pager', [CompletionResultType]::ParameterName, 'Disable paging (equivalent to --pager never)')
@@ -577,7 +579,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             break
         }
         'sealtask;pick;help' {
-            [CompletionResult]::new('project', 'project', [CompletionResultType]::ParameterValue, 'Pick an accessible project')
+            [CompletionResult]::new('project', 'project', [CompletionResultType]::ParameterValue, 'Pick or resolve a project and save it as current')
             [CompletionResult]::new('task', 'task', [CompletionResultType]::ParameterValue, 'Pick a task in the selected/current project')
             [CompletionResult]::new('help', 'help', [CompletionResultType]::ParameterValue, 'Print this message or the help of the given subcommand(s)')
             break
@@ -622,9 +624,8 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('get', 'get', [CompletionResultType]::ParameterValue, 'Show one decrypted project')
             [CompletionResult]::new('archive', 'archive', [CompletionResultType]::ParameterValue, 'Archive a project and make it read-only')
             [CompletionResult]::new('unarchive', 'unarchive', [CompletionResultType]::ParameterValue, 'Restore an archived project')
-            [CompletionResult]::new('use', 'use', [CompletionResultType]::ParameterValue, 'Save a project as the current project for this profile')
-            [CompletionResult]::new('current', 'current', [CompletionResultType]::ParameterValue, 'Show the saved current project without accessing the network')
-            [CompletionResult]::new('clear', 'clear', [CompletionResultType]::ParameterValue, 'Clear the saved current project')
+            [CompletionResult]::new('current', 'current', [CompletionResultType]::ParameterValue, 'Show the effective current project without accessing the network')
+            [CompletionResult]::new('clear', 'clear', [CompletionResultType]::ParameterValue, 'Clear one saved context layer while preserving other fallback layers')
             [CompletionResult]::new('sections', 'sections', [CompletionResultType]::ParameterValue, 'Discover sections in a project')
             [CompletionResult]::new('audit', 'audit', [CompletionResultType]::ParameterValue, 'Show a bounded page of safe project audit metadata')
             [CompletionResult]::new('help', 'help', [CompletionResultType]::ParameterValue, 'Print this message or the help of the given subcommand(s)')
@@ -661,9 +662,8 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('get', 'get', [CompletionResultType]::ParameterValue, 'Show one decrypted project')
             [CompletionResult]::new('archive', 'archive', [CompletionResultType]::ParameterValue, 'Archive a project and make it read-only')
             [CompletionResult]::new('unarchive', 'unarchive', [CompletionResultType]::ParameterValue, 'Restore an archived project')
-            [CompletionResult]::new('use', 'use', [CompletionResultType]::ParameterValue, 'Save a project as the current project for this profile')
-            [CompletionResult]::new('current', 'current', [CompletionResultType]::ParameterValue, 'Show the saved current project without accessing the network')
-            [CompletionResult]::new('clear', 'clear', [CompletionResultType]::ParameterValue, 'Clear the saved current project')
+            [CompletionResult]::new('current', 'current', [CompletionResultType]::ParameterValue, 'Show the effective current project without accessing the network')
+            [CompletionResult]::new('clear', 'clear', [CompletionResultType]::ParameterValue, 'Clear one saved context layer while preserving other fallback layers')
             [CompletionResult]::new('sections', 'sections', [CompletionResultType]::ParameterValue, 'Discover sections in a project')
             [CompletionResult]::new('audit', 'audit', [CompletionResultType]::ParameterValue, 'Show a bounded page of safe project audit metadata')
             [CompletionResult]::new('help', 'help', [CompletionResultType]::ParameterValue, 'Print this message or the help of the given subcommand(s)')
@@ -889,59 +889,8 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
         }
-        'sealtask;projects;use' {
-            [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
-            [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
-            [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
-            [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
-            [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
-            [CompletionResult]::new('--connect-timeout', '--connect-timeout', [CompletionResultType]::ParameterName, 'Maximum time to establish a control-plane connection (for example 5s)')
-            [CompletionResult]::new('--read-timeout', '--read-timeout', [CompletionResultType]::ParameterName, 'Maximum idle time while reading a control-plane response (for example 30s)')
-            [CompletionResult]::new('--request-timeout', '--request-timeout', [CompletionResultType]::ParameterName, 'Maximum total time for one control-plane request (for example 1m)')
-            [CompletionResult]::new('--retry', '--retry', [CompletionResultType]::ParameterName, 'Retry replay-safe API requests after transient failures')
-            [CompletionResult]::new('--profile', '--profile', [CompletionResultType]::ParameterName, 'Isolate credentials and unlock state under a named profile')
-            [CompletionResult]::new('--config-dir', '--config-dir', [CompletionResultType]::ParameterName, 'Override the base directory used for credentials and local unlock state')
-            [CompletionResult]::new('--password-stdin', '--password-stdin', [CompletionResultType]::ParameterName, 'Read the account password from stdin when no local unlock is available')
-            [CompletionResult]::new('--json', '--json', [CompletionResultType]::ParameterName, 'Emit compact JSON instead of human-readable output')
-            [CompletionResult]::new('--no-pager', '--no-pager', [CompletionResultType]::ParameterName, 'Disable paging (equivalent to --pager never)')
-            [CompletionResult]::new('-q', '-q', [CompletionResultType]::ParameterName, 'Suppress automatic paging, progress, and successful mutation acknowledgements')
-            [CompletionResult]::new('--quiet', '--quiet', [CompletionResultType]::ParameterName, 'Suppress automatic paging, progress, and successful mutation acknowledgements')
-            [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
-            [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
-            [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
-            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
-            [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
-            [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
-            break
-        }
-        'sealtask;lists;use' {
-            [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
-            [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
-            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
-            [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
-            [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
-            [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
-            [CompletionResult]::new('--connect-timeout', '--connect-timeout', [CompletionResultType]::ParameterName, 'Maximum time to establish a control-plane connection (for example 5s)')
-            [CompletionResult]::new('--read-timeout', '--read-timeout', [CompletionResultType]::ParameterName, 'Maximum idle time while reading a control-plane response (for example 30s)')
-            [CompletionResult]::new('--request-timeout', '--request-timeout', [CompletionResultType]::ParameterName, 'Maximum total time for one control-plane request (for example 1m)')
-            [CompletionResult]::new('--retry', '--retry', [CompletionResultType]::ParameterName, 'Retry replay-safe API requests after transient failures')
-            [CompletionResult]::new('--profile', '--profile', [CompletionResultType]::ParameterName, 'Isolate credentials and unlock state under a named profile')
-            [CompletionResult]::new('--config-dir', '--config-dir', [CompletionResultType]::ParameterName, 'Override the base directory used for credentials and local unlock state')
-            [CompletionResult]::new('--password-stdin', '--password-stdin', [CompletionResultType]::ParameterName, 'Read the account password from stdin when no local unlock is available')
-            [CompletionResult]::new('--json', '--json', [CompletionResultType]::ParameterName, 'Emit compact JSON instead of human-readable output')
-            [CompletionResult]::new('--no-pager', '--no-pager', [CompletionResultType]::ParameterName, 'Disable paging (equivalent to --pager never)')
-            [CompletionResult]::new('-q', '-q', [CompletionResultType]::ParameterName, 'Suppress automatic paging, progress, and successful mutation acknowledgements')
-            [CompletionResult]::new('--quiet', '--quiet', [CompletionResultType]::ParameterName, 'Suppress automatic paging, progress, and successful mutation acknowledgements')
-            [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
-            [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
-            [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
-            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
-            [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
-            [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
-            break
-        }
         'sealtask;projects;current' {
+            [CompletionResult]::new('--scope', '--scope', [CompletionResultType]::ParameterName, 'Inspect only the nearest local layer or the active profile''s global fallback')
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
             [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
@@ -967,6 +916,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             break
         }
         'sealtask;lists;current' {
+            [CompletionResult]::new('--scope', '--scope', [CompletionResultType]::ParameterName, 'Inspect only the nearest local layer or the active profile''s global fallback')
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
             [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
@@ -992,6 +942,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             break
         }
         'sealtask;projects;clear' {
+            [CompletionResult]::new('--scope', '--scope', [CompletionResultType]::ParameterName, 'Clear the nearest local layer or the active profile''s global fallback')
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
             [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
@@ -1017,6 +968,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             break
         }
         'sealtask;lists;clear' {
+            [CompletionResult]::new('--scope', '--scope', [CompletionResultType]::ParameterName, 'Clear the nearest local layer or the active profile''s global fallback')
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
             [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
@@ -1236,9 +1188,8 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('get', 'get', [CompletionResultType]::ParameterValue, 'Show one decrypted project')
             [CompletionResult]::new('archive', 'archive', [CompletionResultType]::ParameterValue, 'Archive a project and make it read-only')
             [CompletionResult]::new('unarchive', 'unarchive', [CompletionResultType]::ParameterValue, 'Restore an archived project')
-            [CompletionResult]::new('use', 'use', [CompletionResultType]::ParameterValue, 'Save a project as the current project for this profile')
-            [CompletionResult]::new('current', 'current', [CompletionResultType]::ParameterValue, 'Show the saved current project without accessing the network')
-            [CompletionResult]::new('clear', 'clear', [CompletionResultType]::ParameterValue, 'Clear the saved current project')
+            [CompletionResult]::new('current', 'current', [CompletionResultType]::ParameterValue, 'Show the effective current project without accessing the network')
+            [CompletionResult]::new('clear', 'clear', [CompletionResultType]::ParameterValue, 'Clear one saved context layer while preserving other fallback layers')
             [CompletionResult]::new('sections', 'sections', [CompletionResultType]::ParameterValue, 'Discover sections in a project')
             [CompletionResult]::new('audit', 'audit', [CompletionResultType]::ParameterValue, 'Show a bounded page of safe project audit metadata')
             [CompletionResult]::new('help', 'help', [CompletionResultType]::ParameterValue, 'Print this message or the help of the given subcommand(s)')
@@ -1254,9 +1205,6 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             break
         }
         'sealtask;projects;help;unarchive' {
-            break
-        }
-        'sealtask;projects;help;use' {
             break
         }
         'sealtask;projects;help;current' {
@@ -1283,9 +1231,8 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('get', 'get', [CompletionResultType]::ParameterValue, 'Show one decrypted project')
             [CompletionResult]::new('archive', 'archive', [CompletionResultType]::ParameterValue, 'Archive a project and make it read-only')
             [CompletionResult]::new('unarchive', 'unarchive', [CompletionResultType]::ParameterValue, 'Restore an archived project')
-            [CompletionResult]::new('use', 'use', [CompletionResultType]::ParameterValue, 'Save a project as the current project for this profile')
-            [CompletionResult]::new('current', 'current', [CompletionResultType]::ParameterValue, 'Show the saved current project without accessing the network')
-            [CompletionResult]::new('clear', 'clear', [CompletionResultType]::ParameterValue, 'Clear the saved current project')
+            [CompletionResult]::new('current', 'current', [CompletionResultType]::ParameterValue, 'Show the effective current project without accessing the network')
+            [CompletionResult]::new('clear', 'clear', [CompletionResultType]::ParameterValue, 'Clear one saved context layer while preserving other fallback layers')
             [CompletionResult]::new('sections', 'sections', [CompletionResultType]::ParameterValue, 'Discover sections in a project')
             [CompletionResult]::new('audit', 'audit', [CompletionResultType]::ParameterValue, 'Show a bounded page of safe project audit metadata')
             [CompletionResult]::new('help', 'help', [CompletionResultType]::ParameterValue, 'Print this message or the help of the given subcommand(s)')
@@ -1301,9 +1248,6 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             break
         }
         'sealtask;lists;help;unarchive' {
-            break
-        }
-        'sealtask;lists;help;use' {
             break
         }
         'sealtask;lists;help;current' {
@@ -2968,8 +2912,8 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('schema', 'schema', [CompletionResultType]::ParameterValue, 'Describe commands and arguments as human help or versioned JSON')
             [CompletionResult]::new('auth', 'auth', [CompletionResultType]::ParameterValue, 'Authenticate, inspect the session, and manage local unlock state')
             [CompletionResult]::new('me', 'me', [CompletionResultType]::ParameterValue, 'Show the current authenticated user')
-            [CompletionResult]::new('pick', 'pick', [CompletionResultType]::ParameterValue, 'Fuzzy-pick an entity while printing only a reusable opaque selector')
-            [CompletionResult]::new('projects', 'projects', [CompletionResultType]::ParameterValue, 'List, inspect, select, archive, or restore projects')
+            [CompletionResult]::new('pick', 'pick', [CompletionResultType]::ParameterValue, 'Choose or resolve a project to activate, or interactively print a task selector')
+            [CompletionResult]::new('projects', 'projects', [CompletionResultType]::ParameterValue, 'List, inspect, archive, or restore projects and inspect saved context')
             [CompletionResult]::new('tasks', 'tasks', [CompletionResultType]::ParameterValue, 'List, inspect, create, update, move, or delete tasks')
             [CompletionResult]::new('stats', 'stats', [CompletionResultType]::ParameterValue, 'Show current dashboard task counts')
             [CompletionResult]::new('activity', 'activity', [CompletionResultType]::ParameterValue, 'Inspect or continuously follow recent account activity')
@@ -3036,7 +2980,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             break
         }
         'sealtask;help;pick' {
-            [CompletionResult]::new('project', 'project', [CompletionResultType]::ParameterValue, 'Pick an accessible project')
+            [CompletionResult]::new('project', 'project', [CompletionResultType]::ParameterValue, 'Pick or resolve a project and save it as current')
             [CompletionResult]::new('task', 'task', [CompletionResultType]::ParameterValue, 'Pick a task in the selected/current project')
             break
         }
@@ -3051,9 +2995,8 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('get', 'get', [CompletionResultType]::ParameterValue, 'Show one decrypted project')
             [CompletionResult]::new('archive', 'archive', [CompletionResultType]::ParameterValue, 'Archive a project and make it read-only')
             [CompletionResult]::new('unarchive', 'unarchive', [CompletionResultType]::ParameterValue, 'Restore an archived project')
-            [CompletionResult]::new('use', 'use', [CompletionResultType]::ParameterValue, 'Save a project as the current project for this profile')
-            [CompletionResult]::new('current', 'current', [CompletionResultType]::ParameterValue, 'Show the saved current project without accessing the network')
-            [CompletionResult]::new('clear', 'clear', [CompletionResultType]::ParameterValue, 'Clear the saved current project')
+            [CompletionResult]::new('current', 'current', [CompletionResultType]::ParameterValue, 'Show the effective current project without accessing the network')
+            [CompletionResult]::new('clear', 'clear', [CompletionResultType]::ParameterValue, 'Clear one saved context layer while preserving other fallback layers')
             [CompletionResult]::new('sections', 'sections', [CompletionResultType]::ParameterValue, 'Discover sections in a project')
             [CompletionResult]::new('audit', 'audit', [CompletionResultType]::ParameterValue, 'Show a bounded page of safe project audit metadata')
             break
@@ -3068,9 +3011,6 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             break
         }
         'sealtask;help;projects;unarchive' {
-            break
-        }
-        'sealtask;help;projects;use' {
             break
         }
         'sealtask;help;projects;current' {

@@ -61,9 +61,9 @@ complete -c sealtask -n "__fish_sealtask_needs_command" -f -a "info" -d 'Show ma
 complete -c sealtask -n "__fish_sealtask_needs_command" -f -a "schema" -d 'Describe commands and arguments as human help or versioned JSON'
 complete -c sealtask -n "__fish_sealtask_needs_command" -f -a "auth" -d 'Authenticate, inspect the session, and manage local unlock state'
 complete -c sealtask -n "__fish_sealtask_needs_command" -f -a "me" -d 'Show the current authenticated user'
-complete -c sealtask -n "__fish_sealtask_needs_command" -f -a "pick" -d 'Fuzzy-pick an entity while printing only a reusable opaque selector'
-complete -c sealtask -n "__fish_sealtask_needs_command" -f -a "projects" -d 'List, inspect, select, archive, or restore projects'
-complete -c sealtask -n "__fish_sealtask_needs_command" -f -a "lists" -d 'List, inspect, select, archive, or restore projects'
+complete -c sealtask -n "__fish_sealtask_needs_command" -f -a "pick" -d 'Choose or resolve a project to activate, or interactively print a task selector'
+complete -c sealtask -n "__fish_sealtask_needs_command" -f -a "projects" -d 'List, inspect, archive, or restore projects and inspect saved context'
+complete -c sealtask -n "__fish_sealtask_needs_command" -f -a "lists" -d 'List, inspect, archive, or restore projects and inspect saved context'
 complete -c sealtask -n "__fish_sealtask_needs_command" -f -a "tasks" -d 'List, inspect, create, update, move, or delete tasks'
 complete -c sealtask -n "__fish_sealtask_needs_command" -f -a "stats" -d 'Show current dashboard task counts'
 complete -c sealtask -n "__fish_sealtask_needs_command" -f -a "activity" -d 'Inspect or continuously follow recent account activity'
@@ -477,9 +477,11 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and not __fish_s
 complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and not __fish_seen_subcommand_from project task help" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
 complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and not __fish_seen_subcommand_from project task help" -l offline -d 'Read only from the encrypted local snapshot and never access the network'
 complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and not __fish_seen_subcommand_from project task help" -s h -l help -d 'Print help (see more with \'--help\')'
-complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and not __fish_seen_subcommand_from project task help" -f -a "project" -d 'Pick an accessible project'
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and not __fish_seen_subcommand_from project task help" -f -a "project" -d 'Pick or resolve a project and save it as current'
 complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and not __fish_seen_subcommand_from project task help" -f -a "task" -d 'Pick a task in the selected/current project'
 complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and not __fish_seen_subcommand_from project task help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from project" -l scope -d 'Save for this directory or as the active profile\'s global fallback' -r -f -a "local\t''
+global\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from project" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from project" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from project" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
@@ -501,7 +503,8 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_
 complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from project" -l retry -d 'Retry replay-safe API requests after transient failures' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from project" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from project" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
-complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from project" -l include-archived -d 'Include archived projects'
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from project" -l include-archived -d 'Include archived projects when printing a selector'
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from project" -l print-selector -d 'Print only a reusable selector without changing project context'
 complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from project" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
 complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from project" -l json -d 'Emit compact JSON instead of human-readable output'
 complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from project" -l no-pager -d 'Disable paging (equivalent to --pager never)'
@@ -545,52 +548,51 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_
 complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from task" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
 complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from task" -l offline -d 'Read only from the encrypted local snapshot and never access the network'
 complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from task" -s h -l help -d 'Print help (see more with \'--help\')'
-complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from help" -f -a "project" -d 'Pick an accessible project'
+complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from help" -f -a "project" -d 'Pick or resolve a project and save it as current'
 complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from help" -f -a "task" -d 'Pick a task in the selected/current project'
 complete -c sealtask -n "__fish_sealtask_using_subcommand pick; and __fish_seen_subcommand_from help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l api-url -d 'SealTask API base URL' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -l api-url -d 'SealTask API base URL' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
 json-pretty\t''
 jsonl\t''"
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
 always\t''
 never\t''"
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l retry -d 'Retry replay-safe API requests after transient failures' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l verbose
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l include-archived -d 'Include archived projects'
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l raw
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l json -d 'Emit compact JSON instead of human-readable output'
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l no-pager -d 'Disable paging (equivalent to --pager never)'
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l offline -d 'Read only from the encrypted local snapshot and never access the network'
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -s h -l help -d 'Print help (see more with \'--help\')'
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -f -a "list" -d 'List accessible projects'
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -f -a "get" -d 'Show one decrypted project'
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -f -a "archive" -d 'Archive a project and make it read-only'
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -f -a "unarchive" -d 'Restore an archived project'
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -f -a "use" -d 'Save a project as the current project for this profile'
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -f -a "current" -d 'Show the saved current project without accessing the network'
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -f -a "clear" -d 'Clear the saved current project'
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -f -a "sections" -d 'Discover sections in a project'
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -f -a "audit" -d 'Show a bounded page of safe project audit metadata'
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -l retry -d 'Retry replay-safe API requests after transient failures' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -l verbose
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -l include-archived -d 'Include archived projects'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -l raw
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -l offline -d 'Read only from the encrypted local snapshot and never access the network'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -s h -l help -d 'Print help (see more with \'--help\')'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -f -a "list" -d 'List accessible projects'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -f -a "get" -d 'Show one decrypted project'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -f -a "archive" -d 'Archive a project and make it read-only'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -f -a "unarchive" -d 'Restore an archived project'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -f -a "current" -d 'Show the effective current project without accessing the network'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -f -a "clear" -d 'Clear one saved context layer while preserving other fallback layers'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -f -a "sections" -d 'Discover sections in a project'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -f -a "audit" -d 'Show a bounded page of safe project audit metadata'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from list" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from list" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from list" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
@@ -717,36 +719,8 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_s
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from unarchive" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from unarchive" -l offline -d 'Read only from the encrypted local snapshot and never access the network'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from unarchive" -s h -l help -d 'Print help (see more with \'--help\')'
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from use" -l api-url -d 'SealTask API base URL' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from use" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from use" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
-json\t''
-json-pretty\t''
-jsonl\t''"
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from use" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
-always\t''
-never\t''"
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from use" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
-always\t''
-never\t''"
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from use" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
-always\t''
-never\t''"
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from use" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from use" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from use" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from use" -l retry -d 'Retry replay-safe API requests after transient failures' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from use" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from use" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from use" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from use" -l json -d 'Emit compact JSON instead of human-readable output'
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from use" -l no-pager -d 'Disable paging (equivalent to --pager never)'
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from use" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from use" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from use" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from use" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from use" -l offline -d 'Read only from the encrypted local snapshot and never access the network'
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from use" -s h -l help -d 'Print help (see more with \'--help\')'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from current" -l scope -d 'Inspect only the nearest local layer or the active profile\'s global fallback' -r -f -a "local\t''
+global\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from current" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from current" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from current" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
@@ -776,6 +750,8 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_s
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from current" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from current" -l offline -d 'Read only from the encrypted local snapshot and never access the network'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from current" -s h -l help -d 'Print help (see more with \'--help\')'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from clear" -l scope -d 'Clear the nearest local layer or the active profile\'s global fallback' -r -f -a "local\t''
+global\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from clear" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from clear" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from clear" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
@@ -873,55 +849,53 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_s
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from help" -f -a "get" -d 'Show one decrypted project'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from help" -f -a "archive" -d 'Archive a project and make it read-only'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from help" -f -a "unarchive" -d 'Restore an archived project'
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from help" -f -a "use" -d 'Save a project as the current project for this profile'
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from help" -f -a "current" -d 'Show the saved current project without accessing the network'
-complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from help" -f -a "clear" -d 'Clear the saved current project'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from help" -f -a "current" -d 'Show the effective current project without accessing the network'
+complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from help" -f -a "clear" -d 'Clear one saved context layer while preserving other fallback layers'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from help" -f -a "sections" -d 'Discover sections in a project'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from help" -f -a "audit" -d 'Show a bounded page of safe project audit metadata'
 complete -c sealtask -n "__fish_sealtask_using_subcommand projects; and __fish_seen_subcommand_from help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l api-url -d 'SealTask API base URL' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -l api-url -d 'SealTask API base URL' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
 json\t''
 json-pretty\t''
 jsonl\t''"
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
 always\t''
 never\t''"
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
 always\t''
 never\t''"
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l retry -d 'Retry replay-safe API requests after transient failures' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l verbose
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l include-archived -d 'Include archived projects'
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l raw
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l json -d 'Emit compact JSON instead of human-readable output'
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l no-pager -d 'Disable paging (equivalent to --pager never)'
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -l offline -d 'Read only from the encrypted local snapshot and never access the network'
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -s h -l help -d 'Print help (see more with \'--help\')'
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -f -a "list" -d 'List accessible projects'
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -f -a "get" -d 'Show one decrypted project'
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -f -a "archive" -d 'Archive a project and make it read-only'
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -f -a "unarchive" -d 'Restore an archived project'
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -f -a "use" -d 'Save a project as the current project for this profile'
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -f -a "current" -d 'Show the saved current project without accessing the network'
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -f -a "clear" -d 'Clear the saved current project'
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -f -a "sections" -d 'Discover sections in a project'
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -f -a "audit" -d 'Show a bounded page of safe project audit metadata'
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive use current clear sections audit help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -l retry -d 'Retry replay-safe API requests after transient failures' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -l verbose
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -l include-archived -d 'Include archived projects'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -l raw
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -l json -d 'Emit compact JSON instead of human-readable output'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -l no-pager -d 'Disable paging (equivalent to --pager never)'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -l offline -d 'Read only from the encrypted local snapshot and never access the network'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -s h -l help -d 'Print help (see more with \'--help\')'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -f -a "list" -d 'List accessible projects'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -f -a "get" -d 'Show one decrypted project'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -f -a "archive" -d 'Archive a project and make it read-only'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -f -a "unarchive" -d 'Restore an archived project'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -f -a "current" -d 'Show the effective current project without accessing the network'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -f -a "clear" -d 'Clear one saved context layer while preserving other fallback layers'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -f -a "sections" -d 'Discover sections in a project'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -f -a "audit" -d 'Show a bounded page of safe project audit metadata'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and not __fish_seen_subcommand_from list get archive unarchive current clear sections audit help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from list" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from list" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from list" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
@@ -1048,36 +1022,8 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from unarchive" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from unarchive" -l offline -d 'Read only from the encrypted local snapshot and never access the network'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from unarchive" -s h -l help -d 'Print help (see more with \'--help\')'
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from use" -l api-url -d 'SealTask API base URL' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from use" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from use" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
-json\t''
-json-pretty\t''
-jsonl\t''"
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from use" -l color -d 'Control colors in human-readable output' -r -f -a "auto\t''
-always\t''
-never\t''"
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from use" -l pager -d 'Control paging of long human-readable output' -r -f -a "auto\t''
-always\t''
-never\t''"
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from use" -l progress -d 'Control delayed progress indicators on stderr' -r -f -a "auto\t''
-always\t''
-never\t''"
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from use" -l connect-timeout -d 'Maximum time to establish a control-plane connection (for example 5s)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from use" -l read-timeout -d 'Maximum idle time while reading a control-plane response (for example 30s)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from use" -l request-timeout -d 'Maximum total time for one control-plane request (for example 1m)' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from use" -l retry -d 'Retry replay-safe API requests after transient failures' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from use" -l profile -d 'Isolate credentials and unlock state under a named profile' -r
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from use" -l config-dir -d 'Override the base directory used for credentials and local unlock state' -r -F
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from use" -l password-stdin -d 'Read the account password from stdin when no local unlock is available'
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from use" -l json -d 'Emit compact JSON instead of human-readable output'
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from use" -l no-pager -d 'Disable paging (equivalent to --pager never)'
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from use" -s q -l quiet -d 'Suppress automatic paging, progress, and successful mutation acknowledgements'
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from use" -l non-interactive -d 'Never prompt; fail with an actionable validation error when input is missing'
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from use" -s v -d 'Emit redacted operator telemetry to stderr; repeat for more detail'
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from use" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from use" -l offline -d 'Read only from the encrypted local snapshot and never access the network'
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from use" -s h -l help -d 'Print help (see more with \'--help\')'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from current" -l scope -d 'Inspect only the nearest local layer or the active profile\'s global fallback' -r -f -a "local\t''
+global\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from current" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from current" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from current" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
@@ -1107,6 +1053,8 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from current" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from current" -l offline -d 'Read only from the encrypted local snapshot and never access the network'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from current" -s h -l help -d 'Print help (see more with \'--help\')'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from clear" -l scope -d 'Clear the nearest local layer or the active profile\'s global fallback' -r -f -a "local\t''
+global\t''"
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from clear" -l api-url -d 'SealTask API base URL' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from clear" -l storage-origin -d 'Trusted origin for presigned attachment transfers (repeatable)' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from clear" -l format -d 'Select human-readable, finite JSON, or streaming JSON Lines output' -r -f -a "table\t''
@@ -1204,9 +1152,8 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from help" -f -a "get" -d 'Show one decrypted project'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from help" -f -a "archive" -d 'Archive a project and make it read-only'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from help" -f -a "unarchive" -d 'Restore an archived project'
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from help" -f -a "use" -d 'Save a project as the current project for this profile'
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from help" -f -a "current" -d 'Show the saved current project without accessing the network'
-complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from help" -f -a "clear" -d 'Clear the saved current project'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from help" -f -a "current" -d 'Show the effective current project without accessing the network'
+complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from help" -f -a "clear" -d 'Clear one saved context layer while preserving other fallback layers'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from help" -f -a "sections" -d 'Discover sections in a project'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from help" -f -a "audit" -d 'Show a bounded page of safe project audit metadata'
 complete -c sealtask -n "__fish_sealtask_using_subcommand lists; and __fish_seen_subcommand_from help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
@@ -2737,8 +2684,8 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_s
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity browse cache batch doctor config profile inspect comments notes help" -f -a "schema" -d 'Describe commands and arguments as human help or versioned JSON'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity browse cache batch doctor config profile inspect comments notes help" -f -a "auth" -d 'Authenticate, inspect the session, and manage local unlock state'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity browse cache batch doctor config profile inspect comments notes help" -f -a "me" -d 'Show the current authenticated user'
-complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity browse cache batch doctor config profile inspect comments notes help" -f -a "pick" -d 'Fuzzy-pick an entity while printing only a reusable opaque selector'
-complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity browse cache batch doctor config profile inspect comments notes help" -f -a "projects" -d 'List, inspect, select, archive, or restore projects'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity browse cache batch doctor config profile inspect comments notes help" -f -a "pick" -d 'Choose or resolve a project to activate, or interactively print a task selector'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity browse cache batch doctor config profile inspect comments notes help" -f -a "projects" -d 'List, inspect, archive, or restore projects and inspect saved context'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity browse cache batch doctor config profile inspect comments notes help" -f -a "tasks" -d 'List, inspect, create, update, move, or delete tasks'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity browse cache batch doctor config profile inspect comments notes help" -f -a "stats" -d 'Show current dashboard task counts'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and not __fish_seen_subcommand_from completion man info schema auth me pick projects tasks stats activity browse cache batch doctor config profile inspect comments notes help" -f -a "activity" -d 'Inspect or continuously follow recent account activity'
@@ -2758,15 +2705,14 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from auth" -f -a "keychain" -d 'Store or clear this profile\'s saved unlock key'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from auth" -f -a "logout" -d 'Revoke the remote session and clear this profile\'s local credentials'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from auth" -f -a "status" -d 'Inspect sign-in, token expiry, workspace-data, and saved-key state'
-complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from pick" -f -a "project" -d 'Pick an accessible project'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from pick" -f -a "project" -d 'Pick or resolve a project and save it as current'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from pick" -f -a "task" -d 'Pick a task in the selected/current project'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from projects" -f -a "list" -d 'List accessible projects'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from projects" -f -a "get" -d 'Show one decrypted project'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from projects" -f -a "archive" -d 'Archive a project and make it read-only'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from projects" -f -a "unarchive" -d 'Restore an archived project'
-complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from projects" -f -a "use" -d 'Save a project as the current project for this profile'
-complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from projects" -f -a "current" -d 'Show the saved current project without accessing the network'
-complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from projects" -f -a "clear" -d 'Clear the saved current project'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from projects" -f -a "current" -d 'Show the effective current project without accessing the network'
+complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from projects" -f -a "clear" -d 'Clear one saved context layer while preserving other fallback layers'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from projects" -f -a "sections" -d 'Discover sections in a project'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from projects" -f -a "audit" -d 'Show a bounded page of safe project audit metadata'
 complete -c sealtask -n "__fish_sealtask_using_subcommand help; and __fish_seen_subcommand_from tasks" -f -a "list" -d 'List tasks in the selected/current project, or assigned tasks when none is selected'

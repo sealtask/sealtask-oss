@@ -1,22 +1,63 @@
 use std::fs::{self, File, OpenOptions};
 use std::io::{BufReader, Write};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
-use sealtask_client_auth::{Credentials, config_dir, load_credentials_for_url, normalize_api_url};
+use sealtask_client_auth::{
+    Credentials, config_dir, default_config_root, load_credentials_for_url, normalize_api_url,
+};
 use sealtask_client_core::{PublicError, PublicResult};
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use tempfile::NamedTempFile;
 use uuid::Uuid;
 
 const CONTEXT_FILE_NAME: &str = "context.json";
 const CONTEXT_LOCK_FILE_NAME: &str = "context.lock";
+const LOCAL_CONTEXT_DIRECTORY_NAME: &str = "project-contexts";
+const LOCAL_CONTEXT_FILES_DIRECTORY_NAME: &str = "local";
 const CONTEXT_SCHEMA_VERSION: u64 = 1;
 const MAX_CONTEXT_FILE_BYTES: u64 = 16 * 1024;
+const LOCAL_CONTEXT_KEY_DOMAIN: &[u8] = b"sealtask-local-project-context-v1\0";
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub(crate) enum ProjectContextScope {
+    Local,
+    Global,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ResolvedProjectContext {
+    pub(crate) project_id: Uuid,
+    pub(crate) scope: ProjectContextScope,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) directory: Option<PathBuf>,
+    pub(crate) inherited: bool,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ProjectContextMutation {
+    pub(crate) changed: bool,
+    pub(crate) scope: ProjectContextScope,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) directory: Option<PathBuf>,
+    pub(crate) inherited: bool,
+}
+
+#[derive(Clone, Debug)]
+struct ContextEnvironment {
+    current_directory: PathBuf,
+    home_directory: PathBuf,
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct StoredProjectContext {
     schema_version: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    directory_key: Option<String>,
     api_url: String,
     user_id: Uuid,
     project_id: Uuid,
@@ -38,10 +79,21 @@ impl StoredProjectContext {
 
         Ok(Self {
             schema_version: CONTEXT_SCHEMA_VERSION,
+            directory_key: None,
             api_url,
             user_id: credentials.user_id,
             project_id,
         })
+    }
+
+    fn for_directory(
+        credentials: &Credentials,
+        project_id: Uuid,
+        directory_key: String,
+    ) -> PublicResult<Self> {
+        let mut context = Self::new(credentials, project_id)?;
+        context.directory_key = Some(directory_key);
+        Ok(context)
     }
 
     fn validate_binding(&self, credentials: &Credentials) -> PublicResult<()> {
@@ -56,6 +108,20 @@ impl StoredProjectContext {
             ));
         }
         if self.project_id.is_nil() {
+            return Err(corrupt_context_error());
+        }
+        Ok(())
+    }
+
+    fn validate_global_scope(&self) -> PublicResult<()> {
+        if self.directory_key.is_some() {
+            return Err(corrupt_context_error());
+        }
+        Ok(())
+    }
+
+    fn validate_local_scope(&self, expected_directory_key: &str) -> PublicResult<()> {
+        if self.directory_key.as_deref() != Some(expected_directory_key) {
             return Err(corrupt_context_error());
         }
         Ok(())
@@ -145,17 +211,74 @@ impl Drop for ContextFileLock {
     }
 }
 
+impl ContextEnvironment {
+    fn from_process() -> PublicResult<Self> {
+        let current_directory = std::env::current_dir().map_err(|err| {
+            PublicError::unexpected(format!("failed to resolve the current directory: {err}"))
+        })?;
+        let default_config_root = default_config_root()?;
+        let home_directory = default_config_root.parent().ok_or_else(|| {
+            PublicError::unexpected("could not determine the home directory for project context")
+        })?;
+        Self::new(&current_directory, home_directory)
+    }
+
+    fn new(current_directory: &Path, home_directory: &Path) -> PublicResult<Self> {
+        Ok(Self {
+            current_directory: canonicalize_scope_directory(
+                current_directory,
+                "current directory",
+            )?,
+            home_directory: canonicalize_scope_directory(home_directory, "home directory")?,
+        })
+    }
+
+    fn automatic_mutation_scope(&self) -> ProjectContextScope {
+        if self.current_directory == self.home_directory {
+            ProjectContextScope::Global
+        } else {
+            ProjectContextScope::Local
+        }
+    }
+
+    fn local_search_directories(&self) -> Vec<PathBuf> {
+        let current_is_within_home = self.current_directory.starts_with(&self.home_directory);
+        let mut directories = Vec::new();
+        for ancestor in self.current_directory.ancestors() {
+            directories.push(ancestor.to_path_buf());
+            if current_is_within_home && ancestor == self.home_directory {
+                break;
+            }
+        }
+        directories
+    }
+}
+
 /// Loads the current project for the active profile and API target.
 ///
 /// A saved context is usable only when credentials for `api_url` are present
-/// and its account/API binding matches those credentials.
+/// and its account/API binding matches those credentials. The nearest local
+/// directory binding takes precedence over the profile-global fallback.
 pub(crate) fn load_current_project(api_url: &str) -> PublicResult<Option<Uuid>> {
+    Ok(load_project_context(api_url, None)?.map(|context| context.project_id))
+}
+
+/// Loads a scoped project context for the active profile and API target.
+///
+/// `None` resolves the effective context (nearest local ancestor, then global).
+/// An explicit local scope searches only the canonical current directory and
+/// its eligible ancestors. An explicit global scope reads only `context.json`.
+pub(crate) fn load_project_context(
+    api_url: &str,
+    scope: Option<ProjectContextScope>,
+) -> PublicResult<Option<ResolvedProjectContext>> {
     let credentials = load_credentials_for_url(api_url)?.ok_or_else(|| {
         PublicError::validation(
             "not logged in for the current API; authenticate before using saved project context",
         )
     })?;
-    load_current_project_in(&config_dir()?, &credentials)
+    let environment = ContextEnvironment::from_process()?;
+    load_project_context_in(&config_dir()?, &credentials, &environment, scope)
 }
 
 /// Saves the current project for the active profile and API target.
@@ -163,29 +286,81 @@ pub(crate) fn load_current_project(api_url: &str) -> PublicResult<Option<Uuid>> 
 /// Only the schema version, normalized API URL, account ID, and project ID are
 /// persisted. Decrypted project names and other project content never reach
 /// this file.
-pub(crate) fn save_current_project(api_url: &str, project_id: Uuid) -> PublicResult<bool> {
+pub(crate) fn save_current_project(
+    api_url: &str,
+    project_id: Uuid,
+    scope: Option<ProjectContextScope>,
+) -> PublicResult<ProjectContextMutation> {
     let credentials = load_credentials_for_url(api_url)?.ok_or_else(|| {
         PublicError::validation(
             "not logged in for the current API; authenticate before selecting a project",
         )
     })?;
-    select_current_project_in(&config_dir()?, &credentials, project_id)
+    let environment = ContextEnvironment::from_process()?;
+    save_project_context_in(
+        &config_dir()?,
+        &credentials,
+        project_id,
+        &environment,
+        scope,
+    )
 }
 
-/// Clears the active profile's saved current project.
+/// Clears a saved project context for the active profile.
 ///
-/// Returning `false` means no context existed. Repeated clears are successful.
-pub(crate) fn clear_current_project() -> PublicResult<bool> {
-    clear_current_project_in(&config_dir()?)
+/// `None` selects local outside the canonical home directory and global at
+/// home. A local clear removes the nearest inherited local binding, if any.
+pub(crate) fn clear_current_project(
+    scope: Option<ProjectContextScope>,
+) -> PublicResult<ProjectContextMutation> {
+    let environment = ContextEnvironment::from_process()?;
+    clear_project_context_in(&config_dir()?, &environment, scope)
 }
 
+#[cfg(test)]
 fn load_current_project_in(dir: &Path, credentials: &Credentials) -> PublicResult<Option<Uuid>> {
     let context_lock = ContextFileLock::acquire(dir, LockMode::Shared)?;
-    let result = load_current_project_unlocked(dir, credentials);
+    let result = load_global_project_unlocked(dir, credentials);
     finish_locked(context_lock, result)
 }
 
-fn load_current_project_unlocked(
+fn load_project_context_in(
+    dir: &Path,
+    credentials: &Credentials,
+    environment: &ContextEnvironment,
+    scope: Option<ProjectContextScope>,
+) -> PublicResult<Option<ResolvedProjectContext>> {
+    let context_lock = ContextFileLock::acquire(dir, LockMode::Shared)?;
+    let result = load_project_context_unlocked(dir, credentials, environment, scope);
+    finish_locked(context_lock, result)
+}
+
+fn load_project_context_unlocked(
+    dir: &Path,
+    credentials: &Credentials,
+    environment: &ContextEnvironment,
+    scope: Option<ProjectContextScope>,
+) -> PublicResult<Option<ResolvedProjectContext>> {
+    if scope != Some(ProjectContextScope::Global)
+        && let Some(context) = load_nearest_local_project_unlocked(dir, credentials, environment)?
+    {
+        return Ok(Some(context));
+    }
+    if scope == Some(ProjectContextScope::Local) {
+        return Ok(None);
+    }
+
+    Ok(
+        load_global_project_unlocked(dir, credentials)?.map(|project_id| ResolvedProjectContext {
+            project_id,
+            scope: ProjectContextScope::Global,
+            directory: None,
+            inherited: false,
+        }),
+    )
+}
+
+fn load_global_project_unlocked(
     dir: &Path,
     credentials: &Credentials,
 ) -> PublicResult<Option<Uuid>> {
@@ -194,15 +369,49 @@ fn load_current_project_unlocked(
     else {
         return Ok(None);
     };
+    context.validate_global_scope()?;
     context.validate_binding(credentials)?;
     Ok(Some(context.project_id))
+}
+
+fn load_nearest_local_project_unlocked(
+    dir: &Path,
+    credentials: &Credentials,
+    environment: &ContextEnvironment,
+) -> PublicResult<Option<ResolvedProjectContext>> {
+    if !inspect_local_context_storage(dir)? {
+        return Ok(None);
+    }
+    for directory in environment.local_search_directories() {
+        let directory_key = local_context_key(&directory);
+        let path = local_context_file_path(dir, &directory_key);
+        let Some(context) =
+            read_context_file_unlocked(&path).map_err(ContextReadError::into_public_error)?
+        else {
+            continue;
+        };
+        context.validate_local_scope(&directory_key)?;
+        context.validate_binding(credentials)?;
+        return Ok(Some(ResolvedProjectContext {
+            project_id: context.project_id,
+            scope: ProjectContextScope::Local,
+            inherited: directory != environment.current_directory,
+            directory: Some(directory),
+        }));
+    }
+    Ok(None)
 }
 
 fn read_current_project_unlocked(
     dir: &Path,
 ) -> Result<Option<StoredProjectContext>, ContextReadError> {
-    let path = dir.join(CONTEXT_FILE_NAME);
-    let Some(file) = open_context_file(&path).map_err(ContextReadError::Other)? else {
+    read_context_file_unlocked(&dir.join(CONTEXT_FILE_NAME))
+}
+
+fn read_context_file_unlocked(
+    path: &Path,
+) -> Result<Option<StoredProjectContext>, ContextReadError> {
+    let Some(file) = open_context_file(path).map_err(ContextReadError::Other)? else {
         return Ok(None);
     };
     decode_context(BufReader::new(file)).map(Some)
@@ -220,6 +429,7 @@ fn save_current_project_in(
     finish_locked(context_lock, result)
 }
 
+#[cfg(test)]
 fn select_current_project_in(
     dir: &Path,
     credentials: &Credentials,
@@ -227,10 +437,80 @@ fn select_current_project_in(
 ) -> PublicResult<bool> {
     let context = StoredProjectContext::new(credentials, project_id)?;
     let context_lock = ContextFileLock::acquire(dir, LockMode::Exclusive)?;
-    let result = match read_current_project_unlocked(dir) {
+    let result = select_project_context_file_unlocked(
+        dir,
+        &dir.join(CONTEXT_FILE_NAME),
+        &context,
+        |current| {
+            current.validate_global_scope()?;
+            current.validate_binding(credentials)
+        },
+    );
+    finish_locked(context_lock, result)
+}
+
+fn save_project_context_in(
+    dir: &Path,
+    credentials: &Credentials,
+    project_id: Uuid,
+    environment: &ContextEnvironment,
+    requested_scope: Option<ProjectContextScope>,
+) -> PublicResult<ProjectContextMutation> {
+    let scope = requested_scope.unwrap_or_else(|| environment.automatic_mutation_scope());
+    let context_lock = ContextFileLock::acquire(dir, LockMode::Exclusive)?;
+    let result = match scope {
+        ProjectContextScope::Global => {
+            let context = StoredProjectContext::new(credentials, project_id)?;
+            select_project_context_file_unlocked(
+                dir,
+                &dir.join(CONTEXT_FILE_NAME),
+                &context,
+                |current| {
+                    current.validate_global_scope()?;
+                    current.validate_binding(credentials)
+                },
+            )
+            .map(|changed| ProjectContextMutation {
+                changed,
+                scope,
+                directory: None,
+                inherited: false,
+            })
+        }
+        ProjectContextScope::Local => {
+            let directory = environment.current_directory.clone();
+            let directory_key = local_context_key(&directory);
+            let local_dir = prepare_local_context_storage(dir)?;
+            let path = local_dir.join(local_context_file_name(&directory_key));
+            let context = StoredProjectContext::for_directory(
+                credentials,
+                project_id,
+                directory_key.clone(),
+            )?;
+            select_project_context_file_unlocked(&local_dir, &path, &context, |current| {
+                current.validate_local_scope(&directory_key)?;
+                current.validate_binding(credentials)
+            })
+            .map(|changed| ProjectContextMutation {
+                changed,
+                scope,
+                directory: Some(directory),
+                inherited: false,
+            })
+        }
+    };
+    finish_locked(context_lock, result)
+}
+
+fn select_project_context_file_unlocked(
+    storage_dir: &Path,
+    path: &Path,
+    context: &StoredProjectContext,
+    validate_current: impl Fn(&StoredProjectContext) -> PublicResult<()>,
+) -> PublicResult<bool> {
+    match read_context_file_unlocked(path) {
         Ok(Some(current))
-            if current.validate_binding(credentials).is_ok()
-                && current.project_id == project_id =>
+            if validate_current(&current).is_ok() && current.project_id == context.project_id =>
         {
             Ok(false)
         }
@@ -238,15 +518,22 @@ fn select_current_project_in(
             Err(future_context_error(schema_version))
         }
         Ok(_) | Err(ContextReadError::Other(_)) => {
-            save_current_project_unlocked(dir, &context).map(|()| true)
+            save_project_context_file_unlocked(storage_dir, path, context).map(|()| true)
         }
-    };
-    finish_locked(context_lock, result)
+    }
 }
 
+#[cfg(test)]
 fn save_current_project_unlocked(dir: &Path, context: &StoredProjectContext) -> PublicResult<()> {
-    let path = dir.join(CONTEXT_FILE_NAME);
-    let mut temporary = NamedTempFile::new_in(dir).map_err(|err| {
+    save_project_context_file_unlocked(dir, &dir.join(CONTEXT_FILE_NAME), context)
+}
+
+fn save_project_context_file_unlocked(
+    storage_dir: &Path,
+    path: &Path,
+    context: &StoredProjectContext,
+) -> PublicResult<()> {
+    let mut temporary = NamedTempFile::new_in(storage_dir).map_err(|err| {
         PublicError::unexpected(format!(
             "failed to create a temporary project context file: {err}"
         ))
@@ -261,27 +548,99 @@ fn save_current_project_unlocked(dir: &Path, context: &StoredProjectContext) -> 
     temporary.as_file().sync_all().map_err(|err| {
         PublicError::unexpected(format!("failed to sync the project context file: {err}"))
     })?;
-    temporary.persist(&path).map_err(|err| {
+    temporary.persist(path).map_err(|err| {
         PublicError::unexpected(format!(
             "failed to atomically replace the project context: {}",
             err.error
         ))
     })?;
-    set_secret_file_permissions(&path)?;
-    sync_context_dir(dir)
+    set_secret_file_permissions(path)?;
+    sync_context_dir(storage_dir)
 }
 
+#[cfg(test)]
 fn clear_current_project_in(dir: &Path) -> PublicResult<bool> {
     let context_lock = ContextFileLock::acquire(dir, LockMode::Exclusive)?;
     let result = clear_current_project_unlocked(dir);
     finish_locked(context_lock, result)
 }
 
+fn clear_project_context_in(
+    dir: &Path,
+    environment: &ContextEnvironment,
+    requested_scope: Option<ProjectContextScope>,
+) -> PublicResult<ProjectContextMutation> {
+    let scope = requested_scope.unwrap_or_else(|| environment.automatic_mutation_scope());
+    let context_lock = ContextFileLock::acquire(dir, LockMode::Exclusive)?;
+    let result = match scope {
+        ProjectContextScope::Global => {
+            clear_current_project_unlocked(dir).map(|changed| ProjectContextMutation {
+                changed,
+                scope,
+                directory: None,
+                inherited: false,
+            })
+        }
+        ProjectContextScope::Local => {
+            let target = nearest_local_context_path(dir, environment)?;
+            let (directory, path, inherited) = target.map_or_else(
+                || {
+                    let directory = environment.current_directory.clone();
+                    let directory_key = local_context_key(&directory);
+                    (
+                        directory,
+                        local_context_file_path(dir, &directory_key),
+                        false,
+                    )
+                },
+                |(directory, path)| {
+                    let inherited = directory != environment.current_directory;
+                    (directory, path, inherited)
+                },
+            );
+            clear_project_context_file_unlocked(path.parent().unwrap_or(dir), &path).map(
+                |changed| ProjectContextMutation {
+                    changed,
+                    scope,
+                    directory: Some(directory),
+                    inherited,
+                },
+            )
+        }
+    };
+    finish_locked(context_lock, result)
+}
+
+fn nearest_local_context_path(
+    dir: &Path,
+    environment: &ContextEnvironment,
+) -> PublicResult<Option<(PathBuf, PathBuf)>> {
+    if !inspect_local_context_storage(dir)? {
+        return Ok(None);
+    }
+    for directory in environment.local_search_directories() {
+        let path = local_context_file_path(dir, &local_context_key(&directory));
+        match fs::symlink_metadata(&path) {
+            Ok(_) => return Ok(Some((directory, path))),
+            Err(err) if err.kind() == std::io::ErrorKind::NotFound => {}
+            Err(err) => {
+                return Err(PublicError::unexpected(format!(
+                    "failed to inspect the project context file: {err}"
+                )));
+            }
+        }
+    }
+    Ok(None)
+}
+
 fn clear_current_project_unlocked(dir: &Path) -> PublicResult<bool> {
-    let path = dir.join(CONTEXT_FILE_NAME);
-    match fs::remove_file(&path) {
+    clear_project_context_file_unlocked(dir, &dir.join(CONTEXT_FILE_NAME))
+}
+
+fn clear_project_context_file_unlocked(storage_dir: &Path, path: &Path) -> PublicResult<bool> {
+    match fs::remove_file(path) {
         Ok(()) => {
-            sync_context_dir(dir)?;
+            sync_context_dir(storage_dir)?;
             Ok(true)
         }
         Err(err) if err.kind() == std::io::ErrorKind::NotFound => Ok(false),
@@ -289,6 +648,139 @@ fn clear_current_project_unlocked(dir: &Path) -> PublicResult<bool> {
             "failed to clear the project context: {err}"
         ))),
     }
+}
+
+fn canonicalize_scope_directory(path: &Path, description: &str) -> PublicResult<PathBuf> {
+    let canonical = fs::canonicalize(path).map_err(|err| {
+        PublicError::unexpected(format!("failed to resolve the {description}: {err}"))
+    })?;
+    let metadata = fs::metadata(&canonical).map_err(|err| {
+        PublicError::unexpected(format!("failed to inspect the {description}: {err}"))
+    })?;
+    if !metadata.is_dir() {
+        return Err(PublicError::validation(format!(
+            "the {description} is not a directory"
+        )));
+    }
+    Ok(canonical)
+}
+
+fn local_context_key(directory: &Path) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(LOCAL_CONTEXT_KEY_DOMAIN);
+    update_directory_hash(&mut hasher, directory);
+    let digest = hasher.finalize();
+    let mut encoded = String::with_capacity(digest.len() * 2);
+    for byte in digest {
+        use std::fmt::Write as _;
+        write!(&mut encoded, "{byte:02x}").expect("writing to a string cannot fail");
+    }
+    encoded
+}
+
+#[cfg(unix)]
+fn update_directory_hash(hasher: &mut Sha256, directory: &Path) {
+    use std::os::unix::ffi::OsStrExt;
+
+    hasher.update(b"unix\0");
+    hasher.update(directory.as_os_str().as_bytes());
+}
+
+#[cfg(windows)]
+fn update_directory_hash(hasher: &mut Sha256, directory: &Path) {
+    use std::os::windows::ffi::OsStrExt;
+
+    hasher.update(b"windows\0");
+    for code_unit in directory.as_os_str().encode_wide() {
+        hasher.update(code_unit.to_le_bytes());
+    }
+}
+
+#[cfg(not(any(unix, windows)))]
+fn update_directory_hash(hasher: &mut Sha256, directory: &Path) {
+    hasher.update(b"other\0");
+    hasher.update(directory.to_string_lossy().as_bytes());
+}
+
+fn local_context_file_name(directory_key: &str) -> String {
+    format!("{directory_key}.json")
+}
+
+fn local_context_storage_path(dir: &Path) -> PathBuf {
+    dir.join(LOCAL_CONTEXT_DIRECTORY_NAME)
+        .join(LOCAL_CONTEXT_FILES_DIRECTORY_NAME)
+}
+
+fn local_context_file_path(dir: &Path, directory_key: &str) -> PathBuf {
+    local_context_storage_path(dir).join(local_context_file_name(directory_key))
+}
+
+fn inspect_local_context_storage(dir: &Path) -> PublicResult<bool> {
+    let contexts = dir.join(LOCAL_CONTEXT_DIRECTORY_NAME);
+    let local = contexts.join(LOCAL_CONTEXT_FILES_DIRECTORY_NAME);
+    for (path, description) in [
+        (&contexts, "local project context directory"),
+        (&local, "local project context files directory"),
+    ] {
+        let metadata = match fs::symlink_metadata(path) {
+            Ok(metadata) => metadata,
+            Err(err) if err.kind() == std::io::ErrorKind::NotFound => return Ok(false),
+            Err(err) => {
+                return Err(PublicError::unexpected(format!(
+                    "failed to inspect the {description}: {err}"
+                )));
+            }
+        };
+        if metadata.file_type().is_symlink() {
+            return Err(PublicError::validation(format!(
+                "the {description} must not be a symbolic link"
+            )));
+        }
+        if !metadata.is_dir() {
+            return Err(PublicError::validation(format!(
+                "the {description} is not a directory"
+            )));
+        }
+        validate_secret_directory_permissions(&metadata, description)?;
+    }
+    Ok(true)
+}
+
+fn prepare_local_context_storage(dir: &Path) -> PublicResult<PathBuf> {
+    let contexts = dir.join(LOCAL_CONTEXT_DIRECTORY_NAME);
+    let local = contexts.join(LOCAL_CONTEXT_FILES_DIRECTORY_NAME);
+    for (path, description, parent) in [
+        (&contexts, "local project context directory", dir),
+        (
+            &local,
+            "local project context files directory",
+            contexts.as_path(),
+        ),
+    ] {
+        reject_symlink(path, description)?;
+        fs::create_dir(path)
+            .or_else(|err| {
+                if err.kind() == std::io::ErrorKind::AlreadyExists {
+                    Ok(())
+                } else {
+                    Err(err)
+                }
+            })
+            .map_err(|err| {
+                PublicError::unexpected(format!("failed to create the {description}: {err}"))
+            })?;
+        let metadata = fs::symlink_metadata(path).map_err(|err| {
+            PublicError::unexpected(format!("failed to inspect the {description}: {err}"))
+        })?;
+        if metadata.file_type().is_symlink() || !metadata.is_dir() {
+            return Err(PublicError::validation(format!(
+                "the {description} is not a secure directory"
+            )));
+        }
+        set_context_dir_permissions(path)?;
+        sync_context_dir(parent)?;
+    }
+    Ok(local)
 }
 
 fn open_context_file(path: &Path) -> PublicResult<Option<File>> {
@@ -437,6 +929,29 @@ fn validate_secret_file_permissions(_metadata: &fs::Metadata) -> PublicResult<()
 }
 
 #[cfg(unix)]
+fn validate_secret_directory_permissions(
+    metadata: &fs::Metadata,
+    description: &str,
+) -> PublicResult<()> {
+    use std::os::unix::fs::PermissionsExt;
+
+    if metadata.permissions().mode() & 0o077 != 0 {
+        return Err(PublicError::validation(format!(
+            "the {description} permissions are too broad; expected mode 0700"
+        )));
+    }
+    Ok(())
+}
+
+#[cfg(not(unix))]
+fn validate_secret_directory_permissions(
+    _metadata: &fs::Metadata,
+    _description: &str,
+) -> PublicResult<()> {
+    Ok(())
+}
+
+#[cfg(unix)]
 fn sync_context_dir(dir: &Path) -> PublicResult<()> {
     File::open(dir)
         .and_then(|file| file.sync_all())
@@ -476,6 +991,11 @@ mod tests {
         let path = dir.join(CONTEXT_FILE_NAME);
         fs::write(&path, contents).expect("write project context fixture");
         set_secret_file_permissions(&path).expect("secure project context fixture");
+    }
+
+    fn context_environment(current_directory: &Path, home_directory: &Path) -> ContextEnvironment {
+        ContextEnvironment::new(current_directory, home_directory)
+            .expect("resolve context environment")
     }
 
     #[test]
@@ -533,6 +1053,345 @@ mod tests {
         assert_eq!(
             load_current_project_in(&second_dir, &credentials).expect("load second profile"),
             Some(second_project)
+        );
+    }
+
+    #[test]
+    fn automatic_mutation_scope_is_global_only_at_canonical_home() {
+        let temp = TempDir::new().expect("temporary directory");
+        let home = temp.path().join("home");
+        let child = home.join("work/project");
+        fs::create_dir_all(&child).expect("create project directory");
+
+        let at_home = context_environment(&home, &home);
+        assert_eq!(
+            at_home.automatic_mutation_scope(),
+            ProjectContextScope::Global
+        );
+
+        let in_child = context_environment(&child, &home);
+        assert_eq!(
+            in_child.automatic_mutation_scope(),
+            ProjectContextScope::Local
+        );
+    }
+
+    #[test]
+    fn nearest_local_context_wins_over_ancestor_and_global_contexts() {
+        let temp = TempDir::new().expect("temporary directory");
+        let config = temp.path().join("config");
+        let home = temp.path().join("home");
+        let project = home.join("work/project");
+        let nested = project.join("frontend/src");
+        let sibling = project.join("backend");
+        fs::create_dir_all(&nested).expect("create nested project directory");
+        fs::create_dir_all(&sibling).expect("create sibling project directory");
+        let credentials = credentials("https://api.example", Uuid::from_u128(30));
+        let global_project = Uuid::from_u128(31);
+        let ancestor_project = Uuid::from_u128(32);
+        let nested_project = Uuid::from_u128(33);
+
+        let project_environment = context_environment(&project, &home);
+        save_project_context_in(
+            &config,
+            &credentials,
+            global_project,
+            &project_environment,
+            Some(ProjectContextScope::Global),
+        )
+        .expect("save global context");
+        save_project_context_in(
+            &config,
+            &credentials,
+            ancestor_project,
+            &project_environment,
+            Some(ProjectContextScope::Local),
+        )
+        .expect("save ancestor context");
+
+        let nested_environment = context_environment(&nested, &home);
+        let inherited = load_project_context_in(&config, &credentials, &nested_environment, None)
+            .expect("load inherited context")
+            .expect("inherited context");
+        assert_eq!(inherited.project_id, ancestor_project);
+        assert_eq!(inherited.scope, ProjectContextScope::Local);
+        assert_eq!(
+            inherited.directory.as_deref(),
+            Some(project_environment.current_directory.as_path())
+        );
+        assert!(inherited.inherited);
+
+        save_project_context_in(
+            &config,
+            &credentials,
+            nested_project,
+            &nested_environment,
+            Some(ProjectContextScope::Local),
+        )
+        .expect("save nested context");
+        let nearest = load_project_context_in(&config, &credentials, &nested_environment, None)
+            .expect("load nearest context")
+            .expect("nearest context");
+        assert_eq!(nearest.project_id, nested_project);
+        assert!(!nearest.inherited);
+
+        let sibling_environment = context_environment(&sibling, &home);
+        let sibling_context =
+            load_project_context_in(&config, &credentials, &sibling_environment, None)
+                .expect("load sibling context")
+                .expect("sibling context");
+        assert_eq!(sibling_context.project_id, ancestor_project);
+        assert!(sibling_context.inherited);
+
+        let global = load_project_context_in(
+            &config,
+            &credentials,
+            &nested_environment,
+            Some(ProjectContextScope::Global),
+        )
+        .expect("load explicit global context")
+        .expect("global context");
+        assert_eq!(global.project_id, global_project);
+        assert_eq!(global.scope, ProjectContextScope::Global);
+        assert!(global.directory.is_none());
+        assert!(!global.inherited);
+    }
+
+    #[test]
+    fn explicit_local_load_does_not_fall_back_to_global() {
+        let temp = TempDir::new().expect("temporary directory");
+        let config = temp.path().join("config");
+        let home = temp.path().join("home");
+        let project = home.join("project");
+        fs::create_dir_all(&project).expect("create project directory");
+        let credentials = credentials("https://api.example", Uuid::from_u128(34));
+        let environment = context_environment(&project, &home);
+
+        save_project_context_in(
+            &config,
+            &credentials,
+            Uuid::from_u128(35),
+            &environment,
+            Some(ProjectContextScope::Global),
+        )
+        .expect("save global context");
+
+        assert!(
+            load_project_context_in(
+                &config,
+                &credentials,
+                &environment,
+                Some(ProjectContextScope::Local),
+            )
+            .expect("load explicit local context")
+            .is_none()
+        );
+    }
+
+    #[test]
+    fn default_save_and_clear_follow_home_boundary_and_report_scope() {
+        let temp = TempDir::new().expect("temporary directory");
+        let config = temp.path().join("config");
+        let home = temp.path().join("home");
+        let project = home.join("project");
+        fs::create_dir_all(&project).expect("create project directory");
+        let credentials = credentials("https://api.example", Uuid::from_u128(36));
+        let global_project = Uuid::from_u128(37);
+        let local_project = Uuid::from_u128(38);
+        let home_environment = context_environment(&home, &home);
+        let project_environment = context_environment(&project, &home);
+
+        let global = save_project_context_in(
+            &config,
+            &credentials,
+            global_project,
+            &home_environment,
+            None,
+        )
+        .expect("save automatic global context");
+        assert!(global.changed);
+        assert_eq!(global.scope, ProjectContextScope::Global);
+        assert!(global.directory.is_none());
+
+        let local = save_project_context_in(
+            &config,
+            &credentials,
+            local_project,
+            &project_environment,
+            None,
+        )
+        .expect("save automatic local context");
+        assert!(local.changed);
+        assert_eq!(local.scope, ProjectContextScope::Local);
+        assert_eq!(
+            local.directory.as_deref(),
+            Some(project_environment.current_directory.as_path())
+        );
+
+        let cleared_local = clear_project_context_in(&config, &project_environment, None)
+            .expect("clear automatic local context");
+        assert!(cleared_local.changed);
+        assert_eq!(cleared_local.scope, ProjectContextScope::Local);
+        assert!(!cleared_local.inherited);
+        let fallback = load_project_context_in(&config, &credentials, &project_environment, None)
+            .expect("load global fallback")
+            .expect("global fallback");
+        assert_eq!(fallback.project_id, global_project);
+        assert_eq!(fallback.scope, ProjectContextScope::Global);
+
+        let cleared_global = clear_project_context_in(&config, &home_environment, None)
+            .expect("clear automatic global context");
+        assert!(cleared_global.changed);
+        assert_eq!(cleared_global.scope, ProjectContextScope::Global);
+    }
+
+    #[test]
+    fn local_clear_removes_the_nearest_inherited_binding() {
+        let temp = TempDir::new().expect("temporary directory");
+        let config = temp.path().join("config");
+        let home = temp.path().join("home");
+        let project = home.join("project");
+        let nested = project.join("nested");
+        fs::create_dir_all(&nested).expect("create nested directory");
+        let credentials = credentials("https://api.example", Uuid::from_u128(39));
+        let project_environment = context_environment(&project, &home);
+        let nested_environment = context_environment(&nested, &home);
+
+        save_project_context_in(
+            &config,
+            &credentials,
+            Uuid::from_u128(40),
+            &project_environment,
+            Some(ProjectContextScope::Local),
+        )
+        .expect("save ancestor local context");
+        let cleared = clear_project_context_in(
+            &config,
+            &nested_environment,
+            Some(ProjectContextScope::Local),
+        )
+        .expect("clear inherited local context");
+        assert!(cleared.changed);
+        assert!(cleared.inherited);
+        assert_eq!(
+            cleared.directory.as_deref(),
+            Some(project_environment.current_directory.as_path())
+        );
+        assert!(
+            load_project_context_in(
+                &config,
+                &credentials,
+                &nested_environment,
+                Some(ProjectContextScope::Local),
+            )
+            .expect("load cleared local context")
+            .is_none()
+        );
+    }
+
+    #[test]
+    fn local_context_storage_is_private_and_does_not_write_to_the_working_tree() {
+        let temp = TempDir::new().expect("temporary directory");
+        let config = temp.path().join("config");
+        let home = temp.path().join("home");
+        let project = home.join("private-client-name");
+        fs::create_dir_all(&project).expect("create project directory");
+        let credentials = credentials("https://api.example", Uuid::from_u128(41));
+        let project_id = Uuid::from_u128(42);
+        let environment = context_environment(&project, &home);
+
+        save_project_context_in(
+            &config,
+            &credentials,
+            project_id,
+            &environment,
+            Some(ProjectContextScope::Local),
+        )
+        .expect("save local context");
+
+        assert_eq!(
+            fs::read_dir(&project)
+                .expect("read working directory")
+                .count(),
+            0
+        );
+        let directory_key = local_context_key(&environment.current_directory);
+        let context_path = local_context_file_path(&config, &directory_key);
+        let persisted = fs::read_to_string(&context_path).expect("read local context");
+        let value: serde_json::Value =
+            serde_json::from_str(&persisted).expect("parse local context");
+        assert_eq!(value["directoryKey"], directory_key);
+        assert_eq!(value["projectId"], project_id.to_string());
+        assert!(!persisted.contains("private-client-name"));
+        assert!(!persisted.contains("private-email@example.com"));
+        assert!(!persisted.contains("private-data-key-ciphertext"));
+    }
+
+    #[test]
+    fn invalid_nearest_local_binding_is_not_silently_replaced_by_global_fallback() {
+        let temp = TempDir::new().expect("temporary directory");
+        let config = temp.path().join("config");
+        let home = temp.path().join("home");
+        let project = home.join("project");
+        fs::create_dir_all(&project).expect("create project directory");
+        let owner = credentials("https://api.example", Uuid::from_u128(43));
+        let other_account = credentials("https://api.example", Uuid::from_u128(44));
+        let environment = context_environment(&project, &home);
+
+        save_project_context_in(
+            &config,
+            &other_account,
+            Uuid::from_u128(45),
+            &environment,
+            Some(ProjectContextScope::Global),
+        )
+        .expect("save matching global fallback");
+        save_project_context_in(
+            &config,
+            &owner,
+            Uuid::from_u128(46),
+            &environment,
+            Some(ProjectContextScope::Local),
+        )
+        .expect("save local context for another account");
+
+        let error = load_project_context_in(&config, &other_account, &environment, None)
+            .expect_err("invalid local binding must fail");
+        assert!(error.to_string().contains("different account"));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn symlinked_and_physical_working_directories_share_one_local_scope() {
+        use std::os::unix::fs::symlink;
+
+        let temp = TempDir::new().expect("temporary directory");
+        let config = temp.path().join("config");
+        let home = temp.path().join("home");
+        let physical = home.join("physical-project");
+        let alias = home.join("project-alias");
+        fs::create_dir_all(&physical).expect("create physical project directory");
+        symlink(&physical, &alias).expect("create project symlink");
+        let credentials = credentials("https://api.example", Uuid::from_u128(47));
+        let project_id = Uuid::from_u128(48);
+        let alias_environment = context_environment(&alias, &home);
+        let physical_environment = context_environment(&physical, &home);
+
+        save_project_context_in(
+            &config,
+            &credentials,
+            project_id,
+            &alias_environment,
+            Some(ProjectContextScope::Local),
+        )
+        .expect("save through symlink");
+        let loaded = load_project_context_in(&config, &credentials, &physical_environment, None)
+            .expect("load through physical path")
+            .expect("local context");
+        assert_eq!(loaded.project_id, project_id);
+        assert_eq!(
+            loaded.directory,
+            Some(physical_environment.current_directory)
         );
     }
 
@@ -709,6 +1568,82 @@ mod tests {
         assert_eq!(dir_mode, 0o700);
         assert_eq!(context_mode, 0o600);
         assert_eq!(lock_mode, 0o600);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn local_context_directories_and_file_use_private_permissions() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let temp = TempDir::new().expect("temporary directory");
+        let config = temp.path().join("config");
+        let home = temp.path().join("home");
+        let project = home.join("project");
+        fs::create_dir_all(&project).expect("create project directory");
+        let credentials = credentials("https://api.example", Uuid::from_u128(49));
+        let environment = context_environment(&project, &home);
+
+        save_project_context_in(
+            &config,
+            &credentials,
+            Uuid::from_u128(50),
+            &environment,
+            Some(ProjectContextScope::Local),
+        )
+        .expect("save local context");
+
+        let contexts = config.join(LOCAL_CONTEXT_DIRECTORY_NAME);
+        let local = contexts.join(LOCAL_CONTEXT_FILES_DIRECTORY_NAME);
+        let context =
+            local_context_file_path(&config, &local_context_key(&environment.current_directory));
+        let lock = config.join(CONTEXT_LOCK_FILE_NAME);
+        for (path, expected_mode) in [
+            (contexts.as_path(), 0o700),
+            (local.as_path(), 0o700),
+            (context.as_path(), 0o600),
+            (lock.as_path(), 0o600),
+        ] {
+            let mode = fs::metadata(path)
+                .expect("local context metadata")
+                .permissions()
+                .mode()
+                & 0o777;
+            assert_eq!(
+                mode,
+                expected_mode,
+                "unexpected mode for {}",
+                path.display()
+            );
+        }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn loading_rejects_symlinked_local_context_storage() {
+        use std::os::unix::fs::symlink;
+
+        let temp = TempDir::new().expect("temporary directory");
+        let config = temp.path().join("config");
+        let target = temp.path().join("redirected-contexts");
+        let home = temp.path().join("home");
+        let project = home.join("project");
+        fs::create_dir_all(&config).expect("create config directory");
+        fs::create_dir_all(&target).expect("create symlink target");
+        fs::create_dir_all(&project).expect("create project directory");
+        set_context_dir_permissions(&config).expect("secure config directory");
+        symlink(&target, config.join(LOCAL_CONTEXT_DIRECTORY_NAME))
+            .expect("symlink local context directory");
+        let credentials = credentials("https://api.example", Uuid::from_u128(51));
+        let environment = context_environment(&project, &home);
+
+        let error = load_project_context_in(
+            &config,
+            &credentials,
+            &environment,
+            Some(ProjectContextScope::Local),
+        )
+        .expect_err("symlinked local storage must be rejected");
+        assert!(error.to_string().contains("symbolic link"));
     }
 
     #[cfg(unix)]

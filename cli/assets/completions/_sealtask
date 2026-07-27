@@ -575,6 +575,7 @@ _arguments "${_arguments_options[@]}" : \
         case $line[1] in
             (project)
 _arguments "${_arguments_options[@]}" : \
+'(--print-selector)--scope=[Save for this directory or as the active profile'\''s global fallback]:SCOPE:(local global)' \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
@@ -587,7 +588,8 @@ _arguments "${_arguments_options[@]}" : \
 '--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
-'--include-archived[Include archived projects]' \
+'--include-archived[Include archived projects when printing a selector]' \
+'--print-selector[Print only a reusable selector without changing project context]' \
 '--password-stdin[Read the account password from stdin when no local unlock is available]' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
@@ -599,6 +601,7 @@ _arguments "${_arguments_options[@]}" : \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
+'::project -- Active project name, UUID, or unique UUID prefix; omit to choose interactively:_default' \
 && ret=0
 ;;
 (task)
@@ -819,36 +822,9 @@ _arguments "${_arguments_options[@]}" : \
 ':project -- Project name, UUID, or unique UUID prefix:_default' \
 && ret=0
 ;;
-(use)
-_arguments "${_arguments_options[@]}" : \
-'--api-url=[SealTask API base URL]:API_URL:_default' \
-'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
-'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
-'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
-'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
-'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
-'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
-'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
-'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
-'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
-'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
-'--password-stdin[Read the account password from stdin when no local unlock is available]' \
-'(--format)--json[Emit compact JSON instead of human-readable output]' \
-'--no-pager[Disable paging (equivalent to --pager never)]' \
-'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
-'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
-'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
-'--offline[Read only from the encrypted local snapshot and never access the network]' \
-'-h[Print help (see more with '\''--help'\'')]' \
-'--help[Print help (see more with '\''--help'\'')]' \
-':project -- Active project name, UUID, or unique UUID prefix:_default' \
-&& ret=0
-;;
 (current)
 _arguments "${_arguments_options[@]}" : \
+'--scope=[Inspect only the nearest local layer or the active profile'\''s global fallback]:SCOPE:(local global)' \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
@@ -875,6 +851,7 @@ _arguments "${_arguments_options[@]}" : \
 ;;
 (clear)
 _arguments "${_arguments_options[@]}" : \
+'--scope=[Clear the nearest local layer or the active profile'\''s global fallback]:SCOPE:(local global)' \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
@@ -1046,10 +1023,6 @@ _arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
 (unarchive)
-_arguments "${_arguments_options[@]}" : \
-&& ret=0
-;;
-(use)
 _arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
@@ -1252,36 +1225,9 @@ _arguments "${_arguments_options[@]}" : \
 ':project -- Project name, UUID, or unique UUID prefix:_default' \
 && ret=0
 ;;
-(use)
-_arguments "${_arguments_options[@]}" : \
-'--api-url=[SealTask API base URL]:API_URL:_default' \
-'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
-'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
-'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
-'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
-'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
-'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
-'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
-'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
-'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
-'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
-'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
-'--password-stdin[Read the account password from stdin when no local unlock is available]' \
-'(--format)--json[Emit compact JSON instead of human-readable output]' \
-'--no-pager[Disable paging (equivalent to --pager never)]' \
-'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
-'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
-'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
-'--offline[Read only from the encrypted local snapshot and never access the network]' \
-'-h[Print help (see more with '\''--help'\'')]' \
-'--help[Print help (see more with '\''--help'\'')]' \
-':project -- Active project name, UUID, or unique UUID prefix:_default' \
-&& ret=0
-;;
 (current)
 _arguments "${_arguments_options[@]}" : \
+'--scope=[Inspect only the nearest local layer or the active profile'\''s global fallback]:SCOPE:(local global)' \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
@@ -1308,6 +1254,7 @@ _arguments "${_arguments_options[@]}" : \
 ;;
 (clear)
 _arguments "${_arguments_options[@]}" : \
+'--scope=[Clear the nearest local layer or the active profile'\''s global fallback]:SCOPE:(local global)' \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
 '*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
 '(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
@@ -1479,10 +1426,6 @@ _arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
 (unarchive)
-_arguments "${_arguments_options[@]}" : \
-&& ret=0
-;;
-(use)
 _arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
@@ -3573,10 +3516,6 @@ _arguments "${_arguments_options[@]}" : \
 _arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
-(use)
-_arguments "${_arguments_options[@]}" : \
-&& ret=0
-;;
 (current)
 _arguments "${_arguments_options[@]}" : \
 && ret=0
@@ -3931,9 +3870,9 @@ _sealtask_commands() {
 'schema:Describe commands and arguments as human help or versioned JSON' \
 'auth:Authenticate, inspect the session, and manage local unlock state' \
 'me:Show the current authenticated user' \
-'pick:Fuzzy-pick an entity while printing only a reusable opaque selector' \
-'projects:List, inspect, select, archive, or restore projects' \
-'lists:List, inspect, select, archive, or restore projects' \
+'pick:Choose or resolve a project to activate, or interactively print a task selector' \
+'projects:List, inspect, archive, or restore projects and inspect saved context' \
+'lists:List, inspect, archive, or restore projects and inspect saved context' \
 'tasks:List, inspect, create, update, move, or delete tasks' \
 'stats:Show current dashboard task counts' \
 'activity:Inspect or continuously follow recent account activity' \
@@ -4331,8 +4270,8 @@ _sealtask__subcmd__help_commands() {
 'schema:Describe commands and arguments as human help or versioned JSON' \
 'auth:Authenticate, inspect the session, and manage local unlock state' \
 'me:Show the current authenticated user' \
-'pick:Fuzzy-pick an entity while printing only a reusable opaque selector' \
-'projects:List, inspect, select, archive, or restore projects' \
+'pick:Choose or resolve a project to activate, or interactively print a task selector' \
+'projects:List, inspect, archive, or restore projects and inspect saved context' \
 'tasks:List, inspect, create, update, move, or delete tasks' \
 'stats:Show current dashboard task counts' \
 'activity:Inspect or continuously follow recent account activity' \
@@ -4579,7 +4518,7 @@ _sealtask__subcmd__help__subcmd__notes__subcmd__update_commands() {
 (( $+functions[_sealtask__subcmd__help__subcmd__pick_commands] )) ||
 _sealtask__subcmd__help__subcmd__pick_commands() {
     local commands; commands=(
-'project:Pick an accessible project' \
+'project:Pick or resolve a project and save it as current' \
 'task:Pick a task in the selected/current project' \
     )
     _describe -t commands 'sealtask help pick commands' commands "$@"
@@ -4619,9 +4558,8 @@ _sealtask__subcmd__help__subcmd__projects_commands() {
 'get:Show one decrypted project' \
 'archive:Archive a project and make it read-only' \
 'unarchive:Restore an archived project' \
-'use:Save a project as the current project for this profile' \
-'current:Show the saved current project without accessing the network' \
-'clear:Clear the saved current project' \
+'current:Show the effective current project without accessing the network' \
+'clear:Clear one saved context layer while preserving other fallback layers' \
 'sections:Discover sections in a project' \
 'audit:Show a bounded page of safe project audit metadata' \
     )
@@ -4673,11 +4611,6 @@ _sealtask__subcmd__help__subcmd__projects__subcmd__sections__subcmd__list_comman
 _sealtask__subcmd__help__subcmd__projects__subcmd__unarchive_commands() {
     local commands; commands=()
     _describe -t commands 'sealtask help projects unarchive commands' commands "$@"
-}
-(( $+functions[_sealtask__subcmd__help__subcmd__projects__subcmd__use_commands] )) ||
-_sealtask__subcmd__help__subcmd__projects__subcmd__use_commands() {
-    local commands; commands=()
-    _describe -t commands 'sealtask help projects use commands' commands "$@"
 }
 (( $+functions[_sealtask__subcmd__help__subcmd__schema_commands] )) ||
 _sealtask__subcmd__help__subcmd__schema_commands() {
@@ -4912,7 +4845,7 @@ _sealtask__subcmd__notes__subcmd__update_commands() {
 (( $+functions[_sealtask__subcmd__pick_commands] )) ||
 _sealtask__subcmd__pick_commands() {
     local commands; commands=(
-'project:Pick an accessible project' \
+'project:Pick or resolve a project and save it as current' \
 'task:Pick a task in the selected/current project' \
 'help:Print this message or the help of the given subcommand(s)' \
     )
@@ -4921,7 +4854,7 @@ _sealtask__subcmd__pick_commands() {
 (( $+functions[_sealtask__subcmd__pick__subcmd__help_commands] )) ||
 _sealtask__subcmd__pick__subcmd__help_commands() {
     local commands; commands=(
-'project:Pick an accessible project' \
+'project:Pick or resolve a project and save it as current' \
 'task:Pick a task in the selected/current project' \
 'help:Print this message or the help of the given subcommand(s)' \
     )
@@ -5002,9 +4935,8 @@ _sealtask__subcmd__projects_commands() {
 'get:Show one decrypted project' \
 'archive:Archive a project and make it read-only' \
 'unarchive:Restore an archived project' \
-'use:Save a project as the current project for this profile' \
-'current:Show the saved current project without accessing the network' \
-'clear:Clear the saved current project' \
+'current:Show the effective current project without accessing the network' \
+'clear:Clear one saved context layer while preserving other fallback layers' \
 'sections:Discover sections in a project' \
 'audit:Show a bounded page of safe project audit metadata' \
 'help:Print this message or the help of the given subcommand(s)' \
@@ -5043,9 +4975,8 @@ _sealtask__subcmd__projects__subcmd__help_commands() {
 'get:Show one decrypted project' \
 'archive:Archive a project and make it read-only' \
 'unarchive:Restore an archived project' \
-'use:Save a project as the current project for this profile' \
-'current:Show the saved current project without accessing the network' \
-'clear:Clear the saved current project' \
+'current:Show the effective current project without accessing the network' \
+'clear:Clear one saved context layer while preserving other fallback layers' \
 'sections:Discover sections in a project' \
 'audit:Show a bounded page of safe project audit metadata' \
 'help:Print this message or the help of the given subcommand(s)' \
@@ -5104,11 +5035,6 @@ _sealtask__subcmd__projects__subcmd__help__subcmd__unarchive_commands() {
     local commands; commands=()
     _describe -t commands 'sealtask projects help unarchive commands' commands "$@"
 }
-(( $+functions[_sealtask__subcmd__projects__subcmd__help__subcmd__use_commands] )) ||
-_sealtask__subcmd__projects__subcmd__help__subcmd__use_commands() {
-    local commands; commands=()
-    _describe -t commands 'sealtask projects help use commands' commands "$@"
-}
 (( $+functions[_sealtask__subcmd__projects__subcmd__list_commands] )) ||
 _sealtask__subcmd__projects__subcmd__list_commands() {
     local commands; commands=()
@@ -5149,11 +5075,6 @@ _sealtask__subcmd__projects__subcmd__sections__subcmd__list_commands() {
 _sealtask__subcmd__projects__subcmd__unarchive_commands() {
     local commands; commands=()
     _describe -t commands 'sealtask projects unarchive commands' commands "$@"
-}
-(( $+functions[_sealtask__subcmd__projects__subcmd__use_commands] )) ||
-_sealtask__subcmd__projects__subcmd__use_commands() {
-    local commands; commands=()
-    _describe -t commands 'sealtask projects use commands' commands "$@"
 }
 (( $+functions[_sealtask__subcmd__schema_commands] )) ||
 _sealtask__subcmd__schema_commands() {

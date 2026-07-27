@@ -51,6 +51,13 @@ use telemetry::{Telemetry, TelemetryConfig, TelemetryLevel};
 use terminal::{TerminalOptions, TerminalSession};
 use uuid::Uuid;
 
+#[derive(Clone, Copy)]
+enum PrivateTerminalCommand {
+    RawPicker,
+    Browser,
+    PickProject,
+}
+
 #[tokio::main]
 async fn main() {
     let mut args = std::env::args_os().collect::<Vec<_>>();
@@ -64,10 +71,7 @@ async fn main() {
         cli.command.as_ref(),
         Some(Command::Completion { .. } | Command::Man { .. })
     ) || cli.serve_unlock_daemon.is_some();
-    let composable_picker = matches!(
-        cli.command.as_ref(),
-        Some(Command::Pick { .. } | Command::Browse(_))
-    );
+    let private_terminal = private_terminal_command(cli.command.as_ref()).is_some();
     let composable_field = matches!(
         cli.command.as_ref(),
         Some(Command::Tasks { command }) if task_list::is_raw_field_output(command)
@@ -87,7 +91,7 @@ async fn main() {
             progress_explicit: long_option_present(&args, "--progress"),
             quiet: cli.quiet,
             format,
-            pager_allowed: !(composable_picker || composable_field || streaming),
+            pager_allowed: !(private_terminal || composable_field || streaming),
         })
         .map(Some)
     };
@@ -128,6 +132,29 @@ fn parse_cli_or_exit(args: &[OsString], format: OutputFormat) -> Cli {
         .try_get_matches_from(args.iter().cloned())
         .unwrap_or_else(|err| exit_after_clap_error(err, format));
     Cli::from_arg_matches(&matches).unwrap_or_else(|err| exit_after_clap_error(err, format))
+}
+
+fn private_terminal_command(command: Option<&Command>) -> Option<PrivateTerminalCommand> {
+    match command {
+        Some(Command::Pick {
+            command:
+                args::PickCommand::Project {
+                    project: None,
+                    print_selector: false,
+                    ..
+                },
+        }) => Some(PrivateTerminalCommand::PickProject),
+        Some(Command::Pick {
+            command:
+                args::PickCommand::Project {
+                    print_selector: true,
+                    ..
+                }
+                | args::PickCommand::Task { .. },
+        }) => Some(PrivateTerminalCommand::RawPicker),
+        Some(Command::Browse(_)) => Some(PrivateTerminalCommand::Browser),
+        _ => None,
+    }
 }
 
 fn exit_after_clap_error(err: clap::Error, format: OutputFormat) -> ! {
@@ -180,23 +207,32 @@ async fn run(
         _ => {}
     }
 
-    if matches!(
-        cli.command.as_ref(),
-        Some(Command::Pick { .. } | Command::Browse(_))
-    ) {
+    if let Some(private_terminal) = private_terminal_command(cli.command.as_ref()) {
         if format.is_json() {
-            let message = if matches!(cli.command.as_ref(), Some(Command::Pick { .. })) {
-                "'sealtask pick' emits one raw reusable selector and cannot be combined with --json or any JSON --format value"
-            } else {
-                "'sealtask browse' displays decrypted content on the controlling terminal and cannot be combined with --json or any JSON --format value"
+            let message = match private_terminal {
+                PrivateTerminalCommand::RawPicker => {
+                    "'sealtask pick' emits one raw reusable selector and cannot be combined with --json or any JSON --format value"
+                }
+                PrivateTerminalCommand::Browser => {
+                    "'sealtask browse' displays decrypted content on the controlling terminal and cannot be combined with --json or any JSON --format value"
+                }
+                PrivateTerminalCommand::PickProject => {
+                    "'sealtask pick project' without PROJECT opens a private interactive picker and cannot be combined with JSON output; pass PROJECT explicitly for structured automation"
+                }
             };
             return Err(PublicError::validation(message).into());
         }
         if cli.non_interactive {
-            let message = if matches!(cli.command.as_ref(), Some(Command::Pick { .. })) {
-                "'sealtask pick' requires an interactive controlling terminal; use a UUID, id:<prefix>, or exact name directly when running non-interactively"
-            } else {
-                "'sealtask browse' requires an interactive controlling terminal and cannot be combined with --non-interactive"
+            let message = match private_terminal {
+                PrivateTerminalCommand::RawPicker => {
+                    "'sealtask pick' requires an interactive controlling terminal; use a UUID, id:<prefix>, or exact name directly when running non-interactively"
+                }
+                PrivateTerminalCommand::Browser => {
+                    "'sealtask browse' requires an interactive controlling terminal and cannot be combined with --non-interactive"
+                }
+                PrivateTerminalCommand::PickProject => {
+                    "'sealtask pick project' without PROJECT requires an interactive controlling terminal; pass PROJECT explicitly when running non-interactively"
+                }
             };
             return Err(PublicError::validation(message).into());
         }
@@ -329,7 +365,7 @@ async fn run(
             run_auth(&runtime, format, cli.non_interactive, command).await
         }
         (Command::Me, Ok(runtime)) => run_me(&runtime, format).await,
-        (Command::Pick { command }, Ok(runtime)) => run_pick(&runtime, command).await,
+        (Command::Pick { command }, Ok(runtime)) => run_pick(&runtime, format, command).await,
         (
             Command::Projects {
                 legacy_verbose,
@@ -566,15 +602,22 @@ fn validate_offline_command(cli: &Cli) -> CliResult<()> {
             | Command::Config { .. }
             | Command::Profile { .. }
             | Command::Cache { .. }
-            | Command::Browse(_)
-            | Command::Pick { .. },
+            | Command::Browse(_),
         ) => true,
+        Some(Command::Pick {
+            command:
+                args::PickCommand::Project {
+                    print_selector: true,
+                    ..
+                }
+                | args::PickCommand::Task { .. },
+        }) => true,
         Some(Command::Auth {
             command: args::AuthCommand::Status,
         }) => true,
         Some(Command::Projects {
             raw,
-            command: None | Some(args::ProjectsCommand::Current),
+            command: None | Some(args::ProjectsCommand::Current { .. }),
             ..
         }) => !raw,
         Some(Command::Projects {
@@ -675,7 +718,8 @@ mod tests {
             vec!["projects", "current", "--offline"],
             vec!["--offline", "tasks", "list", "--all"],
             vec!["--offline", "notes", "list"],
-            vec!["--offline", "pick", "project"],
+            vec!["--offline", "pick", "project", "--print-selector"],
+            vec!["--offline", "pick", "task"],
             vec!["--offline", "browse"],
             vec!["cache", "status", "--offline"],
             vec!["doctor", "--offline"],
@@ -692,6 +736,8 @@ mod tests {
             vec!["--offline", "me"],
             vec!["--offline", "stats"],
             vec!["--offline", "projects", "audit"],
+            vec!["--offline", "pick", "project"],
+            vec!["--offline", "pick", "project", "id:018f4a76"],
             vec!["--offline", "projects", "list", "--raw"],
             vec!["--offline", "tasks", "watch"],
             vec![

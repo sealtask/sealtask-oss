@@ -272,10 +272,10 @@ fn command_examples(path: &[String]) -> Option<&'static str> {
         "auth status" => "Examples:\n  sealtask auth status\n  sealtask --json auth status",
         "me" => "Examples:\n  sealtask me\n  sealtask --json me",
         "pick" => {
-            "Examples:\n  sealtask pick project\n  sealtask pick task --project \"Operations\""
+            "Examples:\n  sealtask pick project\n  sealtask pick project \"Release Engineering\" --scope global\n  sealtask pick task --project \"Operations\""
         }
         "pick project" => {
-            "Examples:\n  sealtask projects get \"$(sealtask pick project)\"\n  sealtask pick project --include-archived"
+            "Examples:\n  sealtask pick project\n  sealtask pick project \"Release Engineering\" --scope global\n  sealtask projects get \"$(sealtask pick project --print-selector)\""
         }
         "pick task" => {
             "Examples:\n  sealtask tasks get \"$(sealtask pick task)\"\n  sealtask pick task --project \"Operations\""
@@ -291,11 +291,12 @@ fn command_examples(path: &[String]) -> Option<&'static str> {
         }
         "projects archive" => "Examples:\n  sealtask projects archive \"Finished launch\"",
         "projects unarchive" => "Examples:\n  sealtask projects unarchive \"Finished launch\"",
-        "projects use" => "Examples:\n  sealtask projects use \"Release Engineering\"",
         "projects current" => {
-            "Examples:\n  sealtask projects current\n  sealtask --json projects current"
+            "Examples:\n  sealtask projects current\n  sealtask projects current --scope global\n  sealtask --json projects current"
         }
-        "projects clear" => "Examples:\n  sealtask projects clear",
+        "projects clear" => {
+            "Examples:\n  sealtask projects clear\n  sealtask projects clear --scope global"
+        }
         "projects sections" => {
             "Examples:\n  sealtask projects sections list\n  sealtask projects sections list --project \"Release Engineering\""
         }

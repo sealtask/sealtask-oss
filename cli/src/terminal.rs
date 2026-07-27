@@ -264,7 +264,7 @@ impl TerminalPolicy {
         }
         if pager_mode == PagerArg::Always && !options.pager_allowed {
             return Err(PublicError::validation(
-                "paging is unavailable for this raw-output command",
+                "paging is unavailable for this interactive or raw-output command",
             )
             .into());
         }

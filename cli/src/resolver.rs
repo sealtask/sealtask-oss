@@ -82,7 +82,7 @@ pub(crate) async fn resolve_project(
 
     let Some(id) = load_current_project(runtime.api_url())? else {
         return Err(PublicError::validation(
-            "no project was specified and this profile has no current project; pass --project/--work-list-id or run 'sealtask projects use <PROJECT>'",
+            "no project was specified and neither this directory nor the active profile has a current project; pass --project/--work-list-id or run 'sealtask pick project'",
         ));
     };
     Ok(ResolvedProject { id, title: None })

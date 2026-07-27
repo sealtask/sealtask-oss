@@ -174,9 +174,9 @@ fn empty_guidance(
 ) -> &'static str {
     if scope.is_cross_project() {
         return if include_completed {
-            "No assigned tasks found across projects.\nSelect a project: sealtask projects use <PROJECT>"
+            "No assigned tasks found across projects.\nChoose a current project: sealtask pick project"
         } else {
-            "No active assigned tasks found across projects.\nShow completed: sealtask tasks list --all --include-completed\nSelect a project: sealtask projects use <PROJECT>"
+            "No active assigned tasks found across projects.\nShow completed: sealtask tasks list --all --include-completed\nChoose a current project: sealtask pick project"
         };
     }
 

@@ -2,11 +2,11 @@
 .el .ds Aq '
 .TH sealtask-pick 1  "SealTask CLI 0.2.1" "SealTask Manual"
 .SH NAME
-sealtask\-pick \- Fuzzy\-pick an entity while printing only a reusable opaque selector
+sealtask\-pick \- Choose or resolve a project to activate, or interactively print a task selector
 .SH SYNOPSIS
 \fBsealtask pick\fR [\fB\-\-api\-url\fR] [\fB\-\-storage\-origin\fR] [\fB\-\-json\fR] [\fB\-\-format\fR] [\fB\-\-color\fR] [\fB\-\-pager\fR] [\fB\-\-no\-pager\fR] [\fB\-\-progress\fR] [\fB\-q\fR|\fB\-\-quiet\fR] [\fB\-\-non\-interactive\fR] [\fB\-v \fR]... [\fB\-\-debug\fR] [\fB\-\-connect\-timeout\fR] [\fB\-\-read\-timeout\fR] [\fB\-\-request\-timeout\fR] [\fB\-\-retry\fR] [\fB\-\-offline\fR] [\fB\-\-profile\fR] [\fB\-\-config\-dir\fR] [\fB\-h\fR|\fB\-\-help\fR] <\fIsubcommands\fR>
 .SH DESCRIPTION
-Fuzzy\-pick an entity while printing only a reusable opaque selector
+Choose or resolve a project to activate, or interactively print a task selector
 .SH OPTIONS
 .TP
 \fB\-h\fR, \fB\-\-help\fR
@@ -162,11 +162,12 @@ May also be specified with the \fBSEALTASK_CONFIG_DIR\fR environment variable.
 .SH SUBCOMMANDS
 .TP
 sealtask\-pick\-project(1)
-Pick an accessible project
+Pick or resolve a project and save it as current
 .TP
 sealtask\-pick\-task(1)
 Pick a task in the selected/current project
 .SH EXTRA
 Examples:
   sealtask pick project
+  sealtask pick project "Release Engineering" \-\-scope global
   sealtask pick task \-\-project "Operations"
