@@ -11,17 +11,24 @@ use std::fs::OpenOptions;
 use std::io;
 #[cfg(windows)]
 use std::io::IsTerminal;
+#[cfg(unix)]
+use std::sync::atomic::{AtomicI32, Ordering as AtomicOrdering};
 use unicode_normalization::UnicodeNormalization;
 use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::UnicodeWidthStr;
 use uuid::Uuid;
-use zeroize::Zeroize;
+use zeroize::{Zeroize, Zeroizing};
 
 const PICKER_LABEL_MAX_INPUT_BYTES: usize = 4_096;
 const PICKER_LABEL_MAX_OUTPUT_BYTES: usize = 512;
 const PICKER_LABEL_MAX_WIDTH: usize = 80;
 const PICKER_QUERY_MAX_BYTES: usize = 512;
 const PICKER_MAX_ROWS: usize = 12;
+#[cfg(unix)]
+const PICKER_TERMINATION_SIGNALS: [libc::c_int; 4] =
+    [libc::SIGINT, libc::SIGTERM, libc::SIGHUP, libc::SIGQUIT];
+#[cfg(unix)]
+static PICKER_SIGNAL: AtomicI32 = AtomicI32::new(0);
 
 /// An item that can be selected without exposing its decrypted label to logs.
 pub(crate) struct PickerCandidate {
@@ -48,6 +55,11 @@ struct TerminalFrame<'a> {
     rendered_lines: usize,
     cursor_hidden: bool,
     restored: bool,
+}
+
+#[cfg(unix)]
+struct PickerSignalGuard {
+    previous_actions: Vec<(libc::c_int, libc::sigaction)>,
 }
 
 enum PickerOutcome {
@@ -170,6 +182,71 @@ impl Drop for TerminalFrame<'_> {
     }
 }
 
+#[cfg(unix)]
+impl PickerSignalGuard {
+    fn install() -> io::Result<Self> {
+        PICKER_SIGNAL.store(0, AtomicOrdering::SeqCst);
+
+        // SAFETY: `sigaction` is valid when zeroed, and `sigemptyset`
+        // initializes the mask before the action is installed.
+        let mut action = unsafe { std::mem::zeroed::<libc::sigaction>() };
+        action.sa_sigaction = capture_picker_signal as *const () as libc::sighandler_t;
+        action.sa_flags = 0;
+        // SAFETY: `action.sa_mask` is a valid writable signal set.
+        if unsafe { libc::sigemptyset(&mut action.sa_mask) } != 0 {
+            return Err(io::Error::last_os_error());
+        }
+
+        let mut guard = Self {
+            previous_actions: Vec::with_capacity(PICKER_TERMINATION_SIGNALS.len()),
+        };
+        for signal in PICKER_TERMINATION_SIGNALS {
+            // SAFETY: the pointers remain valid for this call, and the handler
+            // only performs an atomic store.
+            let mut previous = unsafe { std::mem::zeroed::<libc::sigaction>() };
+            // SAFETY: `signal` is one of the supported termination signals.
+            if unsafe { libc::sigaction(signal, &action, &mut previous) } != 0 {
+                let error = io::Error::last_os_error();
+                let _ = guard.restore_actions();
+                return Err(error);
+            }
+            guard.previous_actions.push((signal, previous));
+        }
+        Ok(guard)
+    }
+
+    fn restore(mut self) -> io::Result<()> {
+        self.restore_actions()
+    }
+
+    fn restore_actions(&mut self) -> io::Result<()> {
+        let mut first_error = None;
+        while let Some((signal, previous)) = self.previous_actions.pop() {
+            // SAFETY: `previous` came from a successful `sigaction` call for
+            // this exact signal.
+            if unsafe { libc::sigaction(signal, &previous, std::ptr::null_mut()) } != 0
+                && first_error.is_none()
+            {
+                first_error = Some(io::Error::last_os_error());
+            }
+        }
+        first_error.map_or(Ok(()), Err)
+    }
+}
+
+#[cfg(unix)]
+impl Drop for PickerSignalGuard {
+    fn drop(&mut self) {
+        let _ = self.restore_actions();
+    }
+}
+
+#[cfg(unix)]
+extern "C" fn capture_picker_signal(signal: libc::c_int) {
+    let _ =
+        PICKER_SIGNAL.compare_exchange(0, signal, AtomicOrdering::SeqCst, AtomicOrdering::SeqCst);
+}
+
 /// Return the full, unambiguous selector accepted by command resolvers.
 pub(crate) fn selector_for(id: Uuid) -> String {
     format!("id:{}", id.simple())
@@ -203,15 +280,125 @@ pub(crate) fn pick_candidate(
     interact(&terminal, entity_kind, &candidates)
 }
 
+/// Display decrypted content only on the attended controlling terminal.
+///
+/// Unix writes directly to `/dev/tty`. Windows requires attended stdin and
+/// stderr console handles, so redirected standard streams never receive the
+/// displayed plaintext.
+pub(crate) fn show_private_document(title: String, lines: Vec<String>) -> CliResult<()> {
+    terminal::clear_active_progress();
+    let terminal = open_picker_terminal()?;
+    #[cfg(unix)]
+    let signals = PickerSignalGuard::install().map_err(picker_signal_error)?;
+    let mut title = Zeroizing::new(title);
+    let mut lines = Zeroizing::new(lines);
+    let sanitized_title = sanitize_cell(&title);
+    title.zeroize();
+    *title = sanitized_title;
+    for line in lines.iter_mut() {
+        let sanitized = sanitize_cell(line);
+        line.zeroize();
+        *line = sanitized;
+    }
+
+    let mut frame = TerminalFrame::start(&terminal).map_err(picker_io_error)?;
+    let mut offset = 0_usize;
+    let mut wrapped_width = None;
+    let mut visual_lines = Zeroizing::new(Vec::new());
+    let outcome = loop {
+        #[cfg(unix)]
+        if PICKER_SIGNAL.load(AtomicOrdering::SeqCst) != 0 {
+            break Err(CliError::interrupted(
+                "private browse view interrupted",
+                &[],
+            ));
+        }
+        let (terminal_rows, terminal_columns) = terminal.size();
+        let width = usize::from(terminal_columns).max(1);
+        let visible_rows = usize::from(terminal_rows).saturating_sub(2).max(1);
+        if wrapped_width != Some(width) {
+            let next_lines = wrap_private_lines(&lines, width);
+            visual_lines.zeroize();
+            *visual_lines = next_lines;
+            wrapped_width = Some(width);
+        }
+        let maximum_offset = visual_lines.len().saturating_sub(visible_rows);
+        offset = offset.min(maximum_offset);
+        let mut rendered = Vec::with_capacity(visible_rows.saturating_add(2));
+        rendered.push(truncate_width(&title, width));
+        rendered.extend(visual_lines.iter().skip(offset).take(visible_rows).cloned());
+        rendered.push(truncate_width(
+            "↑/↓ scroll · PgUp/PgDn page · Home/End jump · q/Esc close",
+            width,
+        ));
+        let render_result = frame.render(&rendered);
+        rendered.zeroize();
+        if let Err(error) = render_result {
+            break Err(picker_io_error(error));
+        }
+
+        match frame.read_key() {
+            Ok(Key::CtrlC | Key::Char('\u{3}')) => {
+                break Err(CliError::interrupted(
+                    "private browse view interrupted",
+                    &[],
+                ));
+            }
+            Ok(Key::Escape | Key::Enter | Key::Char('q') | Key::Char('Q')) => break Ok(()),
+            Ok(Key::ArrowUp | Key::Char('\u{10}')) => {
+                offset = offset.saturating_sub(1);
+            }
+            Ok(Key::ArrowDown | Key::Char('\u{e}')) => {
+                offset = offset.saturating_add(1).min(maximum_offset);
+            }
+            Ok(Key::PageUp) => {
+                offset = offset.saturating_sub(visible_rows);
+            }
+            Ok(Key::PageDown) => {
+                offset = offset.saturating_add(visible_rows).min(maximum_offset);
+            }
+            Ok(Key::Home) => offset = 0,
+            Ok(Key::End) => offset = maximum_offset,
+            Ok(_) => {}
+            Err(error) if error.kind() == io::ErrorKind::Interrupted => {
+                break Err(CliError::interrupted(
+                    "private browse view interrupted",
+                    &[],
+                ));
+            }
+            Err(error) => break Err(picker_io_error(error)),
+        }
+    };
+
+    let cleanup = frame.restore();
+    let result = match (outcome, cleanup) {
+        (result, Ok(())) => result,
+        (Err(error), Err(_)) => Err(error),
+        (Ok(()), Err(error)) => Err(PublicError::unexpected(format!(
+            "private browse view could not restore the controlling terminal: {error}; reopen the terminal if its display is inconsistent"
+        ))
+        .into()),
+    };
+    #[cfg(unix)]
+    let result = finish_picker_signal_supervision(signals, result);
+    result
+}
+
 fn interact(
     terminal: &Term,
     entity_kind: &str,
     candidates: &[PreparedCandidate],
 ) -> CliResult<Uuid> {
+    #[cfg(unix)]
+    let signals = PickerSignalGuard::install().map_err(picker_signal_error)?;
     let mut frame = TerminalFrame::start(terminal).map_err(picker_io_error)?;
     let mut state = PickerState::default();
     let matcher = SkimMatcherV2::default();
     let outcome = loop {
+        #[cfg(unix)]
+        if PICKER_SIGNAL.load(AtomicOrdering::SeqCst) != 0 {
+            break PickerOutcome::Cancelled("interactive selection interrupted");
+        }
         let ranked = ranked_indices(candidates, &state.query, &matcher);
         normalize_selection(&mut state, ranked.len());
         let (terminal_rows, terminal_columns) = terminal.size();
@@ -250,7 +437,7 @@ fn interact(
     };
 
     let cleanup = frame.restore();
-    match (outcome, cleanup) {
+    let result = match (outcome, cleanup) {
         (PickerOutcome::Selected(id), Ok(())) => Ok(id),
         (PickerOutcome::Cancelled(message), Ok(())) => {
             Err(CliError::interrupted(message, &[]))
@@ -266,7 +453,10 @@ fn interact(
             "interactive picker could not restore the terminal: {cleanup_error}; reopen the terminal if its display is inconsistent"
         ))
         .into()),
-    }
+    };
+    #[cfg(unix)]
+    let result = finish_picker_signal_supervision(signals, result);
+    result
 }
 
 fn prepare_candidates(candidates: Vec<PickerCandidate>) -> Vec<PreparedCandidate> {
@@ -538,6 +728,37 @@ fn truncate_owned(mut value: String, max_width: usize) -> String {
     result
 }
 
+fn wrap_private_lines(lines: &[String], max_width: usize) -> Vec<String> {
+    let max_width = max_width.max(1);
+    let mut wrapped = Vec::new();
+    for line in lines {
+        if line.is_empty() {
+            wrapped.push(String::new());
+            continue;
+        }
+
+        let mut current = String::new();
+        let mut current_width = 0_usize;
+        for grapheme in UnicodeSegmentation::graphemes(line.as_str(), true) {
+            let grapheme_width = UnicodeWidthStr::width(grapheme);
+            if !current.is_empty() && current_width.saturating_add(grapheme_width) > max_width {
+                wrapped.push(std::mem::take(&mut current));
+                current_width = 0;
+            }
+            if current.is_empty() && grapheme_width > max_width {
+                wrapped.push(truncate_width(grapheme, max_width));
+                continue;
+            }
+            current.push_str(grapheme);
+            current_width = current_width.saturating_add(grapheme_width);
+        }
+        if !current.is_empty() {
+            wrapped.push(current);
+        }
+    }
+    wrapped
+}
+
 fn truncate_with_budget(value: &str, max_width: usize, max_bytes: usize) -> String {
     if max_width == 0 || max_bytes == 0 {
         return String::new();
@@ -580,6 +801,53 @@ fn compare_labels(left: Option<&str>, right: Option<&str>) -> Ordering {
     }
 }
 
+#[cfg(unix)]
+fn finish_picker_signal_supervision<T>(
+    signals: PickerSignalGuard,
+    result: CliResult<T>,
+) -> CliResult<T> {
+    let restore_result = signals.restore();
+    let signal = PICKER_SIGNAL.load(AtomicOrdering::SeqCst);
+    if signal != 0 {
+        let mut message = format!(
+            "private terminal interaction interrupted by {}; terminal cleanup was attempted",
+            picker_signal_name(signal)
+        );
+        if let Err(error) = restore_result {
+            message.push_str(&format!(
+                "; the previous signal handlers could not be fully restored: {error}"
+            ));
+        }
+        if let Err(error) = &result
+            && error.to_string().contains("restore")
+        {
+            message.push_str(&format!("; {error}"));
+        }
+        return Err(CliError::interrupted(message, &[]));
+    }
+    restore_result.map_err(picker_signal_error)?;
+    result
+}
+
+#[cfg(unix)]
+fn picker_signal_name(signal: libc::c_int) -> &'static str {
+    match signal {
+        libc::SIGINT => "SIGINT",
+        libc::SIGTERM => "SIGTERM",
+        libc::SIGHUP => "SIGHUP",
+        libc::SIGQUIT => "SIGQUIT",
+        _ => "a termination signal",
+    }
+}
+
+#[cfg(unix)]
+fn picker_signal_error(error: io::Error) -> CliError {
+    PublicError::unexpected(format!(
+        "failed to supervise private terminal interruption safely: {error}"
+    ))
+    .into()
+}
+
 fn picker_io_error(error: io::Error) -> CliError {
     PublicError::unexpected(format!(
         "interactive picker failed: {error}; retry or pass an explicit id: selector"
@@ -615,8 +883,10 @@ fn open_picker_terminal() -> CliResult<Term> {
 
 #[cfg(not(any(unix, windows)))]
 fn open_picker_terminal() -> CliResult<Term> {
-    ensure_picker_environment(std::env::var("TERM").ok().as_deref())?;
-    ensure_attended_terminal(Term::stderr())
+    Err(PublicError::validation(
+        "interactive selection is not supported on this platform; pass an explicit id: selector instead",
+    )
+    .into())
 }
 
 fn ensure_picker_environment(term: Option<&str>) -> CliResult<()> {
@@ -804,6 +1074,25 @@ mod tests {
                 assert!(!line.contains('\r'));
             }
         }
+    }
+
+    #[test]
+    fn private_documents_wrap_long_lines_without_discarding_text() {
+        let source = vec![
+            "0123456789abcdefghijklmnopqrstuvwxyz".to_string(),
+            String::new(),
+            "界界界".to_string(),
+        ];
+        let wrapped = wrap_private_lines(&source, 10);
+
+        assert!(wrapped.iter().all(|line| {
+            UnicodeWidthStr::width(line.as_str()) <= 10
+                && !line.contains('\n')
+                && !line.contains('\r')
+        }));
+        assert_eq!(wrapped[..4].concat(), source[0]);
+        assert!(wrapped.iter().any(String::is_empty));
+        assert_eq!(wrapped.last(), Some(&source[2]));
     }
 
     #[test]

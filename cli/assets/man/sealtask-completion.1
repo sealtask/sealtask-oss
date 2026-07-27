@@ -4,7 +4,7 @@
 .SH NAME
 sealtask\-completion \- Generate a shell completion script without reading configuration or credentials
 .SH SYNOPSIS
-\fBsealtask completion\fR [\fB\-\-api\-url\fR] [\fB\-\-storage\-origin\fR] [\fB\-\-json\fR] [\fB\-\-format\fR] [\fB\-\-color\fR] [\fB\-\-pager\fR] [\fB\-\-no\-pager\fR] [\fB\-\-progress\fR] [\fB\-q\fR|\fB\-\-quiet\fR] [\fB\-\-non\-interactive\fR] [\fB\-v \fR]... [\fB\-\-debug\fR] [\fB\-\-connect\-timeout\fR] [\fB\-\-read\-timeout\fR] [\fB\-\-request\-timeout\fR] [\fB\-\-retry\fR] [\fB\-\-profile\fR] [\fB\-\-config\-dir\fR] [\fB\-h\fR|\fB\-\-help\fR] <\fISHELL\fR>
+\fBsealtask completion\fR [\fB\-\-api\-url\fR] [\fB\-\-storage\-origin\fR] [\fB\-\-json\fR] [\fB\-\-format\fR] [\fB\-\-color\fR] [\fB\-\-pager\fR] [\fB\-\-no\-pager\fR] [\fB\-\-progress\fR] [\fB\-q\fR|\fB\-\-quiet\fR] [\fB\-\-non\-interactive\fR] [\fB\-v \fR]... [\fB\-\-debug\fR] [\fB\-\-connect\-timeout\fR] [\fB\-\-read\-timeout\fR] [\fB\-\-request\-timeout\fR] [\fB\-\-retry\fR] [\fB\-\-offline\fR] [\fB\-\-profile\fR] [\fB\-\-config\-dir\fR] [\fB\-h\fR|\fB\-\-help\fR] <\fISHELL\fR>
 .SH DESCRIPTION
 Generate a shell completion script without reading configuration or credentials
 .SH OPTIONS
@@ -12,12 +12,6 @@ Generate a shell completion script without reading configuration or credentials
 \fB\-h\fR, \fB\-\-help\fR
 Print help (see a summary with \*(Aq\-h\*(Aq)
 .SH OPTIONS
-.TP
-\fB\-\-retry\fR \fI<COUNT>\fR [default: 2]
-Retry replay\-safe API requests after transient failures
-.RS
-May also be specified with the \fBSEALTASK_RETRY\fR environment variable.
-.RE
 .TP
 <\fISHELL\fR>
 Shell whose completion script should be written to stdout
@@ -65,6 +59,18 @@ May also be specified with the \fBSEALTASK_READ_TIMEOUT\fR environment variable.
 Maximum total time for one control\-plane request (for example 1m)
 .RS
 May also be specified with the \fBSEALTASK_REQUEST_TIMEOUT\fR environment variable.
+.RE
+.TP
+\fB\-\-retry\fR \fI<COUNT>\fR [default: 2]
+Retry replay\-safe API requests after transient failures
+.RS
+May also be specified with the \fBSEALTASK_RETRY\fR environment variable.
+.RE
+.TP
+\fB\-\-offline\fR
+Read only from the encrypted local snapshot and never access the network
+.RS
+May also be specified with the \fBSEALTASK_OFFLINE\fR environment variable.
 .RE
 .SH OUTPUT
 .TP

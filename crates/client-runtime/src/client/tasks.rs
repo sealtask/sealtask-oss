@@ -6,10 +6,12 @@ use crate::inputs::{
     validate_priority,
 };
 use crate::models::{AgentTaskDetail, AgentTaskSummary};
+use crate::read_cache::ReadCacheQuery;
 use chrono::{DateTime, Utc};
 use sealtask_client_api::{
-    ArchiveTaskRequest, BoardEventStream, CreateTaskRequest, MoveTaskRequest, PublicApiClient,
-    TaskSectionBoundary, UnarchiveTaskRequest, UpdateTaskRequest,
+    ArchiveTaskRequest, BoardEventStream, CreateTaskRequest, MoveTaskRequest, MyTaskResponse,
+    PublicApiClient, TaskDetailResponse, TaskListResponse, TaskSectionBoundary,
+    UnarchiveTaskRequest, UpdateTaskRequest, WorkListResponse,
 };
 use sealtask_client_core::{PublicError, PublicResult};
 use sealtask_client_crypto::{
@@ -532,6 +534,8 @@ fn zeroize_flexible_value(value: &mut sealtask_client_crypto::FlexibleValue) {
 pub struct ProjectTaskSession {
     runtime: RuntimeClient,
     client: PublicApiClient,
+    credentials: sealtask_client_auth::Credentials,
+    data_key: sealtask_client_crypto::SymmetricKey,
     work_list_id: Uuid,
     context: WorkListContext,
 }
@@ -549,10 +553,25 @@ impl ProjectTaskSession {
         include_completed: bool,
         include_archived: bool,
     ) -> PublicResult<Vec<AgentTaskSummary>> {
+        let cache_guard = self
+            .runtime
+            .read_cache
+            .begin_online_read(&self.credentials)?;
         let response = self
             .client
             .get_tasks(self.work_list_id, include_archived)
             .await?;
+        if self.runtime.read_cache.is_enabled() {
+            self.runtime.read_cache.record_online(
+                cache_guard.as_ref(),
+                &self.data_key,
+                &ReadCacheQuery::ProjectTasks {
+                    work_list_id: self.work_list_id,
+                    include_archived,
+                },
+                &response,
+            )?;
+        }
         let tasks = if include_completed {
             response.tasks
         } else {
@@ -572,6 +591,7 @@ impl ProjectTaskSession {
     /// Issue a fresh one-time stream token and connect to this project's event
     /// feed without exposing the bearer token to callers.
     pub async fn connect_events(&self) -> PublicResult<BoardEventStream> {
+        self.runtime.require_online("project event streams")?;
         let mut client = self.client.clone();
         let token = client.issue_project_sse_token(self.work_list_id).await?;
         client
@@ -602,19 +622,76 @@ impl RuntimeClient {
                 "Password required to decrypt task data.",
             )
             .await?;
-        let mut client = self.api_client_with_credentials(credentials)?;
-
-        let work_lists = client.list_work_lists().await?;
+        let work_lists_query = ReadCacheQuery::WorkLists {
+            include_archived: false,
+        };
+        let my_tasks_query = ReadCacheQuery::MyTasks { include_completed };
+        let (work_lists, tasks): (Vec<WorkListResponse>, Vec<MyTaskResponse>) = if self.is_offline()
+        {
+            (
+                self.read_cache
+                    .read_offline(&credentials, &data_key, &work_lists_query)?,
+                self.read_cache
+                    .read_offline(&credentials, &data_key, &my_tasks_query)?,
+            )
+        } else {
+            let cached_work_lists = self.read_cache.memoized(&credentials, &work_lists_query)?;
+            let cached_tasks = self.read_cache.memoized(&credentials, &my_tasks_query)?;
+            let mut client = if cached_work_lists.is_none() || cached_tasks.is_none() {
+                Some(self.api_client_with_credentials(credentials.clone())?)
+            } else {
+                None
+            };
+            let work_lists = match cached_work_lists {
+                Some(work_lists) => work_lists,
+                None => {
+                    let cache_guard = self.read_cache.begin_online_read(&credentials)?;
+                    let work_lists = client
+                        .as_mut()
+                        .expect("API client exists for an uncached snapshot")
+                        .list_work_lists()
+                        .await?;
+                    self.read_cache.record_online(
+                        cache_guard.as_ref(),
+                        &data_key,
+                        &work_lists_query,
+                        &work_lists,
+                    )?;
+                    work_lists
+                }
+            };
+            let tasks = match cached_tasks {
+                Some(tasks) => tasks,
+                None => {
+                    let cache_guard = self.read_cache.begin_online_read(&credentials)?;
+                    let tasks = client
+                        .as_mut()
+                        .expect("API client exists for an uncached snapshot")
+                        .get_all_my_tasks(include_completed)
+                        .await?;
+                    self.read_cache.record_online(
+                        cache_guard.as_ref(),
+                        &data_key,
+                        &my_tasks_query,
+                        &tasks,
+                    )?;
+                    tasks
+                }
+            };
+            (work_lists, tasks)
+        };
         let mut scheme_histories = HashMap::new();
-        for work_list in &work_lists {
-            let history = load_task_reference_scheme_history(&mut client, work_list).await;
-            if !history.is_empty() {
-                scheme_histories.insert(work_list.id, history);
+        if !self.is_offline() {
+            let mut client = self.api_client_with_credentials(credentials.clone())?;
+            for work_list in &work_lists {
+                let history = load_task_reference_scheme_history(&mut client, work_list).await;
+                if !history.is_empty() {
+                    scheme_histories.insert(work_list.id, history);
+                }
             }
         }
         let contexts =
             self.build_work_list_contexts(&work_lists, &scheme_histories, Some(&data_key));
-        let tasks = client.get_all_my_tasks(include_completed).await?;
 
         Ok(tasks
             .into_iter()
@@ -633,12 +710,36 @@ impl RuntimeClient {
         include_archived: bool,
         password_stdin: bool,
     ) -> PublicResult<Vec<AgentTaskSummary>> {
-        let mut session = self
-            .project_task_session(work_list_id, password_stdin)
+        let (credentials, data_key, context) = self
+            .load_read_work_list_context(
+                work_list_id,
+                password_stdin,
+                "Password required to decrypt task data.",
+            )
             .await?;
-        session
-            .list_tasks(include_completed, include_archived)
-            .await
+        let query = ReadCacheQuery::ProjectTasks {
+            work_list_id,
+            include_archived,
+        };
+        let response: TaskListResponse = if self.is_offline() {
+            self.read_cache
+                .read_offline(&credentials, &data_key, &query)?
+        } else if let Some(cached) = self.read_cache.memoized(&credentials, &query)? {
+            cached
+        } else {
+            let cache_guard = self.read_cache.begin_online_read(&credentials)?;
+            let mut client = self.api_client_with_credentials(credentials.clone())?;
+            let response = client.get_tasks(work_list_id, include_archived).await?;
+            self.read_cache
+                .record_online(cache_guard.as_ref(), &data_key, &query, &response)?;
+            response
+        };
+        Ok(response
+            .tasks
+            .into_iter()
+            .filter(|task| include_completed || !task.is_completed)
+            .map(|task| self.project_task_summary(task, Some(&context.work_list)))
+            .collect())
     }
 
     /// Authenticate, unlock, and resolve the decrypted context for one project
@@ -648,6 +749,7 @@ impl RuntimeClient {
         work_list_id: Uuid,
         password_stdin: bool,
     ) -> PublicResult<ProjectTaskSession> {
+        self.require_online("live project task sessions")?;
         let mut credentials = self.require_logged_in_credentials()?;
         let data_key = self
             .load_data_key(
@@ -667,7 +769,19 @@ impl RuntimeClient {
         mut client: PublicApiClient,
         data_key: &sealtask_client_crypto::SymmetricKey,
     ) -> PublicResult<ProjectTaskSession> {
+        let credentials = client.clone().into_credentials().ok_or_else(|| {
+            PublicError::unexpected("project task session API client is not authenticated")
+        })?;
+        let cache_guard = self.read_cache.begin_online_read(&credentials)?;
         let work_list = client.get_work_list(work_list_id).await?;
+        if self.read_cache.is_enabled() {
+            self.read_cache.record_online(
+                cache_guard.as_ref(),
+                data_key,
+                &ReadCacheQuery::WorkList { work_list_id },
+                &work_list,
+            )?;
+        }
         let scheme_history =
             load_task_reference_scheme_history(&mut client, &work_list.work_list).await;
         let context =
@@ -675,6 +789,8 @@ impl RuntimeClient {
         Ok(ProjectTaskSession {
             runtime: self.clone(),
             client,
+            credentials,
+            data_key: data_key.clone(),
             work_list_id,
             context,
         })
@@ -686,20 +802,36 @@ impl RuntimeClient {
         task_id: Uuid,
         password_stdin: bool,
     ) -> PublicResult<AgentTaskDetail> {
-        let (mut client, context) = self
-            .load_work_list_context(
+        let (credentials, data_key, context) = self
+            .load_read_work_list_context(
                 work_list_id,
                 password_stdin,
                 "Password required to decrypt task data.",
             )
             .await?;
-        let detail = client.get_task(work_list_id, task_id).await?;
+        let query = ReadCacheQuery::Task {
+            work_list_id,
+            task_id,
+        };
+        let detail: TaskDetailResponse = if self.is_offline() {
+            self.read_cache
+                .read_offline(&credentials, &data_key, &query)?
+        } else if let Some(cached) = self.read_cache.memoized(&credentials, &query)? {
+            cached
+        } else {
+            let cache_guard = self.read_cache.begin_online_read(&credentials)?;
+            let mut client = self.api_client_with_credentials(credentials.clone())?;
+            let detail = client.get_task(work_list_id, task_id).await?;
+            self.read_cache
+                .record_online(cache_guard.as_ref(), &data_key, &query, &detail)?;
+            detail
+        };
 
-        let task = self.project_task_summary(detail.task, Some(&context));
+        let task = self.project_task_summary(detail.task, Some(&context.work_list));
         let comments = detail
             .comments
             .into_iter()
-            .map(|comment| self.project_comment(comment, context.list_key.as_ref()))
+            .map(|comment| self.project_comment(comment, context.work_list.list_key.as_ref()))
             .collect();
         Ok(AgentTaskDetail { task, comments })
     }
@@ -1006,10 +1138,12 @@ impl RuntimeClient {
         &self,
         mut prepared: PreparedTaskCreate,
     ) -> PublicResult<AgentTaskSummary> {
-        let created = prepared
+        let result = prepared
             .client
             .create_task(prepared.work_list_id, prepared.request.get())
-            .await?;
+            .await;
+        self.read_cache.invalidate_for_mutation_result(&result);
+        let created = result?;
         Ok(self.project_task_summary(created, Some(prepared.context.get()?)))
     }
 
@@ -1321,14 +1455,16 @@ impl RuntimeClient {
             return Ok(self.project_task_summary(current, Some(context)));
         }
 
-        let updated = prepared
+        let result = prepared
             .client
             .update_task(
                 prepared.work_list_id,
                 prepared.task_id,
                 prepared.request.get(),
             )
-            .await?;
+            .await;
+        self.read_cache.invalidate_for_mutation_result(&result);
+        let updated = result?;
         Ok(self.project_task_summary(updated, Some(prepared.context.get()?)))
     }
 
@@ -1341,7 +1477,7 @@ impl RuntimeClient {
             )
             .await?;
         let current = client.get_task(args.work_list_id, args.task_id).await?;
-        let moved = client
+        let result = client
             .move_task(
                 args.work_list_id,
                 args.task_id,
@@ -1352,7 +1488,9 @@ impl RuntimeClient {
                     section_boundary: None,
                 },
             )
-            .await?;
+            .await;
+        self.read_cache.invalidate_for_mutation_result(&result);
+        let moved = result?;
         Ok(self.project_task_summary(moved, Some(&context)))
     }
 
@@ -1378,7 +1516,7 @@ impl RuntimeClient {
             .load_work_list_context(args.work_list_id, args.password_stdin, prompt_message)
             .await?;
         let current = client.get_task(args.work_list_id, args.task_id).await?;
-        let moved = client
+        let result = client
             .move_task(
                 args.work_list_id,
                 args.task_id,
@@ -1393,7 +1531,9 @@ impl RuntimeClient {
                     }),
                 },
             )
-            .await?;
+            .await;
+        self.read_cache.invalidate_for_mutation_result(&result);
+        let moved = result?;
         Ok(self.project_task_summary(moved, Some(&context)))
     }
 
@@ -1405,13 +1545,15 @@ impl RuntimeClient {
                 "Password required to decrypt archived task data.",
             )
             .await?;
-        let archived = client
+        let result = client
             .archive_task(
                 args.work_list_id,
                 args.task_id,
                 &ArchiveTaskRequest::default(),
             )
-            .await?;
+            .await;
+        self.read_cache.invalidate_for_mutation_result(&result);
+        let archived = result?;
         Ok(self.project_task_summary(archived, Some(&context)))
     }
 
@@ -1423,21 +1565,25 @@ impl RuntimeClient {
                 "Password required to decrypt unarchived task data.",
             )
             .await?;
-        let unarchived = client
+        let result = client
             .unarchive_task(
                 args.work_list_id,
                 args.task_id,
                 &UnarchiveTaskRequest::default(),
             )
-            .await?;
+            .await;
+        self.read_cache.invalidate_for_mutation_result(&result);
+        let unarchived = result?;
         Ok(self.project_task_summary(unarchived, Some(&context)))
     }
 
     pub async fn delete_task(&self, args: DeleteTaskArgs) -> PublicResult<()> {
         let mut client = self.authenticated_api_client()?;
-        client
+        let result = client
             .delete_task(args.work_list_id, args.task_id, &args.input)
-            .await
+            .await;
+        self.read_cache.invalidate_for_mutation_result(&result);
+        result
     }
 }
 

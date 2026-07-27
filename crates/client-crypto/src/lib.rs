@@ -3,6 +3,7 @@
 mod attachment_transport_limits;
 mod attachments;
 mod notes;
+mod read_cache;
 mod task_references;
 
 pub use attachment_transport_limits::{
@@ -18,6 +19,10 @@ pub use notes::{
     NOTE_KEY_CONTEXT, NOTE_PAYLOAD_CONTEXT, NOTE_TITLE_CONTEXT, NotePayloadBody,
     NotePayloadEnvelope, build_note_payload_envelope, decrypt_note_key, decrypt_note_payload,
     encrypt_note_key, encrypt_note_payload,
+};
+pub use read_cache::{
+    MAX_READ_CACHE_CIPHERTEXT_BYTES, MAX_READ_CACHE_PLAINTEXT_BYTES, ReadCacheBinding,
+    open_read_cache, seal_read_cache,
 };
 pub use task_references::{
     TASK_REFERENCE_ORDINARY_REVISION_MAX, TASK_REFERENCE_PREFIX_MAX_BYTES,
@@ -722,8 +727,17 @@ pub fn decode_sealed_blob(b64: &str) -> PublicResult<Vec<u8>> {
 
 pub fn deserialize_from_cbor<T: DeserializeOwned>(bytes: &[u8]) -> PublicResult<T> {
     let mut cursor = Cursor::new(bytes);
-    strong_box::ciborium::de::from_reader(&mut cursor)
-        .map_err(|err| PublicError::crypto(format!("failed to deserialize payload: {err}")))
+    let value = strong_box::ciborium::de::from_reader(&mut cursor)
+        .map_err(|err| PublicError::crypto(format!("failed to deserialize payload: {err}")))?;
+    if cursor.position()
+        != u64::try_from(bytes.len())
+            .map_err(|_| PublicError::validation("CBOR payload is too large"))?
+    {
+        return Err(PublicError::validation(
+            "CBOR payload must contain exactly one value",
+        ));
+    }
+    Ok(value)
 }
 
 pub fn serialize_to_cbor<T: Serialize + ?Sized>(value: &T) -> PublicResult<Vec<u8>> {

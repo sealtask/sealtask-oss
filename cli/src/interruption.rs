@@ -94,6 +94,8 @@ pub(crate) fn needs_mutation_supervision(command: Option<&Command>) -> bool {
             | Command::Auth { .. }
             | Command::Me
             | Command::Pick { .. }
+            | Command::Browse(_)
+            | Command::Cache { .. }
             | Command::Projects { .. }
             | Command::Stats
             | Command::Activity { .. }

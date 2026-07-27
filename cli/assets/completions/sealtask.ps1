@@ -41,6 +41,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help')
             [CompletionResult]::new('-V', '-V ', [CompletionResultType]::ParameterName, 'Print version')
@@ -57,6 +58,8 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('tasks', 'tasks', [CompletionResultType]::ParameterValue, 'List, inspect, create, update, move, or delete tasks')
             [CompletionResult]::new('stats', 'stats', [CompletionResultType]::ParameterValue, 'Show current dashboard task counts')
             [CompletionResult]::new('activity', 'activity', [CompletionResultType]::ParameterValue, 'Inspect or continuously follow recent account activity')
+            [CompletionResult]::new('browse', 'browse', [CompletionResultType]::ParameterValue, 'Browse cached or live decrypted projects and tasks in a private TTY')
+            [CompletionResult]::new('cache', 'cache', [CompletionResultType]::ParameterValue, 'Inspect, verify, or clear the encrypted local read cache')
             [CompletionResult]::new('batch', 'batch', [CompletionResultType]::ParameterValue, 'Validate, execute, and safely resume task mutations from JSON Lines')
             [CompletionResult]::new('doctor', 'doctor', [CompletionResultType]::ParameterValue, 'Diagnose local state, authentication, unlock, and API connectivity')
             [CompletionResult]::new('config', 'config', [CompletionResultType]::ParameterValue, 'Inspect resolved operator configuration')
@@ -87,6 +90,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -112,6 +116,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -136,6 +141,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -160,6 +166,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -184,6 +191,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('login', 'login', [CompletionResultType]::ParameterValue, 'Sign in with an email and password, optionally completing MFA')
@@ -217,6 +225,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -244,6 +253,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -268,6 +278,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -292,6 +303,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('store', 'store', [CompletionResultType]::ParameterValue, 'Save this profile''s unlock key in the platform keychain')
@@ -320,6 +332,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -344,6 +357,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -383,6 +397,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -407,6 +422,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -470,6 +486,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -494,6 +511,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('project', 'project', [CompletionResultType]::ParameterValue, 'Pick an accessible project')
@@ -523,6 +541,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -552,6 +571,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -595,6 +615,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('list', 'list', [CompletionResultType]::ParameterValue, 'List accessible projects')
@@ -633,6 +654,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('list', 'list', [CompletionResultType]::ParameterValue, 'List accessible projects')
@@ -671,6 +693,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -699,6 +722,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -725,6 +749,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -751,6 +776,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -777,6 +803,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -803,6 +830,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -829,6 +857,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -855,6 +884,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -880,6 +910,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -905,6 +936,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -929,6 +961,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -953,6 +986,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -977,6 +1011,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -1001,6 +1036,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -1025,6 +1061,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('list', 'list', [CompletionResultType]::ParameterValue, 'List normalized project sections and their IDs')
@@ -1054,6 +1091,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -1089,6 +1127,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('list', 'list', [CompletionResultType]::ParameterValue, 'List normalized project sections and their IDs')
@@ -1118,6 +1157,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -1157,6 +1197,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -1185,6 +1226,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -1303,6 +1345,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('list', 'list', [CompletionResultType]::ParameterValue, 'List tasks in the selected/current project, or assigned tasks when none is selected')
@@ -1352,6 +1395,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -1381,6 +1425,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -1410,6 +1455,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -1451,6 +1497,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -1479,6 +1526,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -1524,6 +1572,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -1556,6 +1605,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -1584,6 +1634,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -1612,6 +1663,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -1640,6 +1692,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -1668,6 +1721,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -1699,6 +1753,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -1723,6 +1778,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('upload', 'upload', [CompletionResultType]::ParameterValue, 'Encrypt and upload a local regular file')
@@ -1759,6 +1815,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -1789,6 +1846,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -1818,6 +1876,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -1849,6 +1908,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -1971,6 +2031,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -1995,6 +2056,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help')
             [CompletionResult]::new('follow', 'follow', [CompletionResultType]::ParameterValue, 'Follow new activity using bounded cursor catch-up polling')
@@ -2023,6 +2085,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -2036,6 +2099,158 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             break
         }
         'sealtask;activity;help;help' {
+            break
+        }
+        'sealtask;browse' {
+            [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
+            [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
+            [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
+            [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
+            [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
+            [CompletionResult]::new('--connect-timeout', '--connect-timeout', [CompletionResultType]::ParameterName, 'Maximum time to establish a control-plane connection (for example 5s)')
+            [CompletionResult]::new('--read-timeout', '--read-timeout', [CompletionResultType]::ParameterName, 'Maximum idle time while reading a control-plane response (for example 30s)')
+            [CompletionResult]::new('--request-timeout', '--request-timeout', [CompletionResultType]::ParameterName, 'Maximum total time for one control-plane request (for example 1m)')
+            [CompletionResult]::new('--retry', '--retry', [CompletionResultType]::ParameterName, 'Retry replay-safe API requests after transient failures')
+            [CompletionResult]::new('--profile', '--profile', [CompletionResultType]::ParameterName, 'Isolate credentials and unlock state under a named profile')
+            [CompletionResult]::new('--config-dir', '--config-dir', [CompletionResultType]::ParameterName, 'Override the base directory used for credentials and local unlock state')
+            [CompletionResult]::new('--include-completed', '--include-completed', [CompletionResultType]::ParameterName, 'Include completed tasks')
+            [CompletionResult]::new('--include-archived', '--include-archived', [CompletionResultType]::ParameterName, 'Include archived projects and tasks')
+            [CompletionResult]::new('--password-stdin', '--password-stdin', [CompletionResultType]::ParameterName, 'Read the account password from stdin when no local unlock is available')
+            [CompletionResult]::new('--json', '--json', [CompletionResultType]::ParameterName, 'Emit compact JSON instead of human-readable output')
+            [CompletionResult]::new('--no-pager', '--no-pager', [CompletionResultType]::ParameterName, 'Disable paging (equivalent to --pager never)')
+            [CompletionResult]::new('-q', '-q', [CompletionResultType]::ParameterName, 'Suppress automatic paging, progress, and successful mutation acknowledgements')
+            [CompletionResult]::new('--quiet', '--quiet', [CompletionResultType]::ParameterName, 'Suppress automatic paging, progress, and successful mutation acknowledgements')
+            [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
+            [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
+            [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
+            [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
+            [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
+            break
+        }
+        'sealtask;cache' {
+            [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
+            [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
+            [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
+            [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
+            [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
+            [CompletionResult]::new('--connect-timeout', '--connect-timeout', [CompletionResultType]::ParameterName, 'Maximum time to establish a control-plane connection (for example 5s)')
+            [CompletionResult]::new('--read-timeout', '--read-timeout', [CompletionResultType]::ParameterName, 'Maximum idle time while reading a control-plane response (for example 30s)')
+            [CompletionResult]::new('--request-timeout', '--request-timeout', [CompletionResultType]::ParameterName, 'Maximum total time for one control-plane request (for example 1m)')
+            [CompletionResult]::new('--retry', '--retry', [CompletionResultType]::ParameterName, 'Retry replay-safe API requests after transient failures')
+            [CompletionResult]::new('--profile', '--profile', [CompletionResultType]::ParameterName, 'Isolate credentials and unlock state under a named profile')
+            [CompletionResult]::new('--config-dir', '--config-dir', [CompletionResultType]::ParameterName, 'Override the base directory used for credentials and local unlock state')
+            [CompletionResult]::new('--json', '--json', [CompletionResultType]::ParameterName, 'Emit compact JSON instead of human-readable output')
+            [CompletionResult]::new('--no-pager', '--no-pager', [CompletionResultType]::ParameterName, 'Disable paging (equivalent to --pager never)')
+            [CompletionResult]::new('-q', '-q', [CompletionResultType]::ParameterName, 'Suppress automatic paging, progress, and successful mutation acknowledgements')
+            [CompletionResult]::new('--quiet', '--quiet', [CompletionResultType]::ParameterName, 'Suppress automatic paging, progress, and successful mutation acknowledgements')
+            [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
+            [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
+            [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
+            [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
+            [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
+            [CompletionResult]::new('status', 'status', [CompletionResultType]::ParameterValue, 'Show cache presence, mode, size, and modification time without decrypting content')
+            [CompletionResult]::new('verify', 'verify', [CompletionResultType]::ParameterValue, 'Authenticate, decrypt, and validate the complete local cache')
+            [CompletionResult]::new('clear', 'clear', [CompletionResultType]::ParameterValue, 'Remove the encrypted local cache for the active profile')
+            [CompletionResult]::new('help', 'help', [CompletionResultType]::ParameterValue, 'Print this message or the help of the given subcommand(s)')
+            break
+        }
+        'sealtask;cache;status' {
+            [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
+            [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
+            [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
+            [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
+            [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
+            [CompletionResult]::new('--connect-timeout', '--connect-timeout', [CompletionResultType]::ParameterName, 'Maximum time to establish a control-plane connection (for example 5s)')
+            [CompletionResult]::new('--read-timeout', '--read-timeout', [CompletionResultType]::ParameterName, 'Maximum idle time while reading a control-plane response (for example 30s)')
+            [CompletionResult]::new('--request-timeout', '--request-timeout', [CompletionResultType]::ParameterName, 'Maximum total time for one control-plane request (for example 1m)')
+            [CompletionResult]::new('--retry', '--retry', [CompletionResultType]::ParameterName, 'Retry replay-safe API requests after transient failures')
+            [CompletionResult]::new('--profile', '--profile', [CompletionResultType]::ParameterName, 'Isolate credentials and unlock state under a named profile')
+            [CompletionResult]::new('--config-dir', '--config-dir', [CompletionResultType]::ParameterName, 'Override the base directory used for credentials and local unlock state')
+            [CompletionResult]::new('--json', '--json', [CompletionResultType]::ParameterName, 'Emit compact JSON instead of human-readable output')
+            [CompletionResult]::new('--no-pager', '--no-pager', [CompletionResultType]::ParameterName, 'Disable paging (equivalent to --pager never)')
+            [CompletionResult]::new('-q', '-q', [CompletionResultType]::ParameterName, 'Suppress automatic paging, progress, and successful mutation acknowledgements')
+            [CompletionResult]::new('--quiet', '--quiet', [CompletionResultType]::ParameterName, 'Suppress automatic paging, progress, and successful mutation acknowledgements')
+            [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
+            [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
+            [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
+            [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
+            [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
+            break
+        }
+        'sealtask;cache;verify' {
+            [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
+            [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
+            [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
+            [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
+            [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
+            [CompletionResult]::new('--connect-timeout', '--connect-timeout', [CompletionResultType]::ParameterName, 'Maximum time to establish a control-plane connection (for example 5s)')
+            [CompletionResult]::new('--read-timeout', '--read-timeout', [CompletionResultType]::ParameterName, 'Maximum idle time while reading a control-plane response (for example 30s)')
+            [CompletionResult]::new('--request-timeout', '--request-timeout', [CompletionResultType]::ParameterName, 'Maximum total time for one control-plane request (for example 1m)')
+            [CompletionResult]::new('--retry', '--retry', [CompletionResultType]::ParameterName, 'Retry replay-safe API requests after transient failures')
+            [CompletionResult]::new('--profile', '--profile', [CompletionResultType]::ParameterName, 'Isolate credentials and unlock state under a named profile')
+            [CompletionResult]::new('--config-dir', '--config-dir', [CompletionResultType]::ParameterName, 'Override the base directory used for credentials and local unlock state')
+            [CompletionResult]::new('--password-stdin', '--password-stdin', [CompletionResultType]::ParameterName, 'Read the account password from stdin when no local unlock is available')
+            [CompletionResult]::new('--json', '--json', [CompletionResultType]::ParameterName, 'Emit compact JSON instead of human-readable output')
+            [CompletionResult]::new('--no-pager', '--no-pager', [CompletionResultType]::ParameterName, 'Disable paging (equivalent to --pager never)')
+            [CompletionResult]::new('-q', '-q', [CompletionResultType]::ParameterName, 'Suppress automatic paging, progress, and successful mutation acknowledgements')
+            [CompletionResult]::new('--quiet', '--quiet', [CompletionResultType]::ParameterName, 'Suppress automatic paging, progress, and successful mutation acknowledgements')
+            [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
+            [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
+            [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
+            [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
+            [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
+            break
+        }
+        'sealtask;cache;clear' {
+            [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
+            [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
+            [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
+            [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
+            [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
+            [CompletionResult]::new('--connect-timeout', '--connect-timeout', [CompletionResultType]::ParameterName, 'Maximum time to establish a control-plane connection (for example 5s)')
+            [CompletionResult]::new('--read-timeout', '--read-timeout', [CompletionResultType]::ParameterName, 'Maximum idle time while reading a control-plane response (for example 30s)')
+            [CompletionResult]::new('--request-timeout', '--request-timeout', [CompletionResultType]::ParameterName, 'Maximum total time for one control-plane request (for example 1m)')
+            [CompletionResult]::new('--retry', '--retry', [CompletionResultType]::ParameterName, 'Retry replay-safe API requests after transient failures')
+            [CompletionResult]::new('--profile', '--profile', [CompletionResultType]::ParameterName, 'Isolate credentials and unlock state under a named profile')
+            [CompletionResult]::new('--config-dir', '--config-dir', [CompletionResultType]::ParameterName, 'Override the base directory used for credentials and local unlock state')
+            [CompletionResult]::new('--json', '--json', [CompletionResultType]::ParameterName, 'Emit compact JSON instead of human-readable output')
+            [CompletionResult]::new('--no-pager', '--no-pager', [CompletionResultType]::ParameterName, 'Disable paging (equivalent to --pager never)')
+            [CompletionResult]::new('-q', '-q', [CompletionResultType]::ParameterName, 'Suppress automatic paging, progress, and successful mutation acknowledgements')
+            [CompletionResult]::new('--quiet', '--quiet', [CompletionResultType]::ParameterName, 'Suppress automatic paging, progress, and successful mutation acknowledgements')
+            [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
+            [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
+            [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
+            [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
+            [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
+            break
+        }
+        'sealtask;cache;help' {
+            [CompletionResult]::new('status', 'status', [CompletionResultType]::ParameterValue, 'Show cache presence, mode, size, and modification time without decrypting content')
+            [CompletionResult]::new('verify', 'verify', [CompletionResultType]::ParameterValue, 'Authenticate, decrypt, and validate the complete local cache')
+            [CompletionResult]::new('clear', 'clear', [CompletionResultType]::ParameterValue, 'Remove the encrypted local cache for the active profile')
+            [CompletionResult]::new('help', 'help', [CompletionResultType]::ParameterValue, 'Print this message or the help of the given subcommand(s)')
+            break
+        }
+        'sealtask;cache;help;status' {
+            break
+        }
+        'sealtask;cache;help;verify' {
+            break
+        }
+        'sealtask;cache;help;clear' {
+            break
+        }
+        'sealtask;cache;help;help' {
             break
         }
         'sealtask;batch' {
@@ -2058,6 +2273,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('run', 'run', [CompletionResultType]::ParameterValue, 'Run a strict versioned JSONL task-mutation batch')
@@ -2090,6 +2306,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -2118,7 +2335,6 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--retry', '--retry', [CompletionResultType]::ParameterName, 'Retry replay-safe API requests after transient failures')
             [CompletionResult]::new('--profile', '--profile', [CompletionResultType]::ParameterName, 'Isolate credentials and unlock state under a named profile')
             [CompletionResult]::new('--config-dir', '--config-dir', [CompletionResultType]::ParameterName, 'Override the base directory used for credentials and local unlock state')
-            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Run local checks only and make no network requests')
             [CompletionResult]::new('--strict', '--strict', [CompletionResultType]::ParameterName, 'Exit unsuccessfully when any check warns')
             [CompletionResult]::new('--include-keychain', '--include-keychain', [CompletionResultType]::ParameterName, 'Inspect the platform keychain (may trigger an operating-system prompt)')
             [CompletionResult]::new('--json', '--json', [CompletionResultType]::ParameterName, 'Emit compact JSON instead of human-readable output')
@@ -2128,6 +2344,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -2152,6 +2369,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('show', 'show', [CompletionResultType]::ParameterValue, 'Show safe configuration values and where they came from')
@@ -2179,6 +2397,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -2214,6 +2433,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('list', 'list', [CompletionResultType]::ParameterValue, 'List known local profiles and mark the active one')
@@ -2241,6 +2461,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -2265,6 +2486,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -2305,6 +2527,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help')
             break
@@ -2329,6 +2552,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('list', 'list', [CompletionResultType]::ParameterValue, 'List decrypted comments on a task')
@@ -2362,6 +2586,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -2394,6 +2619,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -2426,6 +2652,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -2458,6 +2685,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -2505,6 +2733,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('list', 'list', [CompletionResultType]::ParameterValue, 'List decrypted notes in a project')
@@ -2539,6 +2768,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -2567,6 +2797,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -2600,6 +2831,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -2628,6 +2860,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -2660,6 +2893,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -2691,6 +2925,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
             [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
             [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
             break
@@ -2738,6 +2973,8 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('tasks', 'tasks', [CompletionResultType]::ParameterValue, 'List, inspect, create, update, move, or delete tasks')
             [CompletionResult]::new('stats', 'stats', [CompletionResultType]::ParameterValue, 'Show current dashboard task counts')
             [CompletionResult]::new('activity', 'activity', [CompletionResultType]::ParameterValue, 'Inspect or continuously follow recent account activity')
+            [CompletionResult]::new('browse', 'browse', [CompletionResultType]::ParameterValue, 'Browse cached or live decrypted projects and tasks in a private TTY')
+            [CompletionResult]::new('cache', 'cache', [CompletionResultType]::ParameterValue, 'Inspect, verify, or clear the encrypted local read cache')
             [CompletionResult]::new('batch', 'batch', [CompletionResultType]::ParameterValue, 'Validate, execute, and safely resume task mutations from JSON Lines')
             [CompletionResult]::new('doctor', 'doctor', [CompletionResultType]::ParameterValue, 'Diagnose local state, authentication, unlock, and API connectivity')
             [CompletionResult]::new('config', 'config', [CompletionResultType]::ParameterValue, 'Inspect resolved operator configuration')
@@ -2931,6 +3168,24 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             break
         }
         'sealtask;help;activity;follow' {
+            break
+        }
+        'sealtask;help;browse' {
+            break
+        }
+        'sealtask;help;cache' {
+            [CompletionResult]::new('status', 'status', [CompletionResultType]::ParameterValue, 'Show cache presence, mode, size, and modification time without decrypting content')
+            [CompletionResult]::new('verify', 'verify', [CompletionResultType]::ParameterValue, 'Authenticate, decrypt, and validate the complete local cache')
+            [CompletionResult]::new('clear', 'clear', [CompletionResultType]::ParameterValue, 'Remove the encrypted local cache for the active profile')
+            break
+        }
+        'sealtask;help;cache;status' {
+            break
+        }
+        'sealtask;help;cache;verify' {
+            break
+        }
+        'sealtask;help;cache;clear' {
             break
         }
         'sealtask;help;batch' {

@@ -198,7 +198,7 @@ fn argument_heading(path: &[String], argument: &Arg) -> &'static str {
     if path.is_empty() {
         return match id {
             "api_url" | "storage_origin" | "connect_timeout" | "read_timeout"
-            | "request_timeout" => "Connection",
+            | "request_timeout" | "retry" | "offline" => "Connection",
             "profile" | "config_dir" => "Profile",
             "json" | "format" | "color" | "pager" | "no_pager" | "progress" | "quiet" => "Output",
             "non_interactive" => "Interaction",
@@ -347,6 +347,17 @@ fn command_examples(path: &[String]) -> Option<&'static str> {
         "activity follow" => {
             "Examples:\n  sealtask activity follow\n  sealtask activity follow --since 30m --interval 10s\n  sealtask --format jsonl activity follow"
         }
+        "browse" => {
+            "Examples:\n  sealtask browse\n  sealtask --offline browse --include-completed\n  sealtask browse --include-archived"
+        }
+        "cache" => {
+            "Examples:\n  sealtask cache status\n  sealtask cache verify\n  sealtask cache clear"
+        }
+        "cache status" => "Examples:\n  sealtask cache status\n  sealtask --json cache status",
+        "cache verify" => {
+            "Examples:\n  sealtask cache verify\n  printf '%s\\n' \"$SEALTASK_PASSWORD\" | sealtask cache verify --password-stdin"
+        }
+        "cache clear" => "Examples:\n  sealtask cache clear",
         "batch" => {
             "Examples:\n  sealtask batch run --input ./operations.jsonl --dry-run\n  sealtask --format jsonl batch run --input ./operations.jsonl"
         }

@@ -1,5 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use std::io::{Read, Write};
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt as _;
 use std::path::Path as FsPath;
 use std::process::{Child, Stdio};
 use std::sync::{Arc, Mutex};
@@ -5861,7 +5863,9 @@ async fn cli_logout_clears_persisted_bootstrap() {
     assert!(
         task_output
             .stderr
-            .contains("No unlocked workspace-data session or saved unlock key is available")
+            .contains("No unlocked workspace-data session or saved unlock key is available"),
+        "unexpected stderr: {}",
+        task_output.stderr
     );
 }
 
@@ -6744,7 +6748,9 @@ async fn cli_decrypted_commands_fail_non_interactively_without_unlock_or_keychai
     assert!(
         task_output
             .stderr
-            .contains("No unlocked workspace-data session or saved unlock key is available")
+            .contains("No unlocked workspace-data session or saved unlock key is available"),
+        "unexpected stderr: {}",
+        task_output.stderr
     );
     assert_json_error_contains(
         &task_output.stderr,
@@ -9324,6 +9330,9 @@ fn copy_credentials_to_profile(home: &FsPath, profile: &str) {
     let default_credentials = home.join(".sealtask/credentials.json");
     let profile_dir = home.join(".sealtask/profiles").join(profile);
     std::fs::create_dir_all(&profile_dir).expect("create profile config dir");
+    #[cfg(unix)]
+    std::fs::set_permissions(&profile_dir, std::fs::Permissions::from_mode(0o700))
+        .expect("secure profile config dir");
     std::fs::copy(default_credentials, profile_dir.join("credentials.json"))
         .expect("copy credentials into profile");
 }
@@ -9348,12 +9357,18 @@ fn seed_credentials_with_expiry(
 
     let config_dir = home.join(".sealtask");
     std::fs::create_dir_all(&config_dir).expect("create config dir");
+    #[cfg(unix)]
+    std::fs::set_permissions(&config_dir, std::fs::Permissions::from_mode(0o700))
+        .expect("secure config dir");
     let path = config_dir.join("credentials.json");
     std::fs::write(
-        path,
+        &path,
         serde_json::to_vec_pretty(&credentials).expect("serialize creds"),
     )
     .expect("write creds");
+    #[cfg(unix)]
+    std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600))
+        .expect("secure credentials");
 }
 
 fn authorize(state: &Arc<Mutex<TestState>>, headers: &HeaderMap) {

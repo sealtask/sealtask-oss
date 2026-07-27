@@ -6,6 +6,7 @@ mod events;
 pub mod note_transport;
 mod note_transport_limits;
 mod notes;
+mod read_limits;
 mod transport;
 
 pub use attachments::{
@@ -28,6 +29,12 @@ pub use note_transport_limits::{
     MIN_NOTE_PAGE_ITEMS,
 };
 pub use notes::{CreateNoteRequest, DeleteNoteRequest, NotePage, NoteResponse, UpdateNoteRequest};
+pub use read_limits::{
+    MAX_COLLECTION_RESPONSE_BYTES, MAX_COMMENTS, MAX_DETAIL_RESPONSE_BYTES,
+    MAX_MEMBERS_PER_WORK_LIST, MAX_MY_TASK_COLLECTION_BYTES, MAX_MY_TASK_PAGE_ITEMS,
+    MAX_MY_TASK_PAGES, MAX_MY_TASKS, MAX_SECTIONS_PER_WORK_LIST, MAX_SMALL_RESPONSE_BYTES,
+    MAX_TASKS, MAX_WORK_LISTS,
+};
 pub use transport::{
     ApiCancellationToken, ApiRetryPolicy, ApiTransportOptions, CONTROL_PLANE_USER_AGENT,
     DEFAULT_API_CONNECT_TIMEOUT, DEFAULT_API_MAX_RETRIES, DEFAULT_API_READ_TIMEOUT,
@@ -37,6 +44,7 @@ pub use transport::{
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use uuid::Uuid;
 
 use sealtask_client_core::{PublicError, PublicResult};
@@ -52,7 +60,7 @@ const MAX_ATTACHMENT_CONTROL_PLANE_RESPONSE_BYTES: usize = 64 * 1024;
 
 impl PublicApiClient {
     pub async fn get_me(&mut self) -> PublicResult<CurrentUserResponse> {
-        self.get("/me").await
+        self.get_bounded("/me", MAX_SMALL_RESPONSE_BYTES).await
     }
 
     pub async fn list_work_lists(&mut self) -> PublicResult<Vec<WorkListResponse>> {
@@ -68,11 +76,19 @@ impl PublicApiClient {
         } else {
             "/work-lists"
         };
-        self.get(path).await
+        let work_lists: Vec<WorkListResponse> = self
+            .get_bounded(path, MAX_COLLECTION_RESPONSE_BYTES)
+            .await?;
+        read_limits::validate_work_lists(&work_lists)?;
+        Ok(work_lists)
     }
 
     pub async fn get_work_list(&mut self, id: Uuid) -> PublicResult<WorkListDetailResponse> {
-        self.get(&format!("/work-lists/{id}")).await
+        let work_list = self
+            .get_bounded(&format!("/work-lists/{id}"), MAX_DETAIL_RESPONSE_BYTES)
+            .await?;
+        read_limits::validate_work_list_detail(&work_list)?;
+        Ok(work_list)
     }
 
     pub async fn get_task_reference_schemes(
@@ -80,9 +96,10 @@ impl PublicApiClient {
         work_list_id: Uuid,
     ) -> PublicResult<Vec<TaskReferenceSchemeResponse>> {
         let response: TaskReferenceSchemeListResponse = self
-            .get(&format!(
-                "/work-lists/{work_list_id}/task-reference-schemes"
-            ))
+            .get_bounded(
+                &format!("/work-lists/{work_list_id}/task-reference-schemes"),
+                MAX_COLLECTION_RESPONSE_BYTES,
+            )
             .await?;
         Ok(response.schemes)
     }
@@ -140,7 +157,11 @@ impl PublicApiClient {
         } else {
             format!("/work-lists/{work_list_id}/tasks")
         };
-        self.get(&path).await
+        let tasks = self
+            .get_bounded(&path, MAX_COLLECTION_RESPONSE_BYTES)
+            .await?;
+        read_limits::validate_task_list(&tasks)?;
+        Ok(tasks)
     }
 
     pub async fn get_my_tasks(
@@ -158,11 +179,39 @@ impl PublicApiClient {
         let mut tasks = Vec::new();
         let mut offset = 0;
         let mut target_total = None;
+        let mut page_count = 0_usize;
+        let mut encoded_bytes = 0_usize;
+        let mut task_ids = HashSet::new();
 
         loop {
-            let page = self
-                .get_my_tasks_page(Some(MY_TASKS_PAGE_LIMIT), Some(offset), include_completed)
+            if page_count == MAX_MY_TASK_PAGES {
+                return Err(PublicError::response(
+                    sealtask_client_core::ResponseFailureKind::JsonSchema,
+                    "API /me/tasks pagination exceeds the supported page count",
+                ));
+            }
+            let (page, page_bytes) = self
+                .get_my_tasks_page_with_size(
+                    Some(MY_TASKS_PAGE_LIMIT),
+                    Some(offset),
+                    include_completed,
+                )
                 .await?;
+            page_count += 1;
+            encoded_bytes = encoded_bytes.checked_add(page_bytes).ok_or_else(|| {
+                PublicError::response(
+                    sealtask_client_core::ResponseFailureKind::BodyTooLarge,
+                    "API /me/tasks aggregate response size overflowed",
+                )
+            })?;
+            if encoded_bytes > MAX_MY_TASK_COLLECTION_BYTES {
+                return Err(PublicError::response(
+                    sealtask_client_core::ResponseFailureKind::BodyTooLarge,
+                    format!(
+                        "API /me/tasks aggregate response exceeds the {MAX_MY_TASK_COLLECTION_BYTES}-byte limit"
+                    ),
+                ));
+            }
             if page.offset != offset {
                 return Err(PublicError::unexpected(format!(
                     "invalid /me/tasks page offset: requested {offset}, received {}",
@@ -179,13 +228,41 @@ impl PublicApiClient {
                 PublicError::unexpected("/me/tasks page length exceeds the supported range")
             })?;
             let target_total = *target_total.get_or_insert(page.total);
+            if page.total != target_total {
+                return Err(PublicError::response(
+                    sealtask_client_core::ResponseFailureKind::JsonSchema,
+                    "API /me/tasks total changed while paginating",
+                ));
+            }
+            if page
+                .tasks
+                .iter()
+                .any(|task| !task_ids.insert((task.work_list_id, task.id)))
+            {
+                return Err(PublicError::response(
+                    sealtask_client_core::ResponseFailureKind::JsonSchema,
+                    "API /me/tasks repeated a task while paginating",
+                ));
+            }
             tasks.extend(page.tasks);
+            if tasks.len() > MAX_MY_TASKS {
+                return Err(PublicError::response(
+                    sealtask_client_core::ResponseFailureKind::JsonSchema,
+                    "API /me/tasks collection contains too many tasks",
+                ));
+            }
 
             let collected = i64::try_from(tasks.len()).map_err(|_| {
                 PublicError::unexpected("/me/tasks result length exceeds the supported range")
             })?;
-            if fetched == 0 || collected >= target_total {
+            if collected == target_total {
                 break;
+            }
+            if fetched == 0 {
+                return Err(PublicError::response(
+                    sealtask_client_core::ResponseFailureKind::JsonSchema,
+                    "API /me/tasks pagination ended before the advertised total",
+                ));
             }
 
             offset = offset
@@ -202,6 +279,18 @@ impl PublicApiClient {
         offset: Option<i64>,
         include_completed: bool,
     ) -> PublicResult<MyTasksResponse> {
+        self.get_my_tasks_page_with_size(limit, offset, include_completed)
+            .await
+            .map(|(page, _)| page)
+    }
+
+    async fn get_my_tasks_page_with_size(
+        &mut self,
+        limit: Option<i64>,
+        offset: Option<i64>,
+        include_completed: bool,
+    ) -> PublicResult<(MyTasksResponse, usize)> {
+        read_limits::validate_my_tasks_request(limit, offset)?;
         let mut params = Vec::new();
         if let Some(limit) = limit {
             params.push(format!("limit={limit}"));
@@ -219,11 +308,16 @@ impl PublicApiClient {
             format!("/me/tasks?{}", params.join("&"))
         };
 
-        self.get(&path).await
+        let (page, encoded_bytes) = self
+            .get_bounded_with_size(&path, MAX_COLLECTION_RESPONSE_BYTES)
+            .await?;
+        read_limits::validate_my_tasks_page(&page, limit)?;
+        Ok((page, encoded_bytes))
     }
 
     pub async fn get_dashboard_stats(&mut self) -> PublicResult<DashboardStatsResponse> {
-        self.get("/me/dashboard-stats").await
+        self.get_bounded("/me/dashboard-stats", MAX_SMALL_RESPONSE_BYTES)
+            .await
     }
 
     pub async fn start_opaque_export_key(
@@ -242,8 +336,14 @@ impl PublicApiClient {
         work_list_id: Uuid,
         task_id: Uuid,
     ) -> PublicResult<TaskDetailResponse> {
-        self.get(&format!("/work-lists/{work_list_id}/tasks/{task_id}"))
-            .await
+        let task = self
+            .get_bounded(
+                &format!("/work-lists/{work_list_id}/tasks/{task_id}"),
+                MAX_DETAIL_RESPONSE_BYTES,
+            )
+            .await?;
+        read_limits::validate_task_detail(&task)?;
+        Ok(task)
     }
 
     pub async fn get_task_by_reference_number(
@@ -251,10 +351,14 @@ impl PublicApiClient {
         work_list_id: Uuid,
         reference_number: i64,
     ) -> PublicResult<TaskDetailResponse> {
-        self.get(&format!(
-            "/work-lists/{work_list_id}/tasks/by-reference-number/{reference_number}"
-        ))
-        .await
+        let task = self
+            .get_bounded(
+                &format!("/work-lists/{work_list_id}/tasks/by-reference-number/{reference_number}"),
+                MAX_DETAIL_RESPONSE_BYTES,
+            )
+            .await?;
+        read_limits::validate_task_detail(&task)?;
+        Ok(task)
     }
 
     pub async fn create_task(
@@ -349,10 +453,14 @@ impl PublicApiClient {
         work_list_id: Uuid,
         task_id: Uuid,
     ) -> PublicResult<Vec<CommentResponse>> {
-        self.get(&format!(
-            "/work-lists/{work_list_id}/tasks/{task_id}/comments"
-        ))
-        .await
+        let comments: Vec<CommentResponse> = self
+            .get_bounded(
+                &format!("/work-lists/{work_list_id}/tasks/{task_id}/comments"),
+                MAX_COLLECTION_RESPONSE_BYTES,
+            )
+            .await?;
+        read_limits::validate_comments(&comments)?;
+        Ok(comments)
     }
 
     pub async fn create_comment(
@@ -928,6 +1036,65 @@ mod tests {
         (api_url, server)
     }
 
+    async fn serve_response_sequence(
+        bodies: Vec<Vec<u8>>,
+    ) -> (String, tokio::task::JoinHandle<usize>) {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+            .await
+            .expect("listener");
+        let api_url = format!("http://{}", listener.local_addr().expect("address"));
+        let response_count = bodies.len();
+        let server = tokio::spawn(async move {
+            for body in bodies {
+                let (mut stream, _) = listener.accept().await.expect("connection");
+                let mut request = Vec::new();
+                let mut buffer = [0_u8; 1_024];
+                while !request.windows(4).any(|window| window == b"\r\n\r\n") {
+                    let read = stream.read(&mut buffer).await.expect("request");
+                    if read == 0 {
+                        break;
+                    }
+                    request.extend_from_slice(&buffer[..read]);
+                }
+                let headers = format!(
+                    "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                    body.len()
+                );
+                stream.write_all(headers.as_bytes()).await.expect("headers");
+                stream.write_all(&body).await.expect("body");
+            }
+            response_count
+        });
+        (api_url, server)
+    }
+
+    fn my_task_page(task_id: Uuid, work_list_id: Uuid, offset: i64, total: i64) -> Vec<u8> {
+        serde_json::to_vec(&serde_json::json!({
+            "tasks": [{
+                "id": task_id,
+                "workListId": work_list_id,
+                "workListTitleCiphertext": "work-list-title",
+                "createdByMembershipId": Uuid::now_v7(),
+                "titleCiphertext": "title",
+                "payloadCiphertext": "payload",
+                "sectionId": null,
+                "priority": null,
+                "dueAt": null,
+                "startAt": null,
+                "completedAt": null,
+                "isCompleted": false,
+                "createdAt": Utc::now(),
+                "updatedAt": Utc::now(),
+                "commentCount": 0,
+                "delegations": []
+            }],
+            "total": total,
+            "limit": MY_TASKS_PAGE_LIMIT,
+            "offset": offset
+        }))
+        .expect("serialize /me/tasks page")
+    }
+
     async fn serve_confirmed_note_mutation_body_failure(
         failure: NoteMutationBodyFailure,
     ) -> (String, tokio::task::JoinHandle<()>) {
@@ -1024,6 +1191,70 @@ mod tests {
             idempotency_key: idempotency_key.map(str::to_string),
             idempotency_commitment: idempotency_commitment.map(str::to_string),
         }
+    }
+
+    #[tokio::test]
+    async fn ordinary_read_body_limit_accepts_exact_boundary_and_rejects_one_more() {
+        let minimal = serde_json::to_vec(&serde_json::json!({
+            "tasksOverdue": 0,
+            "tasksDueToday": 0,
+            "tasksDueThisWeek": 0,
+            "completed": 0
+        }))
+        .expect("dashboard response");
+        assert!(minimal.len() < MAX_SMALL_RESPONSE_BYTES);
+
+        let mut exact = minimal.clone();
+        exact.resize(MAX_SMALL_RESPONSE_BYTES, b' ');
+        let (api_url, server) = serve_single_response("200 OK", None, exact).await;
+        let mut client = PublicApiClient::with_credentials(&api_url, test_credentials(&api_url))
+            .expect("client");
+        client
+            .get_dashboard_stats()
+            .await
+            .expect("exact response body limit");
+        server.await.expect("server");
+
+        let mut oversized = minimal;
+        oversized.resize(MAX_SMALL_RESPONSE_BYTES + 1, b' ');
+        let (api_url, server) = serve_single_response("200 OK", None, oversized).await;
+        let mut client = PublicApiClient::with_credentials(&api_url, test_credentials(&api_url))
+            .expect("client");
+        let error = client
+            .get_dashboard_stats()
+            .await
+            .expect_err("response over the body limit");
+        assert_eq!(
+            error.response_failure_kind(),
+            Some(ResponseFailureKind::BodyTooLarge)
+        );
+        assert!(!error.to_string().contains(&api_url));
+        server.await.expect("server");
+    }
+
+    #[tokio::test]
+    async fn all_my_tasks_rejects_a_repeated_task_across_advancing_pages() {
+        let task_id = Uuid::now_v7();
+        let work_list_id = Uuid::now_v7();
+        let (api_url, server) = serve_response_sequence(vec![
+            my_task_page(task_id, work_list_id, 0, 2),
+            my_task_page(task_id, work_list_id, 1, 2),
+        ])
+        .await;
+        let mut client = PublicApiClient::with_credentials(&api_url, test_credentials(&api_url))
+            .expect("client");
+
+        let error = client
+            .get_all_my_tasks(false)
+            .await
+            .expect_err("repeated task must be rejected");
+
+        assert_eq!(
+            error.response_failure_kind(),
+            Some(ResponseFailureKind::JsonSchema)
+        );
+        assert!(error.to_string().contains("repeated a task"));
+        assert_eq!(server.await.expect("server"), 2);
     }
 
     #[tokio::test]

@@ -140,6 +140,7 @@ fn require_password_stdin_for_non_interactive(
 
 pub(super) async fn logout(format: OutputFormat, runtime: &RuntimeClient) -> CliResult<()> {
     let Some(credentials) = load_credentials_for_url(runtime.api_url())? else {
+        runtime.clear_read_cache()?;
         return print_simple_result(
             format,
             &LogoutResult {
@@ -170,6 +171,11 @@ pub(super) async fn logout(format: OutputFormat, runtime: &RuntimeClient) -> Cli
         )
         .and_then(|daemon_session_key| clear_session(&daemon_session_key));
         if let Err(err) = daemon_cleanup_result {
+            local_cleanup_error = Some(err);
+        }
+        if let Err(err) = runtime.clear_read_cache()
+            && local_cleanup_error.is_none()
+        {
             local_cleanup_error = Some(err);
         }
         Ok(())

@@ -61,6 +61,53 @@ pub(crate) fn run_info(runtime: &RuntimeClient, format: OutputFormat) -> CliResu
             "willMutate": false,
             "preparesEncryptedRequest": true,
         },
+        "readCache": {
+            "mode": "online_population_with_explicit_offline_reads",
+            "onlineFallback": false,
+            "offlineFlag": "--offline",
+            "maximumPlaintextBytes": 64 * 1024 * 1024,
+            "singleEncryptedFile": true,
+            "plaintextSnapshotSidecar": false,
+            "coordinationSidecar": "opaque_invalidation_generation",
+            "binding": [
+                "normalizedApiUrl",
+                "userId",
+                "profile",
+                "dataKeyCiphertextSha256"
+            ],
+            "controls": ["cache status", "cache verify", "cache clear"],
+            "offlineReads": [
+                "projects list",
+                "projects get",
+                "projects sections list",
+                "tasks list",
+                "tasks get",
+                "comments list",
+                "notes list",
+                "notes get",
+                "pick project",
+                "pick task",
+                "browse"
+            ],
+            "mutationsRejectedBeforeNetwork": true,
+            "snapshotAgeReported": true,
+            "rollbackProtection": false,
+            "secureDeletionGuaranteed": false,
+        },
+        "invocationCache": {
+            "enabledForCliReads": true,
+            "scope": "one_process_invocation",
+            "persistentFallback": false,
+        },
+        "browse": {
+            "command": "browse",
+            "controllingTerminalOnly": true,
+            "decryptedContentOnStdout": false,
+            "decryptedContentOnStderr": cfg!(windows),
+            "redirectedStandardStreamsReceiveContent": false,
+            "windowsRequiresAttendedStdinAndStderr": cfg!(windows),
+            "offlineSupported": true,
+        },
         "batch": {
             "command": "batch run",
             "inputSchemaVersion": 1,
@@ -183,6 +230,9 @@ pub(crate) fn run_info(runtime: &RuntimeClient, format: OutputFormat) -> CliResu
             println!("Audit: projects audit [PROJECT]");
             println!("Dry runs: tasks create|update --dry-run");
             println!("Batch: batch run --input PATH|- [--checkpoint PATH --resume]");
+            println!("Offline reads: --offline (encrypted snapshots; never implicit fallback)");
+            println!("Cache: cache status|verify|clear");
+            println!("Private TTY browser: browse [--offline]");
             println!(
                 "Retries: {} replay-safe retry attempt(s)",
                 runtime.api_transport_options().retry_policy().max_retries()

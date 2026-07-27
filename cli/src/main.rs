@@ -29,18 +29,22 @@ mod terminal;
 use args::{Cli, Command};
 use clap::FromArgMatches;
 use commands::{
-    run_activity, run_auth, run_batch, run_comments, run_config, run_info, run_lists_get, run_me,
-    run_notes, run_pick, run_profile, run_projects, run_schema, run_stats, run_tasks,
+    run_activity, run_auth, run_batch, run_browse, run_cache, run_comments, run_config, run_info,
+    run_lists_get, run_me, run_notes, run_pick, run_profile, run_projects, run_schema, run_stats,
+    run_tasks,
 };
 use operator_config::{
     OperatorOverrides, parse_timeout, resolve_operator_config,
     resolve_operator_config_for_diagnostics,
 };
-use output::{CliError, CliResult, OutputFormat, print_clap_error, print_cli_error};
+use output::{
+    CliError, CliResult, OutputFormat, finish_with_warnings, print_clap_error, print_cli_error,
+    warning_result,
+};
 use sealtask_client_api::{ApiCancellationToken, ApiRetryPolicy, ApiTransportOptions};
 use sealtask_client_auth::configure_local_state;
 use sealtask_client_core::PublicError;
-use sealtask_client_runtime::{RuntimeClient, serve};
+use sealtask_client_runtime::{ReadCacheOptions, RuntimeClient, serve};
 use std::ffi::{OsStr, OsString};
 use std::time::Duration;
 use telemetry::{Telemetry, TelemetryConfig, TelemetryLevel};
@@ -70,7 +74,10 @@ async fn main() {
         cli.command.as_ref(),
         Some(Command::Completion { .. } | Command::Man { .. })
     ) || cli.serve_unlock_daemon.is_some();
-    let composable_picker = matches!(cli.command.as_ref(), Some(Command::Pick { .. }));
+    let composable_picker = matches!(
+        cli.command.as_ref(),
+        Some(Command::Pick { .. } | Command::Browse(_))
+    );
     let composable_field = matches!(
         cli.command.as_ref(),
         Some(Command::Tasks { command }) if task_list::is_raw_field_output(command)
@@ -164,6 +171,7 @@ async fn run(
     }
 
     validate_stream_output(cli.command.as_ref(), format)?;
+    validate_offline_command(&cli)?;
 
     match cli.command.as_ref() {
         Some(Command::Completion { shell }) => {
@@ -183,18 +191,25 @@ async fn run(
         _ => {}
     }
 
-    if matches!(cli.command.as_ref(), Some(Command::Pick { .. })) {
+    if matches!(
+        cli.command.as_ref(),
+        Some(Command::Pick { .. } | Command::Browse(_))
+    ) {
         if format.is_json() {
-            return Err(PublicError::validation(
-                "'sealtask pick' emits one raw reusable selector and cannot be combined with --json or any JSON --format value",
-            )
-            .into());
+            let message = if matches!(cli.command.as_ref(), Some(Command::Pick { .. })) {
+                "'sealtask pick' emits one raw reusable selector and cannot be combined with --json or any JSON --format value"
+            } else {
+                "'sealtask browse' displays decrypted content on the controlling terminal and cannot be combined with --json or any JSON --format value"
+            };
+            return Err(PublicError::validation(message).into());
         }
         if cli.non_interactive {
-            return Err(PublicError::validation(
-                "'sealtask pick' requires an interactive controlling terminal; use a UUID, id:<prefix>, or exact name directly when running non-interactively",
-            )
-            .into());
+            let message = if matches!(cli.command.as_ref(), Some(Command::Pick { .. })) {
+                "'sealtask pick' requires an interactive controlling terminal; use a UUID, id:<prefix>, or exact name directly when running non-interactively"
+            } else {
+                "'sealtask browse' requires an interactive controlling terminal and cannot be combined with --non-interactive"
+            };
+            return Err(PublicError::validation(message).into());
         }
         picker::ensure_picker_terminal()?;
     }
@@ -288,18 +303,32 @@ async fn run(
             | Command::Doctor { .. }
             | Command::Config { .. }
             | Command::Profile { .. }
+            | Command::Cache { .. }
     );
     let storage_origins = if local_only {
         &[][..]
     } else {
         cli.storage_origin.as_slice()
     };
+    let read_cache_options = if cli.offline {
+        ReadCacheOptions::offline(
+            resolved_config.profile_config_dir(),
+            resolved_config.profile.value.clone(),
+        )
+    } else {
+        ReadCacheOptions::online(
+            resolved_config.profile_config_dir(),
+            resolved_config.profile.value.clone(),
+        )
+    }?;
     let runtime = RuntimeClient::with_storage_origins_and_transport(
         &resolved_config.api_url.value,
         storage_origins,
         transport_options,
     )
+    .and_then(|runtime| runtime.with_read_cache_options(read_cache_options))
     .map(|runtime| runtime.with_api_cancellation_token(cancellation));
+    let runtime_observer = runtime.as_ref().ok().cloned();
 
     let result = match (command, runtime) {
         (Command::Info, Ok(runtime)) => run_info(&runtime, format),
@@ -340,10 +369,11 @@ async fn run(
         (Command::Activity { command }, Ok(runtime)) => {
             run_activity(&runtime, format, command).await
         }
+        (Command::Browse(args), Ok(runtime)) => run_browse(&runtime, args).await,
+        (Command::Cache { command }, Ok(runtime)) => run_cache(&runtime, format, command).await,
         (Command::Batch { command }, Ok(runtime)) => run_batch(&runtime, format, command).await,
         (
             Command::Doctor {
-                offline,
                 strict,
                 include_keychain,
             },
@@ -353,7 +383,7 @@ async fn run(
                 &runtime,
                 &resolved_config.config_dir.value,
                 doctor::DoctorOptions {
-                    offline,
+                    offline: cli.offline,
                     strict,
                     include_keychain,
                 },
@@ -380,6 +410,34 @@ async fn run(
             run_notes(&runtime, format, cli.non_interactive, command).await
         }
         (_, Err(error)) => Err(error.into()),
+    };
+    let result = if let Some(runtime) = runtime_observer {
+        let mut warnings = runtime
+            .take_read_cache_notices()
+            .into_iter()
+            .map(|notice| warning_result(notice.code, notice.message))
+            .collect::<Vec<_>>();
+        if runtime.is_offline() {
+            warnings.extend(
+                runtime
+                    .take_read_cache_snapshots()
+                    .into_iter()
+                    .map(|snapshot| {
+                        warning_result(
+                            "offline_snapshot",
+                            format!(
+                                "read encrypted snapshot '{}' captured at {} ({} seconds old); no network request was attempted",
+                                snapshot.query,
+                                snapshot.captured_at.to_rfc3339(),
+                                snapshot.age_seconds
+                            ),
+                        )
+                    }),
+            );
+        }
+        finish_with_warnings(format, &warnings, result)
+    } else {
+        result
     };
     telemetry.finish(&result);
     result
@@ -493,6 +551,8 @@ fn command_name(command: &Command) -> &'static str {
         Command::Tasks { .. } => "tasks",
         Command::Stats => "stats",
         Command::Activity { .. } => "activity",
+        Command::Browse(_) => "browse",
+        Command::Cache { .. } => "cache",
         Command::Batch { .. } => "batch",
         Command::Doctor { .. } => "doctor",
         Command::Config { .. } => "config",
@@ -500,6 +560,70 @@ fn command_name(command: &Command) -> &'static str {
         Command::Inspect { .. } => "inspect",
         Command::Comments { .. } => "comments",
         Command::Notes { .. } => "notes",
+    }
+}
+
+fn validate_offline_command(cli: &Cli) -> CliResult<()> {
+    if !cli.offline {
+        return Ok(());
+    }
+    let allowed = match cli.command.as_ref() {
+        Some(
+            Command::Completion { .. }
+            | Command::Man { .. }
+            | Command::Info
+            | Command::Schema { .. }
+            | Command::Doctor { .. }
+            | Command::Config { .. }
+            | Command::Profile { .. }
+            | Command::Cache { .. }
+            | Command::Browse(_)
+            | Command::Pick { .. },
+        ) => true,
+        Some(Command::Auth {
+            command: args::AuthCommand::Status,
+        }) => true,
+        Some(Command::Projects {
+            raw,
+            command: None | Some(args::ProjectsCommand::Current),
+            ..
+        }) => !raw,
+        Some(Command::Projects {
+            raw,
+            command:
+                Some(
+                    args::ProjectsCommand::List {
+                        raw: command_raw, ..
+                    }
+                    | args::ProjectsCommand::Get {
+                        raw: command_raw, ..
+                    },
+                ),
+            ..
+        }) => !raw && !command_raw,
+        Some(Command::Projects {
+            raw,
+            command: Some(args::ProjectsCommand::Sections { .. }),
+            ..
+        }) => !raw,
+        Some(Command::Tasks {
+            command: args::TasksCommand::List { raw, .. } | args::TasksCommand::Get { raw, .. },
+        }) => !raw,
+        Some(Command::Comments {
+            command: args::CommentsCommand::List { .. },
+        }) => true,
+        Some(Command::Notes {
+            command: args::NotesCommand::List { .. } | args::NotesCommand::Get { .. },
+        }) => true,
+        _ => false,
+    };
+    if allowed {
+        Ok(())
+    } else {
+        Err(PublicError::validation(
+            "--offline is read-only and supports cached project/task/comment/note reads, pick, browse, cache controls, auth status, and local discovery commands; remove --offline for this command (no network request was attempted)",
+        )
+        .into())
     }
 }
 
@@ -543,4 +667,65 @@ fn command_uses_editor(command: Option<&Command>) -> bool {
             command: args::NotesCommand::Edit(_),
         })
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use clap::Parser;
+
+    fn parse(arguments: &[&str]) -> Cli {
+        Cli::try_parse_from(std::iter::once("sealtask").chain(arguments.iter().copied()))
+            .expect("parse CLI")
+    }
+
+    #[test]
+    fn offline_allowlist_is_explicit_and_rejects_raw_or_remote_work() {
+        for arguments in [
+            vec!["--offline", "projects", "list"],
+            vec!["projects", "current", "--offline"],
+            vec!["--offline", "tasks", "list", "--all"],
+            vec!["--offline", "notes", "list"],
+            vec!["--offline", "pick", "project"],
+            vec!["--offline", "browse"],
+            vec!["cache", "status", "--offline"],
+            vec!["doctor", "--offline"],
+            vec!["--offline", "auth", "status"],
+        ] {
+            let cli = parse(&arguments);
+            assert!(
+                validate_offline_command(&cli).is_ok(),
+                "offline command unexpectedly rejected: {arguments:?}"
+            );
+        }
+
+        for arguments in [
+            vec!["--offline", "me"],
+            vec!["--offline", "stats"],
+            vec!["--offline", "projects", "audit"],
+            vec!["--offline", "projects", "list", "--raw"],
+            vec!["--offline", "tasks", "watch"],
+            vec![
+                "--offline",
+                "tasks",
+                "create",
+                "--work-list-id",
+                "018f4a76-c9f2-7f38-a09a-2ac748db8ee8",
+                "--title",
+                "must not run",
+            ],
+            vec!["--offline", "auth", "login"],
+            vec!["--offline", "batch", "run", "--input", "-"],
+        ] {
+            let cli = parse(&arguments);
+            let error = validate_offline_command(&cli)
+                .expect_err("remote or raw command must be rejected offline");
+            assert_eq!(error.code(), "validation");
+            assert!(
+                error
+                    .to_string()
+                    .contains("no network request was attempted")
+            );
+        }
+    }
 }

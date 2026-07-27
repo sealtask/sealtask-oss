@@ -1,7 +1,8 @@
 use super::RuntimeClient;
 use crate::inputs::{CreateCommentArgs, DeleteCommentArgs, UpdateCommentArgs};
 use crate::models::AgentComment;
-use sealtask_client_api::{CreateCommentRequest, UpdateCommentRequest};
+use crate::read_cache::ReadCacheQuery;
+use sealtask_client_api::{CommentResponse, CreateCommentRequest, UpdateCommentRequest};
 use sealtask_client_core::{PublicError, PublicResult};
 use sealtask_client_crypto::{
     CommentPayloadBody, build_comment_payload_envelope, compute_payload_proof, decode_sealed_blob,
@@ -17,18 +18,34 @@ impl RuntimeClient {
         task_id: Uuid,
         password_stdin: bool,
     ) -> PublicResult<Vec<AgentComment>> {
-        let (mut client, context) = self
-            .load_work_list_context(
+        let (credentials, data_key, context) = self
+            .load_read_work_list_context(
                 work_list_id,
                 password_stdin,
                 "Password required to decrypt task comments.",
             )
             .await?;
-        let comments = client.list_comments(work_list_id, task_id).await?;
+        let query = ReadCacheQuery::Comments {
+            work_list_id,
+            task_id,
+        };
+        let comments: Vec<CommentResponse> = if self.is_offline() {
+            self.read_cache
+                .read_offline(&credentials, &data_key, &query)?
+        } else if let Some(cached) = self.read_cache.memoized(&credentials, &query)? {
+            cached
+        } else {
+            let cache_guard = self.read_cache.begin_online_read(&credentials)?;
+            let mut client = self.api_client_with_credentials(credentials.clone())?;
+            let comments = client.list_comments(work_list_id, task_id).await?;
+            self.read_cache
+                .record_online(cache_guard.as_ref(), &data_key, &query, &comments)?;
+            comments
+        };
 
         Ok(comments
             .into_iter()
-            .map(|comment| self.project_comment(comment, context.list_key.as_ref()))
+            .map(|comment| self.project_comment(comment, context.work_list.list_key.as_ref()))
             .collect())
     }
 
@@ -62,7 +79,7 @@ impl RuntimeClient {
         let body_ciphertext = encrypt_comment_payload(&envelope, list_key)?;
         let body_proof = compute_payload_proof(&body_ciphertext.bytes, &binding_key)?;
 
-        let created = client
+        let result = client
             .create_comment(
                 args.work_list_id,
                 args.task_id,
@@ -71,7 +88,9 @@ impl RuntimeClient {
                     body_ciphertext_proof: body_proof,
                 },
             )
-            .await?;
+            .await;
+        self.read_cache.invalidate_for_mutation_result(&result);
+        let created = result?;
         Ok(self.project_comment(created, Some(list_key)))
     }
 
@@ -115,7 +134,7 @@ impl RuntimeClient {
         let body_ciphertext = encrypt_comment_payload(&envelope, list_key)?;
         let body_proof = compute_payload_proof(&body_ciphertext.bytes, &binding_key)?;
 
-        let updated = client
+        let result = client
             .update_comment(
                 args.work_list_id,
                 args.task_id,
@@ -125,19 +144,23 @@ impl RuntimeClient {
                     body_ciphertext_proof: Some(body_proof),
                 },
             )
-            .await?;
+            .await;
+        self.read_cache.invalidate_for_mutation_result(&result);
+        let updated = result?;
         Ok(self.project_comment(updated, Some(list_key)))
     }
 
     pub async fn delete_comment(&self, args: DeleteCommentArgs) -> PublicResult<()> {
         let mut client = self.authenticated_api_client()?;
-        client
+        let result = client
             .delete_comment(
                 args.work_list_id,
                 args.task_id,
                 args.comment_id,
                 &args.input,
             )
-            .await
+            .await;
+        self.read_cache.invalidate_for_mutation_result(&result);
+        result
     }
 }

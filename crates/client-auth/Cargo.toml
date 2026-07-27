@@ -14,11 +14,14 @@ publish = ["crates-io"]
 [dependencies]
 argon2.workspace = true
 base64.workspace = true
+cap-fs-ext.workspace = true
+cap-std.workspace = true
 chrono.workspace = true
 dirs.workspace = true
 fs2.workspace = true
 generic-array.workspace = true
 keyring.workspace = true
+libc.workspace = true
 opaque-ke.workspace = true
 rand_core.workspace = true
 reqwest.workspace = true
@@ -26,7 +29,6 @@ serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true
 thiserror.workspace = true
-tempfile.workspace = true
 tokio.workspace = true
 uuid.workspace = true
 zeroize.workspace = true
@@ -35,3 +37,4 @@ sealtask-client-core = { version = "0.2.1", path = "../client-core" }
 
 [dev-dependencies]
 axum = "0.8.6"
+tempfile.workspace = true

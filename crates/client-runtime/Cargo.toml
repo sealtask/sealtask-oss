@@ -16,11 +16,15 @@ base64.workspace = true
 cap-fs-ext.workspace = true
 cap-std.workspace = true
 chrono.workspace = true
+ciborium = "0.2"
+fs2.workspace = true
 html2md.workspace = true
 hickory-resolver.workspace = true
+libc.workspace = true
 rpassword.workspace = true
 reqwest.workspace = true
 serde.workspace = true
+serde_bytes.workspace = true
 serde_json.workspace = true
 sha2.workspace = true
 socket2.workspace = true
@@ -29,6 +33,9 @@ undocx.workspace = true
 uuid.workspace = true
 zeroize.workspace = true
 zip.workspace = true
+
+[target.'cfg(unix)'.dependencies]
+rustix.workspace = true
 
 sealtask-client-api = { version = "0.2.1", path = "../client-api" }
 sealtask-client-auth = { version = "0.2.1", path = "../client-auth" }

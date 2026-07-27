@@ -627,20 +627,6 @@ impl PublicApiClient {
         Ok(())
     }
 
-    pub(crate) async fn get<T: for<'de> Deserialize<'de>>(
-        &mut self,
-        path: &str,
-    ) -> PublicResult<T> {
-        let url = format!("{}{}", self.base_url, path);
-        self.send(
-            self.client.get(url),
-            path,
-            RequestSemantics::Read,
-            usize::MAX,
-        )
-        .await
-    }
-
     pub(crate) async fn get_bounded<T: for<'de> Deserialize<'de>>(
         &mut self,
         path: &str,
@@ -654,6 +640,24 @@ impl PublicApiClient {
             max_decompressed_bytes,
         )
         .await
+    }
+
+    pub(crate) async fn get_bounded_with_size<T: for<'de> Deserialize<'de>>(
+        &mut self,
+        path: &str,
+        max_decompressed_bytes: usize,
+    ) -> PublicResult<(T, usize)> {
+        let url = format!("{}{}", self.base_url, path);
+        let response = self
+            .execute_bounded_request(
+                self.client.get(url),
+                RequestSemantics::Read,
+                max_decompressed_bytes,
+            )
+            .await?;
+        let received_len = response.received_len();
+        decode_response(response, path, RequestSemantics::Read)
+            .map(|decoded| (decoded, received_len))
     }
 
     pub(crate) async fn get_bounded_body(
@@ -2428,7 +2432,10 @@ mod tests {
 
         let mut client = PublicApiClient::with_credentials(&api_url, test_credentials(&api_url))
             .expect("client");
-        let first: TestResponse = client.get("/first").await.expect("first response");
+        let first: TestResponse = client
+            .get_bounded("/first", crate::MAX_SMALL_RESPONSE_BYTES)
+            .await
+            .expect("first response");
         assert!(first.ok);
         let first_correlation = client
             .last_request_correlation()
@@ -2442,7 +2449,10 @@ mod tests {
             first_correlation.client_request_id()
         );
 
-        let second: TestResponse = client.get("/second").await.expect("second response");
+        let second: TestResponse = client
+            .get_bounded("/second", crate::MAX_SMALL_RESPONSE_BYTES)
+            .await
+            .expect("second response");
         assert!(second.ok);
         let second_correlation = client
             .last_request_correlation()
@@ -2496,7 +2506,10 @@ mod tests {
         )
         .expect("client");
 
-        let _: TestResponse = client.get("/first").await.expect("first response");
+        let _: TestResponse = client
+            .get_bounded("/first", crate::MAX_SMALL_RESPONSE_BYTES)
+            .await
+            .expect("first response");
         assert_eq!(
             client
                 .last_request_correlation()
@@ -2505,7 +2518,10 @@ mod tests {
             invocation_request_id
         );
         let first_retry_seed = client.last_retry_seed.expect("first retry seed");
-        let _: TestResponse = client.get("/second").await.expect("second response");
+        let _: TestResponse = client
+            .get_bounded("/second", crate::MAX_SMALL_RESPONSE_BYTES)
+            .await
+            .expect("second response");
         assert_eq!(
             client
                 .last_request_correlation()

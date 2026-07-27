@@ -182,7 +182,13 @@ pub(super) async fn run(
         persist_final_auth_response(api_url, auth_response, |credentials| {
             replace_credentials_atomically(credentials, |previous_credentials| {
                 if let Some(previous_credentials) = previous_credentials {
-                    clear_previous_local_auth_state_if_changed(previous_credentials, credentials)?;
+                    clear_previous_local_auth_state_if_changed(
+                        runtime,
+                        previous_credentials,
+                        credentials,
+                    )?;
+                } else {
+                    runtime.clear_read_cache()?;
                 }
                 Ok(())
             })
@@ -218,6 +224,7 @@ pub(super) async fn run(
 }
 
 fn clear_previous_local_auth_state_if_changed(
+    runtime: &RuntimeClient,
     previous: &Credentials,
     current: &Credentials,
 ) -> PublicResult<()> {
@@ -235,6 +242,7 @@ fn clear_previous_local_auth_state_if_changed(
     )?;
     clear_session(&previous_session_key)?;
     clear_persisted_data_key(previous)?;
+    runtime.clear_read_cache()?;
     Ok(())
 }
 

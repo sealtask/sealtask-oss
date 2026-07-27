@@ -26,12 +26,6 @@ pub(super) const MUTATION_RECONCILIATION_TIMEOUT: Duration = Duration::from_secs
 const CREATE_RECONCILIATION_INITIAL_BACKOFF: Duration = Duration::from_millis(25);
 const CREATE_RECONCILIATION_MAX_BACKOFF: Duration = Duration::from_millis(250);
 
-pub(super) struct ProjectedNotePage {
-    pub(super) notes: Vec<AgentNote>,
-    pub(super) next_cursor: Option<String>,
-    pub(super) item_count: usize,
-}
-
 enum NoteResponseProcessing<T> {
     Decoded(PublicResult<T>),
     LocalFailure(PublicError),

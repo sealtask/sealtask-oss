@@ -1,15 +1,24 @@
 #![cfg_attr(test, allow(clippy::unwrap_used))]
 
+use std::ffi::OsStr;
 use std::fmt;
-use std::fs::{self, File, OpenOptions};
-use std::io::{BufReader, Write};
-use std::path::{Path, PathBuf};
+use std::fs::{self, File};
+use std::io::{Read, Write};
+use std::path::{Component, Path, PathBuf};
 use std::sync::OnceLock;
+use std::thread;
 use std::time::{Duration as StdDuration, Instant};
 
 use argon2::{Algorithm, Argon2, Params, Version};
 use base64::Engine as _;
 use base64::engine::general_purpose::{STANDARD, STANDARD_NO_PAD, URL_SAFE, URL_SAFE_NO_PAD};
+use cap_fs_ext::{DirExt as _, FollowSymlinks, OpenOptionsFollowExt as _};
+#[cfg(unix)]
+use cap_fs_ext::{OpenOptionsExt as _, OpenOptionsSyncExt as _};
+use cap_std::ambient_authority;
+use cap_std::fs::{Dir, OpenOptions as CapOpenOptions};
+#[cfg(unix)]
+use cap_std::fs::{DirBuilder, DirBuilderExt as _};
 use chrono::{DateTime, Utc};
 use generic_array::{ArrayLength, GenericArray};
 use opaque_ke::{
@@ -20,9 +29,8 @@ use opaque_ke::{
 use rand_core::OsRng;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256, Sha512};
-use tempfile::NamedTempFile;
 use uuid::Uuid;
-use zeroize::{Zeroize, ZeroizeOnDrop};
+use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
 
 use sealtask_client_core::{PublicError, PublicResult, ResponseFailureKind, TransportFailureKind};
 
@@ -39,6 +47,9 @@ const CREDENTIALS_FILE_NAME: &str = "credentials.json";
 const CREDENTIALS_LOCK_FILE_NAME: &str = "credentials.lock";
 const CREDENTIALS_CHANGED_MESSAGE: &str =
     "credentials changed while the command was running; retry the command";
+const MAX_CREDENTIALS_FILE_BYTES: u64 = 64 * 1024;
+const CREDENTIALS_LOCK_TIMEOUT: StdDuration = StdDuration::from_secs(2);
+const CREDENTIALS_LOCK_RETRY: StdDuration = StdDuration::from_millis(20);
 const CREDENTIAL_REFRESH_TIMEOUT: StdDuration = StdDuration::from_secs(30);
 const MAX_RETRY_AFTER_SECONDS: u64 = 24 * 60 * 60;
 const MAX_REFRESH_RESPONSE_BYTES: usize = 64 * 1024;
@@ -77,7 +88,7 @@ pub struct AuthSession {
     pub refresh_expires_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Credentials {
     pub api_url: String,
     pub access_token: String,
@@ -91,6 +102,11 @@ pub struct Credentials {
 
 struct CredentialsFileLock {
     file: Option<File>,
+    store: CredentialStore,
+}
+
+struct CredentialStore {
+    directory: Dir,
 }
 
 impl Credentials {
@@ -107,25 +123,77 @@ impl Credentials {
     }
 }
 
+impl fmt::Debug for Credentials {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("Credentials")
+            .field("api_url", &"<redacted>")
+            .field("access_token", &"<redacted>")
+            .field("refresh_token", &"<redacted>")
+            .field("access_expires_at", &self.access_expires_at)
+            .field("refresh_expires_at", &self.refresh_expires_at)
+            .field("user_id", &self.user_id)
+            .field("email", &"<redacted>")
+            .field("data_key_ciphertext", &"<redacted>")
+            .finish()
+    }
+}
+
 impl CredentialsFileLock {
     fn acquire(dir: &Path) -> PublicResult<Self> {
-        prepare_config_dir(dir)?;
-        let lock_path = dir.join(CREDENTIALS_LOCK_FILE_NAME);
-        let lock_file = OpenOptions::new()
-            .create(true)
-            .truncate(false)
-            .read(true)
-            .write(true)
-            .open(&lock_path)
-            .map_err(|err| {
-                PublicError::unexpected(format!("failed to open credentials lock file: {err}"))
-            })?;
-        set_secret_file_permissions(&lock_path)?;
-        fs2::FileExt::lock_exclusive(&lock_file).map_err(|err| {
-            PublicError::unexpected(format!("failed to lock credentials file: {err}"))
+        let store = CredentialStore::open(dir, true)?.ok_or_else(|| {
+            PublicError::unexpected("failed to prepare credentials storage directory")
         })?;
+        let mut create_options = secret_open_options();
+        create_options.create_new(true).read(true).write(true);
+        let (lock_file, created) = match store
+            .directory
+            .open_with(CREDENTIALS_LOCK_FILE_NAME, &create_options)
+        {
+            Ok(file) => (file.into_std(), true),
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {
+                let mut options = secret_open_options();
+                options.read(true).write(true);
+                let file = store
+                    .directory
+                    .open_with(CREDENTIALS_LOCK_FILE_NAME, &options)
+                    .map(cap_std::fs::File::into_std)
+                    .map_err(|error| secret_open_error("credentials lock file", error))?;
+                (file, false)
+            }
+            Err(error) => {
+                return Err(secret_open_error("credentials lock file", error));
+            }
+        };
+        if created {
+            set_secret_file_handle_permissions(&lock_file, "credentials lock file")?;
+            store.sync()?;
+        } else {
+            validate_secret_file_handle(&lock_file, "credentials lock file")?;
+        }
+
+        let deadline = Instant::now() + CREDENTIALS_LOCK_TIMEOUT;
+        loop {
+            match fs2::FileExt::try_lock_exclusive(&lock_file) {
+                Ok(()) => break,
+                Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
+                    if Instant::now() >= deadline {
+                        return Err(PublicError::conflict(
+                            "credentials are locked by another process; retry the command",
+                        ));
+                    }
+                    thread::sleep(CREDENTIALS_LOCK_RETRY);
+                }
+                Err(error) => {
+                    return Err(PublicError::unexpected(format!(
+                        "failed to lock credentials file: {error}"
+                    )));
+                }
+            }
+        }
         Ok(Self {
             file: Some(lock_file),
+            store,
         })
     }
 
@@ -148,6 +216,10 @@ impl CredentialsFileLock {
             PublicError::unexpected(format!("failed to unlock credentials file: {err}"))
         })
     }
+
+    fn store(&self) -> &CredentialStore {
+        &self.store
+    }
 }
 
 impl Drop for CredentialsFileLock {
@@ -156,6 +228,631 @@ impl Drop for CredentialsFileLock {
             let _ = fs2::FileExt::unlock(&file);
         }
     }
+}
+
+impl CredentialStore {
+    fn open(path: &Path, create: bool) -> PublicResult<Option<Self>> {
+        let Some((directory, created)) = open_directory_nofollow(path, create)? else {
+            return Ok(None);
+        };
+        if created {
+            set_secret_directory_handle_permissions(&directory)?;
+        } else if create {
+            // Preserve the historical login behavior of tightening an
+            // owner-controlled config directory while refusing foreign-owned
+            // storage above.
+            restrict_secret_directory_handle_permissions(&directory)?;
+        }
+        validate_secret_directory_handle(&directory)?;
+        Ok(Some(Self { directory }))
+    }
+
+    fn load(&self) -> PublicResult<Option<Credentials>> {
+        let mut options = secret_open_options();
+        options.read(true);
+        let file = match self
+            .directory
+            .open_with(CREDENTIALS_FILE_NAME, &options)
+            .map(cap_std::fs::File::into_std)
+        {
+            Ok(file) => file,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+            Err(error) => return Err(secret_open_error("credentials file", error)),
+        };
+        validate_secret_file_handle(&file, "credentials file")?;
+        let metadata = file.metadata().map_err(|error| {
+            PublicError::unexpected(format!("failed to inspect credentials file: {error}"))
+        })?;
+        if metadata.len() > MAX_CREDENTIALS_FILE_BYTES {
+            return Err(credentials_too_large_error());
+        }
+
+        let mut body = Zeroizing::new(Vec::with_capacity(metadata.len() as usize));
+        file.take(MAX_CREDENTIALS_FILE_BYTES + 1)
+            .read_to_end(&mut body)
+            .map_err(|error| {
+                PublicError::unexpected(format!("failed to read credentials file: {error}"))
+            })?;
+        if body.len() as u64 > MAX_CREDENTIALS_FILE_BYTES {
+            return Err(credentials_too_large_error());
+        }
+        let credentials = serde_json::from_slice(&body).map_err(|error| {
+            PublicError::unexpected(format!("failed to parse credentials file: {error}"))
+        })?;
+        Ok(Some(credentials))
+    }
+
+    fn save(&self, credentials: &Credentials) -> PublicResult<()> {
+        if let Some(existing) = self.open_secret_file_if_present(CREDENTIALS_FILE_NAME)? {
+            validate_secret_file_handle(&existing, "credentials file")?;
+        }
+
+        let credential_string_bytes = [
+            &credentials.api_url,
+            &credentials.access_token,
+            &credentials.refresh_token,
+            &credentials.email,
+            &credentials.data_key_ciphertext,
+        ]
+        .into_iter()
+        .try_fold(0_usize, |total, value| total.checked_add(value.len()))
+        .ok_or_else(credentials_too_large_error)?;
+        if credential_string_bytes as u64 > MAX_CREDENTIALS_FILE_BYTES {
+            return Err(credentials_too_large_error());
+        }
+        let mut body = Zeroizing::new(serde_json::to_vec_pretty(credentials).map_err(|error| {
+            PublicError::unexpected(format!("failed to encode credentials file: {error}"))
+        })?);
+        body.push(b'\n');
+        if body.len() as u64 > MAX_CREDENTIALS_FILE_BYTES {
+            return Err(credentials_too_large_error());
+        }
+
+        let temporary_name = format!(".credentials-{}.tmp", Uuid::now_v7());
+        let mut options = secret_open_options();
+        options.create_new(true).read(true).write(true);
+        let temporary = self
+            .directory
+            .open_with(&temporary_name, &options)
+            .map(cap_std::fs::File::into_std)
+            .map_err(|error| secret_open_error("temporary credentials file", error))?;
+        let result = (|| {
+            set_secret_file_handle_permissions(&temporary, "temporary credentials file")?;
+            (&temporary).write_all(&body).map_err(|error| {
+                PublicError::unexpected(format!("failed to write credentials file: {error}"))
+            })?;
+            temporary.sync_all().map_err(|error| {
+                PublicError::unexpected(format!("failed to sync credentials file: {error}"))
+            })?;
+            self.directory
+                .rename(&temporary_name, &self.directory, CREDENTIALS_FILE_NAME)
+                .map_err(|error| {
+                    PublicError::unexpected(format!("failed to replace credentials file: {error}"))
+                })?;
+            self.sync()
+        })();
+        if result.is_err() {
+            let _ = self.directory.remove_file(&temporary_name);
+        }
+        result
+    }
+
+    fn clear(&self) -> PublicResult<()> {
+        let Some(file) = self.open_secret_file_if_present(CREDENTIALS_FILE_NAME)? else {
+            return Ok(());
+        };
+        validate_secret_file_handle(&file, "credentials file")?;
+        drop(file);
+        self.directory
+            .remove_file(CREDENTIALS_FILE_NAME)
+            .map_err(|error| {
+                PublicError::unexpected(format!("failed to remove credentials file: {error}"))
+            })?;
+        self.sync()
+    }
+
+    fn open_secret_file_if_present(&self, name: &str) -> PublicResult<Option<File>> {
+        let mut options = secret_open_options();
+        options.read(true);
+        match self
+            .directory
+            .open_with(name, &options)
+            .map(cap_std::fs::File::into_std)
+        {
+            Ok(file) => Ok(Some(file)),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(None),
+            Err(error) => Err(secret_open_error("credentials file", error)),
+        }
+    }
+
+    fn sync(&self) -> PublicResult<()> {
+        sync_directory_handle(&self.directory)
+    }
+}
+
+fn open_directory_nofollow(path: &Path, create: bool) -> PublicResult<Option<(Dir, bool)>> {
+    let absolute = absolute_normalized_credentials_path(path)?;
+    let root = credentials_filesystem_root(&absolute)?;
+    let mut directory = Dir::open_ambient_dir(&root, ambient_authority()).map_err(|error| {
+        PublicError::unexpected(format!(
+            "failed to open credentials storage filesystem root {}: {error}",
+            root.display()
+        ))
+    })?;
+    let mut walked = root;
+    let mut final_directory_created = false;
+    let normal_components = absolute
+        .components()
+        .filter(|component| matches!(component, Component::Normal(_)))
+        .count();
+    let mut normal_component_index = 0_usize;
+
+    for component in absolute.components() {
+        let Component::Normal(name) = component else {
+            continue;
+        };
+        normal_component_index += 1;
+        let is_final = normal_component_index == normal_components;
+        let next_path = walked.join(name);
+        match directory.open_dir_nofollow(Path::new(name)) {
+            Ok(child) => directory = child,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound && !create => {
+                return Ok(None);
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                let created_component = match create_private_directory(&directory, name) {
+                    Ok(()) => true,
+                    Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => false,
+                    Err(error) => {
+                        return Err(PublicError::unexpected(format!(
+                            "failed to create credentials storage directory {}: {error}",
+                            next_path.display()
+                        )));
+                    }
+                };
+                directory = directory
+                    .open_dir_nofollow(Path::new(name))
+                    .map_err(|error| credentials_directory_path_error(&next_path, error))?;
+                if created_component {
+                    set_secret_directory_handle_permissions(&directory)?;
+                    sync_directory_handle(&directory)?;
+                    final_directory_created |= is_final;
+                }
+            }
+            Err(error) => {
+                return Err(credentials_directory_path_error(&next_path, error));
+            }
+        }
+        walked = next_path;
+    }
+
+    Ok(Some((directory, final_directory_created)))
+}
+
+fn absolute_normalized_credentials_path(path: &Path) -> PublicResult<PathBuf> {
+    let absolute = if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        std::env::current_dir()
+            .map_err(|error| {
+                PublicError::unexpected(format!(
+                    "failed to resolve credentials storage directory: {error}"
+                ))
+            })?
+            .join(path)
+    };
+    let mut normalized = PathBuf::new();
+    for component in absolute.components() {
+        match component {
+            Component::CurDir => {}
+            Component::ParentDir => {
+                return Err(PublicError::unexpected(
+                    "credentials storage path must not contain `..`",
+                ));
+            }
+            Component::Prefix(_) | Component::RootDir | Component::Normal(_) => {
+                normalized.push(component.as_os_str());
+            }
+        }
+    }
+    if !normalized.is_absolute() {
+        return Err(PublicError::unexpected(
+            "failed to resolve credentials storage directory as an absolute path",
+        ));
+    }
+    canonicalize_trusted_macos_system_alias(normalized)
+}
+
+#[cfg(target_os = "macos")]
+fn canonicalize_trusted_macos_system_alias(path: PathBuf) -> PublicResult<PathBuf> {
+    use std::os::unix::fs::MetadataExt as _;
+
+    let aliases = [
+        (
+            Path::new("/var"),
+            Path::new("private/var"),
+            Path::new("/private/var"),
+        ),
+        (
+            Path::new("/tmp"),
+            Path::new("private/tmp"),
+            Path::new("/private/tmp"),
+        ),
+    ];
+    let Some((alias, expected_relative_target, absolute_target, suffix)) =
+        aliases.into_iter().find_map(|(alias, relative, target)| {
+            path.strip_prefix(alias)
+                .ok()
+                .map(|suffix| (alias, relative, target, suffix.to_path_buf()))
+        })
+    else {
+        return Ok(path);
+    };
+
+    let alias_metadata = fs::symlink_metadata(alias).map_err(|error| {
+        PublicError::unexpected(format!(
+            "failed to inspect macOS credentials storage alias {}: {error}",
+            alias.display()
+        ))
+    })?;
+    if !alias_metadata.file_type().is_symlink() {
+        return Ok(path);
+    }
+    let actual_target = fs::read_link(alias).map_err(|error| {
+        PublicError::unexpected(format!(
+            "failed to resolve macOS credentials storage alias {}: {error}",
+            alias.display()
+        ))
+    })?;
+    let target_metadata = fs::symlink_metadata(absolute_target).map_err(|error| {
+        PublicError::unexpected(format!(
+            "failed to inspect trusted macOS credentials storage target {}: {error}",
+            absolute_target.display()
+        ))
+    })?;
+    if alias_metadata.uid() != 0
+        || (actual_target != expected_relative_target && actual_target != absolute_target)
+        || target_metadata.uid() != 0
+        || target_metadata.file_type().is_symlink()
+        || !target_metadata.is_dir()
+    {
+        return Err(PublicError::unexpected(format!(
+            "credentials storage path must not traverse an untrusted macOS system alias: {}",
+            alias.display()
+        )));
+    }
+    Ok(absolute_target.join(suffix))
+}
+
+#[cfg(not(target_os = "macos"))]
+fn canonicalize_trusted_macos_system_alias(path: PathBuf) -> PublicResult<PathBuf> {
+    Ok(path)
+}
+
+fn credentials_filesystem_root(path: &Path) -> PublicResult<PathBuf> {
+    let mut root = PathBuf::new();
+    for component in path.components() {
+        match component {
+            Component::Prefix(_) | Component::RootDir => root.push(component.as_os_str()),
+            Component::CurDir => {}
+            Component::ParentDir | Component::Normal(_) => break,
+        }
+    }
+    if root.as_os_str().is_empty() {
+        return Err(PublicError::unexpected(
+            "failed to resolve credentials storage filesystem root",
+        ));
+    }
+    Ok(root)
+}
+
+#[cfg(unix)]
+fn create_private_directory(parent: &Dir, name: &OsStr) -> std::io::Result<()> {
+    let mut builder = DirBuilder::new();
+    builder.mode(0o700);
+    parent.create_dir_with(Path::new(name), &builder)
+}
+
+#[cfg(not(unix))]
+fn create_private_directory(parent: &Dir, name: &OsStr) -> std::io::Result<()> {
+    parent.create_dir(Path::new(name))
+}
+
+fn credentials_directory_path_error(path: &Path, error: std::io::Error) -> PublicError {
+    if error.kind() == std::io::ErrorKind::InvalidInput
+        || error.kind() == std::io::ErrorKind::NotADirectory
+        || is_symlink_loop_error(&error)
+    {
+        PublicError::unexpected(format!(
+            "credentials storage path must not traverse symlinks, reparse points, or non-directory components: {}",
+            path.display()
+        ))
+    } else {
+        PublicError::unexpected(format!(
+            "failed to open credentials storage directory {}: {error}",
+            path.display()
+        ))
+    }
+}
+
+fn validate_credentials_path(path: &Path) -> PublicResult<()> {
+    if path.file_name().and_then(|name| name.to_str()) != Some(CREDENTIALS_FILE_NAME) {
+        return Err(PublicError::unexpected(
+            "credentials path does not name the expected credentials file",
+        ));
+    }
+    Ok(())
+}
+
+fn credentials_parent(path: &Path) -> PublicResult<&Path> {
+    path.parent()
+        .filter(|parent| !parent.as_os_str().is_empty())
+        .ok_or_else(|| PublicError::unexpected("credentials path has no storage directory"))
+}
+
+fn secret_open_options() -> CapOpenOptions {
+    let mut options = CapOpenOptions::new();
+    options.follow(FollowSymlinks::No);
+    #[cfg(unix)]
+    options.mode(0o600).nonblock(true);
+    options
+}
+
+fn secret_open_error(label: &str, error: std::io::Error) -> PublicError {
+    if error.kind() == std::io::ErrorKind::InvalidInput
+        || error.kind() == std::io::ErrorKind::NotADirectory
+        || is_symlink_loop_error(&error)
+    {
+        PublicError::unexpected(format!(
+            "{label} must be a regular file and must not be a symlink or reparse point"
+        ))
+    } else {
+        PublicError::unexpected(format!("failed to open {label}: {error}"))
+    }
+}
+
+#[cfg(unix)]
+fn is_symlink_loop_error(error: &std::io::Error) -> bool {
+    error.raw_os_error() == Some(libc::ELOOP)
+}
+
+#[cfg(not(unix))]
+fn is_symlink_loop_error(_error: &std::io::Error) -> bool {
+    false
+}
+
+fn credentials_too_large_error() -> PublicError {
+    PublicError::unexpected(format!(
+        "credentials file exceeds the {MAX_CREDENTIALS_FILE_BYTES}-byte limit"
+    ))
+}
+
+#[cfg(unix)]
+fn validate_secret_directory_handle(directory: &Dir) -> PublicResult<()> {
+    use std::os::unix::fs::PermissionsExt as _;
+
+    let metadata = directory
+        .try_clone()
+        .map(cap_std::fs::Dir::into_std_file)
+        .and_then(|directory| directory.metadata())
+        .map_err(|error| {
+            PublicError::unexpected(format!(
+                "failed to inspect credentials storage directory: {error}"
+            ))
+        })?;
+    if !metadata.is_dir() {
+        return Err(PublicError::unexpected(
+            "credentials storage path must be a directory",
+        ));
+    }
+    validate_effective_owner(&metadata, "credentials storage directory")?;
+    if metadata.permissions().mode() & 0o077 != 0 {
+        return Err(PublicError::unexpected(
+            "credentials storage directory permissions are too broad; require mode 0700 or stricter",
+        ));
+    }
+    Ok(())
+}
+
+#[cfg(not(unix))]
+fn validate_secret_directory_handle(directory: &Dir) -> PublicResult<()> {
+    let metadata = directory
+        .try_clone()
+        .map(cap_std::fs::Dir::into_std_file)
+        .and_then(|directory| directory.metadata())
+        .map_err(|error| {
+            PublicError::unexpected(format!(
+                "failed to inspect credentials storage directory: {error}"
+            ))
+        })?;
+    if !metadata.is_dir() {
+        return Err(PublicError::unexpected(
+            "credentials storage path must be a directory",
+        ));
+    }
+    Ok(())
+}
+
+#[cfg(unix)]
+fn restrict_secret_directory_handle_permissions(directory: &Dir) -> PublicResult<()> {
+    use std::os::unix::fs::PermissionsExt as _;
+
+    let file = directory
+        .try_clone()
+        .map(cap_std::fs::Dir::into_std_file)
+        .map_err(|error| {
+            PublicError::unexpected(format!(
+                "failed to secure credentials storage directory: {error}"
+            ))
+        })?;
+    let metadata = file.metadata().map_err(|error| {
+        PublicError::unexpected(format!(
+            "failed to inspect credentials storage directory: {error}"
+        ))
+    })?;
+    validate_effective_owner(&metadata, "credentials storage directory")?;
+    if metadata.permissions().mode() & 0o077 != 0 {
+        file.set_permissions(fs::Permissions::from_mode(0o700))
+            .map_err(|error| {
+                PublicError::unexpected(format!(
+                    "failed to secure credentials storage directory: {error}"
+                ))
+            })?;
+        file.sync_all().map_err(|error| {
+            PublicError::unexpected(format!(
+                "failed to sync credentials storage directory: {error}"
+            ))
+        })?;
+    }
+    Ok(())
+}
+
+#[cfg(not(unix))]
+fn restrict_secret_directory_handle_permissions(_directory: &Dir) -> PublicResult<()> {
+    Ok(())
+}
+
+#[cfg(unix)]
+fn set_secret_directory_handle_permissions(directory: &Dir) -> PublicResult<()> {
+    use std::os::unix::fs::PermissionsExt as _;
+
+    let file = directory
+        .try_clone()
+        .map(cap_std::fs::Dir::into_std_file)
+        .map_err(|error| {
+            PublicError::unexpected(format!(
+                "failed to secure credentials storage directory: {error}"
+            ))
+        })?;
+    file.set_permissions(fs::Permissions::from_mode(0o700))
+        .map_err(|error| {
+            PublicError::unexpected(format!(
+                "failed to secure credentials storage directory: {error}"
+            ))
+        })?;
+    validate_secret_directory_handle(directory)
+}
+
+#[cfg(not(unix))]
+fn set_secret_directory_handle_permissions(_directory: &Dir) -> PublicResult<()> {
+    Ok(())
+}
+
+#[cfg(unix)]
+fn validate_secret_file_handle(file: &File, label: &str) -> PublicResult<()> {
+    use std::os::unix::fs::{MetadataExt as _, PermissionsExt as _};
+
+    let metadata = file
+        .metadata()
+        .map_err(|error| PublicError::unexpected(format!("failed to inspect {label}: {error}")))?;
+    if !metadata.is_file() {
+        return Err(PublicError::unexpected(format!(
+            "{label} must be a regular file"
+        )));
+    }
+    validate_effective_owner(&metadata, label)?;
+    if metadata.nlink() != 1 {
+        return Err(PublicError::unexpected(format!(
+            "{label} must have exactly one hard link"
+        )));
+    }
+    if metadata.permissions().mode() & 0o077 != 0 {
+        return Err(PublicError::unexpected(format!(
+            "{label} permissions are too broad; require mode 0600 or stricter"
+        )));
+    }
+    Ok(())
+}
+
+#[cfg(windows)]
+fn validate_secret_file_handle(file: &File, label: &str) -> PublicResult<()> {
+    use std::os::windows::fs::MetadataExt as _;
+
+    let metadata = file
+        .metadata()
+        .map_err(|error| PublicError::unexpected(format!("failed to inspect {label}: {error}")))?;
+    if !metadata.is_file() {
+        return Err(PublicError::unexpected(format!(
+            "{label} must be a regular file"
+        )));
+    }
+    if metadata.number_of_links() != Some(1) {
+        return Err(PublicError::unexpected(format!(
+            "{label} must have exactly one hard link"
+        )));
+    }
+    Ok(())
+}
+
+#[cfg(not(any(unix, windows)))]
+fn validate_secret_file_handle(file: &File, label: &str) -> PublicResult<()> {
+    let metadata = file
+        .metadata()
+        .map_err(|error| PublicError::unexpected(format!("failed to inspect {label}: {error}")))?;
+    if !metadata.is_file() {
+        return Err(PublicError::unexpected(format!(
+            "{label} must be a regular file"
+        )));
+    }
+    Ok(())
+}
+
+#[cfg(unix)]
+fn set_secret_file_handle_permissions(file: &File, label: &str) -> PublicResult<()> {
+    use std::os::unix::fs::PermissionsExt as _;
+
+    file.set_permissions(fs::Permissions::from_mode(0o600))
+        .map_err(|error| PublicError::unexpected(format!("failed to secure {label}: {error}")))?;
+    validate_secret_file_handle(file, label)
+}
+
+#[cfg(not(unix))]
+fn set_secret_file_handle_permissions(file: &File, label: &str) -> PublicResult<()> {
+    validate_secret_file_handle(file, label)
+}
+
+#[cfg(unix)]
+fn validate_effective_owner(metadata: &fs::Metadata, label: &str) -> PublicResult<()> {
+    use std::os::unix::fs::MetadataExt as _;
+
+    // SAFETY: `geteuid` has no preconditions and does not dereference pointers.
+    let effective_uid = unsafe { libc::geteuid() };
+    validate_effective_owner_ids(metadata.uid(), effective_uid, label)
+}
+
+#[cfg(unix)]
+fn validate_effective_owner_ids(
+    owner_uid: u32,
+    effective_uid: u32,
+    label: &str,
+) -> PublicResult<()> {
+    if owner_uid != effective_uid {
+        return Err(PublicError::unexpected(format!(
+            "{label} must be owned by the current effective user"
+        )));
+    }
+    Ok(())
+}
+
+#[cfg(unix)]
+fn sync_directory_handle(directory: &Dir) -> PublicResult<()> {
+    directory
+        .try_clone()
+        .map(cap_std::fs::Dir::into_std_file)
+        .and_then(|directory| directory.sync_all())
+        .map_err(|error| {
+            PublicError::unexpected(format!(
+                "failed to sync credentials storage directory: {error}"
+            ))
+        })
+}
+
+#[cfg(not(unix))]
+fn sync_directory_handle(_directory: &Dir) -> PublicResult<()> {
+    // Windows capability directory handles do not necessarily carry the
+    // access required by FlushFileBuffers. Credential files themselves are
+    // still synced before handle-relative atomic replacement.
+    Ok(())
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -593,20 +1290,11 @@ pub fn load_credentials() -> PublicResult<Option<Credentials>> {
 }
 
 fn load_credentials_unlocked(path: &Path) -> PublicResult<Option<Credentials>> {
-    let file = match File::open(path) {
-        Ok(file) => file,
-        Err(err) if err.kind() == std::io::ErrorKind::NotFound => return Ok(None),
-        Err(err) => {
-            return Err(PublicError::unexpected(format!(
-                "failed to open credentials file: {err}"
-            )));
-        }
+    validate_credentials_path(path)?;
+    let Some(store) = CredentialStore::open(credentials_parent(path)?, false)? else {
+        return Ok(None);
     };
-    let reader = BufReader::new(file);
-    let credentials: Credentials = serde_json::from_reader(reader).map_err(|err| {
-        PublicError::unexpected(format!("failed to parse credentials file: {err}"))
-    })?;
-    Ok(Some(credentials))
+    store.load()
 }
 
 pub fn load_credentials_for_url(api_url: &str) -> PublicResult<Option<Credentials>> {
@@ -619,7 +1307,7 @@ pub fn load_credentials_for_url(api_url: &str) -> PublicResult<Option<Credential
 
 pub fn save_credentials(credentials: &Credentials) -> PublicResult<()> {
     let dir = config_dir()?;
-    with_credentials_lock_in(&dir, || save_credentials_unlocked(&dir, credentials))
+    with_credentials_lock_in(&dir, |store| store.save(credentials))
 }
 
 pub fn save_credentials_if_current(
@@ -635,13 +1323,12 @@ fn save_credentials_if_current_in(
     expected: &Credentials,
     updated: &Credentials,
 ) -> PublicResult<bool> {
-    with_credentials_lock_in(dir, || {
-        let path = dir.join(CREDENTIALS_FILE_NAME);
-        if load_credentials_unlocked(&path)?.as_ref() != Some(expected) {
+    with_credentials_lock_in(dir, |store| {
+        if store.load()?.as_ref() != Some(expected) {
             return Ok(false);
         }
 
-        save_credentials_unlocked(dir, updated)?;
+        store.save(updated)?;
         Ok(true)
     })
 }
@@ -696,7 +1383,9 @@ async fn refresh_credentials_if_needed_in(
 ) -> PublicResult<Credentials> {
     let credentials_lock = CredentialsFileLock::acquire_async(dir).await?;
     let result = async {
-        let current = load_credentials_unlocked(&dir.join(CREDENTIALS_FILE_NAME))?
+        let current = credentials_lock
+            .store()
+            .load()?
             .filter(|current| credentials_share_refresh_context(current, expected))
             .ok_or_else(credentials_changed_error)?;
 
@@ -717,7 +1406,7 @@ async fn refresh_credentials_if_needed_in(
         .map_err(|_| PublicError::transport(TransportFailureKind::Timeout))??;
         let mut refreshed = current;
         update_credentials_with_refresh(&mut refreshed, refresh_response);
-        save_credentials_unlocked(dir, &refreshed)?;
+        credentials_lock.store().save(&refreshed)?;
         Ok(refreshed)
     }
     .await;
@@ -744,10 +1433,10 @@ fn replace_credentials_atomically_in(
     credentials: &Credentials,
     before_replace: impl FnOnce(Option<&Credentials>) -> PublicResult<()>,
 ) -> PublicResult<Option<Credentials>> {
-    with_credentials_lock_in(dir, || {
-        let previous = load_credentials_unlocked(&dir.join(CREDENTIALS_FILE_NAME))?;
+    with_credentials_lock_in(dir, |store| {
+        let previous = store.load()?;
         before_replace(previous.as_ref())?;
-        save_credentials_unlocked(dir, credentials)?;
+        store.save(credentials)?;
         Ok(previous)
     })
 }
@@ -765,11 +1454,41 @@ fn with_current_credentials_in<T>(
     expected: &Credentials,
     action: impl FnOnce(&Credentials) -> PublicResult<T>,
 ) -> PublicResult<T> {
-    with_credentials_lock_in(dir, || {
-        let current = load_credentials_unlocked(&dir.join(CREDENTIALS_FILE_NAME))?;
+    with_credentials_lock_in(dir, |store| {
+        let current = store.load()?;
         let current = current
             .as_ref()
             .filter(|current| *current == expected)
+            .ok_or_else(credentials_changed_error)?;
+        action(current)
+    })
+}
+
+/// Run a local-state action while the authenticated account and encryption
+/// identity still match `expected`.
+///
+/// Access and refresh tokens may rotate without changing this identity. The
+/// credential-store lock remains held until `action` returns, preventing a
+/// concurrent login from switching accounts while identity-bound state is
+/// being written.
+pub fn with_current_credential_identity<T>(
+    expected: &Credentials,
+    action: impl FnOnce(&Credentials) -> PublicResult<T>,
+) -> PublicResult<T> {
+    let dir = config_dir()?;
+    with_current_credential_identity_in(&dir, expected, action)
+}
+
+fn with_current_credential_identity_in<T>(
+    dir: &Path,
+    expected: &Credentials,
+    action: impl FnOnce(&Credentials) -> PublicResult<T>,
+) -> PublicResult<T> {
+    with_credentials_lock_in(dir, |store| {
+        let current = store.load()?;
+        let current = current
+            .as_ref()
+            .filter(|current| credentials_share_identity(current, expected))
             .ok_or_else(credentials_changed_error)?;
         action(current)
     })
@@ -780,68 +1499,29 @@ pub fn clear_credentials_if_current(
     before_clear: impl FnOnce(&Credentials) -> PublicResult<()>,
 ) -> PublicResult<()> {
     let dir = config_dir()?;
-    with_credentials_lock_in(&dir, || {
-        let path = dir.join(CREDENTIALS_FILE_NAME);
-        let current = load_credentials_unlocked(&path)?;
+    with_credentials_lock_in(&dir, |store| {
+        let current = store.load()?;
         let current = current
             .as_ref()
             .filter(|current| *current == expected)
             .ok_or_else(credentials_changed_error)?;
         let cleanup_result = before_clear(current);
-        clear_credentials_unlocked(&dir)?;
+        store.clear()?;
         cleanup_result
     })
 }
 
 pub fn clear_credentials() -> PublicResult<()> {
     let dir = config_dir()?;
-    with_credentials_lock_in(&dir, || clear_credentials_unlocked(&dir))
-}
-
-fn clear_credentials_unlocked(dir: &Path) -> PublicResult<()> {
-    let path = dir.join(CREDENTIALS_FILE_NAME);
-    match fs::remove_file(&path) {
-        Ok(()) => sync_config_dir(dir)?,
-        Err(err) if err.kind() == std::io::ErrorKind::NotFound => {}
-        Err(err) => {
-            return Err(PublicError::unexpected(format!(
-                "failed to remove credentials file: {err}"
-            )));
-        }
-    }
-    Ok(())
-}
-
-fn save_credentials_unlocked(dir: &Path, credentials: &Credentials) -> PublicResult<()> {
-    prepare_config_dir(dir)?;
-    let path = dir.join(CREDENTIALS_FILE_NAME);
-    let mut temporary = NamedTempFile::new_in(dir).map_err(|err| {
-        PublicError::unexpected(format!(
-            "failed to create temporary credentials file: {err}"
-        ))
-    })?;
-    set_secret_file_permissions(temporary.path())?;
-    serde_json::to_writer_pretty(&mut temporary, credentials).map_err(|err| {
-        PublicError::unexpected(format!("failed to write credentials file: {err}"))
-    })?;
-    temporary.write_all(b"\n").map_err(|err| {
-        PublicError::unexpected(format!("failed to finish credentials file: {err}"))
-    })?;
-    temporary.as_file().sync_all().map_err(|err| {
-        PublicError::unexpected(format!("failed to sync credentials file: {err}"))
-    })?;
-    temporary.persist(&path).map_err(|err| {
-        PublicError::unexpected(format!("failed to replace credentials file: {}", err.error))
-    })?;
-    sync_config_dir(dir)
+    with_credentials_lock_in(&dir, CredentialStore::clear)
 }
 
 fn with_credentials_lock_in<T>(
     dir: &Path,
-    action: impl FnOnce() -> PublicResult<T>,
+    action: impl FnOnce(&CredentialStore) -> PublicResult<T>,
 ) -> PublicResult<T> {
     let credentials_lock = CredentialsFileLock::acquire(dir)?;
-    let result = action();
+    let result = action(credentials_lock.store());
     let unlock_result = credentials_lock.unlock();
     match result {
         Err(err) => Err(err),
@@ -850,13 +1530,6 @@ fn with_credentials_lock_in<T>(
             Ok(value)
         }
     }
-}
-
-fn prepare_config_dir(dir: &Path) -> PublicResult<()> {
-    fs::create_dir_all(dir).map_err(|err| {
-        PublicError::unexpected(format!("failed to create config directory: {err}"))
-    })?;
-    set_config_dir_permissions(dir)
 }
 
 fn credentials_changed_error() -> PublicError {
@@ -870,16 +1543,10 @@ fn credentials_share_refresh_context(left: &Credentials, right: &Credentials) ->
         && left.data_key_ciphertext == right.data_key_ciphertext
 }
 
-#[cfg(unix)]
-fn sync_config_dir(dir: &Path) -> PublicResult<()> {
-    File::open(dir)
-        .and_then(|file| file.sync_all())
-        .map_err(|err| PublicError::unexpected(format!("failed to sync config directory: {err}")))
-}
-
-#[cfg(not(unix))]
-fn sync_config_dir(_dir: &Path) -> PublicResult<()> {
-    Ok(())
+fn credentials_share_identity(left: &Credentials, right: &Credentials) -> bool {
+    normalize_api_url(&left.api_url) == normalize_api_url(&right.api_url)
+        && left.user_id == right.user_id
+        && left.data_key_ciphertext.trim() == right.data_key_ciphertext.trim()
 }
 
 pub fn load_persisted_data_key(credentials: &Credentials) -> PublicResult<Option<Vec<u8>>> {
@@ -2641,6 +3308,253 @@ mod tests {
         }
     }
 
+    fn private_temp_dir() -> TempDir {
+        let directory = tempfile::Builder::new()
+            .prefix(".sealtask-client-auth-test-")
+            .tempdir_in(".")
+            .expect("private test directory");
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt as _;
+
+            fs::set_permissions(directory.path(), fs::Permissions::from_mode(0o700))
+                .expect("secure test directory");
+        }
+        directory
+    }
+
+    fn write_credentials_fixture(path: &Path, size: usize) {
+        set_config_dir_permissions(path.parent().expect("credentials fixture parent"))
+            .expect("secure credentials fixture directory");
+        let mut body = serde_json::to_vec(&test_credentials()).expect("serialize credentials");
+        assert!(body.len() <= size, "fixture size must fit requested body");
+        body.resize(size, b' ');
+        fs::write(path, body).expect("write credentials fixture");
+        set_secret_file_permissions(path).expect("secure credentials fixture");
+    }
+
+    #[test]
+    fn credentials_debug_redacts_every_secret_and_identity_string() {
+        let mut credentials = test_credentials();
+        credentials.api_url = "https://private-api.example/tenant".to_string();
+        credentials.access_token = "access-secret-value".to_string();
+        credentials.refresh_token = "refresh-secret-value".to_string();
+        credentials.email = "private-user@example.test".to_string();
+        credentials.data_key_ciphertext = "private-data-key-ciphertext".to_string();
+
+        let rendered = format!("{credentials:?}");
+
+        for private in [
+            &credentials.api_url,
+            &credentials.access_token,
+            &credentials.refresh_token,
+            &credentials.email,
+            &credentials.data_key_ciphertext,
+        ] {
+            assert!(!rendered.contains(private));
+        }
+        assert!(rendered.contains("<redacted>"));
+    }
+
+    #[test]
+    fn credentials_file_size_bound_accepts_exact_limit_and_rejects_one_more() {
+        let exact = private_temp_dir();
+        let exact_path = exact.path().join(CREDENTIALS_FILE_NAME);
+        write_credentials_fixture(&exact_path, MAX_CREDENTIALS_FILE_BYTES as usize);
+        load_credentials_unlocked(&exact_path)
+            .expect("exact file limit")
+            .expect("credentials");
+
+        const PRIVATE_OVERSIZED_SUFFIX: &str = "oversized-private-refresh-secret";
+        let oversized = private_temp_dir();
+        set_config_dir_permissions(oversized.path()).expect("secure oversized fixture directory");
+        let oversized_path = oversized.path().join(CREDENTIALS_FILE_NAME);
+        let mut body =
+            serde_json::to_vec(&test_credentials()).expect("serialize oversized credentials");
+        body.resize(
+            MAX_CREDENTIALS_FILE_BYTES as usize + 1 - PRIVATE_OVERSIZED_SUFFIX.len(),
+            b' ',
+        );
+        body.extend_from_slice(PRIVATE_OVERSIZED_SUFFIX.as_bytes());
+        fs::write(&oversized_path, body).expect("write oversized credentials");
+        set_secret_file_permissions(&oversized_path).expect("secure oversized credentials");
+
+        let error =
+            load_credentials_unlocked(&oversized_path).expect_err("one byte over the file limit");
+        assert!(error.to_string().contains("65536-byte limit"));
+        assert!(!error.to_string().contains(PRIVATE_OVERSIZED_SUFFIX));
+        assert!(!format!("{error:?}").contains(PRIVATE_OVERSIZED_SUFFIX));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn credentials_file_rejects_symlinks_hardlinks_fifos_and_broad_modes() {
+        use std::ffi::CString;
+        use std::os::unix::ffi::OsStrExt as _;
+        use std::os::unix::fs::{PermissionsExt as _, symlink};
+
+        let symlink_dir = private_temp_dir();
+        let symlink_target = symlink_dir.path().join("target.json");
+        write_credentials_fixture(&symlink_target, 1_024);
+        let symlink_path = symlink_dir.path().join(CREDENTIALS_FILE_NAME);
+        symlink(&symlink_target, &symlink_path).expect("credentials symlink");
+        let error =
+            load_credentials_unlocked(&symlink_path).expect_err("credentials symlink rejected");
+        assert!(error.to_string().contains("symlink"));
+
+        let directory_link_root = private_temp_dir();
+        let real_directory = directory_link_root.path().join("real-config");
+        fs::create_dir(&real_directory).expect("real config directory");
+        let real_credentials = real_directory.join(CREDENTIALS_FILE_NAME);
+        write_credentials_fixture(&real_credentials, 1_024);
+        let linked_directory = directory_link_root.path().join("linked-config");
+        symlink(&real_directory, &linked_directory).expect("config directory symlink");
+        let error = load_credentials_unlocked(&linked_directory.join(CREDENTIALS_FILE_NAME))
+            .expect_err("credentials directory symlink rejected");
+        assert!(error.to_string().contains("symlink"));
+
+        let ancestor_link_root = private_temp_dir();
+        let real_profiles = ancestor_link_root.path().join("real-profiles");
+        let real_profile = real_profiles.join("operator");
+        fs::create_dir_all(&real_profile).expect("real profile directory");
+        let real_profile_credentials = real_profile.join(CREDENTIALS_FILE_NAME);
+        write_credentials_fixture(&real_profile_credentials, 1_024);
+        let linked_profiles = ancestor_link_root.path().join("profiles");
+        symlink(&real_profiles, &linked_profiles).expect("profiles ancestor symlink");
+        let error = load_credentials_unlocked(
+            &linked_profiles.join("operator").join(CREDENTIALS_FILE_NAME),
+        )
+        .expect_err("credentials ancestor symlink rejected");
+        assert!(error.to_string().contains("symlink"));
+        let linked_new_profile = linked_profiles.join("new-operator");
+        let error = match CredentialsFileLock::acquire(&linked_new_profile) {
+            Ok(_) => panic!("credentials creation through ancestor symlink must be rejected"),
+            Err(error) => error,
+        };
+        assert!(error.to_string().contains("symlink"));
+        assert!(
+            !real_profiles.join("new-operator").exists(),
+            "rejected credential-store creation must not mutate the symlink target"
+        );
+
+        let hardlink_dir = private_temp_dir();
+        let hardlink_target = hardlink_dir.path().join("original.json");
+        write_credentials_fixture(&hardlink_target, 1_024);
+        let hardlink_path = hardlink_dir.path().join(CREDENTIALS_FILE_NAME);
+        fs::hard_link(&hardlink_target, &hardlink_path).expect("credentials hardlink");
+        let error =
+            load_credentials_unlocked(&hardlink_path).expect_err("credentials hardlink rejected");
+        assert!(error.to_string().contains("exactly one hard link"));
+
+        let broad_dir = private_temp_dir();
+        let broad_path = broad_dir.path().join(CREDENTIALS_FILE_NAME);
+        write_credentials_fixture(&broad_path, 1_024);
+        fs::set_permissions(&broad_path, fs::Permissions::from_mode(0o644))
+            .expect("broaden credentials permissions");
+        let error =
+            load_credentials_unlocked(&broad_path).expect_err("broad credentials mode rejected");
+        assert!(error.to_string().contains("permissions are too broad"));
+
+        let fifo_dir = private_temp_dir();
+        set_config_dir_permissions(fifo_dir.path()).expect("secure FIFO fixture directory");
+        let fifo_path = fifo_dir.path().join(CREDENTIALS_FILE_NAME);
+        let fifo_c_path =
+            CString::new(fifo_path.as_os_str().as_bytes()).expect("FIFO path without NUL");
+        // SAFETY: `fifo_c_path` is a valid NUL-terminated path and `mkfifo`
+        // does not retain the pointer.
+        let result = unsafe { libc::mkfifo(fifo_c_path.as_ptr(), 0o600) };
+        assert_eq!(result, 0, "create credentials FIFO");
+        let error = load_credentials_unlocked(&fifo_path).expect_err("credentials FIFO rejected");
+        assert!(error.to_string().contains("regular file"));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn credentials_file_rejects_a_foreign_owner_identity() {
+        let error = validate_effective_owner_ids(42, 43, "credentials file")
+            .expect_err("foreign owner rejected");
+        assert!(error.to_string().contains("current effective user"));
+        validate_effective_owner_ids(42, 42, "credentials file").expect("matching owner");
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn credentials_store_accepts_root_owned_macos_var_and_tmp_aliases() {
+        assert_eq!(
+            absolute_normalized_credentials_path(Path::new("/var/example"))
+                .expect("normalize /var"),
+            Path::new("/private/var/example")
+        );
+        assert_eq!(
+            absolute_normalized_credentials_path(Path::new("/tmp/example"))
+                .expect("normalize /tmp"),
+            Path::new("/private/tmp/example")
+        );
+
+        let standard_temp = TempDir::new().expect("standard macOS temporary directory");
+        set_config_dir_permissions(standard_temp.path())
+            .expect("secure standard macOS temporary directory");
+        let config_directory = standard_temp.path().join("config");
+        assert!(
+            CredentialStore::open(&config_directory, true)
+                .expect("create config directory through trusted system alias")
+                .is_some()
+        );
+        assert!(config_directory.is_dir());
+    }
+
+    #[test]
+    fn credentials_lock_wait_is_bounded() {
+        let temp = private_temp_dir();
+        let first = CredentialsFileLock::acquire(temp.path()).expect("first credentials lock");
+        let started = Instant::now();
+        let error = match CredentialsFileLock::acquire(temp.path()) {
+            Ok(_) => panic!("second credentials lock must time out"),
+            Err(error) => error,
+        };
+        let elapsed = started.elapsed();
+        assert!(matches!(error, PublicError::Conflict(_)));
+        assert!(elapsed >= CREDENTIALS_LOCK_TIMEOUT);
+        assert!(elapsed < CREDENTIALS_LOCK_TIMEOUT + StdDuration::from_secs(1));
+        drop(first);
+    }
+
+    #[test]
+    fn credentials_replacement_is_durable_and_leaves_no_temporary_file() {
+        let temp = private_temp_dir();
+        let credentials = test_credentials();
+        replace_credentials_atomically_in(temp.path(), &credentials, |_| Ok(()))
+            .expect("replace credentials");
+        let mut replacement = credentials.clone();
+        replacement.access_token = "replacement-access".to_string();
+        replacement.refresh_token = "replacement-refresh".to_string();
+        let previous = replace_credentials_atomically_in(temp.path(), &replacement, |_| Ok(()))
+            .expect("replace existing credentials");
+        assert_eq!(previous, Some(credentials));
+
+        let names = fs::read_dir(temp.path())
+            .expect("read credentials directory")
+            .map(|entry| {
+                entry
+                    .expect("credentials directory entry")
+                    .file_name()
+                    .to_string_lossy()
+                    .into_owned()
+            })
+            .collect::<Vec<_>>();
+        assert!(names.iter().any(|name| name == CREDENTIALS_FILE_NAME));
+        assert!(
+            !names
+                .iter()
+                .any(|name| name.starts_with(".credentials-") && name.ends_with(".tmp"))
+        );
+        assert_eq!(
+            load_credentials_unlocked(&temp.path().join(CREDENTIALS_FILE_NAME))
+                .expect("load durable credentials"),
+            Some(replacement)
+        );
+    }
+
     #[tokio::test]
     async fn refresh_should_preserve_structured_rate_limit_metadata_without_backend_prose() {
         const PRIVATE_MESSAGE: &str =
@@ -2859,7 +3773,7 @@ mod tests {
         });
         let base_url = format!("http://{address}");
 
-        let temp = TempDir::new().expect("temp dir");
+        let temp = private_temp_dir();
         let credentials_dir = temp.path().join("credentials");
         let mut original = test_credentials();
         original.api_url.clone_from(&base_url);
@@ -2904,7 +3818,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_credentials_store_should_reject_a_changed_crypto_context_before_refresh() {
-        let temp = TempDir::new().expect("temp dir");
+        let temp = private_temp_dir();
         let expected = test_credentials();
         let mut current = expected.clone();
         current.access_expires_at = Utc::now() - Duration::seconds(1);
@@ -2939,7 +3853,7 @@ mod tests {
         });
         let base_url = format!("http://{address}");
 
-        let temp = TempDir::new().expect("temp dir");
+        let temp = private_temp_dir();
         let dir = temp.path().to_path_buf();
         let mut original = test_credentials();
         original.api_url.clone_from(&base_url);
@@ -2979,7 +3893,7 @@ mod tests {
 
     #[test]
     fn test_credentials_store_should_atomically_compare_and_swap() {
-        let temp = TempDir::new().expect("temp dir");
+        let temp = private_temp_dir();
         let original = test_credentials();
         replace_credentials_atomically_in(temp.path(), &original, |_| Ok(()))
             .expect("store original credentials");
@@ -3007,7 +3921,7 @@ mod tests {
 
     #[test]
     fn test_credentials_store_should_clean_up_the_latest_snapshot_before_replace() {
-        let temp = TempDir::new().expect("temp dir");
+        let temp = private_temp_dir();
         let original = test_credentials();
         replace_credentials_atomically_in(temp.path(), &original, |_| Ok(()))
             .expect("store original credentials");
@@ -3037,7 +3951,7 @@ mod tests {
 
     #[test]
     fn test_credentials_store_should_not_run_guarded_writes_for_a_stale_snapshot() {
-        let temp = TempDir::new().expect("temp dir");
+        let temp = private_temp_dir();
         let original = test_credentials();
         let mut current = original.clone();
         current.access_token = "newer-access".to_string();
@@ -3056,8 +3970,65 @@ mod tests {
     }
 
     #[test]
+    fn credential_identity_guard_allows_token_refresh_but_returns_current_credentials() {
+        let temp = private_temp_dir();
+        let mut expected = test_credentials();
+        expected.api_url.push('/');
+        expected.data_key_ciphertext = format!(" {} \n", expected.data_key_ciphertext);
+        let mut current = expected.clone();
+        current.api_url = normalize_api_url(&current.api_url);
+        current.data_key_ciphertext = current.data_key_ciphertext.trim().to_string();
+        current.access_token = "refreshed-access".to_string();
+        current.refresh_token = "refreshed-refresh".to_string();
+        current.access_expires_at += Duration::hours(1);
+        current.refresh_expires_at += Duration::hours(1);
+        replace_credentials_atomically_in(temp.path(), &current, |_| Ok(()))
+            .expect("store refreshed credentials");
+
+        let observed_access_token = RefCell::new(None);
+        with_current_credential_identity_in(temp.path(), &expected, |current| {
+            observed_access_token.replace(Some(current.access_token.clone()));
+            Ok(())
+        })
+        .expect("token rotation must preserve the credential identity");
+
+        assert_eq!(
+            observed_access_token.into_inner().as_deref(),
+            Some("refreshed-access")
+        );
+    }
+
+    #[test]
+    fn credential_identity_guard_rejects_api_account_or_data_key_switches() {
+        let expected = test_credentials();
+        let mut different_api = expected.clone();
+        different_api.api_url = "https://different-api.example".to_string();
+        let mut different_account = expected.clone();
+        different_account.user_id = Uuid::now_v7();
+        let mut different_data_key = expected.clone();
+        different_data_key.data_key_ciphertext =
+            STANDARD_NO_PAD.encode(b"replacement-data-key-ciphertext");
+
+        for current in [different_api, different_account, different_data_key] {
+            let temp = private_temp_dir();
+            replace_credentials_atomically_in(temp.path(), &current, |_| Ok(()))
+                .expect("store switched credential identity");
+            let action_ran = Cell::new(false);
+
+            let error = with_current_credential_identity_in(temp.path(), &expected, |_| {
+                action_ran.set(true);
+                Ok(())
+            })
+            .expect_err("a switched credential identity must reject guarded state writes");
+
+            assert!(matches!(error, PublicError::Conflict(_)));
+            assert!(!action_ran.get());
+        }
+    }
+
+    #[test]
     fn test_credentials_store_should_serialize_concurrent_replacements() {
-        let temp = TempDir::new().expect("temp dir");
+        let temp = private_temp_dir();
         let dir = temp.path().to_path_buf();
         let original = test_credentials();
         replace_credentials_atomically_in(&dir, &original, |_| Ok(()))
@@ -3115,7 +4086,7 @@ mod tests {
 
     #[test]
     fn test_persisted_data_key_round_trips_through_test_backend() {
-        let temp = TempDir::new().expect("temp dir");
+        let temp = private_temp_dir();
         let credentials = test_credentials();
         unsafe {
             std::env::set_var(TEST_KEYCHAIN_DIR_ENV, temp.path());

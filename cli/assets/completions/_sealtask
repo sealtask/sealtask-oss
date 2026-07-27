@@ -35,6 +35,7 @@ _sealtask() {
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help]' \
 '--help[Print help]' \
 '-V[Print version]' \
@@ -69,6 +70,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 ':shell -- Shell whose completion script should be written to stdout:(bash zsh fish powershell)' \
@@ -96,6 +98,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 '*::command -- Optional nested command path, for example\: tasks create:_default' \
@@ -122,6 +125,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 && ret=0
@@ -147,6 +151,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 '*::command -- Optional nested command path, for example\: tasks create:_default' \
@@ -173,6 +178,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 ":: :_sealtask__subcmd__auth_commands" \
@@ -208,6 +214,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 && ret=0
@@ -236,6 +243,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 && ret=0
@@ -261,6 +269,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 && ret=0
@@ -286,6 +295,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 ":: :_sealtask__subcmd__auth__subcmd__keychain_commands" \
@@ -320,6 +330,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 && ret=0
@@ -345,6 +356,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 && ret=0
@@ -402,6 +414,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 && ret=0
@@ -427,6 +440,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 && ret=0
@@ -520,6 +534,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 && ret=0
@@ -545,6 +560,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 ":: :_sealtask__subcmd__pick_commands" \
@@ -580,6 +596,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 && ret=0
@@ -610,6 +627,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 && ret=0
@@ -671,6 +689,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 ":: :_sealtask__subcmd__projects_commands" \
@@ -708,6 +727,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 && ret=0
@@ -735,6 +755,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 ':project -- Project name, UUID, or unique UUID prefix:_default' \
@@ -763,6 +784,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 ':project -- Project name, UUID, or unique UUID prefix:_default' \
@@ -791,6 +813,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 ':project -- Project name, UUID, or unique UUID prefix:_default' \
@@ -818,6 +841,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 ':project -- Active project name, UUID, or unique UUID prefix:_default' \
@@ -844,6 +868,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 && ret=0
@@ -869,6 +894,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 && ret=0
@@ -894,6 +920,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 ":: :_sealtask__subcmd__projects__subcmd__sections_commands" \
@@ -930,6 +957,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 && ret=0
@@ -987,6 +1015,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 '::project -- Project name, UUID, or unique UUID prefix; defaults to the current project:_default' \
@@ -1093,6 +1122,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 ":: :_sealtask__subcmd__projects_commands" \
@@ -1130,6 +1160,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 && ret=0
@@ -1157,6 +1188,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 ':project -- Project name, UUID, or unique UUID prefix:_default' \
@@ -1185,6 +1217,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 ':project -- Project name, UUID, or unique UUID prefix:_default' \
@@ -1213,6 +1246,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 ':project -- Project name, UUID, or unique UUID prefix:_default' \
@@ -1240,6 +1274,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 ':project -- Active project name, UUID, or unique UUID prefix:_default' \
@@ -1266,6 +1301,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 && ret=0
@@ -1291,6 +1327,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 && ret=0
@@ -1316,6 +1353,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 ":: :_sealtask__subcmd__projects__subcmd__sections_commands" \
@@ -1352,6 +1390,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 && ret=0
@@ -1409,6 +1448,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 '::project -- Project name, UUID, or unique UUID prefix; defaults to the current project:_default' \
@@ -1511,6 +1551,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 ":: :_sealtask__subcmd__tasks_commands" \
@@ -1555,6 +1596,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 && ret=0
@@ -1585,6 +1627,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 '::task -- Task title, UUID, or unique UUID prefix:_default' \
@@ -1616,6 +1659,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 && ret=0
@@ -1658,6 +1702,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 && ret=0
@@ -1687,6 +1732,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 '::task -- Task title, UUID, or unique UUID prefix:_default' \
@@ -1734,6 +1780,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 '::task -- Task title, UUID, or unique UUID prefix:_default' \
@@ -1768,6 +1815,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 '::task -- Task title, UUID, or unique UUID prefix:_default' \
@@ -1798,6 +1846,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 '::task -- Task title, UUID, or unique UUID prefix:_default' \
@@ -1828,6 +1877,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 '::task -- Task title, UUID, or unique UUID prefix:_default' \
@@ -1858,6 +1908,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 '::task -- Task title, UUID, or unique UUID prefix:_default' \
@@ -1888,6 +1939,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 '::task -- Task title, UUID, or unique UUID prefix:_default' \
@@ -1921,6 +1973,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 '::task -- Task title, UUID, or unique UUID prefix:_default' \
@@ -1947,6 +2000,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 ":: :_sealtask__subcmd__tasks__subcmd__attachments_commands" \
@@ -1987,6 +2041,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 '::task -- Task title, UUID, or unique UUID prefix:_default' \
@@ -2019,6 +2074,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 '::task -- Task title, UUID, or unique UUID prefix:_default' \
@@ -2050,6 +2106,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 '::task -- Task title, UUID, or unique UUID prefix:_default' \
@@ -2083,6 +2140,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 '::task -- Task title, UUID, or unique UUID prefix:_default' \
@@ -2253,6 +2311,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 && ret=0
@@ -2278,6 +2337,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help]' \
 '--help[Print help]' \
 ":: :_sealtask__subcmd__activity_commands" \
@@ -2313,6 +2373,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 && ret=0
@@ -2330,6 +2391,184 @@ _arguments "${_arguments_options[@]}" : \
         curcontext="${curcontext%:*:*}:sealtask-activity-help-command-$line[1]:"
         case $line[1] in
             (follow)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+        esac
+    ;;
+esac
+;;
+(browse)
+_arguments "${_arguments_options[@]}" : \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'--include-completed[Include completed tasks]' \
+'--include-archived[Include archived projects and tasks]' \
+'--password-stdin[Read the account password from stdin when no local unlock is available]' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+&& ret=0
+;;
+(cache)
+_arguments "${_arguments_options[@]}" : \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+":: :_sealtask__subcmd__cache_commands" \
+"*::: :->cache" \
+&& ret=0
+
+    case $state in
+    (cache)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:sealtask-cache-command-$line[1]:"
+        case $line[1] in
+            (status)
+_arguments "${_arguments_options[@]}" : \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+&& ret=0
+;;
+(verify)
+_arguments "${_arguments_options[@]}" : \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'--password-stdin[Read the account password from stdin when no local unlock is available]' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+&& ret=0
+;;
+(clear)
+_arguments "${_arguments_options[@]}" : \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+":: :_sealtask__subcmd__cache__subcmd__help_commands" \
+"*::: :->help" \
+&& ret=0
+
+    case $state in
+    (help)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:sealtask-cache-help-command-$line[1]:"
+        case $line[1] in
+            (status)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(verify)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(clear)
 _arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
@@ -2366,6 +2605,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 ":: :_sealtask__subcmd__batch_commands" \
@@ -2405,6 +2645,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 && ret=0
@@ -2451,7 +2692,6 @@ _arguments "${_arguments_options[@]}" : \
 '--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
 '--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
 '--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
-'--offline[Run local checks only and make no network requests]' \
 '--strict[Exit unsuccessfully when any check warns]' \
 '--include-keychain[Inspect the platform keychain (may trigger an operating-system prompt)]' \
 '(--format)--json[Emit compact JSON instead of human-readable output]' \
@@ -2461,6 +2701,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 && ret=0
@@ -2486,6 +2727,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 ":: :_sealtask__subcmd__config_commands" \
@@ -2520,6 +2762,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 && ret=0
@@ -2573,6 +2816,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 ":: :_sealtask__subcmd__profile_commands" \
@@ -2606,6 +2850,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 && ret=0
@@ -2631,6 +2876,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 ':name -- Profile name (letters, digits, '\''.'\'', '\''_'\'', and '\''-'\'' only):_default' \
@@ -2690,6 +2936,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help]' \
 '--help[Print help]' \
 ':work_list_id:_default' \
@@ -2716,6 +2963,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 ":: :_sealtask__subcmd__comments_commands" \
@@ -2753,6 +3001,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 '::task -- Task title, UUID, or unique UUID prefix:_default' \
@@ -2787,6 +3036,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 '::task -- Task title, UUID, or unique UUID prefix:_default' \
@@ -2821,6 +3071,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 '::task -- Task title, UUID, or unique UUID prefix:_default' \
@@ -2855,6 +3106,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 '::task -- Task title, UUID, or unique UUID prefix:_default' \
@@ -2921,6 +3173,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 ":: :_sealtask__subcmd__notes_commands" \
@@ -2957,6 +3210,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 && ret=0
@@ -2986,6 +3240,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 '::note -- Note title, UUID, or unique UUID prefix:_default' \
@@ -3021,6 +3276,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 && ret=0
@@ -3050,6 +3306,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 '::note -- Note title, UUID, or unique UUID prefix:_default' \
@@ -3084,6 +3341,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 '::note -- Note title, UUID, or unique UUID prefix:_default' \
@@ -3117,6 +3375,7 @@ _arguments "${_arguments_options[@]}" : \
 '--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
 '-h[Print help (see more with '\''--help'\'')]' \
 '--help[Print help (see more with '\''--help'\'')]' \
 '::note -- Note title, UUID, or unique UUID prefix:_default' \
@@ -3474,6 +3733,38 @@ _arguments "${_arguments_options[@]}" : \
     ;;
 esac
 ;;
+(browse)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(cache)
+_arguments "${_arguments_options[@]}" : \
+":: :_sealtask__subcmd__help__subcmd__cache_commands" \
+"*::: :->cache" \
+&& ret=0
+
+    case $state in
+    (cache)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:sealtask-help-cache-command-$line[1]:"
+        case $line[1] in
+            (status)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(verify)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(clear)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
 (batch)
 _arguments "${_arguments_options[@]}" : \
 ":: :_sealtask__subcmd__help__subcmd__batch_commands" \
@@ -3646,6 +3937,8 @@ _sealtask_commands() {
 'tasks:List, inspect, create, update, move, or delete tasks' \
 'stats:Show current dashboard task counts' \
 'activity:Inspect or continuously follow recent account activity' \
+'browse:Browse cached or live decrypted projects and tasks in a private TTY' \
+'cache:Inspect, verify, or clear the encrypted local read cache' \
 'batch:Validate, execute, and safely resume task mutations from JSON Lines' \
 'doctor:Diagnose local state, authentication, unlock, and API connectivity' \
 'config:Inspect resolved operator configuration' \
@@ -3861,6 +4154,66 @@ _sealtask__subcmd__batch__subcmd__run_commands() {
     local commands; commands=()
     _describe -t commands 'sealtask batch run commands' commands "$@"
 }
+(( $+functions[_sealtask__subcmd__browse_commands] )) ||
+_sealtask__subcmd__browse_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask browse commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__cache_commands] )) ||
+_sealtask__subcmd__cache_commands() {
+    local commands; commands=(
+'status:Show cache presence, mode, size, and modification time without decrypting content' \
+'verify:Authenticate, decrypt, and validate the complete local cache' \
+'clear:Remove the encrypted local cache for the active profile' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'sealtask cache commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__cache__subcmd__clear_commands] )) ||
+_sealtask__subcmd__cache__subcmd__clear_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask cache clear commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__cache__subcmd__help_commands] )) ||
+_sealtask__subcmd__cache__subcmd__help_commands() {
+    local commands; commands=(
+'status:Show cache presence, mode, size, and modification time without decrypting content' \
+'verify:Authenticate, decrypt, and validate the complete local cache' \
+'clear:Remove the encrypted local cache for the active profile' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'sealtask cache help commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__cache__subcmd__help__subcmd__clear_commands] )) ||
+_sealtask__subcmd__cache__subcmd__help__subcmd__clear_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask cache help clear commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__cache__subcmd__help__subcmd__help_commands] )) ||
+_sealtask__subcmd__cache__subcmd__help__subcmd__help_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask cache help help commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__cache__subcmd__help__subcmd__status_commands] )) ||
+_sealtask__subcmd__cache__subcmd__help__subcmd__status_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask cache help status commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__cache__subcmd__help__subcmd__verify_commands] )) ||
+_sealtask__subcmd__cache__subcmd__help__subcmd__verify_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask cache help verify commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__cache__subcmd__status_commands] )) ||
+_sealtask__subcmd__cache__subcmd__status_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask cache status commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__cache__subcmd__verify_commands] )) ||
+_sealtask__subcmd__cache__subcmd__verify_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask cache verify commands' commands "$@"
+}
 (( $+functions[_sealtask__subcmd__comments_commands] )) ||
 _sealtask__subcmd__comments_commands() {
     local commands; commands=(
@@ -3983,6 +4336,8 @@ _sealtask__subcmd__help_commands() {
 'tasks:List, inspect, create, update, move, or delete tasks' \
 'stats:Show current dashboard task counts' \
 'activity:Inspect or continuously follow recent account activity' \
+'browse:Browse cached or live decrypted projects and tasks in a private TTY' \
+'cache:Inspect, verify, or clear the encrypted local read cache' \
 'batch:Validate, execute, and safely resume task mutations from JSON Lines' \
 'doctor:Diagnose local state, authentication, unlock, and API connectivity' \
 'config:Inspect resolved operator configuration' \
@@ -4072,6 +4427,35 @@ _sealtask__subcmd__help__subcmd__batch_commands() {
 _sealtask__subcmd__help__subcmd__batch__subcmd__run_commands() {
     local commands; commands=()
     _describe -t commands 'sealtask help batch run commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__browse_commands] )) ||
+_sealtask__subcmd__help__subcmd__browse_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help browse commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__cache_commands] )) ||
+_sealtask__subcmd__help__subcmd__cache_commands() {
+    local commands; commands=(
+'status:Show cache presence, mode, size, and modification time without decrypting content' \
+'verify:Authenticate, decrypt, and validate the complete local cache' \
+'clear:Remove the encrypted local cache for the active profile' \
+    )
+    _describe -t commands 'sealtask help cache commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__cache__subcmd__clear_commands] )) ||
+_sealtask__subcmd__help__subcmd__cache__subcmd__clear_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help cache clear commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__cache__subcmd__status_commands] )) ||
+_sealtask__subcmd__help__subcmd__cache__subcmd__status_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help cache status commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__cache__subcmd__verify_commands] )) ||
+_sealtask__subcmd__help__subcmd__cache__subcmd__verify_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help cache verify commands' commands "$@"
 }
 (( $+functions[_sealtask__subcmd__help__subcmd__comments_commands] )) ||
 _sealtask__subcmd__help__subcmd__comments_commands() {

@@ -252,21 +252,45 @@ impl TryFrom<&[u8]> for Ciphertext {
 			return Err(Error::invalid_ciphertext("expected ciphertext"));
 		};
 
-		let mut segments = dec.bytes(len);
-
-		let Ok(Some(mut segment)) = segments.pull() else {
-			return Err(Error::invalid_ciphertext("bad ciphertext"));
+		let ciphertext = {
+			let mut segments = dec.bytes(len);
+			let Ok(Some(mut segment)) = segments.pull() else {
+				return Err(Error::invalid_ciphertext("bad ciphertext"));
+			};
+			let mut ciphertext: Vec<u8> = Vec::new();
+			while let Some(chunk) = segment
+				.pull(&mut buf[..])
+				.map_err(|e| Error::ciphertext_decoding("ciphertext", e))?
+			{
+				ciphertext.extend_from_slice(chunk);
+			}
+			ciphertext
 		};
 
-		let mut ciphertext: Vec<u8> = Vec::new();
-
-		while let Some(chunk) = segment
-			.pull(&mut buf[..])
-			.map_err(|e| Error::ciphertext_decoding("ciphertext", e))?
-		{
-			ciphertext.extend_from_slice(chunk);
+		if dec.offset() != b.len() - CIPHERTEXT_MAGIC.len() {
+			return Err(Error::invalid_ciphertext("trailing ciphertext bytes"));
 		}
 
 		Ok(Self { pubkey, ciphertext })
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn decrypt_rejects_trailing_bytes() {
+		let key = SharedStrongBox::generate_key();
+		let strong_box = SharedStrongBox::new(key);
+		let mut ciphertext = strong_box
+			.encrypt(b"private", b"context")
+			.expect("encrypt fixture");
+		ciphertext.push(0);
+
+		assert!(matches!(
+			strong_box.decrypt(&ciphertext, b"context"),
+			Err(Error::InvalidCiphertext(_))
+		));
 	}
 }

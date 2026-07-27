@@ -13,6 +13,10 @@ use crate::password::{
     auto_unlock_ttl_seconds, missing_unlock_error, persisted_unlock_error, read_required_password,
 };
 use crate::projections::read_error_to_public_error;
+use crate::read_cache::{
+    ReadCacheMode, ReadCacheNotice, ReadCacheOptions, ReadCacheQuery, ReadCacheRuntime,
+    ReadCacheSnapshot, ReadCacheStatus, ReadCacheVerification,
+};
 use crate::storage::StorageTransferPolicy;
 use crate::unlock_daemon::{SessionKey, fetch_data_key, session_key, unlock};
 use crate::{
@@ -21,7 +25,7 @@ use crate::{
 };
 use sealtask_client_api::{
     ApiCancellationToken, ApiTransportOptions, PublicApiClient, TaskReferenceSchemeResponse,
-    WorkListResponse, build_control_plane_http_client,
+    WorkListDetailResponse, WorkListResponse, build_control_plane_http_client,
 };
 use sealtask_client_auth::{
     Credentials, load_credentials_for_url, load_persisted_data_key, normalize_api_url,
@@ -88,6 +92,7 @@ pub struct RuntimeClient {
     pub(crate) storage_policy: StorageTransferPolicy,
     pub(crate) blocking_crypto: BlockingCryptoAdmission,
     pub(crate) upload_lifecycle: UploadLifecycleManager,
+    pub(crate) read_cache: ReadCacheRuntime,
     command_data_key: Arc<Mutex<Option<CachedDataKey>>>,
     #[cfg(test)]
     pub(crate) upload_test_workflow: Option<TestUploadWorkflow>,
@@ -180,6 +185,7 @@ impl RuntimeClient {
             storage_policy,
             blocking_crypto: BlockingCryptoAdmission::default(),
             upload_lifecycle: UploadLifecycleManager::default(),
+            read_cache: ReadCacheRuntime::new(ReadCacheOptions::disabled()),
             command_data_key: Arc::new(Mutex::new(None)),
             #[cfg(test)]
             upload_test_workflow: None,
@@ -212,7 +218,83 @@ impl RuntimeClient {
     }
 
     pub fn control_plane_http_client(&self) -> PublicResult<reqwest::Client> {
+        self.require_online("control-plane HTTP requests")?;
         build_control_plane_http_client(self.api_transport_options)
+    }
+
+    /// Enables encrypted online population or explicit offline reads.
+    ///
+    /// Existing constructors deliberately leave persistence disabled and online
+    /// behavior unchanged for SDK compatibility.
+    pub fn with_read_cache_options(mut self, options: ReadCacheOptions) -> PublicResult<Self> {
+        self.read_cache = ReadCacheRuntime::new(options);
+        Ok(self)
+    }
+
+    #[must_use]
+    pub fn read_cache_mode(&self) -> ReadCacheMode {
+        self.read_cache.mode()
+    }
+
+    #[must_use]
+    pub fn is_offline(&self) -> bool {
+        self.read_cache.is_offline()
+    }
+
+    pub fn read_cache_status(&self) -> PublicResult<ReadCacheStatus> {
+        self.read_cache.status()
+    }
+
+    pub async fn verify_read_cache(
+        &self,
+        password_stdin: bool,
+    ) -> PublicResult<ReadCacheVerification> {
+        let mut credentials = self.require_logged_in_credentials()?;
+        let data_key = self
+            .load_data_key(
+                &mut credentials,
+                password_stdin,
+                "Password required to verify the encrypted offline cache.",
+            )
+            .await?;
+        self.read_cache.verify(&credentials, &data_key)
+    }
+
+    pub fn clear_read_cache(&self) -> PublicResult<bool> {
+        self.read_cache.clear()
+    }
+
+    /// Conservatively invalidates all encrypted and invocation-local read
+    /// snapshots after a mutation known to have committed.
+    ///
+    /// This is primarily for callers that intentionally issue raw mutations
+    /// through `authenticated_api_client`.
+    pub fn invalidate_read_cache_after_mutation(&self) {
+        self.read_cache.invalidate_after_mutation();
+    }
+
+    /// Invalidates cached reads when a mutation succeeded or its result says it
+    /// may already have committed. Pre-send validation failures leave the
+    /// cache intact.
+    pub fn invalidate_read_cache_for_mutation_result<T>(&self, result: &PublicResult<T>) {
+        self.read_cache.invalidate_for_mutation_result(result);
+    }
+
+    #[must_use]
+    pub fn take_read_cache_notices(&self) -> Vec<ReadCacheNotice> {
+        self.read_cache.take_notices()
+    }
+
+    #[must_use]
+    pub fn last_read_cache_snapshot(&self) -> Option<ReadCacheSnapshot> {
+        self.read_cache.last_snapshot()
+    }
+
+    /// Removes and returns the bounded, query-deduplicated snapshots consumed
+    /// by this invocation, sorted by query for deterministic operator output.
+    #[must_use]
+    pub fn take_read_cache_snapshots(&self) -> Vec<ReadCacheSnapshot> {
+        self.read_cache.take_snapshots()
     }
 
     pub fn current_session_key(&self, credentials: &Credentials) -> PublicResult<SessionKey> {
@@ -230,6 +312,7 @@ impl RuntimeClient {
     }
 
     pub fn authenticated_api_client(&self) -> PublicResult<PublicApiClient> {
+        self.require_online("authenticated API requests")?;
         let credentials = self.require_logged_in_credentials()?;
         if credentials.is_refresh_expired() {
             return Err(PublicError::validation(
@@ -243,6 +326,7 @@ impl RuntimeClient {
         &self,
         credentials: Credentials,
     ) -> PublicResult<PublicApiClient> {
+        self.require_online("authenticated API requests")?;
         let client = PublicApiClient::with_credentials_and_options(
             &self.api_url,
             credentials,
@@ -252,6 +336,15 @@ impl RuntimeClient {
             Some(token) => client.with_cancellation_token(token),
             None => client,
         })
+    }
+
+    pub(crate) fn require_online(&self, action: &str) -> PublicResult<()> {
+        if self.is_offline() {
+            return Err(PublicError::validation(format!(
+                "{action} are unavailable in offline mode; reconnect and omit --offline"
+            )));
+        }
+        Ok(())
     }
 
     /// Waits up to `timeout` for active attachment uploads and their compensation to finish.
@@ -275,6 +368,7 @@ impl RuntimeClient {
         password_stdin: bool,
         prompt_message: &str,
     ) -> PublicResult<(PublicApiClient, WorkListContext)> {
+        self.require_online("mutating project data")?;
         let (client, context) = self
             .load_unlocked_work_list_context(work_list_id, password_stdin, prompt_message)
             .await?;
@@ -287,6 +381,7 @@ impl RuntimeClient {
         password_stdin: bool,
         prompt_message: &str,
     ) -> PublicResult<(PublicApiClient, UnlockedWorkListContext)> {
+        self.require_online("mutating project data")?;
         let mut credentials = self.require_logged_in_credentials()?;
         let data_key = self
             .load_data_key(&mut credentials, password_stdin, prompt_message)
@@ -307,6 +402,48 @@ impl RuntimeClient {
         Ok((client, context))
     }
 
+    pub(crate) async fn load_read_work_list_context(
+        &self,
+        work_list_id: Uuid,
+        password_stdin: bool,
+        prompt_message: &str,
+    ) -> PublicResult<(Credentials, SymmetricKey, UnlockedWorkListContext)> {
+        let mut credentials = self.require_logged_in_credentials()?;
+        let data_key = self
+            .load_data_key(&mut credentials, password_stdin, prompt_message)
+            .await?;
+        let query = ReadCacheQuery::WorkList { work_list_id };
+        let work_list: WorkListDetailResponse = if self.is_offline() {
+            self.read_cache
+                .read_offline(&credentials, &data_key, &query)?
+        } else if let Some(cached) = self.read_cache.memoized(&credentials, &query)? {
+            cached
+        } else {
+            let cache_guard = self.read_cache.begin_online_read(&credentials)?;
+            let mut client = self.api_client_with_credentials(credentials.clone())?;
+            let work_list = client.get_work_list(work_list_id).await?;
+            self.read_cache
+                .record_online(cache_guard.as_ref(), &data_key, &query, &work_list)?;
+            work_list
+        };
+        let scheme_history = if self.is_offline() {
+            Vec::new()
+        } else {
+            let mut client = self.api_client_with_credentials(credentials.clone())?;
+            load_task_reference_scheme_history(&mut client, &work_list.work_list).await
+        };
+        let context = UnlockedWorkListContext {
+            membership_id: work_list.work_list.membership.id,
+            work_list: self.context_from_work_list_detail(
+                &work_list,
+                &scheme_history,
+                Some(&data_key),
+            ),
+            data_key: data_key.clone(),
+        };
+        Ok((credentials, data_key, context))
+    }
+
     pub(crate) async fn load_unlocked_work_list_context_with_password(
         &self,
         work_list_id: Uuid,
@@ -314,6 +451,7 @@ impl RuntimeClient {
         prompt_message: &str,
         cancellation: &OperationCancellation,
     ) -> PublicResult<(PublicApiClient, UnlockedWorkListContext)> {
+        self.require_online("attachment uploads")?;
         let mut credentials = self.require_logged_in_credentials()?;
         let data_key = match password {
             Some(password) => {
@@ -404,6 +542,45 @@ impl RuntimeClient {
         let session_key = self.current_session_key(credentials)?;
         if let Some(data_key) = self.cached_data_key(&session_key)? {
             return Ok(data_key);
+        }
+
+        if self.is_offline() {
+            if let Some(data_key) =
+                with_current_credentials(credentials, |_| fetch_data_key(&session_key))?
+            {
+                self.cache_data_key(session_key, data_key.clone())?;
+                return Ok(data_key);
+            }
+            match self.load_data_key_from_persisted_secret(credentials, &session_key) {
+                Ok(Some(data_key)) => {
+                    self.cache_data_key(session_key, data_key.clone())?;
+                    return Ok(data_key);
+                }
+                Err(error) => return Err(persisted_unlock_error(prompt_message, error)),
+                Ok(None) => {}
+            }
+            if password_stdin {
+                return match data_key_ciphertext_version(&credentials.data_key_ciphertext)? {
+                    DataKeyCiphertextVersion::LegacyPasswordV1 => {
+                        let password =
+                            Zeroizing::new(read_required_password(true, Some(prompt_message))?);
+                        let ciphertext = credentials.data_key_ciphertext.clone();
+                        let data_key = self
+                            .blocking_crypto
+                            .run(
+                                move || decrypt_user_data_key(&password, &ciphertext),
+                                "offline data-key decryption task failed",
+                            )
+                            .await?;
+                        self.cache_data_key(session_key, data_key.clone())?;
+                        Ok(data_key)
+                    }
+                    DataKeyCiphertextVersion::OpaqueExportKeyV2 => Err(PublicError::validation(
+                        "offline unlock for this account requires an active unlock daemon or saved OS-keychain data key; password verification requires the network",
+                    )),
+                };
+            }
+            return Err(missing_unlock_error(prompt_message));
         }
 
         if password_stdin {
@@ -587,6 +764,37 @@ mod tests {
         assert_eq!(loaded, data_key);
     }
 
+    #[tokio::test]
+    async fn opaque_password_unlock_is_rejected_offline_before_an_http_connection() {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+            .await
+            .expect("listener");
+        let api_url = format!("http://{}", listener.local_addr().expect("address"));
+        let directory = tempfile::Builder::new()
+            .prefix(".sealtask-offline-opaque-test-")
+            .tempdir_in(".")
+            .expect("cache directory");
+        let runtime = RuntimeClient::new(&api_url)
+            .expect("runtime")
+            .with_read_cache_options(
+                ReadCacheOptions::offline(directory.path(), "default").expect("cache options"),
+            )
+            .expect("runtime options");
+        let mut credentials = test_opaque_credentials(&api_url);
+
+        let error = runtime
+            .decrypt_data_key_with_password(&mut credentials, "test password")
+            .await
+            .expect_err("OPAQUE password verification requires online mode");
+        assert!(error.to_string().contains("offline mode"));
+        assert!(
+            tokio::time::timeout(Duration::from_millis(100), listener.accept())
+                .await
+                .is_err(),
+            "offline OPAQUE rejection must occur before any network connection"
+        );
+    }
+
     #[test]
     fn command_data_key_cache_is_scoped_to_the_complete_session_key() {
         let runtime = RuntimeClient::new("http://127.0.0.1:9").expect("runtime");
@@ -650,6 +858,27 @@ mod tests {
             refresh_expires_at: chrono::Utc::now() + chrono::Duration::hours(2),
             user_id: Uuid::now_v7(),
             email: "legacy@example.com".to_string(),
+            data_key_ciphertext,
+        }
+    }
+
+    fn test_opaque_credentials(api_url: &str) -> Credentials {
+        let data_key_ciphertext = STANDARD_NO_PAD.encode(
+            SealedPayload {
+                version: 2,
+                ciphertext: vec![0x44; 48],
+            }
+            .to_bytes()
+            .expect("encode OPAQUE data-key payload"),
+        );
+        Credentials {
+            api_url: api_url.to_string(),
+            access_token: "access".to_string(),
+            refresh_token: "refresh".to_string(),
+            access_expires_at: chrono::Utc::now() + chrono::Duration::hours(1),
+            refresh_expires_at: chrono::Utc::now() + chrono::Duration::hours(2),
+            user_id: Uuid::now_v7(),
+            email: "opaque@example.com".to_string(),
             data_key_ciphertext,
         }
     }

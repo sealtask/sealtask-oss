@@ -130,18 +130,21 @@ impl RuntimeClient {
         args: UploadTaskAttachmentArgs,
         cancellation: OperationCancellation,
     ) -> PublicResult<AgentAttachment> {
+        self.require_online("attachment uploads")?;
         #[cfg(test)]
         if let Some(workflow) = &self.upload_test_workflow {
-            return await_lifecycle_owned_upload(
+            let result = await_lifecycle_owned_upload(
                 &self.upload_lifecycle,
                 workflow.start(cancellation.clone()),
                 cancellation,
             )
             .await;
+            self.read_cache.invalidate_for_mutation_result(&result);
+            return result;
         }
         let worker_runtime = self.clone();
         let worker_cancellation = cancellation.clone();
-        await_lifecycle_owned_upload(
+        let result = await_lifecycle_owned_upload(
             &self.upload_lifecycle,
             async move {
                 worker_runtime
@@ -150,7 +153,9 @@ impl RuntimeClient {
             },
             cancellation,
         )
-        .await
+        .await;
+        self.read_cache.invalidate_for_mutation_result(&result);
+        result
     }
 
     async fn upload_task_attachment_owned(
@@ -389,7 +394,7 @@ impl RuntimeClient {
         let update_result = client
             .update_task(args.work_list_id, args.task_id, &prepared.update)
             .await;
-        match update_result {
+        let result = match update_result {
             Ok(_) => Ok(()),
             Err(primary) if mutation_outcome_is_ambiguous(&primary) => {
                 reconcile_deleted_task_attachment(
@@ -407,7 +412,9 @@ impl RuntimeClient {
                 .await
             }
             Err(primary) => Err(primary),
-        }
+        };
+        self.read_cache.invalidate_for_mutation_result(&result);
+        result
     }
 }
 

@@ -386,15 +386,17 @@ async fn run_project_lifecycle(
 ) -> CliResult<()> {
     if raw {
         let mut client = runtime.authenticated_api_client()?;
-        let work_list = if archive {
-            with_progress("Archiving project…", client.archive_work_list(work_list_id)).await?
+        let result = if archive {
+            with_progress("Archiving project…", client.archive_work_list(work_list_id)).await
         } else {
             with_progress(
                 "Restoring project…",
                 client.unarchive_work_list(work_list_id),
             )
-            .await?
+            .await
         };
+        runtime.invalidate_read_cache_for_mutation_result(&result);
+        let work_list = result?;
         return if mutation_output_enabled(format) {
             print_raw_work_lists(std::slice::from_ref(&work_list), format, true)
         } else {

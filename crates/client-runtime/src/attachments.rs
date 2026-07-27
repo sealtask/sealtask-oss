@@ -36,6 +36,7 @@ impl RuntimeClient {
         attachment_id: Uuid,
         password_stdin: bool,
     ) -> PublicResult<ReadableAttachment> {
+        self.require_online("attachment reads")?;
         let (payload_permit, resolved) = self
             .resolve_task_attachment_download(work_list_id, task_id, attachment_id, password_stdin)
             .await?;
@@ -62,6 +63,7 @@ impl RuntimeClient {
         attachment_id: Uuid,
         password_stdin: bool,
     ) -> PublicResult<DownloadedAttachment> {
+        self.require_online("attachment downloads")?;
         let (payload_permit, resolved) = self
             .resolve_task_attachment_download(work_list_id, task_id, attachment_id, password_stdin)
             .await?;

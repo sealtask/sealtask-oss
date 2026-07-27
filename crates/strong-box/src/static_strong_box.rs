@@ -317,7 +317,9 @@ impl TryFrom<&[u8]> for Ciphertext {
 			.pull(&mut buf[..])
 			.map_err(|e| Error::ciphertext_decoding("nonce", e))?
 		{
-			// Is this necessary?  Probably better to be safe than sorry
+			if chunk.len() != nonce.len() {
+				return Err(Error::invalid_ciphertext("incorrect nonce length"));
+			}
 			nonce[..].copy_from_slice(chunk);
 		} else {
 			return Err(Error::invalid_ciphertext("short nonce"));
@@ -331,19 +333,23 @@ impl TryFrom<&[u8]> for Ciphertext {
 			return Err(Error::invalid_ciphertext("expected ciphertext"));
 		};
 
-		let mut segments = dec.bytes(len);
-
-		let Ok(Some(mut segment)) = segments.pull() else {
-			return Err(Error::invalid_ciphertext("bad ciphertext"));
+		let ciphertext = {
+			let mut segments = dec.bytes(len);
+			let Ok(Some(mut segment)) = segments.pull() else {
+				return Err(Error::invalid_ciphertext("bad ciphertext"));
+			};
+			let mut ciphertext: Vec<u8> = Vec::new();
+			while let Some(chunk) = segment
+				.pull(&mut buf[..])
+				.map_err(|e| Error::ciphertext_decoding("ciphertext", e))?
+			{
+				ciphertext.extend_from_slice(chunk);
+			}
+			ciphertext
 		};
 
-		let mut ciphertext: Vec<u8> = Vec::new();
-
-		while let Some(chunk) = segment
-			.pull(&mut buf[..])
-			.map_err(|e| Error::ciphertext_decoding("ciphertext", e))?
-		{
-			ciphertext.extend_from_slice(chunk);
+		if dec.offset() != b.len() - CIPHERTEXT_MAGIC.len() {
+			return Err(Error::invalid_ciphertext("trailing ciphertext bytes"));
 		}
 
 		Ok(Self {
@@ -351,5 +357,43 @@ impl TryFrom<&[u8]> for Ciphertext {
 			nonce,
 			ciphertext,
 		})
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn decrypt_rejects_trailing_bytes() {
+		let key: Key = Box::new([0x41; 32]).into();
+		let strong_box = StaticStrongBox::new(key.clone(), [key]);
+		let mut ciphertext = strong_box
+			.encrypt(b"private", b"context")
+			.expect("encrypt fixture");
+		ciphertext.push(0);
+
+		assert!(matches!(
+			strong_box.decrypt(&ciphertext, b"context"),
+			Err(Error::InvalidCiphertext(_))
+		));
+	}
+
+	#[test]
+	fn decrypt_rejects_nonstandard_nonce_length_without_panicking() {
+		let key: Key = Box::new([0x42; 32]).into();
+		let strong_box = StaticStrongBox::new(key.clone(), [key]);
+		let mut ciphertext = strong_box
+			.encrypt(b"private", b"context")
+			.expect("encrypt fixture");
+		let nonce_header_offset = CIPHERTEXT_MAGIC.len() + 1 + 1 + 16;
+		assert_eq!(ciphertext[nonce_header_offset], 0x4c);
+		ciphertext[nonce_header_offset] = 0x4d;
+		ciphertext.insert(nonce_header_offset + 1, 0);
+
+		assert!(matches!(
+			strong_box.decrypt(&ciphertext, b"context"),
+			Err(Error::InvalidCiphertext(_))
+		));
 	}
 }

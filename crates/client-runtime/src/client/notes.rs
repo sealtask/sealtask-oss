@@ -14,11 +14,12 @@ use uuid::Uuid;
 
 use crate::inputs::{CreateNoteArgs, DeleteNoteArgs, UpdateNoteArgs};
 use crate::models::AgentNote;
+use crate::read_cache::ReadCacheQuery;
 use crate::reconciliation::mutation_outcome_is_ambiguous;
 
 use self::crypto::{PreparedNoteCreate, PreparedNoteDelete, PreparedNoteUpdate};
 use self::reconciliation::{
-    MUTATION_RECONCILIATION_TIMEOUT, ProjectedNotePage, add_received_note_page_to_encoded_budget,
+    MUTATION_RECONCILIATION_TIMEOUT, add_received_note_page_to_encoded_budget,
     reconcile_delete_note, validate_next_note_cursor, validate_note_page_size,
 };
 use super::RuntimeClient;
@@ -57,69 +58,97 @@ impl RuntimeClient {
         work_list_id: Uuid,
         password_stdin: bool,
     ) -> PublicResult<Vec<AgentNote>> {
-        let (mut client, context) = self
-            .load_unlocked_work_list_context(
+        let (credentials, data_key, context) = self
+            .load_read_work_list_context(
                 work_list_id,
                 password_stdin,
                 "Password required to decrypt note data.",
             )
             .await?;
-        let mut notes = Vec::new();
-        let mut cursor = None;
-        let mut seen_cursors = HashSet::new();
-        let mut encoded_bytes = 0usize;
-        let mut payload_permit = self.blocking_crypto.admit_large_payload().await?;
-        for _ in 0..MAX_NOTE_COLLECTION_PAGES {
-            let response = client
-                .list_notes_page_encoded(work_list_id, cursor.as_deref(), MAX_NOTE_PAGE_ITEMS)
-                .await?;
-            add_received_note_page_to_encoded_budget(&mut encoded_bytes, response.encoded_len())?;
-            let runtime = self.clone();
-            let page_context = context.clone();
-            let (next_permit, page) = self
-                .blocking_crypto
-                .run_with_large_payload(
-                    payload_permit,
-                    move || {
-                        let page = response.decode()?;
-                        validate_note_page_size(page.notes.len())?;
-                        let item_count = page.notes.len();
-                        let notes = page
-                            .notes
-                            .into_iter()
-                            .map(|note| runtime.project_note(note, &page_context))
-                            .collect();
-                        Ok(ProjectedNotePage {
-                            notes,
-                            next_cursor: page.next_cursor,
-                            item_count,
-                        })
-                    },
-                    "note page parsing and decryption task failed",
-                )
-                .await?;
-            payload_permit = next_permit;
-            if notes
-                .len()
-                .checked_add(page.item_count)
-                .is_none_or(|count| count > MAX_NOTE_COLLECTION_ITEMS)
-            {
+        let query = ReadCacheQuery::Notes { work_list_id };
+        let raw_notes: Vec<sealtask_client_api::NoteResponse> = if self.is_offline() {
+            self.read_cache
+                .read_offline(&credentials, &data_key, &query)?
+        } else if let Some(cached) = self.read_cache.memoized(&credentials, &query)? {
+            cached
+        } else {
+            let cache_guard = self.read_cache.begin_online_read(&credentials)?;
+            let mut client = self.api_client_with_credentials(credentials.clone())?;
+            let mut raw_notes = Vec::new();
+            let mut cursor = None;
+            let mut seen_cursors = HashSet::new();
+            let mut encoded_bytes = 0usize;
+            let mut payload_permit = self.blocking_crypto.admit_large_payload().await?;
+            let mut finished = false;
+            for _ in 0..MAX_NOTE_COLLECTION_PAGES {
+                let response = client
+                    .list_notes_page_encoded(work_list_id, cursor.as_deref(), MAX_NOTE_PAGE_ITEMS)
+                    .await?;
+                add_received_note_page_to_encoded_budget(
+                    &mut encoded_bytes,
+                    response.encoded_len(),
+                )?;
+                let (next_permit, page) = self
+                    .blocking_crypto
+                    .run_with_large_payload(
+                        payload_permit,
+                        move || {
+                            let page = response.decode()?;
+                            validate_note_page_size(page.notes.len())?;
+                            Ok(page)
+                        },
+                        "note page parsing task failed",
+                    )
+                    .await?;
+                payload_permit = next_permit;
+                if raw_notes
+                    .len()
+                    .checked_add(page.notes.len())
+                    .is_none_or(|count| count > MAX_NOTE_COLLECTION_ITEMS)
+                {
+                    return Err(PublicError::unexpected(format!(
+                        "note list exceeds the {MAX_NOTE_COLLECTION_ITEMS}-item safety limit"
+                    )));
+                }
+                let page_was_empty = page.notes.is_empty();
+                raw_notes.extend(page.notes);
+                match validate_next_note_cursor(
+                    page.next_cursor,
+                    page_was_empty,
+                    &mut seen_cursors,
+                )? {
+                    Some(next_cursor) => cursor = Some(next_cursor),
+                    None => {
+                        finished = true;
+                        break;
+                    }
+                }
+            }
+            if !finished {
                 return Err(PublicError::unexpected(format!(
-                    "note list exceeds the {MAX_NOTE_COLLECTION_ITEMS}-item safety limit"
+                    "note list exceeds the {MAX_NOTE_COLLECTION_PAGES}-page safety limit"
                 )));
             }
-            let page_was_empty = page.notes.is_empty();
-            notes.extend(page.notes);
-
-            match validate_next_note_cursor(page.next_cursor, page_was_empty, &mut seen_cursors)? {
-                Some(next_cursor) => cursor = Some(next_cursor),
-                None => return Ok(notes),
-            }
-        }
-
-        Err(PublicError::unexpected(format!(
-            "note list exceeds the {MAX_NOTE_COLLECTION_PAGES}-page safety limit"
-        )))
+            self.read_cache
+                .record_online(cache_guard.as_ref(), &data_key, &query, &raw_notes)?;
+            raw_notes
+        };
+        let payload_permit = self.blocking_crypto.admit_large_payload().await?;
+        let runtime = self.clone();
+        let (_, notes) = self
+            .blocking_crypto
+            .run_with_large_payload(
+                payload_permit,
+                move || {
+                    Ok(raw_notes
+                        .into_iter()
+                        .map(|note| runtime.project_note(note, &context))
+                        .collect())
+                },
+                "note decryption task failed",
+            )
+            .await?;
+        Ok(notes)
     }
 
     pub async fn get_note(
@@ -128,25 +157,39 @@ impl RuntimeClient {
         note_id: Uuid,
         password_stdin: bool,
     ) -> PublicResult<AgentNote> {
-        let (mut client, context) = self
-            .load_unlocked_work_list_context(
+        let (credentials, data_key, context) = self
+            .load_read_work_list_context(
                 work_list_id,
                 password_stdin,
                 "Password required to decrypt note data.",
             )
             .await?;
         let payload_permit = self.blocking_crypto.admit_large_payload().await?;
-        let response = client.get_note_encoded(work_list_id, note_id).await?;
+        let query = ReadCacheQuery::Note {
+            work_list_id,
+            note_id,
+        };
+        let note: sealtask_client_api::NoteResponse = if self.is_offline() {
+            self.read_cache
+                .read_offline(&credentials, &data_key, &query)?
+        } else if let Some(cached) = self.read_cache.memoized(&credentials, &query)? {
+            cached
+        } else {
+            let cache_guard = self.read_cache.begin_online_read(&credentials)?;
+            let mut client = self.api_client_with_credentials(credentials.clone())?;
+            let response = client.get_note_encoded(work_list_id, note_id).await?;
+            let note = response.decode()?;
+            self.read_cache
+                .record_online(cache_guard.as_ref(), &data_key, &query, &note)?;
+            note
+        };
         let runtime = self.clone();
         let (_, note) = self
             .blocking_crypto
             .run_with_large_payload(
                 payload_permit,
-                move || {
-                    let note = response.decode()?;
-                    Ok(runtime.project_note(note, &context))
-                },
-                "note parsing and decryption task failed",
+                move || Ok(runtime.project_note(note, &context)),
+                "note decryption task failed",
             )
             .await?;
         Ok(note)
@@ -180,7 +223,7 @@ impl RuntimeClient {
                 "note creation encryption and encoding task failed",
             )
             .await?;
-        match client
+        let result = match client
             .create_note_encoded(work_list_id, prepared.encoded)
             .await
         {
@@ -216,7 +259,9 @@ impl RuntimeClient {
                 .await
             }
             Err(primary) => Err(primary),
-        }
+        };
+        self.read_cache.invalidate_for_mutation_result(&result);
+        result
     }
 
     pub async fn update_note(&self, args: UpdateNoteArgs) -> PublicResult<AgentNote> {
@@ -281,7 +326,7 @@ impl RuntimeClient {
                 "note update parsing, encryption, and encoding task failed",
             )
             .await?;
-        match client
+        let result = match client
             .update_note_encoded(work_list_id, note_id, prepared.encoded)
             .await
         {
@@ -321,7 +366,9 @@ impl RuntimeClient {
                 .await
             }
             Err(primary) => Err(primary),
-        }
+        };
+        self.read_cache.invalidate_for_mutation_result(&result);
+        result
     }
 
     pub async fn delete_note(&self, args: DeleteNoteArgs) -> PublicResult<()> {
@@ -342,7 +389,7 @@ impl RuntimeClient {
                 "note deletion parsing and encoding task failed",
             )
             .await?;
-        match client
+        let result = match client
             .delete_note_encoded(args.work_list_id, args.note_id, prepared.encoded)
             .await
         {
@@ -373,7 +420,9 @@ impl RuntimeClient {
                 .await
             }
             Err(primary) => Err(primary),
-        }
+        };
+        self.read_cache.invalidate_for_mutation_result(&result);
+        result
     }
 }
 

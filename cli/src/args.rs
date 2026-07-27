@@ -156,6 +156,10 @@ pub(crate) struct Cli {
     )]
     pub(crate) retry: u8,
 
+    /// Read only from the encrypted local snapshot and never access the network.
+    #[arg(long, env = "SEALTASK_OFFLINE", global = true)]
+    pub(crate) offline: bool,
+
     /// Isolate credentials and unlock state under a named profile.
     #[arg(long, env = "SEALTASK_PROFILE", global = true, value_name = "NAME")]
     pub(crate) profile: Option<String>,
@@ -311,6 +315,13 @@ pub(crate) enum Command {
         #[command(subcommand)]
         command: ActivityCommand,
     },
+    /// Browse cached or live decrypted projects and tasks in a private TTY.
+    Browse(BrowseArgs),
+    /// Inspect, verify, or clear the encrypted local read cache.
+    Cache {
+        #[command(subcommand)]
+        command: CacheCommand,
+    },
     /// Validate, execute, and safely resume task mutations from JSON Lines.
     Batch {
         #[command(subcommand)]
@@ -318,9 +329,6 @@ pub(crate) enum Command {
     },
     /// Diagnose local state, authentication, unlock, and API connectivity.
     Doctor {
-        /// Run local checks only and make no network requests.
-        #[arg(long)]
-        offline: bool,
         /// Exit unsuccessfully when any check warns.
         #[arg(long)]
         strict: bool,
@@ -354,6 +362,33 @@ pub(crate) enum Command {
         #[command(subcommand)]
         command: NotesCommand,
     },
+}
+
+#[derive(Args, Debug)]
+pub(crate) struct BrowseArgs {
+    /// Include completed tasks.
+    #[arg(long)]
+    pub(crate) include_completed: bool,
+    /// Include archived projects and tasks.
+    #[arg(long)]
+    pub(crate) include_archived: bool,
+    /// Read the account password from stdin when no local unlock is available.
+    #[arg(long)]
+    pub(crate) password_stdin: bool,
+}
+
+#[derive(Subcommand, Debug)]
+pub(crate) enum CacheCommand {
+    /// Show cache presence, mode, size, and modification time without decrypting content.
+    Status,
+    /// Authenticate, decrypt, and validate the complete local cache.
+    Verify {
+        /// Read the account password from stdin when no local unlock is available.
+        #[arg(long)]
+        password_stdin: bool,
+    },
+    /// Remove the encrypted local cache for the active profile.
+    Clear,
 }
 
 #[derive(Subcommand, Debug)]

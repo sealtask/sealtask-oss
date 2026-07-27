@@ -927,17 +927,21 @@ mod tests {
         let server = tokio::spawn(async move {
             serve_with_timeout(&server_path, Duration::from_millis(25)).await
         });
-        for _ in 0..100 {
-            if socket_path.exists() {
-                break;
+        let readiness_deadline = Instant::now() + Duration::from_secs(1);
+        let mut partial = loop {
+            match tokio::net::UnixStream::connect(&socket_path).await {
+                Ok(stream) => break stream,
+                Err(error)
+                    if matches!(
+                        error.kind(),
+                        std::io::ErrorKind::NotFound | std::io::ErrorKind::ConnectionRefused
+                    ) && Instant::now() < readiness_deadline =>
+                {
+                    tokio::time::sleep(Duration::from_millis(2)).await;
+                }
+                Err(error) => panic!("daemon listener did not become ready: {error}"),
             }
-            tokio::time::sleep(Duration::from_millis(2)).await;
-        }
-        assert!(socket_path.exists(), "daemon socket did not become ready");
-
-        let mut partial = tokio::net::UnixStream::connect(&socket_path)
-            .await
-            .expect("connect partial daemon client");
+        };
         partial
             .write_all(b"{")
             .await

@@ -13,6 +13,7 @@ mod models;
 mod operation_cancellation;
 mod password;
 mod projections;
+mod read_cache;
 mod reconciliation;
 mod storage;
 mod unlock_daemon;
@@ -37,6 +38,10 @@ pub use models::{
     TaskReferenceHistoryAvailability,
 };
 pub use operation_cancellation::OperationCancellation;
+pub use read_cache::{
+    ReadCacheMode, ReadCacheNotice, ReadCacheOptions, ReadCacheSnapshot, ReadCacheStatus,
+    ReadCacheVerification,
+};
 pub use unlock_daemon::{
     SessionKey, UnlockStatus, clear_session, fetch_data_key, lock, serve, session_key, socket_path,
     unlock, unlock_status,

@@ -283,6 +283,100 @@ shell completion remains static so decrypted names are never fetched while the
 shell is completing a command. Pass an exact UUID, `id:<prefix>`, or exact name
 directly in automation.
 
+### Release D8: encrypted read cache and offline mode
+
+Successful online project, task, comment, and note reads automatically refresh
+a query-specific encrypted snapshot for the active profile. Repeated identical
+reads within one invocation are memoized in memory. Ordinary online mode always
+treats the API as authoritative: it never silently falls back to a persistent
+snapshot when the network or server fails. A cache-write failure is reported as
+a warning after the authoritative result has been returned.
+
+Use `--offline` only when stale-but-explicit local data is preferable to a
+network attempt:
+
+```bash
+# Populate the exact views while online.
+sealtask projects list
+sealtask tasks list --include-completed
+sealtask notes list
+
+# Later, read only matching encrypted snapshots.
+sealtask --offline projects list
+sealtask --offline tasks list --include-completed
+sealtask --offline notes list
+sealtask --offline browse
+```
+
+Snapshot keys include the command scope and relevant filters, so an offline
+miss asks the operator to reconnect and run that exact read online first. Every
+successful offline command that consumes cached data reports the capture time
+and age of each distinct snapshot it used and confirms that no network request
+was attempted. These warnings make staleness visible but are not rollback
+protection.
+
+The offline allowlist is deliberately narrow:
+
+- cached reads: `projects` / `projects list`, `projects get`,
+  `projects sections list`, `tasks list`, `tasks get`, `comments list`,
+  `notes list`, and `notes get`
+- attended cached discovery: `pick project`, `pick task`, and `browse`
+- local cache and session inspection: `cache status`, `cache verify`,
+  `cache clear`, `auth status`, `doctor`, and `projects current`
+- local discovery and configuration: `info`, `schema`, `config`, `profile`,
+  `completion`, and `man`
+
+Everything else is rejected before authentication or network setup. This
+includes task/comment/note/project mutations, project selection changes,
+login/logout/unlock actions, `me`, `stats`, project audit and raw API modes,
+attachments, activity and watch streams, and batch execution. Remove
+`--offline` explicitly to run one of those commands.
+
+Inspect and maintain the cache without exposing its contents:
+
+```bash
+sealtask cache status
+sealtask --offline cache verify
+printf '%s\n' "$SEALTASK_PASSWORD" \
+  | sealtask --offline cache verify --password-stdin
+sealtask cache clear
+```
+
+`cache status` reports presence, ciphertext size, and modification time without
+decrypting or prompting. `cache verify` authenticates, decrypts, and validates
+the complete bounded cache before reporting its schema, entry count, and
+capture range. `cache clear` removes the active profile's encrypted cache and
+also clears invocation-local copies.
+
+`browse` is a read-only, in-process terminal view for choosing a project and
+task and viewing its description, checklist, comments, and attachment names.
+It requires an attended controlling TTY and rejects `--non-interactive`.
+Decrypted labels and documents never enter redirected stdout or stderr, are
+never handed to another process, and are not stored in a plaintext temporary
+file. Unix renders directly through `/dev/tty`. Windows renders through an
+attended stderr console handle and refuses to start if stdin or stderr is
+redirected. Use `sealtask browse` for authoritative online reads and
+`sealtask --offline browse` for cached reads.
+On Unix, scoped SIGINT, SIGTERM, SIGHUP, and SIGQUIT handling clears the
+CLI-owned terminal region, restores the cursor and prior handlers, and exits
+with the standard interrupted status.
+
+The snapshot content is one bounded StrongBox ciphertext with no plaintext
+content or query-metadata sidecar. A private lock file contains only an opaque
+invalidation generation used to prevent concurrent reads from resurrecting
+snapshots after a mutation or account transition. The cache encryption key and
+authenticated context are bound to the normalized API URL, account UUID,
+active profile, and current decoded data-key ciphertext bytes, so moving a
+cache across any of those boundaries fails authentication. At-rest protection
+still depends on keeping the decrypted account data key unavailable: a process,
+unlock daemon, or OS keychain entry that can supply that key can also decrypt
+the cache. Offline mode never runs the OPAQUE version 2 export-key exchange, so
+a version 2 account cannot use a password alone while offline; it needs an
+already available unlock-daemon or OS-keychain data key. The format does not
+prevent replacement with an older valid cache, and `cache clear` cannot
+guarantee secure deletion from copy-on-write filesystems, snapshots, or
+backups.
+
 ### Secure editor and body-file input
 
 Long-form titles and Markdown bodies can stay out of shell history and process
