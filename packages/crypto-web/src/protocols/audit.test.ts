@@ -155,46 +155,4 @@ describe('audit protocol', () => {
     })
   })
 
-  it('keeps external-reference audit narratives fixed and value-free', () => {
-    expect(
-      createAuditPatchSemantics({
-        type: 'work_list.external_references_updated',
-        context: {},
-      }),
-    ).toMatchObject({
-      fields: [
-        {
-          field: 'work_list_external_references_ciphertext',
-          changeKind: 'update',
-        },
-      ],
-      envelope: {
-        kind: 'audit.work_list_external_references_updated',
-        body: {
-          narrativeKey:
-            'features.audit.narratives.workListExternalReferencesUpdated',
-        },
-      },
-    })
-    expect(
-      createAuditPatchSemantics({
-        type: 'task.external_references_updated',
-        context: {},
-      }),
-    ).toMatchObject({
-      fields: [
-        {
-          field: 'task_external_references_ciphertext',
-          changeKind: 'update',
-        },
-      ],
-      envelope: {
-        kind: 'audit.task_external_references_updated',
-        body: {
-          narrativeKey:
-            'features.audit.narratives.taskExternalReferencesUpdated',
-        },
-      },
-    })
-  })
 })

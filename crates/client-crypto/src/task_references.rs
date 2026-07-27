@@ -13,9 +13,6 @@ use super::{
 };
 
 pub const TASK_REFERENCE_SCHEME_CONTEXT: &[u8] = b"worklist.task_reference_scheme.v1";
-pub const WORK_LIST_EXTERNAL_REFERENCES_CONTEXT: &[u8] =
-    b"worklist.work_list_external_references.v1";
-pub const TASK_EXTERNAL_REFERENCES_CONTEXT: &[u8] = b"worklist.task_external_references.v1";
 
 pub const TASK_REFERENCE_SCHEME_PLAINTEXT_BYTES: usize = 512;
 pub const TASK_REFERENCE_SCHEME_AEAD_CIPHERTEXT_BYTES: usize =
@@ -32,16 +29,8 @@ pub const TASK_REFERENCE_REVISION_MAX: i64 =
     TASK_REFERENCE_ORDINARY_REVISION_MAX + TASK_REFERENCE_REPAIR_REVISION_MAX;
 pub const TASK_REFERENCE_SAFE_INTEGER_MAX: i64 = 9_007_199_254_740_991;
 
-pub const EXTERNAL_REFERENCE_ITEMS_MAX: usize = 32;
-pub const EXTERNAL_REFERENCE_LABEL_MAX_BYTES: usize = 64;
-pub const EXTERNAL_REFERENCE_VALUE_MAX_BYTES: usize = 256;
-pub const EXTERNAL_REFERENCE_SYSTEM_MAX_BYTES: usize = 128;
-
 const TASK_REFERENCE_SCHEME_KIND: &str = "task_reference_scheme";
-const WORK_LIST_EXTERNAL_REFERENCES_KIND: &str = "work_list_external_references";
-const TASK_EXTERNAL_REFERENCES_KIND: &str = "task_external_references";
 const TASK_REFERENCE_SCHEME_VERSION: u8 = 1;
-const EXTERNAL_REFERENCES_VERSION: u8 = 1;
 const TASK_REFERENCE_SEPARATOR: &str = "-";
 
 #[derive(Clone, Eq, PartialEq)]
@@ -151,153 +140,6 @@ struct TaskReferenceSchemeWireV1 {
     padding: Vec<u8>,
 }
 
-#[derive(Clone, Serialize, Deserialize, Eq, PartialEq)]
-#[serde(deny_unknown_fields)]
-pub struct ExternalReferenceItemV1 {
-    pub label: String,
-    pub value: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub system: Option<String>,
-}
-
-impl std::fmt::Debug for ExternalReferenceItemV1 {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        formatter
-            .debug_struct("ExternalReferenceItemV1")
-            .field("label", &"<redacted>")
-            .field("value", &"<redacted>")
-            .field("system", &self.system.as_ref().map(|_| "<redacted>"))
-            .finish()
-    }
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-struct WorkListExternalReferencesWireV1 {
-    kind: String,
-    version: u8,
-    work_list_id: String,
-    items: Vec<ExternalReferenceItemV1>,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-struct TaskExternalReferencesWireV1 {
-    kind: String,
-    version: u8,
-    work_list_id: String,
-    task_id: String,
-    items: Vec<ExternalReferenceItemV1>,
-}
-
-#[derive(Clone, Eq, PartialEq)]
-pub struct WorkListExternalReferencesV1 {
-    pub kind: String,
-    pub version: u8,
-    pub work_list_id: Uuid,
-    pub items: Vec<ExternalReferenceItemV1>,
-}
-
-impl std::fmt::Debug for WorkListExternalReferencesV1 {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        formatter
-            .debug_struct("WorkListExternalReferencesV1")
-            .field("kind", &self.kind)
-            .field("version", &self.version)
-            .field("work_list_id", &self.work_list_id)
-            .field("items", &format_args!("<redacted:{}>", self.items.len()))
-            .finish()
-    }
-}
-
-impl WorkListExternalReferencesV1 {
-    pub fn new(work_list_id: Uuid, items: Vec<ExternalReferenceItemV1>) -> PublicResult<Self> {
-        let envelope = Self {
-            kind: WORK_LIST_EXTERNAL_REFERENCES_KIND.to_string(),
-            version: EXTERNAL_REFERENCES_VERSION,
-            work_list_id,
-            items,
-        };
-        envelope.validate(work_list_id)?;
-        Ok(envelope)
-    }
-
-    pub fn validate(&self, expected_work_list_id: Uuid) -> PublicResult<()> {
-        validate_envelope_header(
-            &self.kind,
-            WORK_LIST_EXTERNAL_REFERENCES_KIND,
-            self.version,
-            EXTERNAL_REFERENCES_VERSION,
-        )?;
-        ensure_uuid_matches(
-            self.work_list_id,
-            expected_work_list_id,
-            "external references work list",
-        )?;
-        validate_external_reference_items(&self.items)
-    }
-}
-
-#[derive(Clone, Eq, PartialEq)]
-pub struct TaskExternalReferencesV1 {
-    pub kind: String,
-    pub version: u8,
-    pub work_list_id: Uuid,
-    pub task_id: Uuid,
-    pub items: Vec<ExternalReferenceItemV1>,
-}
-
-impl std::fmt::Debug for TaskExternalReferencesV1 {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        formatter
-            .debug_struct("TaskExternalReferencesV1")
-            .field("kind", &self.kind)
-            .field("version", &self.version)
-            .field("work_list_id", &self.work_list_id)
-            .field("task_id", &self.task_id)
-            .field("items", &format_args!("<redacted:{}>", self.items.len()))
-            .finish()
-    }
-}
-
-impl TaskExternalReferencesV1 {
-    pub fn new(
-        work_list_id: Uuid,
-        task_id: Uuid,
-        items: Vec<ExternalReferenceItemV1>,
-    ) -> PublicResult<Self> {
-        let envelope = Self {
-            kind: TASK_EXTERNAL_REFERENCES_KIND.to_string(),
-            version: EXTERNAL_REFERENCES_VERSION,
-            work_list_id,
-            task_id,
-            items,
-        };
-        envelope.validate(work_list_id, task_id)?;
-        Ok(envelope)
-    }
-
-    pub fn validate(
-        &self,
-        expected_work_list_id: Uuid,
-        expected_task_id: Uuid,
-    ) -> PublicResult<()> {
-        validate_envelope_header(
-            &self.kind,
-            TASK_EXTERNAL_REFERENCES_KIND,
-            self.version,
-            EXTERNAL_REFERENCES_VERSION,
-        )?;
-        ensure_uuid_matches(
-            self.work_list_id,
-            expected_work_list_id,
-            "external references work list",
-        )?;
-        ensure_uuid_matches(self.task_id, expected_task_id, "external references task")?;
-        validate_external_reference_items(&self.items)
-    }
-}
-
 pub fn encrypt_task_reference_scheme(
     scheme: &TaskReferenceSchemeV1,
     list_key: &SymmetricKey,
@@ -333,102 +175,6 @@ pub fn decrypt_task_reference_scheme(
         expected_scheme_revision_id,
         expected_revision,
     )
-}
-
-pub fn encrypt_work_list_external_references(
-    envelope: &WorkListExternalReferencesV1,
-    list_key: &SymmetricKey,
-) -> PublicResult<SealedBlobPayload> {
-    let plaintext = Zeroizing::new(encode_work_list_external_references(envelope)?);
-    super::encrypt_sealed_bytes(
-        &plaintext,
-        list_key,
-        WORK_LIST_EXTERNAL_REFERENCES_CONTEXT,
-        "failed to seal work list external references",
-    )
-}
-
-pub fn decrypt_work_list_external_references(
-    list_key: &SymmetricKey,
-    payload_ciphertext: &[u8],
-    expected_work_list_id: Uuid,
-) -> PublicResult<WorkListExternalReferencesV1> {
-    let wire: WorkListExternalReferencesWireV1 = decrypt_exact_sealed_payload(
-        list_key,
-        payload_ciphertext,
-        WORK_LIST_EXTERNAL_REFERENCES_CONTEXT,
-        "failed to decrypt work list external references",
-    )?;
-    let envelope = WorkListExternalReferencesV1 {
-        kind: wire.kind,
-        version: wire.version,
-        work_list_id: parse_uuid(
-            &wire.work_list_id,
-            "work list external references work list id",
-        )?,
-        items: wire.items,
-    };
-    envelope.validate(expected_work_list_id)?;
-    Ok(envelope)
-}
-
-pub fn encrypt_task_external_references(
-    envelope: &TaskExternalReferencesV1,
-    list_key: &SymmetricKey,
-) -> PublicResult<SealedBlobPayload> {
-    let plaintext = Zeroizing::new(encode_task_external_references(envelope)?);
-    super::encrypt_sealed_bytes(
-        &plaintext,
-        list_key,
-        TASK_EXTERNAL_REFERENCES_CONTEXT,
-        "failed to seal task external references",
-    )
-}
-
-pub fn decrypt_task_external_references(
-    list_key: &SymmetricKey,
-    payload_ciphertext: &[u8],
-    expected_work_list_id: Uuid,
-    expected_task_id: Uuid,
-) -> PublicResult<TaskExternalReferencesV1> {
-    let wire: TaskExternalReferencesWireV1 = decrypt_exact_sealed_payload(
-        list_key,
-        payload_ciphertext,
-        TASK_EXTERNAL_REFERENCES_CONTEXT,
-        "failed to decrypt task external references",
-    )?;
-    let envelope = TaskExternalReferencesV1 {
-        kind: wire.kind,
-        version: wire.version,
-        work_list_id: parse_uuid(&wire.work_list_id, "task external references work list id")?,
-        task_id: parse_uuid(&wire.task_id, "task external references task id")?,
-        items: wire.items,
-    };
-    envelope.validate(expected_work_list_id, expected_task_id)?;
-    Ok(envelope)
-}
-
-fn encode_work_list_external_references(
-    envelope: &WorkListExternalReferencesV1,
-) -> PublicResult<Vec<u8>> {
-    envelope.validate(envelope.work_list_id)?;
-    serialize_to_cbor(&WorkListExternalReferencesWireV1 {
-        kind: envelope.kind.clone(),
-        version: envelope.version,
-        work_list_id: envelope.work_list_id.to_string(),
-        items: envelope.items.clone(),
-    })
-}
-
-fn encode_task_external_references(envelope: &TaskExternalReferencesV1) -> PublicResult<Vec<u8>> {
-    envelope.validate(envelope.work_list_id, envelope.task_id)?;
-    serialize_to_cbor(&TaskExternalReferencesWireV1 {
-        kind: envelope.kind.clone(),
-        version: envelope.version,
-        work_list_id: envelope.work_list_id.to_string(),
-        task_id: envelope.task_id.to_string(),
-        items: envelope.items.clone(),
-    })
 }
 
 fn encode_task_reference_scheme_with_rng(
@@ -549,28 +295,6 @@ fn ensure_scheme_strong_box_size(payload_ciphertext: &[u8]) -> PublicResult<()> 
     Ok(())
 }
 
-fn decrypt_exact_sealed_payload<T: DeserializeOwned>(
-    key: &SymmetricKey,
-    payload_ciphertext: &[u8],
-    context: &[u8],
-    error_context: &str,
-) -> PublicResult<T> {
-    let sealed = deserialize_sealed_payload_exact(payload_ciphertext)?;
-    if sealed.version != SealedPayload::CURRENT_VERSION {
-        return Err(PublicError::validation(format!(
-            "unsupported sealed payload version {}",
-            sealed.version
-        )));
-    }
-    let plaintext = Zeroizing::new(decrypt_sealed_bytes(
-        key,
-        payload_ciphertext,
-        context,
-        error_context,
-    )?);
-    deserialize_map_from_cbor_exact(&plaintext)
-}
-
 fn deserialize_from_cbor_exact<T: DeserializeOwned>(bytes: &[u8]) -> PublicResult<T> {
     let mut cursor = Cursor::new(bytes);
     let value = strong_box::ciborium::de::from_reader(&mut cursor)
@@ -661,52 +385,6 @@ fn validate_task_reference_prefix(prefix: &str) -> PublicResult<()> {
     Ok(())
 }
 
-fn validate_external_reference_items(items: &[ExternalReferenceItemV1]) -> PublicResult<()> {
-    if items.len() > EXTERNAL_REFERENCE_ITEMS_MAX {
-        return Err(PublicError::validation(format!(
-            "external references cannot contain more than {EXTERNAL_REFERENCE_ITEMS_MAX} items"
-        )));
-    }
-    for item in items {
-        validate_external_reference_text(
-            &item.label,
-            "external reference label",
-            EXTERNAL_REFERENCE_LABEL_MAX_BYTES,
-        )?;
-        validate_external_reference_text(
-            &item.value,
-            "external reference value",
-            EXTERNAL_REFERENCE_VALUE_MAX_BYTES,
-        )?;
-        if let Some(system) = item.system.as_deref() {
-            validate_external_reference_text(
-                system,
-                "external reference system",
-                EXTERNAL_REFERENCE_SYSTEM_MAX_BYTES,
-            )?;
-        }
-    }
-    Ok(())
-}
-
-fn validate_external_reference_text(
-    value: &str,
-    field: &str,
-    max_bytes: usize,
-) -> PublicResult<()> {
-    if value.is_empty() || value.len() > max_bytes {
-        return Err(PublicError::validation(format!(
-            "{field} must contain between 1 and {max_bytes} UTF-8 bytes"
-        )));
-    }
-    if value.trim() != value || value.chars().any(char::is_control) {
-        return Err(PublicError::validation(format!(
-            "{field} cannot have surrounding whitespace or control characters"
-        )));
-    }
-    Ok(())
-}
-
 fn validate_envelope_header(
     actual_kind: &str,
     expected_kind: &str,
@@ -761,10 +439,6 @@ mod tests {
 
     fn scheme_revision_id() -> Uuid {
         Uuid::parse_str("22222222-2222-7222-8222-222222222222").expect("revision UUID")
-    }
-
-    fn task_id() -> Uuid {
-        Uuid::parse_str("33333333-3333-7333-8333-333333333333").expect("task UUID")
     }
 
     fn other_id() -> Uuid {
@@ -992,7 +666,7 @@ mod tests {
         let wrong_context = super::super::encrypt_sealed_bytes(
             &encode_task_reference_scheme_with_rng(&value, &mut OsRng).expect("encode"),
             &key,
-            TASK_EXTERNAL_REFERENCES_CONTEXT,
+            b"worklist.task_reference_scheme.wrong_test_context",
             "encrypt test payload",
         )
         .expect("encrypt");
@@ -1027,64 +701,7 @@ mod tests {
     }
 
     #[test]
-    fn external_reference_envelopes_round_trip_and_reject_wrong_entities() {
-        let key = SymmetricKey::new([0x54; 32]);
-        let work_list_id = work_list_id();
-        let task_id = task_id();
-        let item = ExternalReferenceItemV1 {
-            label: "Matter".to_string(),
-            value: "L-204".to_string(),
-            system: Some("Firm matter-management system".to_string()),
-        };
-
-        let work_list =
-            WorkListExternalReferencesV1::new(work_list_id, vec![item.clone()]).expect("envelope");
-        let sealed = encrypt_work_list_external_references(&work_list, &key)
-            .expect("encrypt work list refs");
-        assert_eq!(
-            decrypt_work_list_external_references(&key, &sealed.bytes, work_list_id)
-                .expect("decrypt work list refs"),
-            work_list
-        );
-        assert!(decrypt_work_list_external_references(&key, &sealed.bytes, other_id()).is_err());
-
-        let task = TaskExternalReferencesV1::new(work_list_id, task_id, vec![item])
-            .expect("task envelope");
-        let sealed = encrypt_task_external_references(&task, &key).expect("encrypt task refs");
-        assert_eq!(
-            decrypt_task_external_references(&key, &sealed.bytes, work_list_id, task_id)
-                .expect("decrypt task refs"),
-            task
-        );
-        assert!(
-            decrypt_task_external_references(&key, &sealed.bytes, work_list_id, other_id(),)
-                .is_err()
-        );
-    }
-
-    #[test]
-    fn external_reference_envelopes_enforce_bounds_and_strict_cbor() {
-        let work_list_id = work_list_id();
-        let invalid = ExternalReferenceItemV1 {
-            label: " Matter".to_string(),
-            value: "L-204".to_string(),
-            system: Some("System".to_string()),
-        };
-        assert!(WorkListExternalReferencesV1::new(work_list_id, vec![invalid]).is_err());
-
-        let too_many = vec![
-            ExternalReferenceItemV1 {
-                label: "Matter".to_string(),
-                value: "L-204".to_string(),
-                system: None,
-            };
-            EXTERNAL_REFERENCE_ITEMS_MAX + 1
-        ];
-        assert!(WorkListExternalReferencesV1::new(work_list_id, too_many).is_err());
-    }
-
-    #[test]
-    fn new_envelopes_reject_noncanonical_outer_sealed_payloads() {
+    fn task_reference_scheme_rejects_noncanonical_outer_sealed_payloads() {
         let key = SymmetricKey::new([0x55; 32]);
         let scheme = scheme("OPS", 1, 4);
         let sealed_scheme = encrypt_task_reference_scheme(&scheme, &key).expect("encrypted scheme");
@@ -1099,74 +716,6 @@ mod tests {
                 )
                 .is_err()
             );
-        }
-
-        let references = WorkListExternalReferencesV1::new(
-            work_list_id(),
-            vec![ExternalReferenceItemV1 {
-                label: "Matter".to_string(),
-                value: "L-204".to_string(),
-                system: None,
-            }],
-        )
-        .expect("external references");
-        let sealed_references =
-            encrypt_work_list_external_references(&references, &key).expect("encrypted refs");
-        for malformed in malformed_outer_variants(&sealed_references.bytes) {
-            assert!(
-                decrypt_work_list_external_references(&key, &malformed, references.work_list_id,)
-                    .is_err()
-            );
-        }
-    }
-
-    #[test]
-    fn external_reference_plaintext_vectors_use_canonical_uuid_strings() {
-        let item = ExternalReferenceItemV1 {
-            label: "Matter".to_string(),
-            value: "L-204".to_string(),
-            system: Some("Clio".to_string()),
-        };
-        let work_list =
-            WorkListExternalReferencesV1::new(work_list_id(), vec![item.clone()]).expect("valid");
-        let task =
-            TaskExternalReferencesV1::new(work_list_id(), task_id(), vec![item]).expect("valid");
-
-        let work_list_plaintext =
-            encode_work_list_external_references(&work_list).expect("work list plaintext");
-        let task_plaintext = encode_task_external_references(&task).expect("task plaintext");
-        let work_list_wire: WorkListExternalReferencesWireV1 =
-            deserialize_from_cbor_exact(&work_list_plaintext).expect("work list wire");
-        let task_wire: TaskExternalReferencesWireV1 =
-            deserialize_from_cbor_exact(&task_plaintext).expect("task wire");
-
-        assert_eq!(work_list_wire.work_list_id, work_list_id().to_string());
-        assert_eq!(task_wire.work_list_id, work_list_id().to_string());
-        assert_eq!(task_wire.task_id, task_id().to_string());
-        assert_eq!(
-            STANDARD.encode(&work_list_plaintext),
-            "pGRraW5keB13b3JrX2xpc3RfZXh0ZXJuYWxfcmVmZXJlbmNlc2d2ZXJzaW9uAWx3b3JrX2xpc3RfaWR4JDExMTExMTExLTExMTEtNzExMS04MTExLTExMTExMTExMTExMWVpdGVtc4GjZWxhYmVsZk1hdHRlcmV2YWx1ZWVMLTIwNGZzeXN0ZW1kQ2xpbw=="
-        );
-        assert_eq!(
-            STANDARD.encode(&task_plaintext),
-            "pWRraW5keBh0YXNrX2V4dGVybmFsX3JlZmVyZW5jZXNndmVyc2lvbgFsd29ya19saXN0X2lkeCQxMTExMTExMS0xMTExLTcxMTEtODExMS0xMTExMTExMTExMTFndGFza19pZHgkMzMzMzMzMzMtMzMzMy03MzMzLTgzMzMtMzMzMzMzMzMzMzMzZWl0ZW1zgaNlbGFiZWxmTWF0dGVyZXZhbHVlZUwtMjA0ZnN5c3RlbWRDbGlv"
-        );
-    }
-
-    #[test]
-    fn external_reference_debug_output_redacts_content() {
-        let item = ExternalReferenceItemV1 {
-            label: "Matter".to_string(),
-            value: "L-204".to_string(),
-            system: Some("Secret system".to_string()),
-        };
-        let envelope =
-            WorkListExternalReferencesV1::new(work_list_id(), vec![item.clone()]).expect("valid");
-
-        for output in [format!("{item:?}"), format!("{envelope:?}")] {
-            assert!(!output.contains("Matter"));
-            assert!(!output.contains("L-204"));
-            assert!(!output.contains("Secret system"));
         }
     }
 }

@@ -138,14 +138,6 @@ export type AuditOperation =
       type: 'task_reference_scheme.updated'
       context: TaskReferenceSchemeContext
     }
-  | {
-      type: 'work_list.external_references_updated'
-      context: Record<string, never>
-    }
-  | {
-      type: 'task.external_references_updated'
-      context: Record<string, never>
-    }
 
 export const AUDIT_KINDS = {
   'task.created': 'audit.task_created',
@@ -181,10 +173,6 @@ export const AUDIT_KINDS = {
     'audit.task_reference_scheme_enabled',
   'task_reference_scheme.updated':
     'audit.task_reference_scheme_updated',
-  'work_list.external_references_updated':
-    'audit.work_list_external_references_updated',
-  'task.external_references_updated':
-    'audit.task_external_references_updated',
 } as const
 
 export type AuditNarrativePrimitive =
@@ -368,14 +356,6 @@ export function buildNarrativeDescriptor(
     case 'task_reference_scheme.updated':
       return descriptor(
         'features.audit.narratives.taskReferenceSchemeUpdated',
-      )
-    case 'work_list.external_references_updated':
-      return descriptor(
-        'features.audit.narratives.workListExternalReferencesUpdated',
-      )
-    case 'task.external_references_updated':
-      return descriptor(
-        'features.audit.narratives.taskExternalReferencesUpdated',
       )
   }
 }
@@ -953,20 +933,6 @@ function buildFieldsArray(
       return [
         {
           field: 'task_reference_scheme_ciphertext',
-          changeKind: 'update',
-        },
-      ]
-    case 'work_list.external_references_updated':
-      return [
-        {
-          field: 'work_list_external_references_ciphertext',
-          changeKind: 'update',
-        },
-      ]
-    case 'task.external_references_updated':
-      return [
-        {
-          field: 'task_external_references_ciphertext',
           changeKind: 'update',
         },
       ]
