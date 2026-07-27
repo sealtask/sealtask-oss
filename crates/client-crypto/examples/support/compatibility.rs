@@ -986,7 +986,7 @@ fn generate_transparency_owner_identity_vector() -> FixtureResult<TransparencyOw
         data_key_b64: b64(&data_key),
         user_id: canonical_user_id,
         user_id_bytes_b64: b64(parsed_user_id.as_bytes()),
-        hkdf_salt_b64: b64(&[]),
+        hkdf_salt_b64: b64([]),
         hkdf_info_utf8,
         identity_seed_b64: b64(&identity_seed),
         identity_public_key_b64: TRANSPARENCY_OWNER_IDENTITY_PUBLIC_KEY_B64.to_string(),
