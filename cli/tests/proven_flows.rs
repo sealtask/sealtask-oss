@@ -6279,6 +6279,55 @@ async fn cli_login_stdin_persists_only_final_no_mfa_credentials() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn cli_human_login_styles_the_complete_success_and_next_hint() {
+    const EMAIL: &str = "process-login@example.test";
+    const PASSWORD: &str = "human-login-password";
+    const CHALLENGE_TOKEN: &str = "unused-human-login-challenge";
+
+    let server = spawn_raw_login_server(
+        EMAIL,
+        PASSWORD,
+        CHALLENGE_TOKEN,
+        Arc::new(Mutex::new(None)),
+        RawLoginFinishOutcome::Authenticated,
+        RawMfaVerifyOutcome::Reject,
+    )
+    .await;
+    let home = TempDir::new().expect("temp home");
+
+    let output = run_cli(
+        home.path(),
+        &server.base_url,
+        &[
+            "--color",
+            "always",
+            "auth",
+            "login",
+            "--email",
+            EMAIL,
+            "--password-stdin",
+        ],
+        Some(PASSWORD),
+    );
+
+    assert!(output.status.success(), "login failed: {}", output.stderr);
+    assert!(
+        output.stderr.is_empty(),
+        "unexpected stderr: {}",
+        output.stderr
+    );
+    let expected = format!(
+        "Logged in as {EMAIL}\nCredentials saved to {}\nNext: sealtask auth unlock",
+        home.path().join(".sealtask/credentials.json").display()
+    );
+    assert_eq!(
+        output.stdout,
+        format!("\u{1b}[32m{expected}\u{1b}[0m\n"),
+        "the complete login result must use the same success style as auth unlock"
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_should_replace_active_credentials_when_login_requests_another_account() {
     const EMAIL: &str = "process-login@example.test";
     const PASSWORD: &str = "process-account-switch-password";

@@ -2,8 +2,8 @@ use super::revoke_session_with_timeout;
 use crate::input::{prompt, read_required_password};
 use crate::interaction::write_interaction_line;
 use crate::output::{
-    CliResult, OutputFormat, WarningResult, finish_with_warnings, mutation_output_enabled,
-    print_json, terminal_line, warning_result,
+    CliResult, OutputFormat, WarningResult, finish_with_warnings, print_simple_result,
+    terminal_line, warning_result,
 };
 use crate::terminal::with_progress;
 use sealtask_client_auth::{
@@ -389,31 +389,25 @@ fn build_login_result(
 }
 
 fn print_login_result(format: OutputFormat, result: &LoginResult, api_url: &str) -> CliResult<()> {
-    match format {
-        OutputFormat::Json | OutputFormat::JsonPretty | OutputFormat::Jsonl => {
-            print_json(result, format, "serializing login result should succeed")
-        }
-        OutputFormat::Table => {
-            if !mutation_output_enabled(format) {
-                return Ok(());
-            }
-            if result.already_logged_in {
-                println!(
-                    "Already logged in as {} ({})",
-                    terminal_line(&result.email),
-                    terminal_line(api_url)
-                );
-            } else {
-                println!("Logged in as {}", terminal_line(&result.email));
-                println!(
-                    "Credentials saved to {}",
-                    terminal_line(&result.credentials_path)
-                );
-                println!("Next: sealtask auth unlock");
-            }
-            Ok(())
-        }
-    }
+    let table_message = if result.already_logged_in {
+        format!(
+            "Already logged in as {} ({})",
+            terminal_line(&result.email),
+            terminal_line(api_url)
+        )
+    } else {
+        format!(
+            "Logged in as {}\nCredentials saved to {}\nNext: sealtask auth unlock",
+            terminal_line(&result.email),
+            terminal_line(&result.credentials_path)
+        )
+    };
+    print_simple_result(
+        format,
+        result,
+        "serializing login result should succeed",
+        &table_message,
+    )
 }
 
 #[cfg(test)]
