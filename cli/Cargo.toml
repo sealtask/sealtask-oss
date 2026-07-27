@@ -47,8 +47,6 @@ sealtask-client-runtime = { version = "0.2.1", path = "../crates/client-runtime"
 
 [target.'cfg(unix)'.dependencies]
 libc.workspace = true
-
-[target.'cfg(any(target_os = "linux", target_os = "macos"))'.dependencies]
 rustix.workspace = true
 
 [dev-dependencies]

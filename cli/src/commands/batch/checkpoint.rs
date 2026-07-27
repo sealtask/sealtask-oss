@@ -1464,21 +1464,26 @@ unsafe extern "C" {
     fn macos_acl_valid(acl: *mut c_void) -> libc::c_int;
 }
 
-#[cfg(unix)]
+#[cfg(all(unix, not(target_os = "redox")))]
 fn open_operable_directory_handle(directory: &Dir) -> std::io::Result<File> {
-    // `cap_std::fs::Dir` uses `O_PATH` on Linux. Cloning that descriptor and
-    // calling `fchmod` or `fsync` fails with `EBADF`, so open the same directory
-    // relative to the held capability with ordinary read access first. Using
-    // `.` keeps this handle-relative and cannot redirect through an ambient
-    // path.
-    let mut options = CapOpenOptions::new();
-    options.read(true).follow(FollowSymlinks::No);
-    directory
-        .open_with(Path::new("."), &options)
-        .map(cap_std::fs::File::into_std)
+    // `cap_std::fs::Dir` uses `O_PATH` on Linux, and its high-level
+    // `open_with(".")` keeps that optimization for directories. Open `.` with
+    // explicit flags relative to the held descriptor so chmod and fsync work
+    // without introducing an ambient path or following a symlink.
+    rustix::fs::openat(
+        directory,
+        Path::new("."),
+        rustix::fs::OFlags::RDONLY
+            | rustix::fs::OFlags::DIRECTORY
+            | rustix::fs::OFlags::NOFOLLOW
+            | rustix::fs::OFlags::CLOEXEC,
+        rustix::fs::Mode::empty(),
+    )
+    .map(File::from)
+    .map_err(std::io::Error::from)
 }
 
-#[cfg(not(unix))]
+#[cfg(any(not(unix), target_os = "redox"))]
 fn open_operable_directory_handle(directory: &Dir) -> std::io::Result<File> {
     directory.try_clone().map(cap_std::fs::Dir::into_std_file)
 }

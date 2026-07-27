@@ -4,6 +4,8 @@ use std::ffi::OsStr;
 use std::fmt;
 use std::fs::{self, File};
 use std::io::{Read, Write};
+#[cfg(all(unix, not(target_os = "redox")))]
+use std::os::fd::{AsRawFd as _, FromRawFd as _};
 use std::path::{Component, Path, PathBuf};
 use std::sync::OnceLock;
 use std::thread;
@@ -631,9 +633,7 @@ fn credentials_too_large_error() -> PublicError {
 fn validate_secret_directory_handle(directory: &Dir) -> PublicResult<()> {
     use std::os::unix::fs::PermissionsExt as _;
 
-    let metadata = directory
-        .try_clone()
-        .map(cap_std::fs::Dir::into_std_file)
+    let metadata = open_operable_directory_handle(directory)
         .and_then(|directory| directory.metadata())
         .map_err(|error| {
             PublicError::unexpected(format!(
@@ -677,14 +677,11 @@ fn validate_secret_directory_handle(directory: &Dir) -> PublicResult<()> {
 fn restrict_secret_directory_handle_permissions(directory: &Dir) -> PublicResult<()> {
     use std::os::unix::fs::PermissionsExt as _;
 
-    let file = directory
-        .try_clone()
-        .map(cap_std::fs::Dir::into_std_file)
-        .map_err(|error| {
-            PublicError::unexpected(format!(
-                "failed to secure credentials storage directory: {error}"
-            ))
-        })?;
+    let file = open_operable_directory_handle(directory).map_err(|error| {
+        PublicError::unexpected(format!(
+            "failed to secure credentials storage directory: {error}"
+        ))
+    })?;
     let metadata = file.metadata().map_err(|error| {
         PublicError::unexpected(format!(
             "failed to inspect credentials storage directory: {error}"
@@ -716,14 +713,11 @@ fn restrict_secret_directory_handle_permissions(_directory: &Dir) -> PublicResul
 fn set_secret_directory_handle_permissions(directory: &Dir) -> PublicResult<()> {
     use std::os::unix::fs::PermissionsExt as _;
 
-    let file = directory
-        .try_clone()
-        .map(cap_std::fs::Dir::into_std_file)
-        .map_err(|error| {
-            PublicError::unexpected(format!(
-                "failed to secure credentials storage directory: {error}"
-            ))
-        })?;
+    let file = open_operable_directory_handle(directory).map_err(|error| {
+        PublicError::unexpected(format!(
+            "failed to secure credentials storage directory: {error}"
+        ))
+    })?;
     file.set_permissions(fs::Permissions::from_mode(0o700))
         .map_err(|error| {
             PublicError::unexpected(format!(
@@ -834,11 +828,39 @@ fn validate_effective_owner_ids(
     Ok(())
 }
 
+#[cfg(all(unix, not(target_os = "redox")))]
+fn open_operable_directory_handle(directory: &Dir) -> std::io::Result<File> {
+    // `cap_std::fs::Dir` uses `O_PATH` on Linux. Cloning that descriptor and
+    // calling `fchmod` or `fsync` fails with `EBADF`. Open `.` directly
+    // relative to the held capability with explicit read-only directory flags;
+    // this cannot redirect through an ambient path or a symlink.
+    const CURRENT_DIRECTORY: &[u8; 2] = b".\0";
+    // SAFETY: `CURRENT_DIRECTORY` is NUL-terminated, the directory descriptor
+    // remains borrowed for the call, and a successful descriptor is
+    // transferred exactly once into `File`.
+    let descriptor = unsafe {
+        libc::openat(
+            directory.as_raw_fd(),
+            CURRENT_DIRECTORY.as_ptr().cast(),
+            libc::O_RDONLY | libc::O_DIRECTORY | libc::O_CLOEXEC | libc::O_NOFOLLOW,
+        )
+    };
+    if descriptor == -1 {
+        return Err(std::io::Error::last_os_error());
+    }
+    // SAFETY: `openat` returned a new owned descriptor which has not been
+    // transferred elsewhere.
+    Ok(unsafe { File::from_raw_fd(descriptor) })
+}
+
+#[cfg(target_os = "redox")]
+fn open_operable_directory_handle(directory: &Dir) -> std::io::Result<File> {
+    directory.try_clone().map(cap_std::fs::Dir::into_std_file)
+}
+
 #[cfg(unix)]
 fn sync_directory_handle(directory: &Dir) -> PublicResult<()> {
-    directory
-        .try_clone()
-        .map(cap_std::fs::Dir::into_std_file)
+    open_operable_directory_handle(directory)
         .and_then(|directory| directory.sync_all())
         .map_err(|error| {
             PublicError::unexpected(format!(
@@ -3475,6 +3497,48 @@ mod tests {
             .expect_err("foreign owner rejected");
         assert!(error.to_string().contains("current effective user"));
         validate_effective_owner_ids(42, 42, "credentials file").expect("matching owner");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn credentials_directory_security_operations_use_an_operable_capability_handle() {
+        use std::os::unix::fs::PermissionsExt as _;
+
+        let temp = TempDir::new().expect("temporary credentials directory");
+        fs::set_permissions(temp.path(), fs::Permissions::from_mode(0o750))
+            .expect("broaden credentials directory for tightening");
+        let (directory, created) = open_directory_nofollow(temp.path(), false)
+            .expect("open credentials directory through capability traversal")
+            .expect("credentials directory exists");
+        assert!(!created);
+
+        let operable =
+            open_operable_directory_handle(&directory).expect("open operable directory handle");
+        #[cfg(target_os = "linux")]
+        {
+            // SAFETY: `operable` owns a live descriptor and `F_GETFL` only
+            // inspects its status flags.
+            let flags = unsafe { libc::fcntl(operable.as_raw_fd(), libc::F_GETFL) };
+            assert_ne!(flags, -1, "inspect operable directory flags");
+            assert_eq!(
+                flags & libc::O_PATH,
+                0,
+                "operable handle must not use O_PATH"
+            );
+        }
+        operable.sync_all().expect("sync operable directory handle");
+
+        restrict_secret_directory_handle_permissions(&directory)
+            .expect("tighten and sync credentials directory");
+        validate_secret_directory_handle(&directory)
+            .expect("inspect secured credentials directory");
+        sync_directory_handle(&directory).expect("sync credentials directory");
+
+        let mode = fs::metadata(temp.path())
+            .expect("inspect credentials directory")
+            .permissions()
+            .mode();
+        assert_eq!(mode & 0o077, 0);
     }
 
     #[cfg(target_os = "macos")]

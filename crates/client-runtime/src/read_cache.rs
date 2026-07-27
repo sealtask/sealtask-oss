@@ -1872,9 +1872,7 @@ fn create_private_directory(parent: &Dir, name: &OsStr) -> std::io::Result<()> {
 
 #[cfg(unix)]
 fn secure_new_directory(directory: &Dir) -> PublicResult<()> {
-    let file = directory
-        .try_clone()
-        .map(cap_std::fs::Dir::into_std_file)
+    let file = open_operable_directory_handle(directory)
         .map_err(|error| cache_io(format!("failed to secure read-cache directory: {error}")))?;
     file.set_permissions(fs::Permissions::from_mode(0o700))
         .map_err(|error| cache_io(format!("failed to secure read-cache directory: {error}")))?;
@@ -1888,9 +1886,7 @@ fn secure_new_directory(directory: &Dir) -> PublicResult<()> {
 
 #[cfg(unix)]
 fn validate_private_directory(directory: &Dir) -> PublicResult<()> {
-    let file = directory
-        .try_clone()
-        .map(cap_std::fs::Dir::into_std_file)
+    let file = open_operable_directory_handle(directory)
         .map_err(|error| cache_io(format!("failed to inspect read-cache directory: {error}")))?;
     let metadata = file
         .metadata()
@@ -2007,11 +2003,34 @@ fn validate_effective_owner(metadata: &fs::Metadata, label: &str) -> PublicResul
     Ok(())
 }
 
+#[cfg(all(unix, not(target_os = "redox")))]
+fn open_operable_directory_handle(directory: &Dir) -> std::io::Result<File> {
+    // `cap_std::fs::Dir` uses `O_PATH` on Linux. Cloning that descriptor and
+    // calling `fchmod` or `fsync` fails with `EBADF`. `Dir::open_with(".")`
+    // also preserves that descriptor because cap-std special-cases `.` during
+    // capability resolution, so ask the kernel to reopen the held directory
+    // directly. This remains handle-relative and cannot redirect through an
+    // ambient path.
+    let descriptor = rustix::fs::openat(
+        directory,
+        ".",
+        rustix::fs::OFlags::RDONLY
+            | rustix::fs::OFlags::DIRECTORY
+            | rustix::fs::OFlags::NOFOLLOW
+            | rustix::fs::OFlags::CLOEXEC,
+        rustix::fs::Mode::empty(),
+    )?;
+    Ok(File::from(descriptor))
+}
+
+#[cfg(target_os = "redox")]
+fn open_operable_directory_handle(directory: &Dir) -> std::io::Result<File> {
+    directory.try_clone().map(cap_std::fs::Dir::into_std_file)
+}
+
 #[cfg(unix)]
 fn sync_directory(directory: &Dir) -> PublicResult<()> {
-    directory
-        .try_clone()
-        .map(cap_std::fs::Dir::into_std_file)
+    open_operable_directory_handle(directory)
         .and_then(|directory| directory.sync_all())
         .map_err(|error| {
             cache_io(format!(
@@ -2132,6 +2151,33 @@ mod tests {
         fs::set_permissions(directory.path(), fs::Permissions::from_mode(0o700))
             .expect("secure test directory");
         directory
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn secures_validates_and_syncs_directory_through_capability_handle() {
+        let root = tempfile::tempdir().expect("temporary root directory");
+        fs::set_permissions(root.path(), fs::Permissions::from_mode(0o700))
+            .expect("secure root directory");
+        let directory_path = root.path().join("cache");
+        fs::create_dir(&directory_path).expect("create cache directory");
+        fs::set_permissions(&directory_path, fs::Permissions::from_mode(0o755))
+            .expect("broaden cache directory");
+        let root_capability =
+            Dir::open_ambient_dir(root.path(), ambient_authority()).expect("open root capability");
+        let directory = root_capability
+            .open_dir_nofollow(Path::new("cache"))
+            .expect("open cache directory without following links");
+
+        secure_new_directory(&directory).expect("secure cache directory");
+        validate_private_directory(&directory).expect("validate cache directory");
+        sync_directory(&directory).expect("sync cache directory");
+
+        let mode = fs::metadata(&directory_path)
+            .expect("inspect secured cache directory")
+            .permissions()
+            .mode();
+        assert_eq!(mode & 0o777, 0o700);
     }
 
     fn record_fixture<T: Serialize>(
