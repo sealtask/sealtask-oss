@@ -8,6 +8,33 @@ use sealtask_client_runtime::RuntimeClient;
 use serde_json::json;
 
 pub(crate) fn run_info(runtime: &RuntimeClient, format: OutputFormat) -> CliResult<()> {
+    let picker = json!({
+        "command": "sealtask pick",
+        "entities": ["project", "task"],
+        "selectorFormat": "id:<32-lowercase-hex>",
+        "interactiveOnly": false,
+        "controllingTerminal": true,
+        "controllingTerminalAppliesTo": "interactive-selection-only",
+        "externalProcess": false,
+        "dynamicNameCompletion": false,
+        "interactiveSelection": {
+            "projectCommand": "sealtask pick project",
+            "projectSelectorOmitted": true,
+            "taskCommand": "sealtask pick task",
+            "controllingTerminal": true,
+            "jsonOutputSupported": false,
+            "nonInteractiveSupported": false,
+        },
+        "explicitProjectActivation": {
+            "command": "sealtask pick project PROJECT",
+            "automationSafe": true,
+            "controllingTerminal": false,
+            "nonInteractiveSupported": true,
+            "structuredOutputSupported": true,
+            "scopeFlag": "--scope",
+            "scopes": ["local", "global"],
+        },
+    });
     let payload = json!({
         "apiBaseUrl": runtime.api_url(),
         "activeProfile": active_profile()?,
@@ -183,15 +210,7 @@ pub(crate) fn run_info(runtime: &RuntimeClient, format: OutputFormat) -> CliResu
                 "comments create --body-file",
             ],
         },
-        "picker": {
-            "command": "sealtask pick",
-            "entities": ["project", "task"],
-            "selectorFormat": "id:<32-lowercase-hex>",
-            "interactiveOnly": true,
-            "controllingTerminal": true,
-            "externalProcess": false,
-            "dynamicNameCompletion": false,
-        },
+        "picker": picker,
         "terminalPolicies": {
             "color": ["auto", "always", "never"],
             "pager": ["auto", "always", "never"],
@@ -224,7 +243,10 @@ pub(crate) fn run_info(runtime: &RuntimeClient, format: OutputFormat) -> CliResu
             println!("Profile: {}", active_profile()?);
             println!("Config: {}", config_dir()?.display());
             println!("Editor: SEALTASK_EDITOR > VISUAL > EDITOR");
-            println!("Picker: sealtask pick project|task");
+            println!("Picker: sealtask pick project|task (interactive selection)");
+            println!(
+                "Project activation: sealtask pick project PROJECT --scope local|global (automation-safe)"
+            );
             println!("Task lists: --columns, --sort, --field id|title|url");
             println!("Streams: tasks watch, activity follow (--format jsonl for automation)");
             println!("Audit: projects audit [PROJECT]");

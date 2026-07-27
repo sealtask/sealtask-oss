@@ -16,7 +16,7 @@ const CONTEXT_LOCK_FILE_NAME: &str = "context.lock";
 const LOCAL_CONTEXT_DIRECTORY_NAME: &str = "project-contexts";
 const LOCAL_CONTEXT_FILES_DIRECTORY_NAME: &str = "local";
 const CONTEXT_SCHEMA_VERSION: u64 = 1;
-const MAX_CONTEXT_FILE_BYTES: u64 = 16 * 1024;
+pub(crate) const MAX_CONTEXT_FILE_BYTES: u64 = 16 * 1024;
 const LOCAL_CONTEXT_KEY_DOMAIN: &[u8] = b"sealtask-local-project-context-v1\0";
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
@@ -44,6 +44,18 @@ pub(crate) struct ProjectContextMutation {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) directory: Option<PathBuf>,
     pub(crate) inherited: bool,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) struct ProjectContextDiagnosticTarget {
+    pub(crate) path: PathBuf,
+    pub(crate) scope: ProjectContextScope,
+    pub(crate) inherited: bool,
+    directory_key: Option<String>,
+}
+
+pub(crate) struct ProjectContextDiagnosticSnapshot {
+    context: StoredProjectContext,
 }
 
 #[derive(Clone, Debug)]
@@ -107,6 +119,10 @@ impl StoredProjectContext {
                 "the saved current project belongs to a different account; select a project again",
             ));
         }
+        self.validate_project_id()
+    }
+
+    fn validate_project_id(&self) -> PublicResult<()> {
         if self.project_id.is_nil() {
             return Err(corrupt_context_error());
         }
@@ -281,6 +297,55 @@ pub(crate) fn load_project_context(
     load_project_context_in(&config_dir()?, &credentials, &environment, scope)
 }
 
+/// Resolves the context file that runtime project selection would inspect.
+///
+/// This is a read-only diagnostic path: it applies the same canonical
+/// nearest-ancestor local lookup and global fallback as `load_project_context`
+/// without requiring credentials or creating the context lock.
+pub(crate) fn resolve_project_context_diagnostic_target(
+    config_directory: &Path,
+) -> PublicResult<ProjectContextDiagnosticTarget> {
+    let environment = ContextEnvironment::from_process()?;
+    resolve_project_context_diagnostic_target_in(config_directory, &environment)
+}
+
+/// Reads and structurally validates a diagnostic target with the runtime
+/// context decoder.
+///
+/// The returned opaque snapshot lets diagnostics validate account/API binding
+/// against the same bytes without rereading a concurrently mutable file.
+pub(crate) fn read_project_context_diagnostic_snapshot(
+    target: &ProjectContextDiagnosticTarget,
+) -> PublicResult<ProjectContextDiagnosticSnapshot> {
+    let context = read_context_file_unlocked(&target.path)
+        .map_err(ContextReadError::into_public_error)?
+        .ok_or_else(|| {
+            PublicError::unexpected(
+                "the project context changed while diagnostics were inspecting it",
+            )
+        })?;
+    match target.scope {
+        ProjectContextScope::Local => {
+            let directory_key = target
+                .directory_key
+                .as_deref()
+                .ok_or_else(corrupt_context_error)?;
+            context.validate_local_scope(directory_key)?;
+        }
+        ProjectContextScope::Global => context.validate_global_scope()?,
+    }
+    context.validate_project_id()?;
+    Ok(ProjectContextDiagnosticSnapshot { context })
+}
+
+/// Validates account/API binding on a previously decoded diagnostic snapshot.
+pub(crate) fn validate_project_context_diagnostic_binding(
+    snapshot: &ProjectContextDiagnosticSnapshot,
+    credentials: &Credentials,
+) -> PublicResult<()> {
+    snapshot.context.validate_binding(credentials)
+}
+
 /// Saves the current project for the active profile and API target.
 ///
 /// Only the schema version, normalized API URL, account ID, and project ID are
@@ -333,6 +398,26 @@ fn load_project_context_in(
     let context_lock = ContextFileLock::acquire(dir, LockMode::Shared)?;
     let result = load_project_context_unlocked(dir, credentials, environment, scope);
     finish_locked(context_lock, result)
+}
+
+fn resolve_project_context_diagnostic_target_in(
+    dir: &Path,
+    environment: &ContextEnvironment,
+) -> PublicResult<ProjectContextDiagnosticTarget> {
+    if let Some((directory, path)) = nearest_local_context_path(dir, environment)? {
+        return Ok(ProjectContextDiagnosticTarget {
+            path,
+            scope: ProjectContextScope::Local,
+            inherited: directory != environment.current_directory,
+            directory_key: Some(local_context_key(&directory)),
+        });
+    }
+    Ok(ProjectContextDiagnosticTarget {
+        path: dir.join(CONTEXT_FILE_NAME),
+        scope: ProjectContextScope::Global,
+        inherited: false,
+        directory_key: None,
+    })
 }
 
 fn load_project_context_unlocked(
@@ -1155,6 +1240,106 @@ mod tests {
         assert_eq!(global.scope, ProjectContextScope::Global);
         assert!(global.directory.is_none());
         assert!(!global.inherited);
+    }
+
+    #[test]
+    fn diagnostic_target_uses_inherited_local_context_then_global_fallback() {
+        let temp = TempDir::new().expect("temporary directory");
+        let config = temp.path().join("config");
+        let home = temp.path().join("home");
+        let project = home.join("work/project");
+        let nested = project.join("src");
+        fs::create_dir_all(&nested).expect("create nested project directory");
+        let primary_credentials = credentials("https://api.example", Uuid::from_u128(60));
+        let project_environment = context_environment(&project, &home);
+        let nested_environment = context_environment(&nested, &home);
+
+        save_project_context_in(
+            &config,
+            &primary_credentials,
+            Uuid::from_u128(61),
+            &project_environment,
+            Some(ProjectContextScope::Global),
+        )
+        .expect("save global context");
+        save_project_context_in(
+            &config,
+            &primary_credentials,
+            Uuid::from_u128(62),
+            &project_environment,
+            Some(ProjectContextScope::Local),
+        )
+        .expect("save local context");
+
+        let local = resolve_project_context_diagnostic_target_in(&config, &nested_environment)
+            .expect("resolve inherited local diagnostic target");
+        assert_eq!(local.scope, ProjectContextScope::Local);
+        assert!(local.inherited);
+        assert_eq!(
+            local.path,
+            local_context_file_path(
+                &config,
+                &local_context_key(&project_environment.current_directory),
+            )
+        );
+        let local_snapshot =
+            read_project_context_diagnostic_snapshot(&local).expect("read local snapshot");
+        validate_project_context_diagnostic_binding(&local_snapshot, &primary_credentials)
+            .expect("validate local binding");
+
+        let other_credentials = credentials("https://other.example", Uuid::from_u128(63));
+        let replacement = StoredProjectContext::for_directory(
+            &other_credentials,
+            Uuid::from_u128(64),
+            local
+                .directory_key
+                .clone()
+                .expect("local target directory key"),
+        )
+        .expect("build replacement context");
+        save_project_context_file_unlocked(
+            local.path.parent().expect("local context parent"),
+            &local.path,
+            &replacement,
+        )
+        .expect("replace local context after snapshot");
+        validate_project_context_diagnostic_binding(&local_snapshot, &primary_credentials)
+            .expect("snapshot binding must not reread the replacement");
+        let replacement_snapshot =
+            read_project_context_diagnostic_snapshot(&local).expect("read replacement snapshot");
+        validate_project_context_diagnostic_binding(&replacement_snapshot, &primary_credentials)
+            .expect_err("a fresh snapshot must observe the replacement binding");
+
+        clear_project_context_in(
+            &config,
+            &nested_environment,
+            Some(ProjectContextScope::Local),
+        )
+        .expect("clear inherited local context");
+        let global = resolve_project_context_diagnostic_target_in(&config, &nested_environment)
+            .expect("resolve global diagnostic target");
+        assert_eq!(global.scope, ProjectContextScope::Global);
+        assert!(!global.inherited);
+        assert_eq!(global.path, config.join(CONTEXT_FILE_NAME));
+        let global_snapshot =
+            read_project_context_diagnostic_snapshot(&global).expect("read global snapshot");
+        validate_project_context_diagnostic_binding(&global_snapshot, &primary_credentials)
+            .expect("validate global binding");
+
+        let mut corrupt: serde_json::Value =
+            serde_json::from_slice(&fs::read(&global.path).expect("read global diagnostic target"))
+                .expect("parse global diagnostic target");
+        corrupt["projectId"] = serde_json::Value::String(Uuid::nil().to_string());
+        fs::write(
+            &global.path,
+            serde_json::to_vec_pretty(&corrupt).expect("serialize nil-project context"),
+        )
+        .expect("write nil-project context");
+        let error = match read_project_context_diagnostic_snapshot(&global) {
+            Ok(_) => panic!("credential-free validation must reject a nil project"),
+            Err(error) => error,
+        };
+        assert!(error.to_string().contains("corrupt"));
     }
 
     #[test]

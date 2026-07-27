@@ -4,6 +4,11 @@ use std::path::{Path, PathBuf};
 
 use crate::operator_config::OperatorSettingsStore;
 use crate::output::{CliResult, OutputFormat, print_json, terminal_line};
+use crate::project_context::{
+    MAX_CONTEXT_FILE_BYTES, ProjectContextDiagnosticSnapshot, ProjectContextDiagnosticTarget,
+    ProjectContextScope, read_project_context_diagnostic_snapshot,
+    resolve_project_context_diagnostic_target, validate_project_context_diagnostic_binding,
+};
 use crate::table::sanitize_cell;
 use crate::terminal::{self, StyleRole, with_progress};
 use chrono::{DateTime, Utc};
@@ -18,9 +23,7 @@ use serde::Serialize;
 use uuid::Uuid;
 
 const DIAGNOSTIC_SCHEMA_VERSION: u8 = 1;
-const CONTEXT_FILE_NAME: &str = "context.json";
 const MAX_CREDENTIALS_FILE_BYTES: u64 = 1024 * 1024;
-const MAX_CONTEXT_FILE_BYTES: u64 = 64 * 1024;
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -80,6 +83,10 @@ pub(crate) struct DiagnosticEnvironmentV1 {
     pub(crate) credentials_path: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) context_path: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) context_scope: Option<ProjectContextScope>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) context_inherited: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) credential_user_id: Option<Uuid>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -174,6 +181,14 @@ pub(crate) fn print_doctor_report(
             if let Some(path) = report.environment.context_path.as_deref() {
                 println!("Context: {}", diagnostic_terminal_line(path));
             }
+            if let Some(scope) = report.environment.context_scope {
+                let inherited = if report.environment.context_inherited == Some(true) {
+                    " (inherited)"
+                } else {
+                    ""
+                };
+                println!("Context scope: {}{inherited}", context_scope_label(scope));
+            }
             if let Some(user_id) = report.environment.credential_user_id {
                 println!("Credential user: {user_id}");
             }
@@ -261,11 +276,24 @@ fn diagnostic_terminal_line(value: &str) -> String {
     terminal_line(&sanitize_cell(value))
 }
 
+const fn context_scope_label(scope: ProjectContextScope) -> &'static str {
+    match scope {
+        ProjectContextScope::Local => "local",
+        ProjectContextScope::Global => "global",
+    }
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum FileReadiness {
     Missing,
     Readable,
     Unsafe,
+}
+
+struct ProjectContextInspection {
+    target: Option<ProjectContextDiagnosticTarget>,
+    readiness: FileReadiness,
+    snapshot: Option<ProjectContextDiagnosticSnapshot>,
 }
 
 /// Collects local and, unless `offline`, authenticated API diagnostics.
@@ -306,9 +334,6 @@ where
     let profile = resolve_profile(&mut checks);
     let config_directory = resolve_config_directory(&mut checks);
     let credentials_file = resolve_credentials_path(&mut checks);
-    let context_file = config_directory
-        .as_ref()
-        .map(|directory| directory.join(CONTEXT_FILE_NAME));
 
     let config_readable = config_directory
         .as_deref()
@@ -338,19 +363,8 @@ where
             FileReadiness::Unsafe
         }
     };
-    match context_file.as_deref() {
-        Some(path) if config_readable => inspect_context_file(path, &mut checks),
-        Some(_) | None => {
-            checks.push(DiagnosticCheckV1::skipped(
-                "context.file",
-                "Project context inspection was skipped because its path is unavailable.",
-            ));
-            checks.push(DiagnosticCheckV1::skipped(
-                "context.permissions",
-                "Project context permissions were not inspected.",
-            ));
-        }
-    }
+    let context_inspection =
+        inspect_project_context(config_directory.as_deref(), config_readable, &mut checks);
 
     let credentials = load_and_check_credentials(
         runtime,
@@ -358,6 +372,7 @@ where
         credentials_file.as_deref(),
         &mut checks,
     );
+    check_context_binding(&context_inspection, credentials.as_ref(), &mut checks);
     let credential_user_id = credentials.as_ref().map(|credentials| credentials.user_id);
     let session_usable = check_session(credentials.as_ref(), &mut checks);
 
@@ -392,7 +407,20 @@ where
                 api_target: safe_api_target(runtime.api_url()),
                 config_directory: config_directory.as_deref().map(display_path),
                 credentials_path: credentials_file.as_deref().map(display_path),
-                context_path: context_file.as_deref().map(display_path),
+                context_path: context_inspection
+                    .target
+                    .as_ref()
+                    .map(|target| display_path(&target.path)),
+                context_scope: context_inspection
+                    .target
+                    .as_ref()
+                    .filter(|_| context_inspection.readiness != FileReadiness::Missing)
+                    .map(|target| target.scope),
+                context_inherited: context_inspection
+                    .target
+                    .as_ref()
+                    .filter(|_| context_inspection.readiness != FileReadiness::Missing)
+                    .map(|target| target.inherited),
                 credential_user_id,
                 authenticated_user_id,
             },
@@ -651,43 +679,174 @@ fn inspect_credentials_file(path: &Path, checks: &mut Vec<DiagnosticCheckV1>) ->
     )
 }
 
-fn inspect_context_file(path: &Path, checks: &mut Vec<DiagnosticCheckV1>) {
+fn inspect_project_context(
+    config_directory: Option<&Path>,
+    config_readable: bool,
+    checks: &mut Vec<DiagnosticCheckV1>,
+) -> ProjectContextInspection {
+    let Some(config_directory) = config_directory.filter(|_| config_readable) else {
+        checks.push(DiagnosticCheckV1::skipped(
+            "context.resolution",
+            "Project context resolution was skipped because the configuration directory is unavailable.",
+        ));
+        checks.push(DiagnosticCheckV1::skipped(
+            "context.file",
+            "Project context inspection was skipped because its path is unavailable.",
+        ));
+        checks.push(DiagnosticCheckV1::skipped(
+            "context.permissions",
+            "Project context permissions were not inspected.",
+        ));
+        return ProjectContextInspection {
+            target: None,
+            readiness: FileReadiness::Unsafe,
+            snapshot: None,
+        };
+    };
+
+    let target = match resolve_project_context_diagnostic_target(config_directory) {
+        Ok(target) => target,
+        Err(_) => {
+            checks.push(
+                DiagnosticCheckV1::fail(
+                    "context.resolution",
+                    "The effective project context could not be resolved safely.",
+                )
+                .with_error_code("invalid_context_storage")
+                .with_remediation(
+                    "Ensure project-contexts and project-contexts/local are private, non-symlinked directories, then retry.",
+                ),
+            );
+            checks.push(DiagnosticCheckV1::skipped(
+                "context.file",
+                "Project context file inspection was skipped because scope resolution failed.",
+            ));
+            checks.push(DiagnosticCheckV1::skipped(
+                "context.permissions",
+                "Project context permissions were not inspected.",
+            ));
+            return ProjectContextInspection {
+                target: None,
+                readiness: FileReadiness::Unsafe,
+                snapshot: None,
+            };
+        }
+    };
+
+    let resolution_summary = match (target.scope, target.inherited) {
+        (ProjectContextScope::Local, true) => {
+            "The nearest inherited directory-local project context was resolved."
+        }
+        (ProjectContextScope::Local, false) => {
+            "The current directory's local project context was resolved."
+        }
+        (ProjectContextScope::Global, _) => {
+            "No applicable directory-local context was found; the profile-global context is the fallback."
+        }
+    };
+    checks.push(DiagnosticCheckV1::pass(
+        "context.resolution",
+        resolution_summary,
+    ));
+
+    let (readiness, snapshot) = inspect_context_file(&target, checks);
+    ProjectContextInspection {
+        target: Some(target),
+        readiness,
+        snapshot,
+    }
+}
+
+fn inspect_context_file(
+    target: &ProjectContextDiagnosticTarget,
+    checks: &mut Vec<DiagnosticCheckV1>,
+) -> (FileReadiness, Option<ProjectContextDiagnosticSnapshot>) {
+    let label = match target.scope {
+        ProjectContextScope::Local => "The effective directory-local project context file",
+        ProjectContextScope::Global => "The profile-global project context file",
+    };
     let readiness = inspect_regular_file(
-        path,
+        &target.path,
         "context.file",
         "context.permissions",
-        "The project context file",
+        label,
         MAX_CONTEXT_FILE_BYTES,
         false,
         checks,
     );
     if readiness != FileReadiness::Readable {
-        return;
+        return (readiness, None);
     }
 
-    let valid_json = File::open(path)
-        .ok()
-        .and_then(|file| serde_json::from_reader::<_, serde_json::Value>(file).ok())
-        .is_some_and(|value| {
-            value.is_object()
-                && value
-                    .get("schemaVersion")
-                    .and_then(serde_json::Value::as_u64)
-                    .is_some()
-        });
-    if valid_json {
+    match read_project_context_diagnostic_snapshot(target) {
+        Ok(snapshot) => {
+            checks.push(DiagnosticCheckV1::pass(
+                "context.format",
+                "The effective project context has a supported structure and scope binding.",
+            ));
+            (readiness, Some(snapshot))
+        }
+        Err(_) => {
+            let scope = context_scope_label(target.scope);
+            checks.push(
+                DiagnosticCheckV1::fail(
+                    "context.format",
+                    "The effective project context is invalid or unsupported.",
+                )
+                .with_error_code("invalid_context")
+                .with_remediation(format!(
+                    "Upgrade SealTask or run 'sealtask projects clear --scope {scope}', then select the project again."
+                )),
+            );
+            (readiness, None)
+        }
+    }
+}
+
+fn check_context_binding(
+    inspection: &ProjectContextInspection,
+    credentials: Option<&Credentials>,
+    checks: &mut Vec<DiagnosticCheckV1>,
+) {
+    if inspection.readiness == FileReadiness::Missing {
+        checks.push(DiagnosticCheckV1::skipped(
+            "context.binding",
+            "No effective project context is saved, so account and API binding were not inspected.",
+        ));
+        return;
+    }
+    let Some((target, snapshot)) = inspection.target.as_ref().zip(inspection.snapshot.as_ref())
+    else {
+        checks.push(DiagnosticCheckV1::skipped(
+            "context.binding",
+            "Project context binding was not inspected because the effective file is unsafe or invalid.",
+        ));
+        return;
+    };
+    let Some(credentials) = credentials else {
+        checks.push(DiagnosticCheckV1::skipped(
+            "context.binding",
+            "Project context binding requires matching stored credentials.",
+        ));
+        return;
+    };
+
+    if validate_project_context_diagnostic_binding(snapshot, credentials).is_ok() {
         checks.push(DiagnosticCheckV1::pass(
-            "context.format",
-            "The project context has a recognized JSON envelope.",
+            "context.binding",
+            "The effective project context matches the active API target and account.",
         ));
     } else {
         checks.push(
             DiagnosticCheckV1::fail(
-                "context.format",
-                "The project context is not valid diagnostic-readable JSON.",
+                "context.binding",
+                "The effective project context belongs to a different API target or account.",
             )
-            .with_error_code("invalid_context")
-            .with_remediation("Run 'sealtask projects clear', then select the project again."),
+            .with_error_code("context_binding_mismatch")
+            .with_remediation(format!(
+                "Run 'sealtask pick project PROJECT --scope {}' to replace this context.",
+                context_scope_label(target.scope)
+            )),
         );
     }
 }
@@ -1394,6 +1553,8 @@ mod tests {
                 config_directory: Some("/tmp/sealtask".to_string()),
                 credentials_path: Some("/tmp/sealtask/credentials.json".to_string()),
                 context_path: Some("/tmp/sealtask/context.json".to_string()),
+                context_scope: Some(ProjectContextScope::Global),
+                context_inherited: Some(false),
                 credential_user_id: Some(Uuid::from_u128(1)),
                 authenticated_user_id: Some(Uuid::from_u128(1)),
             },
@@ -1441,6 +1602,8 @@ mod tests {
             config_directory: None,
             credentials_path: None,
             context_path: None,
+            context_scope: None,
+            context_inherited: None,
             credential_user_id: None,
             authenticated_user_id: None,
         }

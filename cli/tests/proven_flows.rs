@@ -3441,6 +3441,14 @@ fn cli_schema_and_output_formats_are_machine_discoverable() {
         human.stderr
     );
     assert!(human.stdout.starts_with("SealTask CLI contract version 2"));
+    assert!(
+        human
+            .stdout
+            .contains("Picker: sealtask pick project|task (interactive selection)")
+    );
+    assert!(human.stdout.contains(
+        "Project activation: sealtask pick project PROJECT --scope local|global (automation-safe)"
+    ));
 }
 
 #[test]
@@ -3468,13 +3476,44 @@ fn cli_terminal_policies_are_explicit_machine_safe_and_quiet_when_requested() {
     assert!(json.status.success(), "JSON info failed: {}", json.stderr);
     assert!(!json.stdout.contains('\u{1b}'));
     assert!(json.stderr.is_empty());
+    let info = parse_stdout_json(&json.stdout);
+    assert_eq!(info["terminalPolicies"]["quietFlag"], "--quiet");
+    assert_eq!(info["picker"]["selectorFormat"], "id:<32-lowercase-hex>");
+    let picker = &info["picker"];
+    assert_eq!(picker["interactiveOnly"], false);
     assert_eq!(
-        parse_stdout_json(&json.stdout)["terminalPolicies"]["quietFlag"],
-        "--quiet"
+        picker["controllingTerminalAppliesTo"],
+        "interactive-selection-only"
     );
     assert_eq!(
-        parse_stdout_json(&json.stdout)["picker"]["selectorFormat"],
-        "id:<32-lowercase-hex>"
+        picker["interactiveSelection"]["projectSelectorOmitted"],
+        true
+    );
+    assert_eq!(picker["interactiveSelection"]["controllingTerminal"], true);
+    assert_eq!(
+        picker["interactiveSelection"]["nonInteractiveSupported"],
+        false
+    );
+    assert_eq!(
+        picker["explicitProjectActivation"]["command"],
+        "sealtask pick project PROJECT"
+    );
+    assert_eq!(picker["explicitProjectActivation"]["automationSafe"], true);
+    assert_eq!(
+        picker["explicitProjectActivation"]["controllingTerminal"],
+        false
+    );
+    assert_eq!(
+        picker["explicitProjectActivation"]["nonInteractiveSupported"],
+        true
+    );
+    assert_eq!(
+        picker["explicitProjectActivation"]["structuredOutputSupported"],
+        true
+    );
+    assert_eq!(
+        picker["explicitProjectActivation"]["scopes"],
+        json!(["local", "global"])
     );
 
     let quiet = run_cli_exact(home.path(), &["--quiet", "auth", "logout"], None);
@@ -4235,6 +4274,198 @@ fn cli_doctor_offline_json_versions_and_skips_api_checks() {
         std::fs::read(&settings_path).expect("corrupt settings preserved"),
         b"{not valid JSON"
     );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn cli_doctor_inspects_inherited_local_context_before_global_fallback() {
+    let fixture = TestFixture::new();
+    let state = Arc::new(Mutex::new(TestState::new(fixture.clone())));
+    let server = spawn_server(state).await;
+    let home = TempDir::new().expect("temp home");
+    seed_credentials(home.path(), &fixture, &server.base_url);
+    let workspace = home.path().join("source/project");
+    let nested_workspace = workspace.join("src/nested");
+    std::fs::create_dir_all(&nested_workspace).expect("create nested workspace");
+    let project_id = fixture.work_list_id.to_string();
+
+    let global_pick = run_cli(
+        home.path(),
+        &server.base_url,
+        &[
+            "--non-interactive",
+            "--json",
+            "pick",
+            "project",
+            &project_id,
+            "--scope",
+            "global",
+        ],
+        None,
+    );
+    assert!(
+        global_pick.status.success(),
+        "global project pick failed: {}",
+        global_pick.stderr
+    );
+    let local_pick = run_cli_in_dir(
+        home.path(),
+        &workspace,
+        &server.base_url,
+        &[
+            "--non-interactive",
+            "--json",
+            "pick",
+            "project",
+            &project_id,
+            "--scope",
+            "local",
+        ],
+        None,
+    );
+    assert!(
+        local_pick.status.success(),
+        "local project pick failed: {}",
+        local_pick.stderr
+    );
+
+    let local_doctor = run_cli_in_dir(
+        home.path(),
+        &nested_workspace,
+        &server.base_url,
+        &["--json", "doctor", "--offline"],
+        None,
+    );
+    assert!(
+        local_doctor.status.success(),
+        "local offline doctor failed: {}",
+        local_doctor.stderr
+    );
+    let local_report = parse_stdout_json(&local_doctor.stdout);
+    assert_eq!(local_report["environment"]["contextScope"], "local");
+    assert_eq!(local_report["environment"]["contextInherited"], true);
+    let local_context_path = local_report["environment"]["contextPath"]
+        .as_str()
+        .expect("local context path")
+        .to_string();
+    assert!(local_context_path.contains("/project-contexts/local/"));
+    assert!(local_context_path.ends_with(".json"));
+    assert_eq!(
+        doctor_check(&local_report, "context.resolution")["status"],
+        "pass"
+    );
+    assert!(
+        doctor_check(&local_report, "context.resolution")["summary"]
+            .as_str()
+            .expect("context resolution summary")
+            .contains("inherited")
+    );
+    for check_id in ["context.file", "context.format", "context.binding"] {
+        assert_eq!(doctor_check(&local_report, check_id)["status"], "pass");
+    }
+
+    let mut mismatched_context: Value =
+        serde_json::from_slice(&std::fs::read(&local_context_path).expect("read local context"))
+            .expect("parse local context");
+    mismatched_context["apiUrl"] = json!("https://private-other-api.example");
+    std::fs::write(
+        &local_context_path,
+        serde_json::to_vec_pretty(&mismatched_context).expect("serialize mismatched context"),
+    )
+    .expect("write mismatched local context");
+    let mismatched_local = run_cli_in_dir(
+        home.path(),
+        &nested_workspace,
+        &server.base_url,
+        &["--json", "doctor", "--offline"],
+        None,
+    );
+    assert_eq!(mismatched_local.status.code(), Some(1));
+    assert!(!mismatched_local.stdout.contains("private-other-api"));
+    assert!(!mismatched_local.stderr.contains("private-other-api"));
+    let mismatched_report = parse_stdout_json(&mismatched_local.stdout);
+    assert_eq!(
+        doctor_check(&mismatched_report, "context.format")["status"],
+        "pass"
+    );
+    assert_eq!(
+        doctor_check(&mismatched_report, "context.binding")["errorCode"],
+        "context_binding_mismatch"
+    );
+
+    std::fs::write(&local_context_path, b"{\"schemaVersion\":1}\n")
+        .expect("corrupt nearest local context");
+    let corrupt_local = run_cli_in_dir(
+        home.path(),
+        &nested_workspace,
+        &server.base_url,
+        &["--json", "doctor", "--offline"],
+        None,
+    );
+    assert_eq!(corrupt_local.status.code(), Some(1));
+    let corrupt_report = parse_stdout_json(&corrupt_local.stdout);
+    assert_eq!(
+        corrupt_report["environment"]["contextPath"],
+        local_context_path
+    );
+    assert_eq!(corrupt_report["environment"]["contextScope"], "local");
+    assert_eq!(
+        doctor_check(&corrupt_report, "context.format")["errorCode"],
+        "invalid_context"
+    );
+    assert_eq!(
+        doctor_check(&corrupt_report, "context.binding")["status"],
+        "skipped"
+    );
+
+    let clear_local = run_cli_in_dir(
+        home.path(),
+        &nested_workspace,
+        &server.base_url,
+        &[
+            "--non-interactive",
+            "--json",
+            "projects",
+            "clear",
+            "--scope",
+            "local",
+        ],
+        None,
+    );
+    assert!(
+        clear_local.status.success(),
+        "local project clear failed: {}",
+        clear_local.stderr
+    );
+
+    let global_doctor = run_cli_in_dir(
+        home.path(),
+        &nested_workspace,
+        &server.base_url,
+        &["--json", "doctor", "--offline"],
+        None,
+    );
+    assert!(
+        global_doctor.status.success(),
+        "global fallback doctor failed: {}",
+        global_doctor.stderr
+    );
+    let global_report = parse_stdout_json(&global_doctor.stdout);
+    assert_eq!(global_report["environment"]["contextScope"], "global");
+    assert_eq!(global_report["environment"]["contextInherited"], false);
+    assert!(
+        global_report["environment"]["contextPath"]
+            .as_str()
+            .expect("global context path")
+            .ends_with("/.sealtask/context.json")
+    );
+    for check_id in [
+        "context.resolution",
+        "context.file",
+        "context.format",
+        "context.binding",
+    ] {
+        assert_eq!(doctor_check(&global_report, check_id)["status"], "pass");
+    }
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -10229,6 +10460,15 @@ fn parse_stdout_json(stdout: &str) -> Value {
 
 fn parse_stderr_json(stderr: &str) -> Value {
     serde_json::from_str(stderr).expect("stderr JSON")
+}
+
+fn doctor_check<'a>(report: &'a Value, check_id: &str) -> &'a Value {
+    report["checks"]
+        .as_array()
+        .expect("doctor checks")
+        .iter()
+        .find(|check| check["id"] == check_id)
+        .unwrap_or_else(|| panic!("missing doctor check {check_id}"))
 }
 
 fn telemetry_invocation_id(stderr: &str) -> Uuid {
