@@ -14,12 +14,12 @@ import {
   hpkeOpen,
 } from '../runtime/hpke'
 import type { StrongBoxBridge } from '../runtime/strong-box'
-import { SEALED_PAYLOAD_VERSION } from '../runtime/constants'
 import { deriveInviteKeyPair } from '../protocols/invite-key'
+import { parseSealedPayload } from '../protocols/sealed-payload'
 import {
-  parseSealedPayload,
-  serializeSealedPayloadBase64,
-} from '../protocols/sealed-payload'
+  sealWorkListKeyForOwner,
+  type ProjectKeyWriteFormat,
+} from '../protocols/work-list'
 import {
   INVITE_PREVIEW_AUTH_KIND,
   INVITE_PREVIEW_AUTH_SCHEME,
@@ -34,9 +34,9 @@ import {
 
 const encoder = new TextEncoder()
 const INVITE_MEMBER_CONTEXT = encoder.encode('worklist.invite.member')
-const WORK_LIST_MEMBERSHIP_CONTEXT = encoder.encode('worklist.membership')
 const MEMBERSHIP_PROOF_LABEL = 'accept:'
 const AUTH_DIGEST_BYTES = 32
+const PUBLIC_KEY_BYTES = 32
 const VERIFIED_INVITE_AUTHORITY = Symbol('VerifiedPendingInvitation')
 
 export type PendingInvitationCrypto = {
@@ -59,6 +59,8 @@ export type InviteKeyResolver = (params: {
 }) => Promise<{
   invitePublicKey: Uint8Array
   generation: number
+  identityPublicKey: Uint8Array
+  authorization: 'owner-authorized'
 }>
 
 export type PendingInvitationPreview =
@@ -86,12 +88,14 @@ export type PendingInvitationAcceptanceBlockReason =
   | 'verification_failed'
   | 'missing_package'
   | 'verification_unavailable'
+  | 'legacy'
 
 export type InviteAuthenticationLevel = 'authenticated' | 'legacy'
 
 export type InviteAcceptancePayload = {
   workListKeyCiphertext: string
   membershipProof: string
+  reservationRevision: number
 }
 
 export type InviteVerificationErrorCode =
@@ -99,6 +103,7 @@ export type InviteVerificationErrorCode =
   | 'missing_artifacts'
   | 'missing_package'
   | 'verification_unavailable'
+  | 'authentication_required'
   | 'authentication_failed'
   | 'verification_failed'
   | 'verified_invite_consumed'
@@ -117,6 +122,7 @@ export class InviteVerificationError extends Error {
 type RecoveredInvite = {
   membershipId: string
   workListId: string
+  reservationRevision?: number
   listKey: Uint8Array
   memberEnvelopeKey: Uint8Array
   authentication: InviteAuthenticationLevel
@@ -124,18 +130,22 @@ type RecoveredInvite = {
 }
 
 /**
- * A one-use capability issued only after all recipient/member bindings and,
- * when present, the inviter authenticator have verified. Its constructor is
- * private at the type level and also guarded by a module-private runtime token.
+ * A one-use capability issued only after all recipient/member bindings and the
+ * inviter authenticator have verified. Its constructor is private at the type
+ * level and also guarded by a module-private runtime token.
  */
 export class VerifiedPendingInvitation {
   readonly membershipId: string
   readonly workListId: string
-  readonly authentication: InviteAuthenticationLevel
+  readonly authentication = 'authenticated' as const
   #listKey: Uint8Array | null
   #memberEnvelopeKey: Uint8Array | null
+  #reservationRevision: number
 
-  private constructor(authority: symbol, recovered: RecoveredInvite) {
+  private constructor(
+    authority: symbol,
+    recovered: RecoveredInvite & { reservationRevision: number },
+  ) {
     if (authority !== VERIFIED_INVITE_AUTHORITY) {
       throw new InviteVerificationError(
         'invalid_verified_invite',
@@ -144,14 +154,29 @@ export class VerifiedPendingInvitation {
     }
     this.membershipId = recovered.membershipId
     this.workListId = recovered.workListId
-    this.authentication = recovered.authentication
+    this.#reservationRevision = recovered.reservationRevision
     this.#listKey = recovered.listKey
     this.#memberEnvelopeKey = recovered.memberEnvelopeKey
   }
 
   static async verify(params: VerifyInviteForAcceptanceParams): Promise<VerifiedPendingInvitation> {
     const recovered = await recoverAndVerifyInvite(params)
-    return new VerifiedPendingInvitation(VERIFIED_INVITE_AUTHORITY, recovered)
+    const reservationRevision = recovered.reservationRevision
+    if (
+      recovered.authentication !== 'authenticated'
+      || reservationRevision === undefined
+    ) {
+      zeroBytes(recovered.listKey)
+      zeroBytes(recovered.memberEnvelopeKey)
+      throw new InviteVerificationError(
+        'authentication_required',
+        'Only version-two invitations with verified sender authentication can be accepted.',
+      )
+    }
+    return new VerifiedPendingInvitation(VERIFIED_INVITE_AUTHORITY, {
+      ...recovered,
+      reservationRevision,
+    })
   }
 
   dispose(): void {
@@ -166,6 +191,7 @@ export class VerifiedPendingInvitation {
     params: {
       dataKey: Uint8Array
       strongBox: StrongBoxBridge
+      projectKeyWriteFormat?: ProjectKeyWriteFormat
     },
   ): Promise<InviteAcceptancePayload> {
     if (authority !== VERIFIED_INVITE_AUTHORITY) {
@@ -182,25 +208,29 @@ export class VerifiedPendingInvitation {
         'The verified invitation has already been consumed or disposed.',
       )
     }
+    // Take exclusive ownership before the first async suspension so concurrent
+    // callers cannot both consume the same verified capability.
+    this.#listKey = null
+    this.#memberEnvelopeKey = null
 
     try {
-      const membershipCiphertext = await params.strongBox.encrypt({
-        key: params.dataKey,
-        context: WORK_LIST_MEMBERSHIP_CONTEXT,
-        plaintext: listKey,
+      const membershipPayload = await sealWorkListKeyForOwner({
+        listKey,
+        dataKey: params.dataKey,
+        strongBox: params.strongBox,
+        projectKeyWriteFormat: params.projectKeyWriteFormat,
       })
       return {
-        workListKeyCiphertext: serializeSealedPayloadBase64({
-          version: SEALED_PAYLOAD_VERSION,
-          ciphertext: membershipCiphertext,
-        }),
+        workListKeyCiphertext: membershipPayload.base64,
         membershipProof: await computeMembershipProof(
           memberEnvelopeKey,
           this.membershipId,
         ),
+        reservationRevision: this.#reservationRevision,
       }
     } finally {
-      this.dispose()
+      zeroBytes(listKey)
+      zeroBytes(memberEnvelopeKey)
     }
   }
 }
@@ -223,6 +253,7 @@ export async function buildInviteAcceptancePayload(params: {
   verifiedInvite: VerifiedPendingInvitation
   dataKey: Uint8Array
   strongBox: StrongBoxBridge
+  projectKeyWriteFormat?: ProjectKeyWriteFormat
 }): Promise<InviteAcceptancePayload> {
   if (!(params.verifiedInvite instanceof VerifiedPendingInvitation)) {
     throw new InviteVerificationError(
@@ -230,9 +261,17 @@ export async function buildInviteAcceptancePayload(params: {
       'Invite acceptance requires a capability issued by the trust verifier.',
     )
   }
+  if (params.verifiedInvite.authentication !== 'authenticated') {
+    params.verifiedInvite.dispose()
+    throw new InviteVerificationError(
+      'authentication_required',
+      'Invitations without verified sender authentication cannot be accepted.',
+    )
+  }
   return params.verifiedInvite.buildAcceptance(VERIFIED_INVITE_AUTHORITY, {
     dataKey: params.dataKey,
     strongBox: params.strongBox,
+    projectKeyWriteFormat: params.projectKeyWriteFormat,
   })
 }
 
@@ -319,7 +358,11 @@ export function getPendingInvitationAcceptanceBlockReason(
   }
   if (
     preview?.status === 'unavailable'
-    && (preview.reason === 'missing_package' || preview.reason === 'verification_unavailable')
+    && (
+      preview.reason === 'missing_package'
+      || preview.reason === 'verification_unavailable'
+      || preview.reason === 'legacy'
+    )
   ) {
     return preview.reason
   }
@@ -335,13 +378,13 @@ export function canAcceptPendingInvitationAfterPreview(
     || !invitation.recipientCiphertext
     || !invitation.saltMember
     || !preview
+    || invitation.inviteProtocolVersion !== 2
+    || !Number.isSafeInteger(invitation.reservationRevision)
+    || invitation.reservationRevision! < 0
   ) {
     return false
   }
-  if (preview.status === 'decrypted') {
-    return Boolean(invitation.invitePackageCiphertext)
-  }
-  return preview.status === 'unavailable' && preview.reason === 'legacy'
+  return preview.status === 'decrypted' && Boolean(invitation.invitePackageCiphertext)
 }
 
 export function resolvePendingInvitationState(
@@ -605,6 +648,7 @@ async function recoverAndVerifyInvite(
     const recovered: RecoveredInvite = {
       membershipId: invitation.membershipId,
       workListId: invitation.workListId,
+      reservationRevision: resolveInvitationProtocol(invitation).reservationRevision,
       listKey,
       memberEnvelopeKey,
       authentication: finalAuthentication,
@@ -911,7 +955,14 @@ async function verifyPackageAuthenticator(params: {
   } catch {
     return 'unavailable'
   }
-  if (inviterKey.generation !== authenticator.body.inviter_key_generation) {
+  if (
+    inviterKey.generation !== authenticator.body.inviter_key_generation
+    || inviterKey.authorization !== 'owner-authorized'
+    || !(inviterKey.invitePublicKey instanceof Uint8Array)
+    || inviterKey.invitePublicKey.length !== PUBLIC_KEY_BYTES
+    || !(inviterKey.identityPublicKey instanceof Uint8Array)
+    || inviterKey.identityPublicKey.length !== PUBLIC_KEY_BYTES
+  ) {
     return 'failed'
   }
   const verified = await verifyInvitePreviewAuthenticator({

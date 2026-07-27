@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 
 import { encodeBase64 } from '../runtime/base64'
 import type { StrongBoxBridge } from '../runtime/strong-box'
+import * as protocolExports from './index'
 import {
   buildCommentPayloadEnvelope,
   decryptCommentPayload,
@@ -27,6 +28,7 @@ import {
   decryptTaskPayload,
   encryptTaskPayload,
 } from './task'
+import { encryptWorkListPayload } from './work-list'
 
 const decoder = new TextDecoder()
 
@@ -157,6 +159,55 @@ describe('sealed protocol payloads', () => {
       'encrypt:worklist.note.v1',
       'decrypt:worklist.note.v1',
     ])
+  })
+
+  it('returns ciphertext fields without a plaintext fingerprint', async () => {
+    const strongBox = identityBridge([])
+    const listKey = new Uint8Array(32).fill(7)
+    const richText = {
+      format: 'plaintext' as const,
+      version: 1,
+      blocks: [{ type: 'paragraph' as const, text: 'Body' }],
+    }
+
+    const sealedPayloads = await Promise.all([
+      encryptWorkListPayload({
+        envelope: {
+          kind: 'work_list',
+          version: 1,
+          body: { title: 'Project', sections: [] },
+        },
+        listKey,
+        strongBox,
+      }),
+      encryptTaskPayload({
+        envelope: buildTaskPayloadEnvelope({
+          title: 'Task',
+          rich_text: richText,
+        }),
+        listKey,
+        strongBox,
+      }),
+      encryptCommentPayload({
+        envelope: buildCommentPayloadEnvelope({ content: richText }),
+        listKey,
+        strongBox,
+      }),
+      encryptNotePayload({
+        envelope: buildNotePayloadEnvelope({
+          title: 'Note',
+          content: richText,
+        }),
+        noteKey: listKey,
+        strongBox,
+      }),
+    ])
+
+    for (const sealed of sealedPayloads) {
+      expect(Object.keys(sealed).sort()).toEqual(['base64', 'bytes'])
+      expect(sealed).not.toHaveProperty('schemaHash')
+    }
+    expect(protocolExports).not.toHaveProperty('computeSchemaHash')
   })
 
   it('wraps and unwraps private note keys with the note-key context', async () => {

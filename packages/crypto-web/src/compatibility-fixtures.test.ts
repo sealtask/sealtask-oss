@@ -25,8 +25,13 @@ import {
   encodeRecipientPlaintext,
 } from './protocols/invite-issuance'
 import { decryptNotePayload } from './protocols/note'
+import { serializeSealedPayloadBase64 } from './protocols/sealed-payload'
 import { decryptTaskPayload } from './protocols/task'
-import { derivePayloadBindingKey, computePayloadProof } from './protocols/work-list'
+import {
+  computePayloadProof,
+  decryptWorkListKeyCiphertext,
+  derivePayloadBindingKey,
+} from './protocols/work-list'
 import {
   encodeHpkeEnvelope,
   hpkeOpen,
@@ -50,6 +55,9 @@ import {
   reconstructInclusionRoot,
   verifyConsistencyProof,
 } from './trust/transparency-proofs'
+import { hkdfExpand } from './runtime/hkdf'
+import { createOwnerAuthorizedTransparencyStatement } from './trust/transparency-authorization'
+import { transparencyUserIdToBytes } from './trust/transparency-user-id'
 
 type PasswordDataKeyVector = {
   password: string
@@ -95,6 +103,10 @@ type CompatibilityCorpus = {
     nonceB64: string
     keyIdB64: string
     ciphertextB64: string
+  }
+  projectKeys: {
+    keyB64: string
+    legacyBareArrayCborB64: string
   }
   payloadProof: {
     listKeyB64: string
@@ -164,6 +176,15 @@ type CompatibilityCorpus = {
     v2: AuthVersionVector
   }
   transparency: {
+    ownerIdentity: {
+      dataKeyB64: string
+      userId: string
+      userIdBytesB64: string
+      hkdfSaltB64: string
+      hkdfInfoUtf8: string
+      identitySeedB64: string
+      identityPublicKeyB64: string
+    }
     statements: Array<{
       userId: string
       generation: number
@@ -402,6 +423,25 @@ describe('Rust/browser crypto compatibility corpus', () => {
     })).resolves.toBe(corpus.payloadProof.proofB64)
   })
 
+  it('decrypts the shared legacy bare project-key array vector', async () => {
+    const vector = corpus.projectKeys
+    await expect(decryptWorkListKeyCiphertext({
+      ciphertext: serializeSealedPayloadBase64({
+        version: 1,
+        ciphertext: decode(vector.legacyBareArrayCborB64),
+      }),
+      dataKey: new Uint8Array(32),
+      strongBox: {
+        async encrypt({ plaintext }) {
+          return plaintext.slice()
+        },
+        async decrypt({ ciphertext }) {
+          return ciphertext.slice()
+        },
+      },
+    })).resolves.toEqual(decode(vector.keyB64))
+  })
+
   it('matches attachment reference CBOR and decrypts blob/reference fixtures', async () => {
     const vector = corpus.attachment
     const blobRef = {
@@ -531,6 +571,25 @@ describe('Rust/browser crypto compatibility corpus', () => {
 
   it('matches transparency digests, inclusion proof, and consistency proof', async () => {
     const vector = corpus.transparency
+    const ownerIdentity = vector.ownerIdentity
+    expect(transparencyUserIdToBytes(ownerIdentity.userId))
+      .toEqual(decode(ownerIdentity.userIdBytesB64))
+    expect(ownerIdentity.hkdfSaltB64).toBe('')
+    await expect(hkdfExpand({
+      parent: decode(ownerIdentity.dataKeyB64),
+      info: ownerIdentity.hkdfInfoUtf8,
+      salt: decode(ownerIdentity.hkdfSaltB64),
+    })).resolves.toEqual(decode(ownerIdentity.identitySeedB64))
+    const ownerStatement = await createOwnerAuthorizedTransparencyStatement({
+      dataKey: decode(ownerIdentity.dataKeyB64),
+      userId: ownerIdentity.userId,
+      generation: 0,
+      invitePublicKey: new Uint8Array(32).fill(0x51),
+      previousStatementDigest: null,
+    })
+    expect(ownerStatement.identityPublicKey)
+      .toEqual(decode(ownerIdentity.identityPublicKeyB64))
+
     for (const statement of vector.statements) {
       const digest = await computeStatementDigest({
         userId: statement.userId,

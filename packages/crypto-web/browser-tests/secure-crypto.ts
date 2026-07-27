@@ -7,7 +7,7 @@ import {
   normalizeInvitePackageInviter,
 } from '../src/protocols/invite-issuance'
 import { deriveInviteKeyPair } from '../src/protocols/invite-key'
-import { parseSealedPayload } from '../src/protocols/sealed-payload'
+import { decryptWorkListKeyCiphertext } from '../src/protocols/work-list'
 import {
   buildInviteAcceptancePayload,
   decryptPendingInvitationPreview,
@@ -190,6 +190,8 @@ window.runSecureCryptoFlow = async () => {
       return {
         invitePublicKey: inviterKeys.publicKey.slice(),
         generation,
+        identityPublicKey: new Uint8Array(32).fill(0x91),
+        authorization: 'owner-authorized' as const,
       }
     }
 
@@ -217,12 +219,10 @@ window.runSecureCryptoFlow = async () => {
       dataKey: inviteeDataKey,
       strongBox: bridge,
     })
-    const acceptedListKey = await bridge.decrypt({
-      key: inviteeDataKey,
-      context: encoder.encode('worklist.membership'),
-      ciphertext: parseSealedPayload(
-        acceptance.workListKeyCiphertext,
-      ).ciphertext,
+    const acceptedListKey = await decryptWorkListKeyCiphertext({
+      ciphertext: acceptance.workListKeyCiphertext,
+      dataKey: inviteeDataKey,
+      strongBox: bridge,
     })
     const acceptedListKeyMatches =
       acceptedListKey.length === listKey.length &&

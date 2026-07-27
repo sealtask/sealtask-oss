@@ -6,7 +6,6 @@ import { randomBytes } from '../runtime/random'
 import { getStrongBoxBridge, type StrongBoxBridge } from '../runtime/strong-box'
 import type { AttachmentRef } from './attachment'
 import {
-  computeSchemaHash,
   decodeAndValidatePayloadBytes,
   validatePayloadBytes,
   type PayloadValidationDependencies,
@@ -22,7 +21,7 @@ import {
   serializeSealedPayloadBase64,
 } from './sealed-payload'
 import { toSealedBlob } from './sealed-blob'
-import type { ValidatedSealedBlobPayload } from './types'
+import type { SealedBlobPayload } from './types'
 
 const encoder = new TextEncoder()
 const NOTE_PAYLOAD_CONTEXT = encoder.encode('worklist.note.v1')
@@ -68,22 +67,16 @@ export async function encryptNotePayload(params: {
   noteKey: Uint8Array
   strongBox?: StrongBoxBridge
   validation?: PayloadValidationDependencies
-}): Promise<ValidatedSealedBlobPayload> {
+}): Promise<SealedBlobPayload> {
   const plaintext = toUint8Array(cborEncode(params.envelope))
   validatePayloadBytes(plaintext, 'note', params.validation)
   const bridge = params.strongBox ?? (await getStrongBoxBridge())
-  const [schemaHash, ciphertext] = await Promise.all([
-    computeSchemaHash(plaintext),
-    bridge.encrypt({
-      key: params.noteKey,
-      context: NOTE_PAYLOAD_CONTEXT,
-      plaintext,
-    }),
-  ])
-  return {
-    ...toSealedBlob({ version: SEALED_PAYLOAD_VERSION, ciphertext }),
-    schemaHash,
-  }
+  const ciphertext = await bridge.encrypt({
+    key: params.noteKey,
+    context: NOTE_PAYLOAD_CONTEXT,
+    plaintext,
+  })
+  return toSealedBlob({ version: SEALED_PAYLOAD_VERSION, ciphertext })
 }
 
 export async function decryptNotePayload(params: {

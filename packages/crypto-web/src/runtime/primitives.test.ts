@@ -27,6 +27,16 @@ describe('runtime primitives', () => {
     expect(copied).toEqual(new Uint8Array(3))
   })
 
+  it('copies Buffer subclasses without retaining their shared slice semantics', () => {
+    const source = Buffer.from([1, 2, 3])
+    const copied = toUint8Array(source)
+
+    zeroBytes(copied)
+
+    expect(copied).toEqual(new Uint8Array(3))
+    expect(source).toEqual(Buffer.from([1, 2, 3]))
+  })
+
   it('round-trips unpadded URL-safe base64', () => {
     const bytes = new Uint8Array([251, 255, 239, 1])
     const encoded = encodeBase64(bytes)

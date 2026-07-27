@@ -31,6 +31,9 @@ const ATTACHMENT_BLOB_CONTEXT: &[u8] = b"worklist.attachment.blob.v1";
 const INVITE_PREVIEW_AUTH_SCHEME: &str = "x25519-hkdf-sha256-hmac-sha256";
 const INVITE_MEMBER_KEY_INFO_PREFIX: &str = "member:";
 const TRANSPARENCY_DOMAIN: &[u8] = b"worklist.transparency.v1";
+const TRANSPARENCY_OWNER_KEY_INFO_PREFIX: &str = "transparency:owner-signing:v2";
+const TRANSPARENCY_OWNER_IDENTITY_PUBLIC_KEY_B64: &str =
+    "8q3Dhm9y8ioVUFX+Zo9p0qfBsxAQPmyPhhVzkEnDDII";
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -38,6 +41,7 @@ pub struct CompatibilityCorpus {
     pub schema_version: u8,
     pub data_keys: DataKeyVectors,
     pub strong_box: StrongBoxVector,
+    pub project_keys: ProjectKeyCompatibilityVector,
     pub payload_proof: PayloadProofVector,
     pub payloads: PayloadVectors,
     pub attachment: AttachmentVector,
@@ -86,6 +90,13 @@ pub struct StrongBoxVector {
     pub nonce_b64: String,
     pub key_id_b64: String,
     pub ciphertext_b64: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectKeyCompatibilityVector {
+    pub key_b64: String,
+    pub legacy_bare_array_cbor_b64: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -278,12 +289,25 @@ pub struct InviteAuthenticatorVersionVector {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct TransparencyVector {
+    pub owner_identity: TransparencyOwnerIdentityVector,
     pub statements: Vec<TransparencyStatementVector>,
     pub target_index: usize,
     pub log_size: usize,
     pub inclusion_proof_b64: Vec<String>,
     pub root_hash_b64: String,
     pub consistency: TransparencyConsistencyVector,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct TransparencyOwnerIdentityVector {
+    pub data_key_b64: String,
+    pub user_id: String,
+    pub user_id_bytes_b64: String,
+    pub hkdf_salt_b64: String,
+    pub hkdf_info_utf8: String,
+    pub identity_seed_b64: String,
+    pub identity_public_key_b64: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -455,6 +479,8 @@ pub fn generate_corpus() -> FixtureResult<CompatibilityCorpus> {
     )?;
 
     let data_keys = generate_data_key_vectors(&data_key)?;
+    let project_key = byte_sequence(0x00, KEY_SIZE);
+    let legacy_bare_array = serialize_to_cbor_x(&project_key)?;
     let payloads = generate_payload_vectors(&list_key)?;
     let task_ciphertext = decode_b64(&payloads.task.sealed_payload_b64)?;
     let list_key_value = SymmetricKey::from_slice(&list_key)?;
@@ -472,6 +498,10 @@ pub fn generate_corpus() -> FixtureResult<CompatibilityCorpus> {
             nonce_b64: b64(strong_box_nonce),
             key_id_b64: b64(strong_box_case.key_id),
             ciphertext_b64: b64(&strong_box_case.ciphertext),
+        },
+        project_keys: ProjectKeyCompatibilityVector {
+            key_b64: b64(&project_key),
+            legacy_bare_array_cbor_b64: b64(&legacy_bare_array),
         },
         payload_proof: PayloadProofVector {
             list_key_b64: b64(&list_key),
@@ -926,6 +956,7 @@ fn generate_transparency_vector() -> FixtureResult<TransparencyVector> {
     let root = prefixed_hash(1, &[&prefix_root, &leaves[2]]);
 
     Ok(TransparencyVector {
+        owner_identity: generate_transparency_owner_identity_vector()?,
         statements,
         target_index: 1,
         log_size: 3,
@@ -936,6 +967,29 @@ fn generate_transparency_vector() -> FixtureResult<TransparencyVector> {
             prefix_root_b64: b64(prefix_root),
             proof_b64: vec![b64(prefix_root), b64(leaves[2])],
         },
+    })
+}
+
+fn generate_transparency_owner_identity_vector() -> FixtureResult<TransparencyOwnerIdentityVector> {
+    let data_key = byte_sequence(1, KEY_SIZE);
+    let user_id = "11111111-1111-1111-1111-111111111111";
+    let parsed_user_id = Uuid::parse_str(user_id)?;
+    let canonical_user_id = parsed_user_id.to_string();
+    if canonical_user_id != user_id {
+        return Err("transparency owner-identity fixture user id is not canonical".into());
+    }
+    let compact_user_id = canonical_user_id.replace('-', "");
+    let hkdf_info_utf8 = format!("{TRANSPARENCY_OWNER_KEY_INFO_PREFIX}:{compact_user_id}");
+    let identity_seed = hkdf(&data_key, hkdf_info_utf8.as_bytes(), KEY_SIZE)?;
+
+    Ok(TransparencyOwnerIdentityVector {
+        data_key_b64: b64(&data_key),
+        user_id: canonical_user_id,
+        user_id_bytes_b64: b64(parsed_user_id.as_bytes()),
+        hkdf_salt_b64: b64(&[]),
+        hkdf_info_utf8,
+        identity_seed_b64: b64(&identity_seed),
+        identity_public_key_b64: TRANSPARENCY_OWNER_IDENTITY_PUBLIC_KEY_B64.to_string(),
     })
 }
 

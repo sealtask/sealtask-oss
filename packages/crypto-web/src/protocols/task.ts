@@ -5,7 +5,6 @@ import { SEALED_PAYLOAD_VERSION } from '../runtime/constants'
 import { getStrongBoxBridge, type StrongBoxBridge } from '../runtime/strong-box'
 import type { AttachmentRef } from './attachment'
 import {
-  computeSchemaHash,
   decodeAndValidatePayloadBytes,
   validatePayloadBytes,
   type PayloadValidationDependencies,
@@ -19,7 +18,7 @@ import type {
 } from './rich-text'
 import { parseSealedPayload } from './sealed-payload'
 import { toSealedBlob } from './sealed-blob'
-import type { ValidatedSealedBlobPayload } from './types'
+import type { SealedBlobPayload } from './types'
 
 export type {
   RichTextBlock,
@@ -68,22 +67,16 @@ export async function encryptTaskPayload(params: {
   listKey: Uint8Array
   strongBox?: StrongBoxBridge
   validation?: PayloadValidationDependencies
-}): Promise<ValidatedSealedBlobPayload> {
+}): Promise<SealedBlobPayload> {
   const plaintext = toUint8Array(cborEncode(params.envelope))
   validatePayloadBytes(plaintext, 'task', params.validation)
   const bridge = params.strongBox ?? (await getStrongBoxBridge())
-  const [schemaHash, ciphertext] = await Promise.all([
-    computeSchemaHash(plaintext),
-    bridge.encrypt({
-      key: params.listKey,
-      context: TASK_PAYLOAD_CONTEXT,
-      plaintext,
-    }),
-  ])
-  return {
-    ...toSealedBlob({ version: SEALED_PAYLOAD_VERSION, ciphertext }),
-    schemaHash,
-  }
+  const ciphertext = await bridge.encrypt({
+    key: params.listKey,
+    context: TASK_PAYLOAD_CONTEXT,
+    plaintext,
+  })
+  return toSealedBlob({ version: SEALED_PAYLOAD_VERSION, ciphertext })
 }
 
 export async function decryptTaskPayload(params: {

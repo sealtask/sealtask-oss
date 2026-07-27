@@ -4,7 +4,6 @@ import { toUint8Array } from '../runtime/bytes'
 import { SEALED_PAYLOAD_VERSION } from '../runtime/constants'
 import { getStrongBoxBridge, type StrongBoxBridge } from '../runtime/strong-box'
 import {
-  computeSchemaHash,
   decodeAndValidatePayloadBytes,
   validatePayloadBytes,
   type PayloadValidationDependencies,
@@ -12,7 +11,7 @@ import {
 import { parseSealedPayload } from './sealed-payload'
 import { toSealedBlob } from './sealed-blob'
 import type { TaskPayloadRichText } from './task'
-import type { ValidatedSealedBlobPayload } from './types'
+import type { SealedBlobPayload } from './types'
 
 const COMMENT_PAYLOAD_CONTEXT = new TextEncoder().encode('worklist.comment.v1')
 
@@ -41,22 +40,16 @@ export async function encryptCommentPayload(params: {
   listKey: Uint8Array
   strongBox?: StrongBoxBridge
   validation?: PayloadValidationDependencies
-}): Promise<ValidatedSealedBlobPayload> {
+}): Promise<SealedBlobPayload> {
   const plaintext = toUint8Array(cborEncode(params.envelope))
   validatePayloadBytes(plaintext, 'comment', params.validation)
   const bridge = params.strongBox ?? (await getStrongBoxBridge())
-  const [schemaHash, ciphertext] = await Promise.all([
-    computeSchemaHash(plaintext),
-    bridge.encrypt({
-      key: params.listKey,
-      context: COMMENT_PAYLOAD_CONTEXT,
-      plaintext,
-    }),
-  ])
-  return {
-    ...toSealedBlob({ version: SEALED_PAYLOAD_VERSION, ciphertext }),
-    schemaHash,
-  }
+  const ciphertext = await bridge.encrypt({
+    key: params.listKey,
+    context: COMMENT_PAYLOAD_CONTEXT,
+    plaintext,
+  })
+  return toSealedBlob({ version: SEALED_PAYLOAD_VERSION, ciphertext })
 }
 
 export async function decryptCommentPayload(params: {

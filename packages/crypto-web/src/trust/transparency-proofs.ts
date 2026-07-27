@@ -1,3 +1,5 @@
+import { transparencyUserIdToBytes } from './transparency-user-id'
+
 const encoder = new TextEncoder()
 const STATEMENT_DOMAIN = encoder.encode('worklist.transparency.v1')
 const LEAF_PREFIX = 0x00
@@ -8,7 +10,7 @@ export async function computeStatementDigest(params: {
   generation: number
   inviteKey: Uint8Array
 }): Promise<Uint8Array> {
-  const userBytes = uuidToBytes(params.userId)
+  const userBytes = transparencyUserIdToBytes(params.userId)
   const generationBytes = encodeUint64(params.generation, 'generation')
   const keyLengthBytes = encodeUint32(params.inviteKey.length, 'invite_public_key.length')
   return sha256(
@@ -147,18 +149,6 @@ export async function verifyConsistencyProof(
     throw new Error('consistency proof has unused hashes')
   }
   return { prefixRoot: result.prefixRoot, fullRoot: result.subtreeRoot }
-}
-
-function uuidToBytes(value: string): Uint8Array {
-  const normalized = value.replace(/-/g, '').trim().toLowerCase()
-  if (!/^[0-9a-f]{32}$/.test(normalized)) {
-    throw new Error('user_id must be a valid UUID string')
-  }
-  const bytes = new Uint8Array(16)
-  for (let index = 0; index < bytes.length; index += 1) {
-    bytes[index] = Number.parseInt(normalized.slice(index * 2, index * 2 + 2), 16)
-  }
-  return bytes
 }
 
 function encodeUint64(value: number, field: string): Uint8Array {

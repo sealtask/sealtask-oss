@@ -35,6 +35,10 @@
     "keyIdB64": "9vnTBOW+zZmReliHXOjeBA",
     "ciphertextB64": "sbj1g1D2+dME5b7NmZF6WIdc6N4ETAECAwQFBgcICQoLDFg4N+0lBl0z19houjE1u8/rTNGEs/0p5M8qD7TOoCqGm0w43fvJ9VtPnWHrMeUR5qd6sOFg3570Lpk"
   },
+  "projectKeys": {
+    "keyB64": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8",
+    "legacyBareArrayCborB64": "mCAAAQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGBgZGBoYGxgcGB0YHhgf"
+  },
   "payloadProof": {
     "listKeyB64": "ICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj8",
     "bindingKeyB64": "ER8+D/xqj1ok7oqqFQLlnZh9irU90QcrWomZryUCoNM",
@@ -197,6 +201,15 @@
     }
   },
   "transparency": {
+    "ownerIdentity": {
+      "dataKeyB64": "AQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyA",
+      "userId": "11111111-1111-1111-1111-111111111111",
+      "userIdBytesB64": "EREREREREREREREREREREQ",
+      "hkdfSaltB64": "",
+      "hkdfInfoUtf8": "transparency:owner-signing:v2:11111111111111111111111111111111",
+      "identitySeedB64": "gGD7Lkb5yvurytw5ZGWOqN15AmHaDbhttKTrIwLkRr8",
+      "identityPublicKeyB64": "8q3Dhm9y8ioVUFX+Zo9p0qfBsxAQPmyPhhVzkEnDDII"
+    },
     "statements": [
       {
         "userId": "11111111-1111-1111-1111-111111111111",

@@ -10218,9 +10218,23 @@ fn encode_membership_key_ciphertext(
     data_key: &SymmetricKey,
     list_key: &SymmetricKey,
 ) -> sealtask_client_core::PublicResult<String> {
+    let plaintext = serialize_to_cbor(&FlexibleValue::Map(vec![
+        (
+            FlexibleValue::Text("kind".to_owned()),
+            FlexibleValue::Text("sealtask-project-key".to_owned()),
+        ),
+        (
+            FlexibleValue::Text("version".to_owned()),
+            FlexibleValue::Integer(2.into()),
+        ),
+        (
+            FlexibleValue::Text("key".to_owned()),
+            FlexibleValue::Bytes(list_key.as_bytes().to_vec()),
+        ),
+    ]))?;
     let strong_box = StrongBoxKeyRing::new(data_key.clone()).strong_box();
     let sealed = strong_box
-        .encrypt(list_key.as_bytes(), WORK_LIST_MEMBERSHIP_CONTEXT)
+        .encrypt(&plaintext, WORK_LIST_MEMBERSHIP_CONTEXT)
         .expect("seal membership key");
     let payload = SealedPayload::new(sealed).to_bytes()?;
     Ok(STANDARD_NO_PAD.encode(payload))

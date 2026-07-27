@@ -1,4 +1,4 @@
-import { encode as cborEncode } from 'cbor-x'
+import { decode as cborDecode, encode as cborEncode } from 'cbor-x'
 import { describe, expect, it } from 'vitest'
 
 import { decodeBase64, encodeBase64 } from '../runtime/base64'
@@ -27,6 +27,7 @@ import {
   deriveMemberEnvelopeKey,
   encodeInvitePackageBindingContext,
   encodeRecipientBindingContext,
+  getPendingInvitationAcceptanceBlockReason,
   verifyInviteForAcceptance,
   type InviteKeyResolver,
   type PendingInvitationCrypto,
@@ -39,6 +40,7 @@ const MEMBERSHIP_ID = 'membership-1'
 const INVITER_GENERATION = 7
 const DATA_KEY = new Uint8Array(32).fill(0x31)
 const INVITER_DATA_KEY = new Uint8Array(32).fill(0x72)
+const INVITER_IDENTITY_PUBLIC_KEY = new Uint8Array(32).fill(0x91)
 const LIST_KEY = new Uint8Array(32).fill(0xa4)
 const SALT = new Uint8Array(32).fill(0x5c)
 
@@ -87,13 +89,84 @@ describe('authenticated invitation verification and acceptance', () => {
       dataKey: DATA_KEY,
       strongBox,
     })
-    expect(decodeAcceptedListKey(acceptance.workListKeyCiphertext)).toEqual(LIST_KEY)
+    expect(decodeAcceptedProjectKeyPlaintext(acceptance.workListKeyCiphertext)).toEqual(LIST_KEY)
     expect(decodeBase64(acceptance.membershipProof)).toHaveLength(32)
+    expect(acceptance.reservationRevision).toBe(4)
     await expect(buildInviteAcceptancePayload({
       verifiedInvite,
       dataKey: DATA_KEY,
       strongBox,
     })).rejects.toMatchObject({ code: 'verified_invite_consumed' })
+  })
+
+  it('writes a v2 project-key envelope only when the rollout gate explicitly opts in', async () => {
+    const fixture = await buildInvitationFixture()
+    const verifiedInvite = await verifyInviteForAcceptance({
+      invitation: fixture.invitation,
+      dataKey: DATA_KEY,
+      userId: USER_ID,
+      strongBox,
+      resolveInviteKey: fixture.resolveInviteKey,
+    })
+
+    const acceptance = await buildInviteAcceptancePayload({
+      verifiedInvite,
+      dataKey: DATA_KEY,
+      strongBox,
+      projectKeyWriteFormat: 'v2-envelope',
+    })
+
+    expect(decodeAcceptedProjectKeyEnvelope(acceptance.workListKeyCiphertext)).toEqual({
+      kind: 'sealtask-project-key',
+      version: 2,
+      key: LIST_KEY,
+    })
+  })
+
+  it('atomically consumes the acceptance capability before asynchronous encryption', async () => {
+    const fixture = await buildInvitationFixture()
+    let blockEncryption = false
+    let releaseEncryption!: () => void
+    const encryptionGate = new Promise<void>((resolve) => {
+      releaseEncryption = resolve
+    })
+    const deferredStrongBox: StrongBoxBridge = {
+      async encrypt({ plaintext }) {
+        if (blockEncryption) {
+          await encryptionGate
+        }
+        return plaintext.slice()
+      },
+      async decrypt({ ciphertext }) {
+        return ciphertext.slice()
+      },
+    }
+    const verifiedInvite = await verifyInviteForAcceptance({
+      invitation: fixture.invitation,
+      dataKey: DATA_KEY,
+      userId: USER_ID,
+      strongBox: deferredStrongBox,
+      resolveInviteKey: fixture.resolveInviteKey,
+    })
+    blockEncryption = true
+
+    const first = buildInviteAcceptancePayload({
+      verifiedInvite,
+      dataKey: DATA_KEY,
+      strongBox: deferredStrongBox,
+    })
+    await expect(buildInviteAcceptancePayload({
+      verifiedInvite,
+      dataKey: DATA_KEY,
+      strongBox: deferredStrongBox,
+    })).rejects.toMatchObject({ code: 'verified_invite_consumed' })
+
+    releaseEncryption()
+    await expect(first).resolves.toEqual({
+      workListKeyCiphertext: expect.any(String),
+      membershipProof: expect.any(String),
+      reservationRevision: 4,
+    })
   })
 
   it('rejects a forged object and a direct constructor call at the acceptance boundary', async () => {
@@ -114,6 +187,34 @@ describe('authenticated invitation verification and acceptance', () => {
         preview: null,
       }],
     )).toThrow(/only be created by the trust verifier/i)
+  })
+
+  it('rejects a capability whose authentication marker is downgraded before acceptance', async () => {
+    const fixture = await buildInvitationFixture()
+    const verifiedInvite = await verifyInviteForAcceptance({
+      invitation: fixture.invitation,
+      dataKey: DATA_KEY,
+      userId: USER_ID,
+      strongBox,
+      resolveInviteKey: fixture.resolveInviteKey,
+    })
+
+    try {
+      expect(Reflect.set(verifiedInvite, 'authentication', 'legacy')).toBe(true)
+      await expect(buildInviteAcceptancePayload({
+        verifiedInvite,
+        dataKey: DATA_KEY,
+        strongBox,
+      })).rejects.toMatchObject({ code: 'authentication_required' })
+      expect(Reflect.set(verifiedInvite, 'authentication', 'authenticated')).toBe(true)
+      await expect(buildInviteAcceptancePayload({
+        verifiedInvite,
+        dataKey: DATA_KEY,
+        strongBox,
+      })).rejects.toMatchObject({ code: 'verified_invite_consumed' })
+    } finally {
+      verifiedInvite.dispose()
+    }
   })
 
   it('rejects an authenticator-tampered package even when every digest is self-consistent', async () => {
@@ -146,6 +247,8 @@ describe('authenticated invitation verification and acceptance', () => {
     const wrongResolver: InviteKeyResolver = async () => ({
       invitePublicKey: wrongPair.publicKey,
       generation: INVITER_GENERATION,
+      identityPublicKey: INVITER_IDENTITY_PUBLIC_KEY,
+      authorization: 'owner-authorized',
     })
     try {
       await expect(verifyInviteForAcceptance({
@@ -159,6 +262,50 @@ describe('authenticated invitation verification and acceptance', () => {
       zeroBytes(wrongPair.privateKey)
       zeroBytes(wrongPair.publicKey)
     }
+  })
+
+  it('rejects a resolver result that is not owner-authorized', async () => {
+    const fixture = await buildInvitationFixture()
+    const unauthenticatedResolver = async () => {
+      const resolved = await fixture.resolveInviteKey({
+        userId: INVITER_ID,
+        generation: INVITER_GENERATION,
+      })
+      return {
+        ...resolved,
+        authorization: 'legacy' as const,
+      }
+    }
+
+    await expect(verifyInviteForAcceptance({
+      invitation: fixture.invitation,
+      dataKey: DATA_KEY,
+      userId: USER_ID,
+      strongBox,
+      resolveInviteKey: unauthenticatedResolver as unknown as InviteKeyResolver,
+    })).rejects.toMatchObject({ code: 'authentication_failed' })
+  })
+
+  it('rejects malformed owner identity evidence from the resolver', async () => {
+    const fixture = await buildInvitationFixture()
+    const malformedResolver = async () => {
+      const resolved = await fixture.resolveInviteKey({
+        userId: INVITER_ID,
+        generation: INVITER_GENERATION,
+      })
+      return {
+        ...resolved,
+        identityPublicKey: new Uint8Array(31),
+      }
+    }
+
+    await expect(verifyInviteForAcceptance({
+      invitation: fixture.invitation,
+      dataKey: DATA_KEY,
+      userId: USER_ID,
+      strongBox,
+      resolveInviteKey: malformedResolver,
+    })).rejects.toMatchObject({ code: 'authentication_failed' })
   })
 
   it('distinguishes unavailable inviter verification from failed authentication', async () => {
@@ -186,7 +333,7 @@ describe('authenticated invitation verification and acceptance', () => {
     })
   })
 
-  it('preserves authenticator-less package compatibility without claiming authentication', async () => {
+  it('classifies authenticator-less packages as legacy and rejects normal acceptance', async () => {
     const fixture = await buildInvitationFixture({ includeAuthenticator: false })
     const preview = await decryptPendingInvitationPreview({
       invitation: fixture.invitation,
@@ -195,25 +342,17 @@ describe('authenticated invitation verification and acceptance', () => {
       strongBox,
     })
     expect(preview).toEqual({ status: 'unavailable', reason: 'legacy' })
-
-    const verifiedInvite = await verifyInviteForAcceptance({
+    expect(canAcceptPendingInvitationAfterPreview(fixture.invitation, preview)).toBe(false)
+    expect(getPendingInvitationAcceptanceBlockReason(preview)).toBe('legacy')
+    await expect(verifyInviteForAcceptance({
       invitation: fixture.invitation,
       dataKey: DATA_KEY,
       userId: USER_ID,
       strongBox,
-    })
-    expect(verifiedInvite.authentication).toBe('legacy')
-    await expect(buildInviteAcceptancePayload({
-      verifiedInvite,
-      dataKey: DATA_KEY,
-      strongBox,
-    })).resolves.toMatchObject({
-      membershipProof: expect.any(String),
-      workListKeyCiphertext: expect.any(String),
-    })
+    })).rejects.toMatchObject({ code: 'authentication_required' })
   })
 
-  it('accepts only genuinely digest-less package-less legacy artifacts', async () => {
+  it('classifies genuinely digest-less package-less artifacts as legacy but rejects acceptance', async () => {
     const legacy = await buildInvitationFixture({ includePackage: false })
     const preview = await decryptPendingInvitationPreview({
       invitation: legacy.invitation,
@@ -222,13 +361,14 @@ describe('authenticated invitation verification and acceptance', () => {
       strongBox,
     })
     expect(preview).toEqual({ status: 'unavailable', reason: 'legacy' })
-    const verifiedLegacy = await verifyInviteForAcceptance({
+    expect(canAcceptPendingInvitationAfterPreview(legacy.invitation, preview)).toBe(false)
+    expect(getPendingInvitationAcceptanceBlockReason(preview)).toBe('legacy')
+    await expect(verifyInviteForAcceptance({
       invitation: legacy.invitation,
       dataKey: DATA_KEY,
       userId: USER_ID,
       strongBox,
-    })
-    verifiedLegacy.dispose()
+    })).rejects.toMatchObject({ code: 'authentication_required' })
 
     const packageBound = await buildInvitationFixture()
     const missingPackage: PendingInvitationCrypto = {
@@ -389,6 +529,8 @@ async function buildInvitationFixture(options: FixtureOptions = {}): Promise<{
           return {
             invitePublicKey: resolvedInviterPublicKey.slice(),
             generation: INVITER_GENERATION,
+            identityPublicKey: INVITER_IDENTITY_PUBLIC_KEY.slice(),
+            authorization: 'owner-authorized',
           }
         },
       }
@@ -473,7 +615,11 @@ async function sealRecipient(params: {
   })
 }
 
-function decodeAcceptedListKey(ciphertext: string): Uint8Array {
+function decodeAcceptedProjectKeyEnvelope(ciphertext: string): unknown {
   const sealed = parseSealedPayload(ciphertext)
-  return sealed.ciphertext
+  return cborDecode(sealed.ciphertext)
+}
+
+function decodeAcceptedProjectKeyPlaintext(ciphertext: string): Uint8Array {
+  return parseSealedPayload(ciphertext).ciphertext
 }

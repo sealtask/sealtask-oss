@@ -1,6 +1,6 @@
 import { decode as cborDecode } from 'cbor-x'
 
-import { toArrayBuffer, toUint8Array, type ByteSource } from '../runtime/bytes'
+import { toUint8Array, type ByteSource } from '../runtime/bytes'
 import {
   PROJECT_EMOJI_POLICY,
   type ProjectEmojiPolicy,
@@ -1216,15 +1216,4 @@ function toByteArray(value: unknown, field: string): Uint8Array {
     return Uint8Array.from(value)
   }
   throw new PayloadValidationError(`${field} must be a byte array`)
-}
-
-export async function computeSchemaHash(
-  bytes: Uint8Array,
-): Promise<Uint8Array> {
-  if (!globalThis.crypto?.subtle) {
-    throw new Error('WebCrypto digest is unavailable')
-  }
-  return new Uint8Array(
-    await globalThis.crypto.subtle.digest('SHA-256', toArrayBuffer(bytes)),
-  )
 }

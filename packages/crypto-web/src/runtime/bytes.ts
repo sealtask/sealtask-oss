@@ -2,7 +2,10 @@ export type ByteSource = Uint8Array | ArrayBuffer | ArrayBufferLike | ArrayLike<
 
 export function toUint8Array(value: ByteSource): Uint8Array {
   if (value instanceof Uint8Array) {
-    return value.slice()
+    // `Buffer` subclasses Uint8Array but overrides `slice()` to return a
+    // shared-memory view. Use the intrinsic typed-array copy semantics so
+    // later zeroization can never mutate caller-owned Buffer storage.
+    return Uint8Array.from(value)
   }
   if (isArrayBufferLike(value)) {
     const view = new Uint8Array(value)

@@ -62,6 +62,11 @@ pub const KEY_SIZE: usize = 32;
 pub const OPAQUE_EXPORT_KEY_BYTES: usize = 64;
 const LEGACY_DATA_KEY_PAYLOAD_VERSION: u8 = 1;
 const OPAQUE_DATA_KEY_PAYLOAD_VERSION: u8 = 2;
+const PROJECT_KEY_ENVELOPE_KIND: &str = "sealtask-project-key";
+const PROJECT_KEY_ENVELOPE_VERSION: u8 = 2;
+const PROJECT_KEY_CBOR_MAX_BYTES: usize = 512;
+const PROJECT_KEY_CBOR_MAX_DEPTH: usize = 8;
+const PROJECT_KEY_CBOR_MAX_ITEMS: usize = KEY_SIZE + 4;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub enum DataKeyCiphertextVersion {
@@ -383,13 +388,13 @@ pub fn decrypt_work_list_key(
     data_key: &SymmetricKey,
     work_list_key_ciphertext: &[u8],
 ) -> PublicResult<SymmetricKey> {
-    let plaintext = decrypt_sealed_bytes(
+    let plaintext = Zeroizing::new(decrypt_sealed_bytes(
         data_key,
         work_list_key_ciphertext,
         WORK_LIST_MEMBERSHIP_CONTEXT,
         "failed to decrypt work list key",
-    )?;
-    let key_bytes = decode_work_list_key_bytes(&plaintext)?;
+    )?);
+    let key_bytes = Zeroizing::new(decode_work_list_key_bytes(&plaintext)?);
     symmetric_key_from_bytes(&key_bytes)
 }
 
@@ -868,39 +873,209 @@ fn sealed_blob_from_payload(payload: SealedPayload) -> PublicResult<SealedBlobPa
 }
 
 fn decode_work_list_key_bytes(plaintext: &[u8]) -> PublicResult<Vec<u8>> {
-    let Some(bytes) = try_decode_envelope(plaintext)? else {
-        return if plaintext.is_empty() {
-            Err(PublicError::validation("work list key cannot be empty"))
-        } else {
-            Ok(plaintext.to_vec())
-        };
-    };
-
-    if bytes.is_empty() {
-        return Err(PublicError::validation("work list key cannot be empty"));
+    // A legacy raw key can itself be valid CBOR. For example, 0x58 0x1e followed by 30 bytes
+    // parses as a 30-byte CBOR byte string, so exact raw-key length must win before CBOR parsing.
+    if plaintext.len() == KEY_SIZE {
+        return Ok(plaintext.to_vec());
     }
 
-    Ok(bytes)
+    let key = decode_structured_project_key(plaintext)?;
+    require_project_key_length(key)
 }
 
-fn try_decode_envelope(bytes: &[u8]) -> PublicResult<Option<Vec<u8>>> {
-    if let Ok(envelope) = deserialize_from_cbor::<WorkListKeyEnvelope>(bytes) {
-        let bytes = match envelope.key {
-            WorkListKeyField::Bytes(data) => data,
-            WorkListKeyField::Text(text) => decode_membership_key_string(&text)?,
+fn decode_structured_project_key(bytes: &[u8]) -> PublicResult<Vec<u8>> {
+    match deserialize_exact_cbor_value(bytes) {
+        Some(FlexibleValue::Bytes(key)) => Ok(key),
+        Some(FlexibleValue::Tag(64, value)) => match *value {
+            FlexibleValue::Bytes(key) => Ok(key),
+            _ => Err(PublicError::validation("invalid project key payload")),
+        },
+        Some(FlexibleValue::Array(values)) => decode_legacy_byte_array(values),
+        Some(FlexibleValue::Map(fields)) => decode_project_key_map(&fields),
+        _ => Err(PublicError::validation("invalid project key payload")),
+    }
+}
+
+fn require_project_key_length(key: Vec<u8>) -> PublicResult<Vec<u8>> {
+    if key.len() != KEY_SIZE {
+        return Err(PublicError::validation(format!(
+            "project key must be exactly {KEY_SIZE} bytes"
+        )));
+    }
+    Ok(key)
+}
+
+fn deserialize_exact_cbor_value(bytes: &[u8]) -> Option<FlexibleValue> {
+    validate_definite_cbor(bytes)?;
+    let mut cursor = Cursor::new(bytes);
+    let value = strong_box::ciborium::de::from_reader(&mut cursor).ok()?;
+    (cursor.position() as usize == bytes.len()).then_some(value)
+}
+
+fn validate_definite_cbor(bytes: &[u8]) -> Option<()> {
+    if bytes.len() > PROJECT_KEY_CBOR_MAX_BYTES {
+        return None;
+    }
+    let mut offset = 0;
+    let mut remaining_items = PROJECT_KEY_CBOR_MAX_ITEMS;
+    scan_definite_cbor_value(bytes, &mut offset, 0, &mut remaining_items)?;
+    (offset == bytes.len()).then_some(())
+}
+
+fn scan_definite_cbor_value(
+    bytes: &[u8],
+    offset: &mut usize,
+    depth: usize,
+    remaining_items: &mut usize,
+) -> Option<()> {
+    if depth >= PROJECT_KEY_CBOR_MAX_DEPTH || *remaining_items == 0 {
+        return None;
+    }
+    *remaining_items -= 1;
+    let initial = *bytes.get(*offset)?;
+    *offset = (*offset).checked_add(1)?;
+    let major_type = initial >> 5;
+    let additional = initial & 0x1f;
+    let argument = read_cbor_argument(bytes, offset, additional)?;
+
+    match major_type {
+        0 | 1 | 7 => Some(()),
+        2 | 3 => {
+            let length = usize::try_from(argument).ok()?;
+            let end = (*offset).checked_add(length)?;
+            bytes.get(*offset..end)?;
+            *offset = end;
+            Some(())
+        }
+        4 => {
+            for _ in 0..argument {
+                scan_definite_cbor_value(bytes, offset, depth + 1, remaining_items)?;
+            }
+            Some(())
+        }
+        5 => {
+            for _ in 0..argument.checked_mul(2)? {
+                scan_definite_cbor_value(bytes, offset, depth + 1, remaining_items)?;
+            }
+            Some(())
+        }
+        6 => scan_definite_cbor_value(bytes, offset, depth + 1, remaining_items),
+        _ => None,
+    }
+}
+
+fn read_cbor_argument(bytes: &[u8], offset: &mut usize, additional: u8) -> Option<u64> {
+    if additional < 24 {
+        return Some(u64::from(additional));
+    }
+    let byte_count = match additional {
+        24 => 1,
+        25 => 2,
+        26 => 4,
+        27 => 8,
+        _ => return None,
+    };
+    let mut value = 0u64;
+    for _ in 0..byte_count {
+        value = (value << 8) | u64::from(*bytes.get(*offset)?);
+        *offset = (*offset).checked_add(1)?;
+    }
+    Some(value)
+}
+
+fn decode_project_key_map(fields: &[(FlexibleValue, FlexibleValue)]) -> PublicResult<Vec<u8>> {
+    if fields.len() == 1 {
+        let Some(key) = unique_map_field(fields, "key") else {
+            return Err(PublicError::validation("invalid project key payload"));
         };
-        return Ok(Some(bytes));
+        return decode_legacy_key_value(key.clone());
     }
 
-    if let Ok(raw_bytes) = deserialize_from_cbor::<Vec<u8>>(bytes) {
-        return Ok(Some(raw_bytes));
+    if fields.len() != 3
+        || !fields.iter().all(|(name, _)| {
+            matches!(
+                name,
+                FlexibleValue::Text(name)
+                    if matches!(name.as_str(), "kind" | "version" | "key")
+            )
+        })
+    {
+        return Err(PublicError::validation("invalid project key envelope"));
     }
 
-    Ok(None)
+    let (Some(kind), Some(version), Some(key)) = (
+        unique_map_field(fields, "kind"),
+        unique_map_field(fields, "version"),
+        unique_map_field(fields, "key"),
+    ) else {
+        return Err(PublicError::validation("invalid project key envelope"));
+    };
+    if !matches!(
+        kind,
+        FlexibleValue::Text(kind) if kind == PROJECT_KEY_ENVELOPE_KIND
+    ) || !matches!(
+        version,
+        FlexibleValue::Integer(version)
+            if i128::from(*version) == i128::from(PROJECT_KEY_ENVELOPE_VERSION)
+    ) {
+        return Err(PublicError::validation("invalid project key envelope"));
+    }
+    match key {
+        FlexibleValue::Bytes(key) => Ok(key.clone()),
+        _ => Err(PublicError::validation("invalid project key envelope")),
+    }
+}
+
+fn decode_legacy_key_value(value: FlexibleValue) -> PublicResult<Vec<u8>> {
+    match value {
+        FlexibleValue::Bytes(key) => Ok(key),
+        FlexibleValue::Text(key) => decode_membership_key_string(&key),
+        FlexibleValue::Tag(64, value) => match *value {
+            FlexibleValue::Bytes(key) => Ok(key),
+            _ => Err(PublicError::validation("invalid project key payload")),
+        },
+        FlexibleValue::Array(values) => decode_legacy_byte_array(values),
+        _ => Err(PublicError::validation("invalid project key payload")),
+    }
+}
+
+fn decode_legacy_byte_array(values: Vec<FlexibleValue>) -> PublicResult<Vec<u8>> {
+    if values.len() != KEY_SIZE {
+        return Err(PublicError::validation("invalid project key payload"));
+    }
+    values
+        .into_iter()
+        .map(|value| match value {
+            FlexibleValue::Integer(value) => u8::try_from(i128::from(value))
+                .map_err(|_| PublicError::validation("invalid project key payload")),
+            _ => Err(PublicError::validation("invalid project key payload")),
+        })
+        .collect()
+}
+
+fn unique_map_field<'a>(
+    fields: &'a [(FlexibleValue, FlexibleValue)],
+    expected: &str,
+) -> Option<&'a FlexibleValue> {
+    let mut matches = fields.iter().filter_map(|(name, value)| {
+        matches!(name, FlexibleValue::Text(name) if name == expected).then_some(value)
+    });
+    let value = matches.next()?;
+    matches.next().is_none().then_some(value)
 }
 
 fn decode_membership_key_string(value: &str) -> PublicResult<Vec<u8>> {
-    let normalized = value.trim().replace('-', "+").replace('_', "/");
+    let normalized = value
+        .chars()
+        .filter(|character| {
+            !matches!(
+                character,
+                ' ' | '\t' | '\n' | '\u{000B}' | '\u{000C}' | '\r'
+            )
+        })
+        .collect::<String>()
+        .replace('-', "+")
+        .replace('_', "/");
     if normalized.is_empty() {
         return Err(PublicError::validation(
             "membership key string cannot be empty",
@@ -913,23 +1088,12 @@ fn decode_membership_key_string(value: &str) -> PublicResult<Vec<u8>> {
         .map_err(|err| PublicError::validation(format!("membership key must be base64: {err}")))
 }
 
-#[derive(Deserialize)]
-struct WorkListKeyEnvelope {
-    key: WorkListKeyField,
-}
-
-#[derive(Deserialize)]
-#[serde(untagged)]
-enum WorkListKeyField {
-    Bytes(Vec<u8>),
-    Text(String),
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use base64::engine::general_purpose::STANDARD_NO_PAD;
-    use serde::Deserialize;
+    use serde::{Deserialize, Serialize};
+    use serde_bytes::ByteBuf;
 
     #[derive(Deserialize)]
     #[serde(rename_all = "camelCase")]
@@ -937,6 +1101,255 @@ mod tests {
         version: u8,
         ciphertext: Vec<u8>,
         cbor_base64_no_pad: String,
+    }
+
+    #[derive(Serialize)]
+    struct ProjectKeyEnvelopeFixture {
+        kind: &'static str,
+        version: u8,
+        key: ByteBuf,
+    }
+
+    #[derive(Serialize)]
+    struct LegacyProjectKeyEnvelopeFixture {
+        key: ByteBuf,
+    }
+
+    #[derive(Serialize)]
+    struct LegacyTextProjectKeyEnvelopeFixture {
+        key: String,
+    }
+
+    #[derive(Serialize)]
+    struct ProjectKeyEnvelopeWithExtraFixture {
+        kind: &'static str,
+        version: u8,
+        key: ByteBuf,
+        extra: bool,
+    }
+
+    #[derive(Deserialize)]
+    #[serde(rename_all = "camelCase")]
+    struct SharedCompatibilityCorpus {
+        project_keys: SharedProjectKeyVector,
+    }
+
+    #[derive(Deserialize)]
+    #[serde(rename_all = "camelCase")]
+    struct SharedProjectKeyVector {
+        key_b64: String,
+        legacy_bare_array_cbor_b64: String,
+    }
+
+    #[test]
+    fn project_key_decoder_accepts_shared_legacy_bare_byte_array_vector() {
+        let corpus: SharedCompatibilityCorpus =
+            serde_json::from_str(include_str!("../../../testdata/crypto-compat-v1.json"))
+                .expect("parse shared compatibility corpus");
+        let expected = STANDARD_NO_PAD
+            .decode(corpus.project_keys.key_b64)
+            .expect("decode shared project key");
+        let legacy_array = STANDARD_NO_PAD
+            .decode(corpus.project_keys.legacy_bare_array_cbor_b64)
+            .expect("decode shared legacy array");
+
+        assert_eq!(
+            decode_work_list_key_bytes(&legacy_array).expect("decode shared legacy array"),
+            expected
+        );
+    }
+
+    #[test]
+    fn project_key_decoder_accepts_js_v2_envelope_vector() {
+        const JS_ENVELOPE_BASE64: &str = concat!(
+            "uQADZGtpbmR0c2VhbHRhc2stcHJvamVjdC1rZXlndmVyc2lvbgJja2V5WCAA",
+            "AQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHw=="
+        );
+        const JS_LEGACY_ENVELOPE_BASE64: &str =
+            "uQABY2tledhAWCAAAQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHw==";
+        const JS_LEGACY_BYTE_STRING_BASE64: &str =
+            "2EBYIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f";
+        let expected = (0u8..KEY_SIZE as u8).collect::<Vec<_>>();
+
+        for encoded in [
+            JS_ENVELOPE_BASE64,
+            JS_LEGACY_ENVELOPE_BASE64,
+            JS_LEGACY_BYTE_STRING_BASE64,
+        ] {
+            assert_eq!(
+                decode_work_list_key_bytes(
+                    &STANDARD
+                        .decode(encoded)
+                        .expect("decode JS envelope fixture")
+                )
+                .expect("decode project-key envelope"),
+                expected
+            );
+        }
+    }
+
+    #[test]
+    fn project_key_decoder_treats_ambiguous_32_bytes_as_legacy_raw_key() {
+        let mut key = vec![0x58, 0x1e];
+        key.extend(0u8..30);
+
+        assert_eq!(
+            decode_work_list_key_bytes(&key).expect("decode ambiguous raw key"),
+            key
+        );
+    }
+
+    #[test]
+    fn project_key_decoder_accepts_strict_and_legacy_cbor_shapes() {
+        let key = (0u8..KEY_SIZE as u8).collect::<Vec<_>>();
+        let strict = serialize_to_cbor(&ProjectKeyEnvelopeFixture {
+            kind: PROJECT_KEY_ENVELOPE_KIND,
+            version: PROJECT_KEY_ENVELOPE_VERSION,
+            key: ByteBuf::from(key.clone()),
+        })
+        .expect("encode strict envelope");
+        let legacy_bytes = serialize_to_cbor(&LegacyProjectKeyEnvelopeFixture {
+            key: ByteBuf::from(key.clone()),
+        })
+        .expect("encode legacy byte envelope");
+        let encoded_key = STANDARD.encode(&key);
+        let legacy_text = serialize_to_cbor(&LegacyTextProjectKeyEnvelopeFixture {
+            key: format!("{} \t\r\n{}", &encoded_key[..20], &encoded_key[20..]),
+        })
+        .expect("encode legacy text envelope");
+        let legacy_text_with_long_ascii_whitespace =
+            serialize_to_cbor(&LegacyTextProjectKeyEnvelopeFixture {
+                key: format!("{}{}", " ".repeat(300), encoded_key),
+            })
+            .expect("encode legacy text envelope with long whitespace");
+        let legacy_byte_string =
+            serialize_to_cbor(&ByteBuf::from(key.clone())).expect("encode byte string");
+        let legacy_byte_array = serialize_to_cbor(&key).expect("encode legacy byte array");
+        let legacy_array_envelope = serialize_to_cbor(&serde_json::json!({
+            "key": key.clone(),
+        }))
+        .expect("encode legacy byte-array envelope");
+
+        for (index, encoded) in [
+            strict,
+            legacy_bytes,
+            legacy_text,
+            legacy_text_with_long_ascii_whitespace,
+            legacy_byte_string,
+            legacy_byte_array,
+            legacy_array_envelope,
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            assert_eq!(
+                decode_work_list_key_bytes(&encoded)
+                    .unwrap_or_else(|error| panic!("decode compatible envelope {index}: {error}")),
+                key
+            );
+        }
+    }
+
+    #[test]
+    fn project_key_decoder_rejects_malformed_payloads() {
+        let short_key = vec![0x11; KEY_SIZE - 1];
+        let wrong_kind = serialize_to_cbor(&ProjectKeyEnvelopeFixture {
+            kind: "seal-work-list-key",
+            version: PROJECT_KEY_ENVELOPE_VERSION,
+            key: ByteBuf::from(vec![0x22; KEY_SIZE]),
+        })
+        .expect("encode wrong-kind envelope");
+        let wrong_version = serialize_to_cbor(&ProjectKeyEnvelopeFixture {
+            kind: PROJECT_KEY_ENVELOPE_KIND,
+            version: 1,
+            key: ByteBuf::from(vec![0x22; KEY_SIZE]),
+        })
+        .expect("encode wrong-version envelope");
+        let extra_field = serialize_to_cbor(&ProjectKeyEnvelopeWithExtraFixture {
+            kind: PROJECT_KEY_ENVELOPE_KIND,
+            version: PROJECT_KEY_ENVELOPE_VERSION,
+            key: ByteBuf::from(vec![0x22; KEY_SIZE]),
+            extra: true,
+        })
+        .expect("encode extra-field envelope");
+        let short_envelope = serialize_to_cbor(&ProjectKeyEnvelopeFixture {
+            kind: PROJECT_KEY_ENVELOPE_KIND,
+            version: PROJECT_KEY_ENVELOPE_VERSION,
+            key: ByteBuf::from(short_key.clone()),
+        })
+        .expect("encode short-key envelope");
+        let mut trailing = serialize_to_cbor(&ProjectKeyEnvelopeFixture {
+            kind: PROJECT_KEY_ENVELOPE_KIND,
+            version: PROJECT_KEY_ENVELOPE_VERSION,
+            key: ByteBuf::from(vec![0x22; KEY_SIZE]),
+        })
+        .expect("encode envelope");
+        trailing.push(0);
+        let key = vec![0x22; KEY_SIZE];
+        let mut indefinite_map = vec![0xbf, 0x63, b'k', b'e', b'y', 0x58, 0x20];
+        indefinite_map.extend_from_slice(&key);
+        indefinite_map.push(0xff);
+        let mut indefinite_byte_string = vec![0x5f, 0x58, 0x20];
+        indefinite_byte_string.extend_from_slice(&key);
+        indefinite_byte_string.push(0xff);
+        let mut top_level_tagged_text = vec![0xd8, 0x40];
+        top_level_tagged_text
+            .extend(serialize_to_cbor(&STANDARD.encode(&key)).expect("encode tagged text"));
+        let mut double_tagged_bytes = vec![0xd8, 0x40, 0xd8, 0x40];
+        double_tagged_bytes.extend(
+            serialize_to_cbor(&ByteBuf::from(key.clone())).expect("encode double-tagged bytes"),
+        );
+        let mut deeply_nested = vec![0xc0; PROJECT_KEY_CBOR_MAX_DEPTH + 1];
+        deeply_nested.extend([0x41, 0x00]);
+        let oversized = vec![0x00; PROJECT_KEY_CBOR_MAX_BYTES + 1];
+        let non_canonical_pad_bits = serialize_to_cbor(&LegacyTextProjectKeyEnvelopeFixture {
+            key: format!("{}B=", "A".repeat(42)),
+        })
+        .expect("encode non-canonical base64");
+        let short_legacy_array =
+            serialize_to_cbor(&vec![0_u8; KEY_SIZE - 1]).expect("encode short byte array");
+        let long_legacy_array =
+            serialize_to_cbor(&vec![0_u8; KEY_SIZE + 1]).expect("encode long byte array");
+        let out_of_range_legacy_array = serialize_to_cbor(&FlexibleValue::Array(
+            (0..KEY_SIZE)
+                .map(|index| {
+                    FlexibleValue::Integer(
+                        if index == KEY_SIZE - 1 {
+                            256_i64
+                        } else {
+                            0_i64
+                        }
+                        .into(),
+                    )
+                })
+                .collect(),
+        ))
+        .expect("encode out-of-range byte array");
+
+        for payload in [
+            Vec::new(),
+            short_key,
+            wrong_kind,
+            wrong_version,
+            extra_field,
+            short_envelope,
+            indefinite_map,
+            indefinite_byte_string,
+            top_level_tagged_text,
+            double_tagged_bytes,
+            deeply_nested,
+            oversized,
+            non_canonical_pad_bits,
+            short_legacy_array,
+            long_legacy_array,
+            out_of_range_legacy_array,
+            trailing,
+        ] {
+            assert!(
+                decode_work_list_key_bytes(&payload).is_err(),
+                "payload must be rejected: {payload:?}"
+            );
+        }
     }
 
     #[test]
