@@ -1318,10 +1318,7 @@ mod tests {
         let Some(coordination_path) = env::var_os(COORDINATION_ENV) else {
             return;
         };
-        let previous_handlers = EDITOR_TERMINATION_SIGNALS.map(|signal| {
-            let action = current_signal_action(signal);
-            (action.sa_sigaction, action.sa_flags)
-        });
+        let previous_handlers = EDITOR_TERMINATION_SIGNALS.map(current_signal_action);
         let coordination_path = PathBuf::from(coordination_path);
         let mut launcher = move |_command: &EditorCommand, document_path: &Path| {
             let workspace_path = document_path
@@ -1354,11 +1351,14 @@ mod tests {
         assert!(matches!(error, CliError::Interrupted { .. }));
         assert!(error.to_string().contains("SIGINT"));
         assert!(!error.to_string().contains("Private"));
-        let restored_handlers = EDITOR_TERMINATION_SIGNALS.map(|signal| {
-            let action = current_signal_action(signal);
-            (action.sa_sigaction, action.sa_flags)
-        });
-        assert_eq!(restored_handlers, previous_handlers);
+        let restored_handlers = EDITOR_TERMINATION_SIGNALS.map(current_signal_action);
+        for ((signal, previous), restored) in EDITOR_TERMINATION_SIGNALS
+            .iter()
+            .zip(previous_handlers.iter())
+            .zip(restored_handlers.iter())
+        {
+            assert_signal_action_semantics_eq(*signal, previous, restored);
+        }
     }
 
     #[cfg(unix)]
@@ -1376,7 +1376,7 @@ mod tests {
             .env(COORDINATION_ENV, &coordination_path)
             .stdin(Stdio::null())
             .stdout(Stdio::null())
-            .stderr(Stdio::null())
+            .stderr(Stdio::piped())
             .spawn()
             .expect("spawn signal cleanup worker");
 
@@ -1391,11 +1391,13 @@ mod tests {
                 }
             }
             if let Some(status) = worker.try_wait().expect("poll signal cleanup worker") {
-                panic!("signal cleanup worker exited before readiness: {status}");
+                let diagnostics = read_worker_stderr(&mut worker);
+                panic!("signal cleanup worker exited before readiness: {status}\n{diagnostics}");
             }
             if Instant::now() >= readiness_deadline {
                 terminate_and_reap_editor(&mut worker);
-                panic!("signal cleanup worker did not become ready");
+                let diagnostics = read_worker_stderr(&mut worker);
+                panic!("signal cleanup worker did not become ready\n{diagnostics}");
             }
             thread::sleep(Duration::from_millis(10));
         };
@@ -1414,12 +1416,17 @@ mod tests {
             }
             if Instant::now() >= exit_deadline {
                 terminate_and_reap_editor(&mut worker);
-                panic!("signal cleanup worker did not exit");
+                let diagnostics = read_worker_stderr(&mut worker);
+                panic!("signal cleanup worker did not exit\n{diagnostics}");
             }
             thread::sleep(Duration::from_millis(10));
         };
 
-        assert!(status.success(), "signal cleanup worker failed: {status}");
+        let diagnostics = read_worker_stderr(&mut worker);
+        assert!(
+            status.success(),
+            "signal cleanup worker failed: {status}\n{diagnostics}"
+        );
         assert!(
             !workspace_path.exists(),
             "plaintext workspace survived interruption: {}",
@@ -1437,5 +1444,44 @@ mod tests {
         let result = unsafe { libc::sigaction(signal, std::ptr::null(), &mut current) };
         assert_eq!(result, 0, "query current action for signal {signal}");
         current
+    }
+
+    #[cfg(unix)]
+    fn assert_signal_action_semantics_eq(
+        signal: libc::c_int,
+        previous: &libc::sigaction,
+        restored: &libc::sigaction,
+    ) {
+        assert_eq!(
+            restored.sa_sigaction, previous.sa_sigaction,
+            "restored handler for signal {signal}"
+        );
+
+        let previous_flags = previous.sa_flags;
+        let restored_flags = restored.sa_flags;
+        // glibc injects its private `SA_RESTORER` bookkeeping bit when
+        // reinstalling an action on Linux/x86. It does not change the signal
+        // behavior and is not part of the action supplied by this module.
+        #[cfg(all(target_os = "linux", any(target_arch = "x86", target_arch = "x86_64")))]
+        let previous_flags = previous_flags & !0x0400_0000;
+        #[cfg(all(target_os = "linux", any(target_arch = "x86", target_arch = "x86_64")))]
+        let restored_flags = restored_flags & !0x0400_0000;
+
+        assert_eq!(
+            restored_flags, previous_flags,
+            "restored behavior flags for signal {signal}"
+        );
+    }
+
+    #[cfg(unix)]
+    fn read_worker_stderr(worker: &mut Child) -> String {
+        let Some(mut stderr) = worker.stderr.take() else {
+            return String::new();
+        };
+        let mut diagnostics = String::new();
+        stderr
+            .read_to_string(&mut diagnostics)
+            .expect("read signal cleanup worker diagnostics");
+        diagnostics
     }
 }
