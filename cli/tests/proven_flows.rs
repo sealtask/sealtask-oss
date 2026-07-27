@@ -6337,21 +6337,13 @@ async fn cli_logout_does_not_revoke_a_concurrently_refreshed_session() {
         Utc::now() + Duration::days(1),
     );
 
-    let mut refresh =
-        spawn_cli_process(home.path(), &server.base_url, &["--json", "lists", "--raw"]);
-    wait_for_cli_condition(
-        &mut refresh,
-        "refresh to commit while retaining the credential lock",
-        || {
-            server
-                .state
-                .lock()
-                .expect("race state lock")
-                .refresh_requests
-                == 1
-        },
+    let refresh = spawn_cli_process(home.path(), &server.base_url, &["--json", "lists", "--raw"]);
+    tokio::time::timeout(
+        std::time::Duration::from_secs(5),
+        server.refresh_committed.notified(),
     )
-    .await;
+    .await
+    .expect("refresh should commit while retaining the credential lock");
 
     let logout = spawn_cli_process(home.path(), &server.base_url, &["--json", "auth", "logout"]);
     tokio::time::sleep(std::time::Duration::from_millis(500)).await;
@@ -7429,6 +7421,7 @@ struct DoctorHealthRequest {
 struct RefreshLogoutRaceServer {
     base_url: String,
     state: Arc<Mutex<RefreshLogoutRaceInner>>,
+    refresh_committed: Arc<Notify>,
     release_refresh_response: Arc<Notify>,
     _task: tokio::task::JoinHandle<()>,
 }
@@ -7436,6 +7429,7 @@ struct RefreshLogoutRaceServer {
 #[derive(Clone)]
 struct RefreshLogoutRaceAppState {
     state: Arc<Mutex<RefreshLogoutRaceInner>>,
+    refresh_committed: Arc<Notify>,
     release_refresh_response: Arc<Notify>,
 }
 
@@ -8431,9 +8425,11 @@ async fn spawn_refresh_logout_race_server(fixture: &TestFixture) -> RefreshLogou
         work_list_requests: 0,
         revoked: false,
     }));
+    let refresh_committed = Arc::new(Notify::new());
     let release_refresh_response = Arc::new(Notify::new());
     let app_state = RefreshLogoutRaceAppState {
         state: Arc::clone(&state),
+        refresh_committed: Arc::clone(&refresh_committed),
         release_refresh_response: Arc::clone(&release_refresh_response),
     };
     let app = Router::new()
@@ -8454,6 +8450,7 @@ async fn spawn_refresh_logout_race_server(fixture: &TestFixture) -> RefreshLogou
     RefreshLogoutRaceServer {
         base_url: format!("http://{address}"),
         state,
+        refresh_committed,
         release_refresh_response,
         _task: task,
     }
@@ -8468,6 +8465,7 @@ async fn refresh_logout_race_refresh(
         assert_eq!(payload.refresh_token, inner.initial_refresh_token);
         inner.refresh_requests += 1;
     }
+    state.refresh_committed.notify_one();
     state.release_refresh_response.notified().await;
 
     (
