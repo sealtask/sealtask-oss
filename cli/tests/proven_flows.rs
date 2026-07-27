@@ -1596,12 +1596,10 @@ async fn task_dry_runs_emit_secret_safe_plans_without_post_or_patch() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn d7_first_sigint_waits_for_a_definitive_task_create_response() {
     let fixture = TestFixture::new();
-    let committed = Arc::new(Notify::new());
     let release_response = Arc::new(Notify::new());
     let state = Arc::new(Mutex::new(TestState::new(fixture.clone())));
     {
         let mut state = state.lock().expect("state lock");
-        state.d7_task_create_committed = Some(committed.clone());
         state.d7_task_create_release_response = Some(release_response.clone());
     }
     let server = spawn_server(state.clone()).await;
@@ -1623,9 +1621,12 @@ async fn d7_first_sigint_waits_for_a_definitive_task_create_response() {
         ],
         &fixture.password,
     );
-    tokio::time::timeout(std::time::Duration::from_secs(5), committed.notified())
-        .await
-        .expect("task create should commit before its response is released");
+    wait_for_cli_condition(
+        &mut child,
+        "task create to commit before its response is released",
+        || state.lock().expect("state lock").d7_task_create_committed,
+    )
+    .await;
     signal_process(&mut child, libc::SIGINT);
     tokio::time::sleep(std::time::Duration::from_millis(100)).await;
     assert!(
@@ -1668,15 +1669,13 @@ async fn d7_first_sigint_waits_for_a_definitive_task_create_response() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn d7_second_sigint_exits_130_with_an_ambiguous_mutation_outcome() {
     let fixture = TestFixture::new();
-    let committed = Arc::new(Notify::new());
     let release_response = Arc::new(Notify::new());
     let state = Arc::new(Mutex::new(TestState::new(fixture.clone())));
     {
         let mut state = state.lock().expect("state lock");
-        state.d7_task_create_committed = Some(committed.clone());
         state.d7_task_create_release_response = Some(release_response.clone());
     }
-    let server = spawn_server(state).await;
+    let server = spawn_server(state.clone()).await;
     let home = TempDir::new().expect("temp home");
     seed_credentials(home.path(), &fixture, &server.base_url);
 
@@ -1696,9 +1695,12 @@ async fn d7_second_sigint_exits_130_with_an_ambiguous_mutation_outcome() {
         ],
         &fixture.password,
     );
-    tokio::time::timeout(std::time::Duration::from_secs(5), committed.notified())
-        .await
-        .expect("task create should commit before its response is released");
+    wait_for_cli_condition(
+        &mut child,
+        "task create to commit before its response is released",
+        || state.lock().expect("state lock").d7_task_create_committed,
+    )
+    .await;
     let release_if_signals_are_missed = release_response.clone();
     let fallback_release = tokio::spawn(async move {
         tokio::time::sleep(std::time::Duration::from_secs(2)).await;
@@ -1739,19 +1741,15 @@ async fn d7_second_sigint_exits_130_with_an_ambiguous_mutation_outcome() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn d7_batch_forced_interrupt_reports_each_in_flight_post_and_patch_as_ambiguous() {
     let fixture = TestFixture::new();
-    let create_committed = Arc::new(Notify::new());
     let create_release = Arc::new(Notify::new());
-    let update_committed = Arc::new(Notify::new());
     let update_release = Arc::new(Notify::new());
     let state = Arc::new(Mutex::new(TestState::new(fixture.clone())));
     {
         let mut state = state.lock().expect("state lock");
-        state.d7_task_create_committed = Some(create_committed.clone());
         state.d7_task_create_release_response = Some(create_release.clone());
-        state.d7_task_update_committed = Some(update_committed.clone());
         state.d7_task_update_release_response = Some(update_release.clone());
     }
-    let server = spawn_server(state).await;
+    let server = spawn_server(state.clone()).await;
     let home = TempDir::new().expect("temp home");
     seed_credentials(home.path(), &fixture, &server.base_url);
     let unlock = run_cli(
@@ -1792,11 +1790,15 @@ async fn d7_batch_forced_interrupt_reports_each_in_flight_post_and_patch_as_ambi
             "2",
         ],
     );
-    tokio::time::timeout(std::time::Duration::from_secs(5), async {
-        tokio::join!(create_committed.notified(), update_committed.notified());
-    })
-    .await
-    .expect("both batch mutations should commit before responses are released");
+    wait_for_cli_condition(
+        &mut child,
+        "both batch mutations to commit before their responses are released",
+        || {
+            let state = state.lock().expect("state lock");
+            state.d7_task_create_committed && state.d7_task_update_committed
+        },
+    )
+    .await;
 
     let fallback_create_release = create_release.clone();
     let fallback_update_release = update_release.clone();
@@ -6335,13 +6337,21 @@ async fn cli_logout_does_not_revoke_a_concurrently_refreshed_session() {
         Utc::now() + Duration::days(1),
     );
 
-    let refresh = spawn_cli_process(home.path(), &server.base_url, &["--json", "lists", "--raw"]);
-    tokio::time::timeout(
-        std::time::Duration::from_secs(5),
-        server.refresh_committed.notified(),
+    let mut refresh =
+        spawn_cli_process(home.path(), &server.base_url, &["--json", "lists", "--raw"]);
+    wait_for_cli_condition(
+        &mut refresh,
+        "refresh to commit while retaining the credential lock",
+        || {
+            server
+                .state
+                .lock()
+                .expect("race state lock")
+                .refresh_requests
+                == 1
+        },
     )
-    .await
-    .expect("refresh should commit while retaining the credential lock");
+    .await;
 
     let logout = spawn_cli_process(home.path(), &server.base_url, &["--json", "auth", "logout"]);
     tokio::time::sleep(std::time::Duration::from_millis(500)).await;
@@ -7419,7 +7429,6 @@ struct DoctorHealthRequest {
 struct RefreshLogoutRaceServer {
     base_url: String,
     state: Arc<Mutex<RefreshLogoutRaceInner>>,
-    refresh_committed: Arc<Notify>,
     release_refresh_response: Arc<Notify>,
     _task: tokio::task::JoinHandle<()>,
 }
@@ -7427,7 +7436,6 @@ struct RefreshLogoutRaceServer {
 #[derive(Clone)]
 struct RefreshLogoutRaceAppState {
     state: Arc<Mutex<RefreshLogoutRaceInner>>,
-    refresh_committed: Arc<Notify>,
     release_refresh_response: Arc<Notify>,
 }
 
@@ -7898,9 +7906,9 @@ struct TestState {
     d6_watch_task_reads: usize,
     d6_watch_call_order: Vec<&'static str>,
     d6_activity_reads: usize,
-    d7_task_create_committed: Option<Arc<Notify>>,
+    d7_task_create_committed: bool,
     d7_task_create_release_response: Option<Arc<Notify>>,
-    d7_task_update_committed: Option<Arc<Notify>>,
+    d7_task_update_committed: bool,
     d7_task_update_release_response: Option<Arc<Notify>>,
     base_url: Option<String>,
 }
@@ -7977,9 +7985,9 @@ impl TestState {
             d6_watch_task_reads: 0,
             d6_watch_call_order: Vec::new(),
             d6_activity_reads: 0,
-            d7_task_create_committed: None,
+            d7_task_create_committed: false,
             d7_task_create_release_response: None,
-            d7_task_update_committed: None,
+            d7_task_update_committed: false,
             d7_task_update_release_response: None,
             base_url: None,
         }
@@ -8423,11 +8431,9 @@ async fn spawn_refresh_logout_race_server(fixture: &TestFixture) -> RefreshLogou
         work_list_requests: 0,
         revoked: false,
     }));
-    let refresh_committed = Arc::new(Notify::new());
     let release_refresh_response = Arc::new(Notify::new());
     let app_state = RefreshLogoutRaceAppState {
         state: Arc::clone(&state),
-        refresh_committed: Arc::clone(&refresh_committed),
         release_refresh_response: Arc::clone(&release_refresh_response),
     };
     let app = Router::new()
@@ -8448,7 +8454,6 @@ async fn spawn_refresh_logout_race_server(fixture: &TestFixture) -> RefreshLogou
     RefreshLogoutRaceServer {
         base_url: format!("http://{address}"),
         state,
-        refresh_committed,
         release_refresh_response,
         _task: task,
     }
@@ -8463,7 +8468,6 @@ async fn refresh_logout_race_refresh(
         assert_eq!(payload.refresh_token, inner.initial_refresh_token);
         inner.refresh_requests += 1;
     }
-    state.refresh_committed.notify_one();
     state.release_refresh_response.notified().await;
 
     (
@@ -9253,7 +9257,7 @@ async fn create_task(
     Json(payload_json): Json<Value>,
 ) -> (StatusCode, Json<serde_json::Value>) {
     authorize(&state, &headers);
-    let (response, committed, release_response) = {
+    let (response, release_response) = {
         let mut state = state.lock().expect("state lock");
         assert_eq!(work_list_id, state.fixture.work_list_id);
         let payload: CreateTaskRequestBody =
@@ -9302,15 +9306,9 @@ async fn create_task(
             "commentCount": 0,
             "delegations": []
         });
-        (
-            response,
-            state.d7_task_create_committed.clone(),
-            state.d7_task_create_release_response.clone(),
-        )
+        state.d7_task_create_committed = true;
+        (response, state.d7_task_create_release_response.clone())
     };
-    if let Some(committed) = committed {
-        committed.notify_one();
-    }
     if let Some(release_response) = release_response {
         release_response.notified().await;
     }
@@ -9325,7 +9323,7 @@ async fn update_task(
     Json(payload_json): Json<Value>,
 ) -> (StatusCode, Json<serde_json::Value>) {
     authorize(&state, &headers);
-    let (response, committed, release_response) = {
+    let (response, release_response) = {
         let mut state = state.lock().expect("state lock");
         assert_eq!(work_list_id, state.fixture.work_list_id);
         assert_eq!(task_id, state.fixture.task_id);
@@ -9428,15 +9426,9 @@ async fn update_task(
             "commentCount": 1,
             "delegations": []
         });
-        (
-            response,
-            state.d7_task_update_committed.clone(),
-            state.d7_task_update_release_response.clone(),
-        )
+        state.d7_task_update_committed = true;
+        (response, state.d7_task_update_release_response.clone())
     };
-    if let Some(committed) = committed {
-        committed.notify_one();
-    }
     if let Some(release_response) = release_response {
         release_response.notified().await;
     }
