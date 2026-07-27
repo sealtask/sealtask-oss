@@ -12,6 +12,12 @@ pub(crate) fn command() -> Command {
     configure_command(Cli::command(), &[])
 }
 
+pub(crate) fn print_root_help(color: clap::ColorChoice) -> CliResult<()> {
+    let mut command = command().color(color);
+    let help = command.render_help();
+    write_stdout(format_args!("{help}"))
+}
+
 pub(crate) fn print_completion(shell: CompletionShell) -> CliResult<()> {
     let mut command = command();
     let mut output = Vec::new();

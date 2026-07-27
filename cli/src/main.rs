@@ -51,22 +51,12 @@ use telemetry::{Telemetry, TelemetryConfig, TelemetryLevel};
 use terminal::{TerminalOptions, TerminalSession};
 use uuid::Uuid;
 
-const ROOT_QUICK_HELP: &str = "\
-SealTask CLI — secure task management from your terminal
-
-Get started:
-  sealtask auth login        Sign in to SealTask
-  sealtask auth unlock       Unlock workspace data
-  sealtask projects list     List projects
-  sealtask tasks list --all  List your assigned tasks
-
-Discover:
-  sealtask --help             Show all commands and global options
-  sealtask help <command>     Show help for one command";
-
 #[tokio::main]
 async fn main() {
-    let args = std::env::args_os().collect::<Vec<_>>();
+    let mut args = std::env::args_os().collect::<Vec<_>>();
+    if args.len() == 1 {
+        args.push(OsString::from("--help"));
+    }
     let raw_format = OutputFormat::from_raw_args(&args);
     let cli = parse_cli_or_exit(&args, raw_format);
     let format = OutputFormat::from_cli(&cli);
@@ -162,8 +152,7 @@ async fn run(
             )
             .into());
         }
-        output::write_stdout_line(format_args!("{ROOT_QUICK_HELP}"))?;
-        return Ok(());
+        return discovery::print_root_help(terminal::clap_color_choice(raw_args, format));
     }
 
     if let Some(socket_path) = cli.serve_unlock_daemon.as_deref() {

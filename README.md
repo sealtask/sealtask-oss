@@ -917,9 +917,10 @@ Help and version output retain Clap's human-readable text format. Use
 `sealtask --json schema [COMMAND ...]` for a versioned machine-readable command
 and argument description.
 
-Running `sealtask` without a command prints a short quick-start guide and exits
-successfully; `sealtask --help` remains the complete command reference. In
-interactive table mode, prompts are written to stderr. In JSON modes,
+Running `sealtask` without arguments prints the same canonical root reference
+as `sealtask help` and `sealtask --help`, then exits successfully. Human global
+options without a command use that same reference so command discovery cannot
+drift. In interactive table mode, prompts are written to stderr. In JSON modes,
 interactive prompts use the controlling terminal instead of stdout or stderr;
 when no terminal is available, the command fails with a structured, actionable
 error. Pass `--non-interactive` to make that policy explicit.

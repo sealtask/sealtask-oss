@@ -4505,25 +4505,27 @@ fn cli_discovery_rejects_modes_that_would_corrupt_generated_output() {
 }
 
 #[test]
-fn cli_root_without_arguments_matches_release_a_help_contract() {
+fn cli_root_without_arguments_matches_canonical_root_help() {
     let home = TempDir::new().expect("temp home");
-    let output = run_cli_exact(home.path(), &[], None);
+    let bare = run_cli_exact(home.path(), &[], None);
+    let help = run_cli_exact(home.path(), &["help"], None);
+    let long_help = run_cli_exact(home.path(), &["--help"], None);
 
-    assert!(
-        output.status.success(),
-        "root guidance failed: {}",
-        output.stderr
-    );
-    assert!(output.stderr.is_empty());
-    assert_eq!(
-        output.stdout,
-        include_str!("golden/release_a_root_help.txt")
-    );
+    assert!(bare.status.success(), "root help failed: {}", bare.stderr);
+    assert!(bare.stderr.is_empty());
+    assert_eq!(bare.stdout, help.stdout);
+    assert_eq!(bare.stdout, long_help.stdout);
+    assert!(bare.stdout.contains("Commands:"));
+    assert!(bare.stdout.contains("notes"));
+    assert!(bare.stdout.contains("batch"));
 }
 
 #[test]
-fn cli_root_guidance_is_consistent_with_human_global_options() {
+fn cli_root_help_is_consistent_with_human_global_options() {
     let home = TempDir::new().expect("temp home");
+    let help = run_cli_exact(home.path(), &["help"], None);
+    assert!(help.status.success(), "root help failed: {}", help.stderr);
+
     for args in [
         &["--profile", "operator"][..],
         &["--format", "table"][..],
@@ -4536,10 +4538,7 @@ fn cli_root_guidance_is_consistent_with_human_global_options() {
             output.stderr
         );
         assert!(output.stderr.is_empty());
-        assert_eq!(
-            output.stdout,
-            include_str!("golden/release_a_root_help.txt")
-        );
+        assert_eq!(output.stdout, help.stdout);
     }
 }
 
