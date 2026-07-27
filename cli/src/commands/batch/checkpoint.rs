@@ -887,9 +887,7 @@ fn prepare_checkpoint_parent_with(
         walked = child_path;
     }
 
-    let metadata = directory
-        .try_clone()
-        .map(cap_std::fs::Dir::into_std_file)
+    let metadata = open_operable_directory_handle(&directory)
         .and_then(|directory| directory.metadata())
         .map_err(|error| {
             checkpoint_io(format!(
@@ -1150,14 +1148,11 @@ fn validate_secret_directory_handle(directory: &Dir, metadata: &fs::Metadata) ->
             "checkpoint parent permissions are too broad; require mode 0700 or stricter",
         ));
     }
-    let directory = directory
-        .try_clone()
-        .map(cap_std::fs::Dir::into_std_file)
-        .map_err(|error| {
-            checkpoint_io(format!(
-                "failed to inspect checkpoint parent security: {error}"
-            ))
-        })?;
+    let directory = open_operable_directory_handle(directory).map_err(|error| {
+        checkpoint_io(format!(
+            "failed to inspect checkpoint parent security: {error}"
+        ))
+    })?;
     validate_no_allow_extended_acl(&directory, "checkpoint parent")
 }
 
@@ -1193,9 +1188,7 @@ fn validate_secret_file_handle(
 
 #[cfg(unix)]
 fn set_secret_directory_handle_permissions(directory: &Dir) -> CliResult<()> {
-    let directory = directory
-        .try_clone()
-        .map(cap_std::fs::Dir::into_std_file)
+    let directory = open_operable_directory_handle(directory)
         .map_err(|error| checkpoint_io(format!("failed to secure checkpoint parent: {error}")))?;
     directory
         .set_permissions(fs::Permissions::from_mode(0o700))
@@ -1472,10 +1465,27 @@ unsafe extern "C" {
 }
 
 #[cfg(unix)]
-fn sync_directory_handle(directory: &Dir) -> CliResult<()> {
+fn open_operable_directory_handle(directory: &Dir) -> std::io::Result<File> {
+    // `cap_std::fs::Dir` uses `O_PATH` on Linux. Cloning that descriptor and
+    // calling `fchmod` or `fsync` fails with `EBADF`, so open the same directory
+    // relative to the held capability with ordinary read access first. Using
+    // `.` keeps this handle-relative and cannot redirect through an ambient
+    // path.
+    let mut options = CapOpenOptions::new();
+    options.read(true).follow(FollowSymlinks::No);
     directory
-        .try_clone()
-        .map(cap_std::fs::Dir::into_std_file)
+        .open_with(Path::new("."), &options)
+        .map(cap_std::fs::File::into_std)
+}
+
+#[cfg(not(unix))]
+fn open_operable_directory_handle(directory: &Dir) -> std::io::Result<File> {
+    directory.try_clone().map(cap_std::fs::Dir::into_std_file)
+}
+
+#[cfg(unix)]
+fn sync_directory_handle(directory: &Dir) -> CliResult<()> {
+    open_operable_directory_handle(directory)
         .and_then(|directory| directory.sync_all())
         .map_err(|error| checkpoint_io(format!("failed to sync checkpoint directory: {error}")))
 }
@@ -2094,6 +2104,18 @@ mod tests {
                 0o700
             );
         }
+    }
+
+    #[test]
+    fn secures_and_syncs_checkpoint_directory_through_capability_handle() {
+        let directory = secure_dir();
+        let capability =
+            prepare_checkpoint_parent(directory.path()).expect("checkpoint parent capability");
+
+        set_secret_directory_handle_permissions(&capability)
+            .expect("capability directory must be reopened with a mutable descriptor");
+        sync_directory_handle(&capability)
+            .expect("capability directory must be reopened with a syncable descriptor");
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
