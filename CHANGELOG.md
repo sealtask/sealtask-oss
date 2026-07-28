@@ -8,6 +8,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-07-28
+
 ### Added
 
 - Added JSON contract v2, compact and pretty schema discovery, isolated named
@@ -34,6 +36,7 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 - Added the public MFA-compatible CLI and Rust client surface.
 
-[Unreleased]: https://github.com/sealtask/sealtask-oss/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/sealtask/sealtask-oss/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/sealtask/sealtask-oss/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/sealtask/sealtask-oss/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/sealtask/sealtask-oss/releases/tag/v0.2.0
