@@ -172,7 +172,7 @@ The release systems are resumable but intentionally refuse ambiguous state.
 | Public `main` has a non-mirror commit | The mirror rejects the non-fast-forward update. Reconcile public history explicitly; never force-push from the workflow. |
 | A draft GitHub Release remains | Rerun the failed announcement job. It may refill that same draft and publish it. |
 | A published release is not immutable | Stop. Automation refuses to mutate it; correct the repository setting and handle the release as an incident. |
-| The immutable release already exists | Rerun only the failed verification job. Announcement validates the target and treats the immutable release as complete. |
+| The immutable release already exists | Rerun only the failed verification job. Announcement validates the release tag and treats the immutable release as complete. |
 | Asset or attestation verification fails | Rerun the verifier. Do not replace assets on an immutable release. |
 
 GitHub Releases and crates.io are independent systems, so they cannot be one
@@ -212,6 +212,14 @@ comparison so the audited hardening can run. It does not waive drift checks:
 repository, deletes the copied workflow, regenerates it from scratch, applies
 the patch, compares it with the checked-in file, restores the runtime config,
 and finally rehearses both pull-request planning and tagged release planning.
+
+The mirror pre-creates each exact annotated release tag before the public
+release workflow runs. Announcement therefore verifies that protected tag and
+intentionally omits `--target`: GitHub ignores `target_commitish` for an
+existing tag, while an explicit historical target can require workflow-write
+permission that the built-in Actions token cannot receive after public `main`
+advances. The verifier resolves the tag itself to `GITHUB_SHA`, which is the
+authoritative source-commit check.
 
 Pinned release-plz 0.3.160 similarly hard-codes
 `cargo package --allow-dirty --workspace` while reconstructing a prior

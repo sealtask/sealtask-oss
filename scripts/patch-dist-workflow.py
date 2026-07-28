@@ -114,6 +114,12 @@ def main() -> int:
         raise ValueError("generated announce job did not retain write-only permissions")
     source = replace_once(
         source,
+        '          RELEASE_COMMIT: "${{ github.sha }}"\n',
+        "",
+        "historical release target environment",
+    )
+    source = replace_once(
+        source,
         (
             '          gh release create "${{ needs.plan.outputs.tag }}" '
             '--target "$RELEASE_COMMIT" $PRERELEASE_FLAG '
@@ -121,14 +127,18 @@ def main() -> int:
             '--notes-file "$RUNNER_TEMP/notes.txt" artifacts/*\n'
         ),
         (
+            "          # The exact annotated tag already exists. A target commit is\n"
+            "          # only needed to create a missing tag and can require unavailable\n"
+            "          # workflow-write permission after the default branch advances.\n"
             '          if existing_release="$(gh release view '
             '"${{ needs.plan.outputs.tag }}" '
-            '--json isDraft,isImmutable,targetCommitish 2>/dev/null)"; then\n'
-            '            existing_target="$(jq -r \'.targetCommitish\' '
+            '--json isDraft,isImmutable,tagName 2>/dev/null)"; then\n'
+            '            existing_tag="$(jq -r \'.tagName\' '
             '<<<"${existing_release}")"\n'
-            '            if [[ "${existing_target}" != "${RELEASE_COMMIT}" ]]; then\n'
-            '              echo "::error::Existing release targets '
-            '${existing_target}, expected ${RELEASE_COMMIT}."\n'
+            '            if [[ "${existing_tag}" != '
+            '"${{ needs.plan.outputs.tag }}" ]]; then\n'
+            '              echo "::error::Existing release uses tag '
+            '${existing_tag}, expected ${{ needs.plan.outputs.tag }}."\n'
             "              exit 1\n"
             "            fi\n"
             "            if jq -e '.isDraft == false' "
@@ -145,13 +155,12 @@ def main() -> int:
             '              gh release upload "${{ needs.plan.outputs.tag }}" '
             "artifacts/* --clobber\n"
             '              gh release edit "${{ needs.plan.outputs.tag }}" '
-            '--target "$RELEASE_COMMIT" '
             '--title "$ANNOUNCEMENT_TITLE" '
-            '--notes-file "$RUNNER_TEMP/notes.txt" --draft=false\n'
+            '--notes-file "$RUNNER_TEMP/notes.txt" --draft=false --verify-tag\n'
             "            fi\n"
             "          else\n"
             '            gh release create "${{ needs.plan.outputs.tag }}" '
-            '--target "$RELEASE_COMMIT" $PRERELEASE_FLAG '
+            "$PRERELEASE_FLAG "
             '--title "$ANNOUNCEMENT_TITLE" '
             '--notes-file "$RUNNER_TEMP/notes.txt" --verify-tag artifacts/*\n'
             "          fi\n"

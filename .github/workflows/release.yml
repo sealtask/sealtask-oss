@@ -346,15 +346,17 @@ jobs:
           PRERELEASE_FLAG: "${{ fromJson(needs.host.outputs.val).announcement_is_prerelease && '--prerelease' || '' }}"
           ANNOUNCEMENT_TITLE: "${{ fromJson(needs.host.outputs.val).announcement_title }}"
           ANNOUNCEMENT_BODY: "${{ fromJson(needs.host.outputs.val).announcement_github_body }}"
-          RELEASE_COMMIT: "${{ github.sha }}"
         run: |
           # Write and read notes from a file to avoid quoting breaking things
           echo "$ANNOUNCEMENT_BODY" > $RUNNER_TEMP/notes.txt
 
-          if existing_release="$(gh release view "${{ needs.plan.outputs.tag }}" --json isDraft,isImmutable,targetCommitish 2>/dev/null)"; then
-            existing_target="$(jq -r '.targetCommitish' <<<"${existing_release}")"
-            if [[ "${existing_target}" != "${RELEASE_COMMIT}" ]]; then
-              echo "::error::Existing release targets ${existing_target}, expected ${RELEASE_COMMIT}."
+          # The exact annotated tag already exists. A target commit is
+          # only needed to create a missing tag and can require unavailable
+          # workflow-write permission after the default branch advances.
+          if existing_release="$(gh release view "${{ needs.plan.outputs.tag }}" --json isDraft,isImmutable,tagName 2>/dev/null)"; then
+            existing_tag="$(jq -r '.tagName' <<<"${existing_release}")"
+            if [[ "${existing_tag}" != "${{ needs.plan.outputs.tag }}" ]]; then
+              echo "::error::Existing release uses tag ${existing_tag}, expected ${{ needs.plan.outputs.tag }}."
               exit 1
             fi
             if jq -e '.isDraft == false' <<<"${existing_release}" >/dev/null; then
@@ -365,10 +367,10 @@ jobs:
               echo "Immutable release already exists; the verification job will prove its assets."
             else
               gh release upload "${{ needs.plan.outputs.tag }}" artifacts/* --clobber
-              gh release edit "${{ needs.plan.outputs.tag }}" --target "$RELEASE_COMMIT" --title "$ANNOUNCEMENT_TITLE" --notes-file "$RUNNER_TEMP/notes.txt" --draft=false
+              gh release edit "${{ needs.plan.outputs.tag }}" --title "$ANNOUNCEMENT_TITLE" --notes-file "$RUNNER_TEMP/notes.txt" --draft=false --verify-tag
             fi
           else
-            gh release create "${{ needs.plan.outputs.tag }}" --target "$RELEASE_COMMIT" $PRERELEASE_FLAG --title "$ANNOUNCEMENT_TITLE" --notes-file "$RUNNER_TEMP/notes.txt" --verify-tag artifacts/*
+            gh release create "${{ needs.plan.outputs.tag }}" $PRERELEASE_FLAG --title "$ANNOUNCEMENT_TITLE" --notes-file "$RUNNER_TEMP/notes.txt" --verify-tag artifacts/*
           fi
 
   custom-verify-release:

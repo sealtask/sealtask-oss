@@ -34,13 +34,13 @@ jobs:
           fi
           release="$(
             gh release view "${GITHUB_REF_NAME}" \
-              --json assets,isDraft,isImmutable,targetCommitish
+              --json assets,isDraft,isImmutable,tagName
           )"
           jq -e \
-            --arg sha "${GITHUB_SHA}" \
+            --arg tag "${GITHUB_REF_NAME}" \
             '.isDraft == false and
              .isImmutable == true and
-             .targetCommitish == $sha and
+             .tagName == $tag and
              (.assets | length) > 0' \
             <<<"${release}"
 

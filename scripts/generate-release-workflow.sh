@@ -63,6 +63,22 @@ python3 \
 
 expected="${TEMP_DIR}/.github/workflows/release.yml"
 actual="${SOURCE_DIR}/.github/workflows/release.yml"
+if grep -En -- \
+  'RELEASE_COMMIT|targetCommitish|--target' \
+  "${expected}" \
+  "${SOURCE_DIR}/.github/workflows/verify-release.yml"; then
+  echo "release workflows must identify pre-created releases by tag" >&2
+  exit 1
+fi
+verify_tag_count="$(
+  { grep -Fo -- '--verify-tag' "${expected}" || true; } |
+    wc -l |
+    tr -d '[:space:]'
+)"
+if [[ "${verify_tag_count}" != "2" ]]; then
+  echo "expected release create and edit to verify the pre-created tag" >&2
+  exit 1
+fi
 if [[ "${MODE}" == "update" ]]; then
   cp "${expected}" "${actual}"
   echo "Updated ${actual}."
