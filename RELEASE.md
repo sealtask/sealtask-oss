@@ -1,6 +1,23 @@
-# Releasing SealTask OSS Crates
+# Releasing SealTask OSS
 
-This workspace publishes to crates.io in dependency order:
+The steady-state release operation is one reviewed pull request merge. Version
+selection, changelog generation, exact dependency pins, generated CLI assets,
+public mirroring, annotated tags, crates.io publication, cross-platform
+artifacts, checksums, SBOMs, attestations, and post-publication verification are
+automated.
+
+```text
+private master
+  -> public main mirror
+  -> automated private release PR
+  -> reviewed merge
+  -> atomic public main + annotated vX.Y.Z tag
+  -> crates.io (OIDC, dependency order)
+  -> immutable GitHub Release
+  -> registry install + release/asset/attestation verification
+```
+
+The six crates are always versioned and published together in this order:
 
 1. `sealtask-client-core`
 2. `sealtask-client-auth`
@@ -9,94 +26,209 @@ This workspace publishes to crates.io in dependency order:
 5. `sealtask-client-runtime`
 6. `sealtask`
 
-Downstream crates depend on earlier crates being visible on crates.io, so releasing them back-to-back without waiting will fail.
+## Steady-state procedure
 
-## Requirements
+1. Merge normal OSS changes to private `master`. Use Conventional Commit
+   prefixes (`fix:`, `feat:`, and breaking-change markers) so release-plz can
+   choose the next version and produce useful changelog entries.
+2. Wait for **Prepare OSS Release** to create or update
+   `release-plz-oss`. It also runs after every successful mirror and on weekday
+   schedules, so a transient failure does not require a human kick.
+3. Review the private release PR:
+   - proposed lockstep version and `CHANGELOG.md`
+   - all exact internal dependency pins
+   - generated completions and man pages
+   - the normal OSS checks
+   - **OSS Release Platforms** on Linux, macOS, and Windows
+4. Merge that PR. This merge is the release approval.
+5. Confirm the public **Release** workflow finishes. It must publish all six
+   exact crate archives, install the registry copy of `sealtask`, create an
+   immutable GitHub Release, and verify every downloaded asset and attestation.
 
-- a crates.io account with publish access
-- `cargo login` already configured locally, or `CARGO_REGISTRY_TOKEN` set in the environment
-- a clean git worktree unless you explicitly opt into `ALLOW_DIRTY=1`
+Do not create or move release tags by hand. The private mirror workflow derives
+the tag from the reviewed workspace version and atomically pushes public `main`
+and the annotated tag. It then records an annotated private `oss-vX.Y.Z`
+provenance tag at the exact monorepo source commit.
 
-For the 0.2.1 security maintenance release, require a clean `cargo audit`, the
-full locked workspace suite, strict WASM manifest verification on Linux/AMD64,
-and the browser StrongBox bridge integration test. Confirm that `wee_alloc` is
-absent and that the release tag points at the same commit as the verified
-artifact manifest.
+If there are no releasable commits, the release-PR workflow exits successfully
+without changing its bot branch.
 
-For the 0.2.0 MFA compatibility release, confirm that every workspace package
-and inter-crate dependency pin uses the same version. The new public
-`PublicError::MfaRequiredUseBeginLogin` and `PublicError::MfaInputRequired`
-variants can require additional arms in downstream exhaustive matches; keep the
-dated compatibility note in README.md.
+## One-time repository setup
 
-## Dry Run
+These settings cannot safely be encoded in a workflow committed to either
+repository. Configure them before merging the first automated release PR.
 
-From the repository root:
+### Private repository
+
+Install a narrowly scoped GitHub App that can create and update release PRs.
+Grant it repository metadata read, contents read/write, pull requests
+read/write. Pull requests write also authorizes the release-label operations
+used by the workflow, so no separate issues permission is required. Allow it
+to create/update the `release-plz-oss` branch under the repository's rules.
+
+Protect private `master`: require pull requests and the repository's required
+checks; reject direct pushes. Multi-maintainer repositories should also require
+at least one human approval. A solo-maintainer repository must leave the
+blanket approval count at zero because GitHub does not permit an author to
+approve their own PR. Release approval remains independently enforced:
+`release-plz-oss` is App-authored, so the maintainer can approve it, and the
+mirror verifies that every new public release source came from a merged,
+`release`-labeled PR whose head was that same-repository bot branch, whose
+merge SHA is the exact tag source, and which has an approval on the final PR
+head from a human who still has write or admin access, with no outstanding
+authorized change request.
+
+Store its credentials as private Actions secrets:
+
+- `RELEASE_APP_ID`
+- `RELEASE_APP_PRIVATE_KEY`
+
+Set the private Actions repository variable `RELEASE_APP_LOGIN` to that App's
+bot login, including the `[bot]` suffix.
+
+Keep the existing `OSS_MIRROR_SSH_KEY` write deploy key restricted to
+`sealtask/sealtask-oss`.
+
+### Public repository
+
+1. Enable immutable releases for `sealtask/sealtask-oss`. This must be enabled
+   before the first automated GitHub Release. After verifying the setting, add
+   the public Actions repository variable
+   `IMMUTABLE_RELEASES_ENABLED=true`. This is the pre-publication activation
+   latch; the post-publication verifier still proves the actual release is
+   immutable.
+2. Create a `crates-io` environment and restrict deployments to tags matching
+   `v*`. Do not add another required reviewer if the reviewed private release PR
+   is intended to be the only steady-state approval.
+3. Create a `crates-io-bootstrap` environment with a required reviewer. Add a
+   short-lived `CRATES_IO_BOOTSTRAP_TOKEN` environment secret only for the
+   first publication.
+4. Keep the default Actions token read-only. The generated release workflow
+   escalates only the individual jobs that publish attestations or the GitHub
+   Release.
+5. Public `main` is mirror-only. Repository rules must reject deletion and
+   non-fast-forward updates; ideally also restrict ordinary updates to the
+   mirror deploy key or its replacement GitHub App. Add matching tag rules for
+   `v*` that reject updates and deletion and allow creation only by the mirror
+   identity. Protect private `oss-v*` provenance tags the same way.
+
+## First automated release
+
+All six crate names are initially unowned on crates.io, so trusted publishing
+cannot be configured until the bootstrap publication establishes ownership.
+The first release has one deliberate bootstrap detour:
+
+1. Let **Prepare OSS Release** create the initial `v0.3.0` PR. This one-time
+   transition moves the existing `0.2.1` workspace onto the new release
+   contract.
+2. Review and merge the PR normally. The mirror creates public `v0.3.0`.
+3. The public **Release** workflow will build artifacts and stop at crates.io
+   OIDC authentication because the trusted publishers do not exist yet. Do not
+   create a GitHub Release manually.
+4. In the public repository, run **Bootstrap crates.io ownership** with:
+   - `release_tag`: `v0.3.0`
+   - `confirmation`: `BOOTSTRAP-SEALTASK-CRATES`
+5. After all six crates exist, configure this trusted publisher on each crate:
+
+   ```text
+   GitHub owner:        sealtask
+   GitHub repository:   sealtask-oss
+   Workflow filename:   release.yml
+   Environment:         crates-io
+   ```
+
+   Configure it for all six names listed at the top of this document. The
+   trusted workflow is the caller `release.yml`, not the reusable
+   `publish-crates.yml`.
+6. Revoke the bootstrap token and delete `CRATES_IO_BOOTSTRAP_TOKEN` from the
+   environment.
+7. Choose **Re-run failed jobs** on the original public **Release** run. The
+   publisher checks the staged archive checksum against crates.io, skips each
+   already-published crate, performs the registry install verification, and
+   continues to the immutable GitHub Release.
+
+Every later release uses OIDC and needs no crates.io token.
+
+## Retry and recovery rules
+
+The release systems are resumable but intentionally refuse ambiguous state.
+
+| Failure | Safe action |
+| --- | --- |
+| Release PR says the public tree is behind | Wait for **Mirror OSS Workspace**, then rerun the release-PR job. |
+| A crate publish times out or Cargo returns an uncertain result | Use **Re-run failed jobs**. The publisher resumes only when crates.io reports the exact staged SHA-256 checksum. |
+| Some crates exist and later ones do not | Use **Re-run failed jobs**. Existing exact archives are skipped and publication continues in dependency order. |
+| Public tag already points somewhere else | Stop. Never delete or move the tag; reconcile the source/history as an incident. |
+| Public `main` has a non-mirror commit | The mirror rejects the non-fast-forward update. Reconcile public history explicitly; never force-push from the workflow. |
+| A draft GitHub Release remains | Rerun the failed announcement job. It may refill that same draft and publish it. |
+| A published release is not immutable | Stop. Automation refuses to mutate it; correct the repository setting and handle the release as an incident. |
+| The immutable release already exists | Rerun only the failed verification job. Announcement validates the target and treats the immutable release as complete. |
+| Asset or attestation verification fails | Rerun the verifier. Do not replace assets on an immutable release. |
+
+GitHub Releases and crates.io are independent systems, so they cannot be one
+transaction. The workflow publishes and verifies crates first, then publishes
+the immutable GitHub Release. A retry-safe checksum state machine bridges that
+boundary.
+
+## Local validation
+
+From `oss/`:
+
+```bash
+./scripts/check-release-metadata.sh workspace
+python3 -m unittest scripts/test_check_release_metadata.py
+python3 -m unittest scripts/test_finalize_release_changelog.py
+python3 -m unittest scripts/test_prepare_initial_release.py
+./scripts/test-release-plz-cargo.sh
+./scripts/test-publish-crates.sh
+./scripts/generate-release-workflow.sh check
+cargo fmt --all --check
+cargo check --workspace --all-targets --locked
+cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+cargo test --workspace --all-targets --locked
+```
+
+`.github/workflows/release.yml` is generated by pinned cargo-dist 0.32.0; do
+not edit it directly. `scripts/patch-dist-workflow.py` is a fail-closed adapter
+for the small policy gaps in that generated version. The generation check
+rebuilds the workflow in a clean temporary Git repository, applies each exact
+single-use patch, and compares the result byte-for-byte. Remove a patch when a
+future pinned cargo-dist version emits the equivalent guarantee itself.
+
+Cargo-dist normally rejects any edited generated workflow at runtime. The
+checked-in `allow-dirty = ["ci"]` disables only that redundant runtime
+comparison so the audited hardening can run. It does not waive drift checks:
+`generate-release-workflow.sh` removes the exception in its temporary
+repository, deletes the copied workflow, regenerates it from scratch, applies
+the patch, compares it with the checked-in file, restores the runtime config,
+and finally rehearses both pull-request planning and tagged release planning.
+
+Pinned release-plz 0.3.160 similarly hard-codes
+`cargo package --allow-dirty --workspace` while reconstructing a prior
+git-only release. `scripts/release-plz-cargo.sh` forwards every Cargo call
+unchanged except that exact command, where it excludes the two unpublished
+StrongBox browser-WASM packages. The adapter fails closed if release-plz
+changes the command shape; remove it when upstream can scope the snapshot to
+the release-managed package graph.
+
+After committing a release candidate in a temporary standalone checkout, this
+packages all six archives without registry access or publication:
 
 ```bash
 DRY_RUN=1 ./scripts/publish-crates.sh
 ```
 
-Dry-run mode fully runs `cargo publish --dry-run` for `sealtask-client-core`, then packages downstream crates with `cargo package --no-verify --list`. That avoids crates.io index failures before the earlier internal crates are published.
+For an emergency token-based rerun from an exact annotated tag, set
+`CARGO_REGISTRY_TOKEN` and `RELEASE_TAG=vX.Y.Z`, then run
+`./scripts/publish-crates.sh`. Prefer the protected hosted workflows because
+they preserve approval and provenance evidence.
 
-## Publish
-
-```bash
-./scripts/publish-crates.sh
-```
-
-The script publishes each crate, then polls crates.io for the exact version before continuing to the next one.
-
-After publishing, install `sealtask` in a clean environment and record
-successful no-factor, interactive TOTP, one-time backup-code, one-line
-`mfa_input_required`, and two-line stdin login flows. A path dependency or the
-dry-run package result is not release evidence.
-
-Also verify the installed CLI contract: `sealtask --json info` reports
-`jsonContractVersion: 2`, `sealtask --json schema tasks create` is a single
-compact JSON document, `--format json-pretty` is equivalent except for
-whitespace, and two named profiles under a temporary `--config-dir` do not
-share credentials or unlock state.
-
-Generate the version-matched completion and manual bundle and attach it to
-binary/package-manager releases:
+From the private monorepo root, the source/tag/review state machines have
+network-free regression suites:
 
 ```bash
-SEALTASK_BINARY=target/release/sealtask ./scripts/generate-cli-assets.sh update
-SEALTASK_BINARY=target/release/sealtask ./scripts/generate-cli-assets.sh check
-find cli/assets -type f -print | sort
+python3 -m unittest scripts/test_release_review_policy.py
+./scripts/test-resolve-oss-release-tag.sh
+./scripts/test-persist-oss-release-baseline.sh
+./scripts/test-push-oss-subtree.sh
 ```
-
-The bundle contains Bash, Zsh, Fish, and PowerShell completions plus section-1
-manual pages for every visible command. Generate it from the exact release
-binary; do not reuse assets from a prior CLI version.
-
-Exercise data-key unlock against both a legacy version 1 account and an OPAQUE
-export-key version 2 account. For version 2, record successful single-command,
-unlock-daemon, and platform-keychain flows against the hosted API, including an
-expired-access-token refresh. Confirm a wrong password leaves no bootstrap
-secret and that credentials and local unlock storage contain no OPAQUE export
-key. Version 1 password unwrap must remain offline.
-
-For the two-line stdin check, confirm the first password line is still trimmed
-and the second factor line loses only its physical LF or CRLF delimiter. Record
-that whitespace-only, tabs, surrounding whitespace, Unicode digits, canonical
-TOTP, and formatted or malformed backup-looking values reach the server
-byte-for-byte; for an enrolled account, a missing or exactly empty line two must
-produce `mfa_input_required`. Also confirm a denied factor is absent from
-stderr/debug output and that no pending or final credential file is written.
-
-## Useful Overrides
-
-```bash
-ALLOW_DIRTY=1 ./scripts/publish-crates.sh
-WAIT_SECONDS=15 MAX_ATTEMPTS=40 ./scripts/publish-crates.sh
-```
-
-- `ALLOW_DIRTY=1`: allow packaging and publishing from a dirty worktree
-- `WAIT_SECONDS`: seconds between crates.io visibility checks
-- `MAX_ATTEMPTS`: maximum visibility checks before the script exits with an error
-
-## Manual Recovery
-
-If a publish succeeds but the script exits before the next crate, rerun it after the published version appears on crates.io. `cargo publish` will refuse to republish the same version, so you can continue safely after visibility catches up.

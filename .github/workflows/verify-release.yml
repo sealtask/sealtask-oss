@@ -1,0 +1,80 @@
+name: Verify published release
+
+on:
+  workflow_call:
+    inputs:
+      plan:
+        required: true
+        type: string
+
+permissions:
+  attestations: read
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout release tag
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify immutable release metadata
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag_commit="$(git rev-parse "refs/tags/${GITHUB_REF_NAME}^{}")"
+          if [[ "${tag_commit}" != "${GITHUB_SHA}" ]]; then
+            echo "::error::Tag commit ${tag_commit} differs from workflow commit ${GITHUB_SHA}."
+            exit 1
+          fi
+          release="$(
+            gh release view "${GITHUB_REF_NAME}" \
+              --json assets,isDraft,isImmutable,targetCommitish
+          )"
+          jq -e \
+            --arg sha "${GITHUB_SHA}" \
+            '.isDraft == false and
+             .isImmutable == true and
+             .targetCommitish == $sha and
+             (.assets | length) > 0' \
+            <<<"${release}"
+
+      - name: Verify the release and every asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          download_dir="$(mktemp -d)"
+          trap 'rm -rf "${download_dir}"' EXIT
+
+          verified=0
+          for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
+            if gh release verify "${GITHUB_REF_NAME}"; then
+              verified=1
+              break
+            fi
+            echo "Waiting for immutable release attestation (${attempt}/12)..."
+            sleep 10
+          done
+          if [[ "${verified}" != "1" ]]; then
+            echo "::error::Release attestation was not verifiable."
+            exit 1
+          fi
+
+          gh release download "${GITHUB_REF_NAME}" --dir "${download_dir}"
+          asset_count=0
+          while IFS= read -r -d '' asset; do
+            gh release verify-asset "${GITHUB_REF_NAME}" "${asset}"
+            gh attestation verify "${asset}" --repo "${GITHUB_REPOSITORY}"
+            asset_count=$((asset_count + 1))
+          done < <(find "${download_dir}" -type f -print0)
+          if [[ "${asset_count}" == "0" ]]; then
+            echo "::error::The published release contained no downloadable assets."
+            exit 1
+          fi
+          echo "Verified ${asset_count} immutable, attested release assets."

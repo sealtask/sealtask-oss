@@ -1,0 +1,37 @@
+[workspace]
+members = ["cargo:."]
+
+[dist]
+cargo-dist-version = "0.32.0"
+allow-dirty = ["ci"]
+ci = ["github"]
+packages = ["sealtask"]
+targets = [
+    "x86_64-unknown-linux-gnu",
+    "x86_64-apple-darwin",
+    "aarch64-apple-darwin",
+    "x86_64-pc-windows-msvc",
+]
+installers = ["shell", "powershell"]
+checksum = "sha256"
+include = ["cli/assets"]
+cargo-auditable = true
+cargo-cyclonedx = true
+github-attestations = true
+github-attestations-phase = "announce"
+github-release = "announce"
+pr-run-mode = "plan"
+plan-jobs = ["./release-gate"]
+publish-jobs = ["./publish-crates"]
+post-announce-jobs = ["./verify-release"]
+github-custom-job-permissions = { "publish-crates" = { contents = "read", id-token = "write" }, "verify-release" = { attestations = "read", contents = "read" } }
+
+[dist.dependencies.apt]
+pkg-config = "*"
+libdbus-1-dev = "*"
+
+[dist.github-action-commits]
+"actions/attest" = "f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6"
+"actions/checkout" = "d23441a48e516b6c34aea4fa41551a30e30af803"
+"actions/download-artifact" = "3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c"
+"actions/upload-artifact" = "043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"

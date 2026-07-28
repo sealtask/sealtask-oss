@@ -1,0 +1,61 @@
+[workspace]
+allow_dirty = false
+changelog_update = false
+dependencies_update = false
+features_always_increment_minor = true
+# Git-only mode invokes the scoped Cargo adapter documented in RELEASE.md.
+git_only = true
+git_release_enable = false
+git_tag_enable = false
+pr_branch_prefix = "release-plz-"
+pr_labels = ["release"]
+pr_name = "chore(release): prepare v{{ version }}"
+publish = false
+release = false
+release_always = false
+semver_check = true
+
+[[package]]
+name = "sealtask-client-core"
+release = true
+version_group = "sealtask"
+git_tag_name = "v{{ version }}"
+
+[[package]]
+name = "sealtask-client-auth"
+release = true
+version_group = "sealtask"
+git_tag_name = "v{{ version }}"
+
+[[package]]
+name = "sealtask-client-crypto"
+release = true
+version_group = "sealtask"
+git_tag_name = "v{{ version }}"
+
+[[package]]
+name = "sealtask-client-api"
+release = true
+version_group = "sealtask"
+git_tag_name = "v{{ version }}"
+
+[[package]]
+name = "sealtask-client-runtime"
+release = true
+version_group = "sealtask"
+git_tag_name = "v{{ version }}"
+
+[[package]]
+name = "sealtask"
+release = true
+version_group = "sealtask"
+git_tag_name = "v{{ version }}"
+changelog_update = true
+changelog_path = "CHANGELOG.md"
+changelog_include = [
+    "sealtask-client-core",
+    "sealtask-client-auth",
+    "sealtask-client-crypto",
+    "sealtask-client-api",
+    "sealtask-client-runtime",
+]

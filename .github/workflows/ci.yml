@@ -22,7 +22,7 @@ jobs:
           persist-credentials: false
 
       - name: Install Bun
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@735343b667d3e6f658f44d0eca948eb6282f2b76 # v2.0.2
         with:
           bun-version: 1.3.14
 
@@ -83,3 +83,22 @@ jobs:
 
       - name: Verify canonical StrongBox WASM artifact
         run: ./scripts/build-strong-box-wasm.sh verify
+
+      - name: Test release automation
+        run: |
+          ./scripts/check-release-metadata.sh workspace
+          python3 -m unittest scripts/test_check_release_metadata.py
+          python3 -m unittest scripts/test_finalize_release_changelog.py
+          python3 -m unittest scripts/test_prepare_initial_release.py
+          ./scripts/test-release-plz-cargo.sh
+          ./scripts/test-publish-crates.sh
+
+      - name: Install pinned cargo-dist
+        shell: bash
+        run: |
+          curl --proto '=https' --tlsv1.2 -LsSf \
+            https://github.com/axodotdev/cargo-dist/releases/download/v0.32.0/cargo-dist-installer.sh |
+            sh
+
+      - name: Verify generated release workflow
+        run: ./scripts/generate-release-workflow.sh check

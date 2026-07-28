@@ -22,8 +22,8 @@ tokio.workspace = true
 uuid.workspace = true
 zeroize.workspace = true
 
-sealtask-client-auth = { version = "0.2.1", path = "../client-auth" }
-sealtask-client-core = { version = "0.2.1", path = "../client-core" }
+sealtask-client-auth = { version = "=0.2.1", path = "../client-auth" }
+sealtask-client-core = { version = "=0.2.1", path = "../client-core" }
 
 [dev-dependencies]
 flate2.workspace = true
