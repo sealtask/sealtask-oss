@@ -1044,10 +1044,16 @@ printf '%s\n%s\n' "$SEALTASK_PASSWORD" "$SEALTASK_MFA_CODE" \
 Do not pass authenticator or backup codes as command-line arguments; arguments
 can be retained in shell history and process listings.
 
-Once the crate is published, install the CLI with:
+Install the latest CLI release with:
 
 ```bash
-cargo install sealtask
+curl -fsSL https://sealtask.com/cli/install.sh | sh
+```
+
+Or install it from crates.io:
+
+```bash
+cargo install sealtask --locked
 ```
 
 Set a custom API URL with `SEALTASK_API_URL` if you are not targeting the default hosted endpoint:
