@@ -63,10 +63,6 @@ jobs:
             --version "=${version}" \
             --locked \
             --root "${install_root}"
-          "${install_root}/bin/sealtask" --version |
-            grep -Fx "sealtask ${version}"
-          info="$("${install_root}/bin/sealtask" --json --non-interactive info)"
-          jq -e \
-            --arg version "${version}" \
-            '.version == $version and .jsonContractVersion == 2' \
-            <<<"${info}"
+          ./scripts/verify-registry-package.sh \
+            "${install_root}/bin/sealtask" \
+            "${version}"

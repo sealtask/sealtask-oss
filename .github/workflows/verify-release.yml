@@ -70,7 +70,13 @@ jobs:
           asset_count=0
           while IFS= read -r -d '' asset; do
             gh release verify-asset "${GITHUB_REF_NAME}" "${asset}"
-            gh attestation verify "${asset}" --repo "${GITHUB_REPOSITORY}"
+            gh attestation verify "${asset}" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --signer-workflow \
+                "${GITHUB_REPOSITORY}/.github/workflows/release.yml" \
+              --source-ref "${GITHUB_REF}" \
+              --source-digest "${GITHUB_SHA}" \
+              --deny-self-hosted-runners
             asset_count=$((asset_count + 1))
           done < <(find "${download_dir}" -type f -print0)
           if [[ "${asset_count}" == "0" ]]; then

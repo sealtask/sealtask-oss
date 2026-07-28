@@ -1,0 +1,471 @@
+name: Recover v0.3.0 GitHub Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "Type RECOVER-SEALTASK-V0.3.0"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: recover-v0.3.0-release
+  cancel-in-progress: false
+
+env:
+  GH_REPO: sealtask/sealtask-oss
+  RECOVERY_TAG: v0.3.0
+  RECOVERY_VERSION: 0.3.0
+  RECOVERY_TAG_OBJECT: 34146df3c6b85793fc940c9b9bf5448ea8dc6d95
+  RECOVERY_COMMIT: a0389a3aa6285b9bb136aa1756c11da7e6ec5a6e
+
+jobs:
+  validate:
+    name: Validate the pinned release inputs
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: read
+      contents: read
+
+    steps:
+      - name: Confirm the one-time recovery
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          if [[ "${CONFIRMATION}" != "RECOVER-SEALTASK-V0.3.0" ]]; then
+            echo "::error::The recovery confirmation did not match."
+            exit 1
+          fi
+          if [[ "${GITHUB_REPOSITORY}" != "sealtask/sealtask-oss" ]]; then
+            echo "::error::This recovery is restricted to sealtask/sealtask-oss."
+            exit 1
+          fi
+          if [[ "${GITHUB_REF}" != "refs/heads/main" ]]; then
+            echo "::error::Dispatch this recovery from public main."
+            exit 1
+          fi
+
+      - name: Checkout recovery controls
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+          path: recovery-control
+
+      - name: Checkout the immutable release tag
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          ref: v0.3.0
+          path: release-source
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y pkg-config libdbus-1-dev
+
+      - name: Install pinned Rust
+        uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4
+        with:
+          toolchain: 1.94.0
+
+      - name: Validate the local tag and exact source run
+        working-directory: release-source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          IMMUTABLE_RELEASES_ENABLED: ${{ vars.IMMUTABLE_RELEASES_ENABLED }}
+        run: |
+          set -euo pipefail
+
+          if [[ "$(git cat-file -t "refs/tags/${RECOVERY_TAG}")" != "tag" ]]; then
+            echo "::error::${RECOVERY_TAG} is not an annotated tag."
+            exit 1
+          fi
+          if [[ "$(git rev-parse "refs/tags/${RECOVERY_TAG}")" != "${RECOVERY_TAG_OBJECT}" ]]; then
+            echo "::error::${RECOVERY_TAG} does not match the pinned annotated tag object."
+            exit 1
+          fi
+          tag_commit="$(git rev-parse "refs/tags/${RECOVERY_TAG}^{commit}")"
+          if [[ "${tag_commit}" != "${RECOVERY_COMMIT}" || "$(git rev-parse HEAD)" != "${RECOVERY_COMMIT}" ]]; then
+            echo "::error::The recovery tag does not resolve to the pinned release commit."
+            exit 1
+          fi
+          git fetch --quiet origin main
+          if ! git merge-base --is-ancestor "${RECOVERY_COMMIT}" origin/main; then
+            echo "::error::The pinned release commit is not reachable from public main."
+            exit 1
+          fi
+
+          ../recovery-control/scripts/validate-v0.3.0-source-run.sh
+
+      - name: Verify all six crates and the registry-installed CLI
+        working-directory: release-source
+        env:
+          SEALTASK_CONFIG_DIR: ${{ runner.temp }}/registry-install-config
+        run: |
+          set -euo pipefail
+
+          ./scripts/check-release-metadata.sh release --tag "${RECOVERY_TAG}"
+          RELEASE_TAG="${RECOVERY_TAG}" ./scripts/publish-crates.sh
+
+          expected_crates=(
+            "sealtask-client-core 34f7779b6df75c40acaa1f108902a2348806431a4cd3c639ef0b25d342091b89"
+            "sealtask-client-auth d02257352e4da98ebf57ebb1963780e2195527674e99f99261770599187910b8"
+            "sealtask-client-crypto 00bdde8faf928c0930e2eee1322829a2c7fb4d2b9f626685b0dc67223d3e8fbd"
+            "sealtask-client-api 8b9b502f372e5d1d4b6f7eeaca144de36cfb7bbc4038148596f6aaefaa8ac64a"
+            "sealtask-client-runtime 3e7fa135856875444b8a851bf26e1ae6a71b59209d5ad1b6538855e67fbaa055"
+            "sealtask 6eb0b60cae1741672f07e51d6cccdb018f1540379f8c95414b76e5f31f662f45"
+          )
+          for expected in "${expected_crates[@]}"; do
+            read -r crate checksum <<<"${expected}"
+            payload="$(
+              curl \
+                --fail \
+                --silent \
+                --show-error \
+                --user-agent "sealtask-v0.3.0-recovery/1" \
+                "https://crates.io/api/v1/crates/${crate}/${RECOVERY_VERSION}"
+            )"
+            printf '%s\n' "${payload}" |
+              jq -e \
+                --arg crate "${crate}" \
+                --arg version "${RECOVERY_VERSION}" \
+                --arg checksum "${checksum}" \
+                '
+                  .version.crate == $crate and
+                  .version.num == $version and
+                  .version.checksum == $checksum and
+                  .version.yanked == false
+                ' >/dev/null
+          done
+
+          install_root="${RUNNER_TEMP}/registry-install"
+          cargo install \
+            sealtask \
+            --version "=${RECOVERY_VERSION}" \
+            --locked \
+            --root "${install_root}"
+          ../recovery-control/scripts/verify-registry-package.sh \
+            "${install_root}/bin/sealtask" \
+            "${RECOVERY_VERSION}"
+
+      - name: Download the exact source-run artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          artifact-ids: 8698437800,8698421602,8698401425,8698332832,8698330697
+          digest-mismatch: error
+          github-token: ${{ github.token }}
+          merge-multiple: true
+          path: downloaded-artifacts
+          repository: sealtask/sealtask-oss
+          run-id: 30384064267
+
+      - name: Validate every release asset and the Linux binary
+        env:
+          SEALTASK_CONFIG_DIR: ${{ runner.temp }}/artifact-config
+        run: |
+          set -euo pipefail
+
+          ./recovery-control/scripts/prepare-v0.3.0-release-assets.sh \
+            downloaded-artifacts \
+            release-assets
+
+          artifact_root="${RUNNER_TEMP}/artifact-binary"
+          mkdir "${artifact_root}"
+          tar \
+            -xJf release-assets/sealtask-x86_64-unknown-linux-gnu.tar.xz \
+            -C "${artifact_root}"
+          ./recovery-control/scripts/verify-registry-package.sh \
+            "${artifact_root}/sealtask-x86_64-unknown-linux-gnu/sealtask" \
+            "${RECOVERY_VERSION}"
+
+  publish:
+    name: Attest and publish the immutable release
+    needs: validate
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: read
+      attestations: write
+      contents: write
+      id-token: write
+
+    steps:
+      - name: Checkout the audited recovery controls
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+          path: recovery-control
+
+      - name: Revalidate the exact source run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          IMMUTABLE_RELEASES_ENABLED: ${{ vars.IMMUTABLE_RELEASES_ENABLED }}
+        run: ./recovery-control/scripts/validate-v0.3.0-source-run.sh
+
+      - name: Redownload the exact source-run artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          artifact-ids: 8698437800,8698421602,8698401425,8698332832,8698330697
+          digest-mismatch: error
+          github-token: ${{ github.token }}
+          merge-multiple: true
+          path: downloaded-artifacts
+          repository: sealtask/sealtask-oss
+          run-id: 30384064267
+
+      - name: Rebuild the exact release-asset allowlist
+        run: |
+          set -euo pipefail
+          ./recovery-control/scripts/prepare-v0.3.0-release-assets.sh \
+            downloaded-artifacts \
+            release-assets
+
+      - name: Inspect the existing release state
+        id: release-state
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if release="$(
+            gh release view "${RECOVERY_TAG}" \
+              --json assets,isDraft,isImmutable,isPrerelease,targetCommitish
+          )"; then
+            if printf '%s\n' "${release}" |
+              jq -e \
+                --arg sha "${RECOVERY_COMMIT}" \
+                '
+                  .isDraft == false and
+                  .isImmutable == true and
+                  .isPrerelease == false and
+                  .targetCommitish == $sha
+                ' >/dev/null; then
+              state=immutable
+            elif printf '%s\n' "${release}" |
+              jq -e \
+                --arg sha "${RECOVERY_COMMIT}" \
+                '
+                  .isDraft == true and
+                  .isImmutable == false and
+                  .isPrerelease == false and
+                  .targetCommitish == $sha
+                ' >/dev/null; then
+              state=draft
+            else
+              echo "::error::An incompatible release already exists for ${RECOVERY_TAG}."
+              exit 1
+            fi
+          else
+            state=missing
+          fi
+          echo "state=${state}" >>"${GITHUB_OUTPUT}"
+
+      - name: Attest the exact recovered assets
+        uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4
+        with:
+          subject-path: release-assets/*
+
+      - name: Verify recovery provenance before publication
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          mapfile -d '' assets < <(
+            find release-assets -mindepth 1 -maxdepth 1 -type f -print0
+          )
+          if [[ "${#assets[@]}" != "19" ]]; then
+            echo "::error::Expected 19 attested release assets, found ${#assets[@]}."
+            exit 1
+          fi
+
+          verify_recovery_attestation() {
+            gh attestation verify "$1" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --signer-workflow \
+                "sealtask/sealtask-oss/.github/workflows/recover-v0.3.0.yml" \
+              --source-ref refs/heads/main \
+              --source-digest "${GITHUB_SHA}" \
+              --deny-self-hosted-runners
+          }
+
+          attestations_ready=0
+          for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
+            verification_failed=0
+            for asset in "${assets[@]}"; do
+              if ! verify_recovery_attestation "${asset}" >/dev/null 2>&1; then
+                verification_failed=1
+                break
+              fi
+            done
+            if [[ "${verification_failed}" == "0" ]]; then
+              attestations_ready=1
+              break
+            fi
+            echo "Waiting for recovery attestations (${attempt}/12)..."
+            sleep 5
+          done
+          if [[ "${attestations_ready}" != "1" ]]; then
+            echo "::error::The exact recovery attestations could not be verified."
+            exit 1
+          fi
+
+      - name: Stage, validate, and publish the draft release
+        if: steps.release-state.outputs.state != 'immutable'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_STATE: ${{ steps.release-state.outputs.state }}
+        run: |
+          set -euo pipefail
+
+          title="$(jq -r '.announcement_title' release-assets/dist-manifest.json)"
+          jq -r '.announcement_github_body' \
+            release-assets/dist-manifest.json \
+            >"${RUNNER_TEMP}/release-notes.md"
+
+          if [[ "${RELEASE_STATE}" == "missing" ]]; then
+            gh release create "${RECOVERY_TAG}" \
+              --draft \
+              --target "${RECOVERY_COMMIT}" \
+              --title "${title}" \
+              --notes-file "${RUNNER_TEMP}/release-notes.md" \
+              --verify-tag \
+              release-assets/*
+          elif [[ "${RELEASE_STATE}" == "draft" ]]; then
+            gh release upload "${RECOVERY_TAG}" release-assets/* --clobber
+            gh release edit "${RECOVERY_TAG}" \
+              --draft \
+              --target "${RECOVERY_COMMIT}" \
+              --title "${title}" \
+              --notes-file "${RUNNER_TEMP}/release-notes.md" \
+              --verify-tag
+          else
+            echo "::error::Unexpected release state: ${RELEASE_STATE}"
+            exit 1
+          fi
+
+          find release-assets -mindepth 1 -maxdepth 1 -type f -print0 |
+            xargs -0 sha256sum |
+            awk '{
+              path = $2
+              sub(/^.*\//, "", path)
+              print path "\tsha256:" $1
+            }' |
+            sort >"${RUNNER_TEMP}/expected-release-assets.tsv"
+
+          for attempt in 1 2 3 4 5 6; do
+            draft="$(
+              gh release view "${RECOVERY_TAG}" \
+                --json assets,isDraft,isImmutable,isPrerelease,targetCommitish
+            )"
+            printf '%s\n' "${draft}" |
+              jq -r '.assets[] | [.name, .digest] | @tsv' |
+              sort >"${RUNNER_TEMP}/draft-release-assets.tsv"
+            if printf '%s\n' "${draft}" |
+              jq -e \
+                --arg sha "${RECOVERY_COMMIT}" \
+                '
+                  .isDraft == true and
+                  .isImmutable == false and
+                  .isPrerelease == false and
+                  .targetCommitish == $sha and
+                  (.assets | length) == 19 and
+                  all(.assets[]; (.digest | type) == "string")
+                ' >/dev/null &&
+              diff -u \
+                "${RUNNER_TEMP}/expected-release-assets.tsv" \
+                "${RUNNER_TEMP}/draft-release-assets.tsv"; then
+              break
+            fi
+            if [[ "${attempt}" == "6" ]]; then
+              echo "::error::The staged draft assets did not match the pinned source artifacts."
+              exit 1
+            fi
+            sleep 5
+          done
+
+          gh release edit "${RECOVERY_TAG}" --draft=false --verify-tag
+
+      - name: Verify the immutable release and every attested asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          immutable=0
+          for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
+            release="$(
+              gh release view "${RECOVERY_TAG}" \
+                --json assets,isDraft,isImmutable,isPrerelease,targetCommitish
+            )"
+            if printf '%s\n' "${release}" |
+              jq -e \
+                --arg sha "${RECOVERY_COMMIT}" \
+                '
+                  .isDraft == false and
+                  .isImmutable == true and
+                  .isPrerelease == false and
+                  .targetCommitish == $sha and
+                  (.assets | length) == 19
+                ' >/dev/null &&
+              gh release verify "${RECOVERY_TAG}"; then
+              immutable=1
+              break
+            fi
+            echo "Waiting for immutable release verification (${attempt}/12)..."
+            sleep 10
+          done
+          if [[ "${immutable}" != "1" ]]; then
+            echo "::error::The recovered release did not become verifiably immutable."
+            exit 1
+          fi
+
+          download_dir="${RUNNER_TEMP}/published-release"
+          mkdir "${download_dir}"
+          gh release download "${RECOVERY_TAG}" --dir "${download_dir}"
+
+          diff -u \
+            <(
+              find release-assets -mindepth 1 -maxdepth 1 -type f -exec sha256sum {} \; |
+                awk '{
+                  path = $2
+                  sub(/^.*\//, "", path)
+                  print path "\t" $1
+                }' |
+                sort
+            ) \
+            <(
+              find "${download_dir}" -mindepth 1 -maxdepth 1 -type f -exec sha256sum {} \; |
+                awk '{
+                  path = $2
+                  sub(/^.*\//, "", path)
+                  print path "\t" $1
+                }' |
+                sort
+            )
+
+          verify_recovery_attestation() {
+            gh attestation verify "$1" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --signer-workflow \
+                "sealtask/sealtask-oss/.github/workflows/recover-v0.3.0.yml" \
+              --source-ref refs/heads/main \
+              --source-digest "${GITHUB_SHA}" \
+              --deny-self-hosted-runners
+          }
+
+          asset_count=0
+          while IFS= read -r -d '' asset; do
+            gh release verify-asset "${RECOVERY_TAG}" "${asset}"
+            verify_recovery_attestation "${asset}"
+            asset_count=$((asset_count + 1))
+          done < <(
+            find "${download_dir}" -mindepth 1 -maxdepth 1 -type f -print0
+          )
+          if [[ "${asset_count}" != "19" ]]; then
+            echo "::error::Expected 19 verified release assets, found ${asset_count}."
+            exit 1
+          fi

@@ -57,3 +57,4 @@ jobs:
           python3 -m unittest scripts/test_prepare_initial_release.py
           ./scripts/test-release-plz-cargo.sh
           ./scripts/test-publish-crates.sh
+          ./scripts/test-verify-registry-package.sh
