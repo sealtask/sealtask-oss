@@ -30,8 +30,6 @@ use std::fs::{self, File};
 use std::io::{Read, Seek, SeekFrom, Write};
 #[cfg(unix)]
 use std::os::unix::fs::{MetadataExt as _, PermissionsExt as _};
-#[cfg(windows)]
-use std::os::windows::fs::MetadataExt as _;
 use std::path::{Component, Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -2042,16 +2040,18 @@ fn validate_private_file(file: &File, label: &str) -> PublicResult<()> {
 
 #[cfg(windows)]
 fn validate_private_file(file: &File, label: &str) -> PublicResult<()> {
+    use cap_fs_ext::MetadataExt as _;
+    use cap_std::fs::MetadataExt as _;
+
     const FILE_ATTRIBUTE_REPARSE_POINT: u32 = 0x400;
-    let metadata = file
-        .metadata()
+    let metadata = cap_std::fs::Metadata::from_file(file)
         .map_err(|error| cache_io(format!("failed to inspect {label}: {error}")))?;
     if !metadata.is_file() || metadata.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT != 0 {
         return Err(PublicError::validation(format!(
             "{label} must be a regular file and not a reparse point"
         )));
     }
-    if metadata.number_of_links() != Some(1) {
+    if metadata.nlink() != 1 {
         return Err(PublicError::validation(format!(
             "{label} must have exactly one hard link"
         )));
@@ -3149,6 +3149,35 @@ mod tests {
                 .expect("explicit clear removes the unsafe cache entry")
         );
         assert!(!cache_path.exists());
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn test_should_reject_hardlinked_cache_file() {
+        let directory = private_temp_dir();
+        let credentials = test_credentials(false);
+        let data_key = SymmetricKey::new([0x2d; KEY_SIZE]);
+        let query = ReadCacheQuery::WorkLists {
+            include_archived: true,
+        };
+        let online = ReadCacheRuntime::new(
+            ReadCacheOptions::online(directory.path(), "default").expect("options"),
+        );
+        record_fixture(
+            &online,
+            &credentials,
+            &data_key,
+            &query,
+            &Vec::<WorkListResponse>::new(),
+        );
+        let cache_path = directory.path().join(CACHE_FILE_NAME);
+        let hardlink_path = directory.path().join("cache-hardlink");
+        fs::hard_link(&cache_path, &hardlink_path).expect("hard link");
+
+        let error = online
+            .status()
+            .expect_err("cache hard link must be rejected");
+        assert!(error.to_string().contains("exactly one hard link"));
     }
 
     #[cfg(unix)]

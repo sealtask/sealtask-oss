@@ -760,17 +760,16 @@ fn validate_secret_file_handle(file: &File, label: &str) -> PublicResult<()> {
 
 #[cfg(windows)]
 fn validate_secret_file_handle(file: &File, label: &str) -> PublicResult<()> {
-    use std::os::windows::fs::MetadataExt as _;
+    use cap_fs_ext::MetadataExt as _;
 
-    let metadata = file
-        .metadata()
+    let metadata = cap_std::fs::Metadata::from_file(file)
         .map_err(|error| PublicError::unexpected(format!("failed to inspect {label}: {error}")))?;
     if !metadata.is_file() {
         return Err(PublicError::unexpected(format!(
             "{label} must be a regular file"
         )));
     }
-    if metadata.number_of_links() != Some(1) {
+    if metadata.nlink() != 1 {
         return Err(PublicError::unexpected(format!(
             "{label} must have exactly one hard link"
         )));
@@ -3488,6 +3487,20 @@ mod tests {
         assert_eq!(result, 0, "create credentials FIFO");
         let error = load_credentials_unlocked(&fifo_path).expect_err("credentials FIFO rejected");
         assert!(error.to_string().contains("regular file"));
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn test_should_reject_hardlinked_credentials_file() {
+        let directory = private_temp_dir();
+        let original_path = directory.path().join("original.json");
+        write_credentials_fixture(&original_path, 1_024);
+        let credentials_path = directory.path().join(CREDENTIALS_FILE_NAME);
+        fs::hard_link(&original_path, &credentials_path).expect("credentials hard link");
+
+        let error = load_credentials_unlocked(&credentials_path)
+            .expect_err("credentials hard link must be rejected");
+        assert!(error.to_string().contains("exactly one hard link"));
     }
 
     #[cfg(unix)]

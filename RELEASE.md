@@ -87,7 +87,11 @@ Set the private Actions repository variable `RELEASE_APP_LOGIN` to that App's
 bot login, including the `[bot]` suffix.
 
 Keep the existing `OSS_MIRROR_SSH_KEY` write deploy key restricted to
-`sealtask/sealtask-oss`.
+`sealtask/sealtask-oss`. Before adding or replacing that deploy key through
+GitHub CLI, run `gh auth refresh --hostname github.com --scopes workflow` and
+confirm `gh auth status --hostname github.com` lists `workflow`. GitHub retains
+the creating OAuth authorization for deploy keys; without that scope, the key
+cannot mirror files under `.github/workflows/`.
 
 ### Public repository
 
