@@ -39,7 +39,7 @@ The six crates are always versioned and published together in this order:
    - all exact internal dependency pins
    - generated completions and man pages
    - the normal OSS checks
-   - **OSS Release Platforms** on Linux, macOS, and Windows
+   - **OSS Release Platforms** on Linux and macOS
 4. Merge that PR. This merge is the release approval.
 5. Confirm the public **Release** workflow finishes. It must publish all six
    exact crate archives, install the registry copy of `sealtask`, create an

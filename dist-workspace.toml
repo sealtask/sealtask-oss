@@ -10,9 +10,8 @@ targets = [
     "x86_64-unknown-linux-gnu",
     "x86_64-apple-darwin",
     "aarch64-apple-darwin",
-    "x86_64-pc-windows-msvc",
 ]
-installers = ["shell", "powershell"]
+installers = ["shell"]
 checksum = "sha256"
 include = ["cli/assets"]
 cargo-auditable = true

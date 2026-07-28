@@ -24,6 +24,8 @@ This workspace is still in active development and is not yet positioned as a sta
 - crate boundaries are intentional, but APIs may still change
 - several APIs may still evolve as the agent workflow surface expands
 - the current release target is the CLI first, with supporting crates published alongside it
+- prebuilt releases currently target Linux x86_64 and macOS x86_64/arm64;
+  Windows artifacts are deferred until dedicated Windows validation is in place
 
 ## 0.2.1 security note (2026-07-25)
 

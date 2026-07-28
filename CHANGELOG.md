@@ -14,15 +14,13 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
   profiles, and deterministic non-interactive behavior for automation.
 - Added operator-focused project selection, fuzzy picking, diagnostics, live
   streams, secure editor flows, resilient batches, and task-reference tools.
-- Added reproducible Linux, macOS, and Windows binary releases with shell and
-  PowerShell installers, checksums, SBOMs, and build attestations.
+- Added reproducible Linux and macOS binary releases with a shell installer,
+  checksums, SBOMs, and build attestations.
 
 ### Changed
 
 - Made the six public Rust crates a lockstep graph with exact internal version
   requirements and resumable, checksum-verified crates.io publication.
-- Enabled native Windows credential storage for supported Windows binaries.
-
 ## [0.2.1] - 2026-07-25
 
 ### Security
