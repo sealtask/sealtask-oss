@@ -6,7 +6,6 @@ use cap_std::fs::{Dir, OpenOptions as CapOpenOptions};
 #[cfg(unix)]
 use cap_std::fs::{DirBuilder, DirBuilderExt as _};
 use chrono::{DateTime, Utc};
-use fs2::FileExt as _;
 use sealtask_client_api::{
     CommentResponse, MAX_COMMENTS, MAX_MEMBERS_PER_WORK_LIST, MAX_MY_TASKS,
     MAX_NOTE_COLLECTION_ITEMS, MAX_SECTIONS_PER_WORK_LIST, MAX_TASKS, MAX_WORK_LISTS,
@@ -26,7 +25,7 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::ffi::OsStr;
-use std::fs::{self, File};
+use std::fs::{self, File, TryLockError};
 use std::io::{Read, Seek, SeekFrom, Write};
 #[cfg(unix)]
 use std::os::unix::fs::{MetadataExt as _, PermissionsExt as _};
@@ -1496,9 +1495,9 @@ impl CacheLocation {
         }
         let deadline = Instant::now() + CACHE_LOCK_TIMEOUT;
         loop {
-            match file.try_lock_exclusive() {
+            match file.try_lock() {
                 Ok(()) => return Ok(CacheLock(Some(file))),
-                Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
+                Err(TryLockError::WouldBlock) => {
                     if Instant::now() >= deadline {
                         return Err(PublicError::unexpected(
                             "encrypted read cache is locked by another process",
@@ -1506,7 +1505,7 @@ impl CacheLocation {
                     }
                     thread::sleep(CACHE_LOCK_RETRY);
                 }
-                Err(error) => {
+                Err(TryLockError::Error(error)) => {
                     return Err(cache_io(format!(
                         "failed to lock encrypted read cache: {error}"
                     )));
@@ -2649,6 +2648,28 @@ mod tests {
                 .read_offline::<Vec<WorkListResponse>>(&credentials, &data_key, &query)
                 .is_err()
         );
+    }
+
+    #[test]
+    fn read_cache_lock_wait_is_bounded() {
+        let directory = private_temp_dir();
+        let location = CacheLocation::open(directory.path(), false)
+            .expect("open cache location")
+            .expect("cache location exists");
+        let first = location.acquire_lock().expect("first cache lock");
+        let started = Instant::now();
+        let error = match location.acquire_lock() {
+            Ok(_) => panic!("second cache lock must time out"),
+            Err(error) => error,
+        };
+        let elapsed = started.elapsed();
+
+        assert!(
+            matches!(error, PublicError::Unexpected(message) if message.contains("locked by another process"))
+        );
+        assert!(elapsed >= CACHE_LOCK_TIMEOUT);
+        assert!(elapsed < CACHE_LOCK_TIMEOUT + Duration::from_secs(1));
+        drop(first);
     }
 
     #[test]

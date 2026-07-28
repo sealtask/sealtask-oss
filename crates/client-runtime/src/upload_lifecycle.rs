@@ -165,7 +165,7 @@ impl UploadLifecycleManager {
         self.lock_failures().drain(..).collect()
     }
 
-    #[cfg(test)]
+    #[cfg(all(test, unix))]
     pub(crate) fn available_admission_permits(&self) -> usize {
         self.inner.admission.available_permits()
     }

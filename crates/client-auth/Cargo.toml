@@ -18,7 +18,6 @@ cap-fs-ext.workspace = true
 cap-std.workspace = true
 chrono.workspace = true
 dirs.workspace = true
-fs2.workspace = true
 generic-array.workspace = true
 keyring.workspace = true
 libc.workspace = true

@@ -2,7 +2,7 @@
 
 use std::ffi::OsStr;
 use std::fmt;
-use std::fs::{self, File};
+use std::fs::{self, File, TryLockError};
 use std::io::{Read, Write};
 #[cfg(all(unix, not(target_os = "redox")))]
 use std::os::fd::{AsRawFd as _, FromRawFd as _};
@@ -176,9 +176,9 @@ impl CredentialsFileLock {
 
         let deadline = Instant::now() + CREDENTIALS_LOCK_TIMEOUT;
         loop {
-            match fs2::FileExt::try_lock_exclusive(&lock_file) {
+            match lock_file.try_lock() {
                 Ok(()) => break,
-                Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
+                Err(TryLockError::WouldBlock) => {
                     if Instant::now() >= deadline {
                         return Err(PublicError::conflict(
                             "credentials are locked by another process; retry the command",
@@ -186,7 +186,7 @@ impl CredentialsFileLock {
                     }
                     thread::sleep(CREDENTIALS_LOCK_RETRY);
                 }
-                Err(error) => {
+                Err(TryLockError::Error(error)) => {
                     return Err(PublicError::unexpected(format!(
                         "failed to lock credentials file: {error}"
                     )));
@@ -214,7 +214,7 @@ impl CredentialsFileLock {
         let Some(file) = self.file.take() else {
             return Ok(());
         };
-        fs2::FileExt::unlock(&file).map_err(|err| {
+        file.unlock().map_err(|err| {
             PublicError::unexpected(format!("failed to unlock credentials file: {err}"))
         })
     }
@@ -227,7 +227,7 @@ impl CredentialsFileLock {
 impl Drop for CredentialsFileLock {
     fn drop(&mut self) {
         if let Some(file) = self.file.take() {
-            let _ = fs2::FileExt::unlock(&file);
+            let _ = file.unlock();
         }
     }
 }
@@ -2212,10 +2212,10 @@ fn map_reqwest_error(err: reqwest::Error, context: &str) -> PublicError {
 }
 
 fn map_refresh_transport_error(err: reqwest::Error) -> PublicError {
-    if err.is_timeout() {
-        PublicError::transport(TransportFailureKind::Timeout)
-    } else if err.is_connect() {
+    if err.is_connect() {
         PublicError::transport(TransportFailureKind::Connect)
+    } else if err.is_timeout() {
+        PublicError::transport(TransportFailureKind::Timeout)
     } else if err.is_body() {
         PublicError::transport(TransportFailureKind::Body)
     } else {
@@ -3714,14 +3714,15 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn refresh_should_classify_connection_failures_without_exposing_request_context() {
+    async fn refresh_should_classify_closed_listener_failure_without_exposing_request_context() {
         let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind");
         let address = listener.local_addr().expect("address");
         drop(listener);
         let base_url = format!("http://{address}");
         let client = reqwest::Client::builder()
-            .connect_timeout(StdDuration::from_secs(1))
-            .timeout(StdDuration::from_secs(1))
+            .no_proxy()
+            .connect_timeout(StdDuration::from_millis(250))
+            .timeout(StdDuration::from_secs(3))
             .build()
             .expect("client");
 

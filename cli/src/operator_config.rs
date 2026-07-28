@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::env;
-use std::fs::{self, File, OpenOptions};
+use std::fs::{self, File, OpenOptions, TryLockError};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
@@ -469,7 +469,7 @@ impl SettingsFileLock {
         let Some(file) = self.file.take() else {
             return Ok(());
         };
-        fs2::FileExt::unlock(&file).map_err(|err| {
+        file.unlock().map_err(|err| {
             PublicError::unexpected(format!("failed to unlock the operator settings: {err}"))
         })
     }
@@ -480,9 +480,9 @@ fn lock_exclusive_with_timeout(file: &File, timeout: Duration) -> PublicResult<(
         .checked_add(timeout)
         .ok_or_else(|| PublicError::unexpected("operator settings lock deadline overflowed"))?;
     loop {
-        match fs2::FileExt::try_lock_exclusive(file) {
+        match file.try_lock() {
             Ok(()) => return Ok(()),
-            Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
+            Err(TryLockError::WouldBlock) => {
                 let now = Instant::now();
                 if now >= deadline {
                     return Err(PublicError::request_timeout(
@@ -494,7 +494,7 @@ fn lock_exclusive_with_timeout(file: &File, timeout: Duration) -> PublicResult<(
                         .min(deadline.saturating_duration_since(now)),
                 );
             }
-            Err(error) => {
+            Err(TryLockError::Error(error)) => {
                 return Err(PublicError::unexpected(format!(
                     "failed to lock the operator settings: {error}"
                 )));
@@ -506,7 +506,7 @@ fn lock_exclusive_with_timeout(file: &File, timeout: Duration) -> PublicResult<(
 impl Drop for SettingsFileLock {
     fn drop(&mut self) {
         if let Some(file) = self.file.take() {
-            let _ = fs2::FileExt::unlock(&file);
+            let _ = file.unlock();
         }
     }
 }
@@ -1338,7 +1338,7 @@ mod tests {
             .write(true)
             .open(&path)
             .unwrap();
-        fs2::FileExt::lock_exclusive(&first).unwrap();
+        first.lock().unwrap();
 
         let started = Instant::now();
         let error = lock_exclusive_with_timeout(&second, Duration::from_millis(25))
@@ -1346,7 +1346,7 @@ mod tests {
         assert!(started.elapsed() < Duration::from_secs(1));
         assert_eq!(error.code(), "request_timeout");
         assert!(error.to_string().contains("retry"));
-        fs2::FileExt::unlock(&first).unwrap();
+        first.unlock().unwrap();
     }
 
     #[test]

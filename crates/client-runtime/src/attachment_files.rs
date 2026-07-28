@@ -265,11 +265,10 @@ fn infer_content_type(path: &Path) -> &'static str {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, unix))]
 mod tests {
     use super::*;
 
-    #[cfg(unix)]
     #[tokio::test]
     async fn unix_fifo_is_rejected_without_waiting_for_a_writer() {
         let temporary = tempfile::tempdir().expect("temporary directory");

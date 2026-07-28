@@ -8,7 +8,6 @@ use cap_std::fs::{Dir, OpenOptions as CapOpenOptions};
 #[cfg(unix)]
 use cap_std::fs::{DirBuilder, DirBuilderExt as _};
 use chrono::{DateTime, Utc};
-use fs2::FileExt;
 #[cfg(any(target_os = "linux", target_os = "macos"))]
 use rustix::fs::{RenameFlags, renameat_with};
 #[cfg(any(target_os = "linux", target_os = "macos"))]
@@ -20,7 +19,7 @@ use std::ffi::c_void;
 use std::ffi::{OsStr, OsString};
 #[cfg(test)]
 use std::fs::OpenOptions as StdOpenOptions;
-use std::fs::{self, File};
+use std::fs::{self, File, TryLockError};
 use std::io::{Read, Write};
 #[cfg(target_os = "macos")]
 use std::os::fd::AsRawFd as _;
@@ -385,7 +384,7 @@ impl CheckpointWriter {
 impl Drop for CheckpointWriter {
     fn drop(&mut self) {
         if let Some(lock) = self.lock.take() {
-            let _ = FileExt::unlock(&lock);
+            let _ = lock.unlock();
         }
     }
 }
@@ -1042,9 +1041,9 @@ fn acquire_lock(location: &CheckpointLocation) -> CliResult<File> {
 
     let deadline = Instant::now() + CHECKPOINT_LOCK_TIMEOUT;
     loop {
-        match file.try_lock_exclusive() {
+        match file.try_lock() {
             Ok(()) => return Ok(file),
-            Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
+            Err(TryLockError::WouldBlock) => {
                 if Instant::now() >= deadline {
                     return Err(CliError::checkpoint_conflict(
                         "checkpoint is locked by another batch process",
@@ -1052,7 +1051,7 @@ fn acquire_lock(location: &CheckpointLocation) -> CliResult<File> {
                 }
                 thread::sleep(CHECKPOINT_LOCK_RETRY);
             }
-            Err(error) => {
+            Err(TryLockError::Error(error)) => {
                 return Err(checkpoint_io(format!("failed to lock checkpoint: {error}")));
             }
         }
