@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
@@ -8,7 +9,6 @@ use base64::engine::general_purpose::{STANDARD_NO_PAD, URL_SAFE_NO_PAD};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use socket2::{Domain, SockAddr, Socket, Type};
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use uuid::Uuid;
 
 use sealtask_client_auth::{config_dir, normalize_api_url};
@@ -137,7 +137,7 @@ fn socket_path_for_config_dir(config_dir: &Path) -> PublicResult<PathBuf> {
     hasher.update(config_dir.as_os_str().to_string_lossy().as_bytes());
     let digest = hasher.finalize();
     let directory_name = format!("sealtask-unlock-{}", URL_SAFE_NO_PAD.encode(&digest[..16]));
-    let fallback_path = Path::new("/tmp")
+    let fallback_path = fallback_socket_root()
         .join(directory_name)
         .join(SOCKET_FILE_NAME);
     SockAddr::unix(&fallback_path).map_err(|err| {
@@ -146,6 +146,18 @@ fn socket_path_for_config_dir(config_dir: &Path) -> PublicResult<PathBuf> {
         ))
     })?;
     Ok(fallback_path)
+}
+
+fn fallback_socket_root() -> PathBuf {
+    #[cfg(unix)]
+    {
+        PathBuf::from("/tmp")
+    }
+
+    #[cfg(not(unix))]
+    {
+        std::env::temp_dir()
+    }
 }
 
 pub fn session_key(
@@ -304,6 +316,13 @@ pub async fn serve(socket_path: &Path) -> PublicResult<()> {
 }
 
 async fn serve_with_timeout(socket_path: &Path, request_timeout: Duration) -> PublicResult<()> {
+    let socket_path = socket_path.to_owned();
+    tokio::task::spawn_blocking(move || serve_blocking(&socket_path, request_timeout))
+        .await
+        .map_err(|err| PublicError::unexpected(format!("unlock daemon task failed: {err}")))?
+}
+
+fn serve_blocking(socket_path: &Path, request_timeout: Duration) -> PublicResult<()> {
     let socket_dir = socket_path.parent().ok_or_else(|| {
         PublicError::unexpected(format!(
             "unlock daemon socket path has no parent: {}",
@@ -342,9 +361,24 @@ async fn serve_with_timeout(socket_path: &Path, request_timeout: Duration) -> Pu
         })?;
     }
 
-    let listener = tokio::net::UnixListener::bind(socket_path).map_err(|err| {
+    let address = SockAddr::unix(socket_path).map_err(|err| {
+        PublicError::unexpected(format!(
+            "failed to resolve unlock daemon socket {}: {err}",
+            socket_path.display()
+        ))
+    })?;
+    let listener = Socket::new(Domain::UNIX, Type::STREAM, None).map_err(|err| {
+        PublicError::unexpected(format!("failed to create unlock daemon socket: {err}"))
+    })?;
+    listener.bind(&address).map_err(|err| {
         PublicError::unexpected(format!(
             "failed to bind unlock daemon socket {}: {err}",
+            socket_path.display()
+        ))
+    })?;
+    listener.listen(128).map_err(|err| {
+        PublicError::unexpected(format!(
+            "failed to listen on unlock daemon socket {}: {err}",
             socket_path.display()
         ))
     })?;
@@ -363,29 +397,29 @@ async fn serve_with_timeout(socket_path: &Path, request_timeout: Duration) -> Pu
         )?;
     }
 
-    let store = std::sync::Arc::new(tokio::sync::Mutex::new(UnlockStore::default()));
+    let mut store = UnlockStore::default();
 
     loop {
-        let (mut stream, _) = listener.accept().await.map_err(|err| {
+        let (mut stream, _) = listener.accept().map_err(|err| {
             PublicError::unexpected(format!("unlock daemon accept failed: {err}"))
         })?;
-        let store = store.clone();
 
-        let Some(request) = read_daemon_request(&mut stream, request_timeout).await else {
+        let Some(request) = read_daemon_request(&mut stream, request_timeout) else {
             continue;
         };
-        let response = handle_request(request, &store).await;
+        let response = handle_request(request, &mut store);
         let should_shutdown = matches!(response, DaemonResponse::Shutdown);
         let response_bytes = serde_json::to_vec(&response).map_err(|err| {
             PublicError::unexpected(format!("failed to encode unlock daemon response: {err}"))
         })?;
-        let _ = tokio::time::timeout(request_timeout, stream.write_all(&response_bytes)).await;
+        write_daemon_response(&mut stream, &response_bytes, request_timeout);
 
         if should_shutdown {
             break;
         }
     }
 
+    drop(listener);
     if socket_path.exists() {
         let _ = std::fs::remove_file(socket_path);
     }
@@ -393,35 +427,66 @@ async fn serve_with_timeout(socket_path: &Path, request_timeout: Duration) -> Pu
     Ok(())
 }
 
-async fn read_daemon_request(
-    stream: &mut tokio::net::UnixStream,
-    request_timeout: Duration,
-) -> Option<DaemonRequest> {
+fn read_daemon_request(stream: &mut Socket, request_timeout: Duration) -> Option<DaemonRequest> {
+    stream.set_nonblocking(true).ok()?;
+    let deadline = Instant::now().checked_add(request_timeout)?;
     let mut request_bytes = Vec::new();
-    let read_result = tokio::time::timeout(
-        request_timeout,
-        stream
-            .take(DAEMON_MAX_REQUEST_BYTES + 1)
-            .read_to_end(&mut request_bytes),
-    )
-    .await;
-    if !matches!(read_result, Ok(Ok(_))) || request_bytes.len() as u64 > DAEMON_MAX_REQUEST_BYTES {
-        return None;
+    let mut buffer = [0_u8; 4096];
+    loop {
+        let remaining = deadline.checked_duration_since(Instant::now())?;
+        if remaining.is_zero() {
+            return None;
+        }
+        match stream.read(&mut buffer) {
+            Ok(0) => break,
+            Ok(count) => {
+                if request_bytes.len().saturating_add(count) as u64 > DAEMON_MAX_REQUEST_BYTES {
+                    return None;
+                }
+                request_bytes.extend_from_slice(&buffer[..count]);
+            }
+            Err(err) if err.kind() == std::io::ErrorKind::Interrupted => continue,
+            Err(err) if err.kind() == std::io::ErrorKind::WouldBlock => {
+                std::thread::sleep(DAEMON_IO_POLL_INTERVAL.min(remaining));
+            }
+            Err(_) => return None,
+        }
     }
     serde_json::from_slice(&request_bytes).ok()
 }
 
-async fn handle_request(
-    request: DaemonRequest,
-    store: &std::sync::Arc<tokio::sync::Mutex<UnlockStore>>,
-) -> DaemonResponse {
+fn write_daemon_response(stream: &mut Socket, response: &[u8], timeout: Duration) {
+    let Some(deadline) = Instant::now().checked_add(timeout) else {
+        return;
+    };
+    let mut written = 0;
+    while written < response.len() {
+        let Some(remaining) = deadline.checked_duration_since(Instant::now()) else {
+            return;
+        };
+        if remaining.is_zero() {
+            return;
+        }
+        match stream.write(&response[written..]) {
+            Ok(0) => return,
+            Ok(count) => written += count,
+            Err(err) if err.kind() == std::io::ErrorKind::Interrupted => continue,
+            Err(err) if err.kind() == std::io::ErrorKind::WouldBlock => {
+                std::thread::sleep(DAEMON_IO_POLL_INTERVAL.min(remaining));
+            }
+            Err(_) => return,
+        }
+    }
+}
+
+fn handle_request(request: DaemonRequest, store: &mut UnlockStore) -> DaemonResponse {
     match request {
         DaemonRequest::Put {
             session_key,
             data_key_b64,
             expires_at_unix,
         } => {
-            store.lock().await.put(
+            store.put(
                 session_key,
                 StoredSession {
                     data_key_b64,
@@ -431,13 +496,13 @@ async fn handle_request(
             DaemonResponse::Stored
         }
         DaemonRequest::Get { session_key } => DaemonResponse::DataKey {
-            data_key_b64: store.lock().await.get(&session_key),
+            data_key_b64: store.get(&session_key),
         },
         DaemonRequest::Status { session_key } => {
-            DaemonResponse::Status(store.lock().await.status(session_key.as_ref()))
+            DaemonResponse::Status(store.status(session_key.as_ref()))
         }
         DaemonRequest::Delete { session_key } => {
-            store.lock().await.delete(&session_key);
+            store.delete(&session_key);
             DaemonResponse::Deleted
         }
         DaemonRequest::Shutdown => DaemonResponse::Shutdown,
@@ -466,10 +531,7 @@ fn try_send_request_until(
     send_request_over_stream_until(stream, request, deadline)
 }
 
-fn connect_to_daemon(
-    socket_path: &Path,
-    timeout: Duration,
-) -> PublicResult<std::os::unix::net::UnixStream> {
+fn connect_to_daemon(socket_path: &Path, timeout: Duration) -> PublicResult<Socket> {
     let socket = Socket::new(Domain::UNIX, Type::STREAM, None).map_err(|err| {
         PublicError::unexpected(format!("failed to create unlock daemon socket: {err}"))
     })?;
@@ -493,12 +555,12 @@ fn connect_to_daemon(
             socket_path.display()
         ))
     })?;
-    Ok(socket.into())
+    Ok(socket)
 }
 
 #[cfg(test)]
 fn send_request_over_stream_with_timeout(
-    stream: std::os::unix::net::UnixStream,
+    stream: Socket,
     request: DaemonRequest,
     timeout: Duration,
 ) -> PublicResult<DaemonResponse> {
@@ -507,7 +569,7 @@ fn send_request_over_stream_with_timeout(
 }
 
 fn send_request_over_stream_until(
-    mut stream: std::os::unix::net::UnixStream,
+    mut stream: Socket,
     request: DaemonRequest,
     deadline: Instant,
 ) -> PublicResult<DaemonResponse> {
@@ -519,7 +581,6 @@ fn send_request_over_stream_until(
     let payload = serde_json::to_vec(&request).map_err(|err| {
         PublicError::unexpected(format!("failed to encode unlock daemon request: {err}"))
     })?;
-    use std::io::{Read, Write};
     let mut written = 0;
     while written < payload.len() {
         remaining_until(deadline, "failed to write unlock daemon request")?;
@@ -781,11 +842,12 @@ mod tests {
 
         let first = socket_path_for_config_dir(&long_config_dir).expect("short socket path");
         let second = socket_path_for_config_dir(&long_config_dir).expect("stable socket path");
+        let fallback_root = fallback_socket_root();
 
         assert_eq!(first, second);
         assert_eq!(
             first.parent().and_then(Path::parent),
-            Some(Path::new("/tmp"))
+            Some(fallback_root.as_path())
         );
         assert_eq!(
             first.file_name().and_then(|name| name.to_str()),
@@ -808,12 +870,14 @@ mod tests {
         assert_eq!(unlock_expiration(10, 20).expect("valid TTL"), 30);
     }
 
+    #[cfg(unix)]
     #[test]
     fn daemon_request_times_out_when_the_peer_never_replies() {
         use std::io::Read as _;
 
         let (client, mut peer) =
             std::os::unix::net::UnixStream::pair().expect("create daemon socket pair");
+        let client = Socket::from(client);
         let (release_tx, release_rx) = std::sync::mpsc::channel();
         let peer_thread = std::thread::spawn(move || {
             let mut request = Vec::new();
@@ -842,6 +906,7 @@ mod tests {
         );
     }
 
+    #[cfg(unix)]
     #[test]
     fn daemon_readiness_wait_has_one_overall_budget() {
         let temp_dir = tempfile::TempDir::new().expect("create daemon socket directory");
@@ -929,14 +994,9 @@ mod tests {
         });
         let readiness_deadline = Instant::now() + Duration::from_secs(1);
         let mut partial = loop {
-            match tokio::net::UnixStream::connect(&socket_path).await {
+            match connect_to_daemon(&socket_path, Duration::from_millis(25)) {
                 Ok(stream) => break stream,
-                Err(error)
-                    if matches!(
-                        error.kind(),
-                        std::io::ErrorKind::NotFound | std::io::ErrorKind::ConnectionRefused
-                    ) && Instant::now() < readiness_deadline =>
-                {
+                Err(_) if Instant::now() < readiness_deadline => {
                     tokio::time::sleep(Duration::from_millis(2)).await;
                 }
                 Err(error) => panic!("daemon listener did not become ready: {error}"),
@@ -944,7 +1004,6 @@ mod tests {
         };
         partial
             .write_all(b"{")
-            .await
             .expect("write partial daemon request");
 
         let status_path = socket_path.clone();

@@ -1981,6 +1981,8 @@ fn validate_private_directory(directory: &Dir) -> PublicResult<()> {
 
 #[cfg(windows)]
 fn validate_private_directory(directory: &Dir) -> PublicResult<()> {
+    use std::os::windows::fs::MetadataExt as _;
+
     const FILE_ATTRIBUTE_REPARSE_POINT: u32 = 0x400;
     let file = directory
         .try_clone()
