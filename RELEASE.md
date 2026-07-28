@@ -1,16 +1,16 @@
 # Releasing SealTask OSS
 
-The steady-state release operation is one reviewed pull request merge. Version
-selection, changelog generation, exact dependency pins, generated CLI assets,
-public mirroring, annotated tags, crates.io publication, cross-platform
-artifacts, checksums, SBOMs, attestations, and post-publication verification are
-automated.
+The steady-state release operation is one human-authorized pull request merge.
+Version selection, changelog generation, exact dependency pins, generated CLI
+assets, public mirroring, annotated tags, crates.io publication, cross-platform
+artifacts, checksums, SBOMs, attestations, and post-publication verification
+are automated.
 
 ```text
 private master
   -> public main mirror
   -> automated private release PR
-  -> reviewed merge
+  -> authorized human merge
   -> atomic public main + annotated vX.Y.Z tag
   -> crates.io (OIDC, dependency order)
   -> immutable GitHub Release
@@ -40,7 +40,10 @@ The six crates are always versioned and published together in this order:
    - generated completions and man pages
    - the normal OSS checks
    - **OSS Release Platforms** on Linux and macOS
-4. Merge that PR. This merge is the release approval.
+4. Merge that PR from a human account with write or admin access. This exact
+   merge is the solo-maintainer release approval. An explicit approval on the
+   final PR head is also accepted when GitHub offers that action. Keep
+   auto-merge disabled.
 5. Confirm the public **Release** workflow finishes. It must publish all six
    exact crate archives, install the registry copy of `sealtask`, create an
    immutable GitHub Release, and verify every downloaded asset and attestation.
@@ -70,13 +73,16 @@ Protect private `master`: require pull requests and the repository's required
 checks; reject direct pushes. Multi-maintainer repositories should also require
 at least one human approval. A solo-maintainer repository must leave the
 blanket approval count at zero because GitHub does not permit an author to
-approve their own PR. Release approval remains independently enforced:
-`release-plz-oss` is App-authored, so the maintainer can approve it, and the
+approve their own PR. Release approval remains independently enforced: the
 mirror verifies that every new public release source came from a merged,
-`release`-labeled PR whose head was that same-repository bot branch, whose
-merge SHA is the exact tag source, and which has an approval on the final PR
-head from a human who still has write or admin access, with no outstanding
-authorized change request.
+`release`-labeled PR whose head was the same-repository App branch, whose merge
+SHA is the exact tag source, and which was either merged by a human who still
+has write or admin access or approved on the final PR head by such a human.
+Outstanding authorized change requests still block publication. The human
+merge path is the steady-state solo-maintainer signal when GitHub does not
+offer an approval action. The mirror also rejects a release PR whose timeline
+ever enabled auto-merge, preventing a stale authorization from surviving an
+App rewrite of the release branch.
 
 Store its credentials as private Actions secrets:
 
@@ -227,7 +233,7 @@ For an emergency token-based rerun from an exact annotated tag, set
 `./scripts/publish-crates.sh`. Prefer the protected hosted workflows because
 they preserve approval and provenance evidence.
 
-From the private monorepo root, the source/tag/review state machines have
+From the private monorepo root, the source/tag/approval state machines have
 network-free regression suites:
 
 ```bash
