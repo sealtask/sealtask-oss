@@ -17,6 +17,7 @@ cap-fs-ext.workspace = true
 cap-std.workspace = true
 chrono.workspace = true
 ciborium = "0.2"
+fs2.workspace = true
 html2md.workspace = true
 hickory-resolver.workspace = true
 libc.workspace = true
