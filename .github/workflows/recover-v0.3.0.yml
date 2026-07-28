@@ -232,26 +232,26 @@ jobs:
           set -euo pipefail
           if release="$(
             gh release view "${RECOVERY_TAG}" \
-              --json assets,isDraft,isImmutable,isPrerelease,targetCommitish
+              --json assets,isDraft,isImmutable,isPrerelease,tagName
           )"; then
             if printf '%s\n' "${release}" |
               jq -e \
-                --arg sha "${RECOVERY_COMMIT}" \
+                --arg tag "${RECOVERY_TAG}" \
                 '
                   .isDraft == false and
                   .isImmutable == true and
                   .isPrerelease == false and
-                  .targetCommitish == $sha
+                  .tagName == $tag
                 ' >/dev/null; then
               state=immutable
             elif printf '%s\n' "${release}" |
               jq -e \
-                --arg sha "${RECOVERY_COMMIT}" \
+                --arg tag "${RECOVERY_TAG}" \
                 '
                   .isDraft == true and
                   .isImmutable == false and
                   .isPrerelease == false and
-                  .targetCommitish == $sha
+                  .tagName == $tag
                 ' >/dev/null; then
               state=draft
             else
@@ -327,9 +327,11 @@ jobs:
             >"${RUNNER_TEMP}/release-notes.md"
 
           if [[ "${RELEASE_STATE}" == "missing" ]]; then
+            # The pinned annotated tag already exists and was revalidated above.
+            # Supplying its historical commit with --target would make GitHub
+            # require workflow-write permission, which GITHUB_TOKEN cannot have.
             gh release create "${RECOVERY_TAG}" \
               --draft \
-              --target "${RECOVERY_COMMIT}" \
               --title "${title}" \
               --notes-file "${RUNNER_TEMP}/release-notes.md" \
               --verify-tag \
@@ -338,7 +340,6 @@ jobs:
             gh release upload "${RECOVERY_TAG}" release-assets/* --clobber
             gh release edit "${RECOVERY_TAG}" \
               --draft \
-              --target "${RECOVERY_COMMIT}" \
               --title "${title}" \
               --notes-file "${RUNNER_TEMP}/release-notes.md" \
               --verify-tag
@@ -359,19 +360,19 @@ jobs:
           for attempt in 1 2 3 4 5 6; do
             draft="$(
               gh release view "${RECOVERY_TAG}" \
-                --json assets,isDraft,isImmutable,isPrerelease,targetCommitish
+                --json assets,isDraft,isImmutable,isPrerelease,tagName
             )"
             printf '%s\n' "${draft}" |
               jq -r '.assets[] | [.name, .digest] | @tsv' |
               sort >"${RUNNER_TEMP}/draft-release-assets.tsv"
             if printf '%s\n' "${draft}" |
               jq -e \
-                --arg sha "${RECOVERY_COMMIT}" \
+                --arg tag "${RECOVERY_TAG}" \
                 '
                   .isDraft == true and
                   .isImmutable == false and
                   .isPrerelease == false and
-                  .targetCommitish == $sha and
+                  .tagName == $tag and
                   (.assets | length) == 19 and
                   all(.assets[]; (.digest | type) == "string")
                 ' >/dev/null &&
@@ -399,16 +400,16 @@ jobs:
           for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
             release="$(
               gh release view "${RECOVERY_TAG}" \
-                --json assets,isDraft,isImmutable,isPrerelease,targetCommitish
+                --json assets,isDraft,isImmutable,isPrerelease,tagName
             )"
             if printf '%s\n' "${release}" |
               jq -e \
-                --arg sha "${RECOVERY_COMMIT}" \
+                --arg tag "${RECOVERY_TAG}" \
                 '
                   .isDraft == false and
                   .isImmutable == true and
                   .isPrerelease == false and
-                  .targetCommitish == $sha and
+                  .tagName == $tag and
                   (.assets | length) == 19
                 ' >/dev/null &&
               gh release verify "${RECOVERY_TAG}"; then
