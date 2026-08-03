@@ -21,6 +21,7 @@ PUBLISH_ORDER = (
     "sealtask-client-crypto",
     "sealtask-client-api",
     "sealtask-client-runtime",
+    "sealtask-agent",
     "sealtask",
 )
 
@@ -30,6 +31,7 @@ EXPECTED_MANIFESTS = {
     "sealtask-client-crypto": Path("crates/client-crypto/Cargo.toml"),
     "sealtask-client-api": Path("crates/client-api/Cargo.toml"),
     "sealtask-client-runtime": Path("crates/client-runtime/Cargo.toml"),
+    "sealtask-agent": Path("agent/Cargo.toml"),
     "sealtask": Path("cli/Cargo.toml"),
 }
 

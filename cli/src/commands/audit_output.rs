@@ -32,6 +32,9 @@ pub(super) struct AuditEventV1<'a> {
     actor_user_id: Option<Uuid>,
     actor_user_name: Option<&'a str>,
     actor_membership_id: Option<Uuid>,
+    actor_agent_id: Option<Uuid>,
+    actor_agent_handle: Option<&'a str>,
+    actor_agent_display_name: Option<&'a str>,
     actor_type: &'a str,
     source_kind: &'a str,
     target_version: Option<i64>,
@@ -67,6 +70,9 @@ impl<'a> From<&'a AuditLogEvent> for AuditEventV1<'a> {
             actor_user_id: event.actor_user_id,
             actor_user_name: event.actor_user_name.as_deref(),
             actor_membership_id: event.actor_membership_id,
+            actor_agent_id: event.actor_agent_id,
+            actor_agent_handle: event.actor_agent_handle.as_deref(),
+            actor_agent_display_name: event.actor_agent_display_name.as_deref(),
             actor_type: &event.actor_type,
             source_kind: &event.source_kind,
             target_version: event.target_version,
@@ -179,6 +185,29 @@ fn audit_actor(event: &AuditLogEvent) -> String {
                 .actor_user_id
                 .map(|id| format!("user:{}", short_id(id)))
         })
+        .or_else(|| {
+            let handle = event
+                .actor_agent_handle
+                .as_deref()
+                .filter(|handle| !handle.trim().is_empty());
+            let display_name = event
+                .actor_agent_display_name
+                .as_deref()
+                .filter(|name| !name.trim().is_empty());
+            match (handle, display_name) {
+                (Some(handle), Some(display_name)) => {
+                    Some(sanitize_cell(&format!("@{handle} · {display_name}")))
+                }
+                (Some(handle), None) => Some(sanitize_cell(&format!("@{handle}"))),
+                (None, Some(display_name)) => Some(sanitize_cell(&format!("agent:{display_name}"))),
+                (None, None) => None,
+            }
+        })
+        .or_else(|| {
+            event
+                .actor_agent_id
+                .map(|id| format!("agent:{}", short_id(id)))
+        })
         .unwrap_or_else(|| sanitize_cell(&event.actor_type))
 }
 
@@ -206,6 +235,9 @@ mod tests {
             actor_user_id: Some(Uuid::now_v7()),
             actor_user_name: Some("Operator".to_string()),
             actor_membership_id: Some(Uuid::now_v7()),
+            actor_agent_id: None,
+            actor_agent_handle: None,
+            actor_agent_display_name: None,
             actor_type: "user".to_string(),
             source_kind: "api".to_string(),
             target_version: Some(2),
@@ -237,6 +269,9 @@ mod tests {
             actor_user_id: None,
             actor_user_name: Some("name\rforged".to_string()),
             actor_membership_id: None,
+            actor_agent_id: None,
+            actor_agent_handle: None,
+            actor_agent_display_name: None,
             actor_type: "user".to_string(),
             source_kind: "api".to_string(),
             target_version: None,
@@ -250,5 +285,43 @@ mod tests {
         assert!(!line.contains('\n'));
         assert!(!line.contains('\r'));
         assert!(!line.contains('\u{1b}'));
+    }
+
+    #[test]
+    fn agent_actor_prefers_display_name_then_handle_and_id() {
+        let agent_id = Uuid::now_v7();
+        let mut event = AuditLogEvent {
+            id: Uuid::now_v7(),
+            workspace_id: Uuid::now_v7(),
+            work_list_id: Some(Uuid::now_v7()),
+            task_id: Some(Uuid::now_v7()),
+            comment_id: None,
+            entity_type: "agent_run".to_string(),
+            entity_id: Uuid::now_v7(),
+            action: "agent_run.succeeded".to_string(),
+            scope_level: "task".to_string(),
+            actor_user_id: None,
+            actor_user_name: None,
+            actor_membership_id: None,
+            actor_agent_id: Some(agent_id),
+            actor_agent_handle: Some("implementer".to_string()),
+            actor_agent_display_name: Some("Implementation Agent".to_string()),
+            actor_type: "agent".to_string(),
+            source_kind: "agent".to_string(),
+            target_version: None,
+            client_version: None,
+            occurred_at: Utc::now(),
+            changes: Vec::new(),
+            payload_present: false,
+        };
+
+        assert_eq!(audit_actor(&event), "@implementer · Implementation Agent");
+        event.actor_agent_display_name = None;
+        assert_eq!(audit_actor(&event), "@implementer");
+        event.actor_agent_display_name = Some("Implementation Agent".to_string());
+        event.actor_agent_handle = None;
+        assert_eq!(audit_actor(&event), "agent:Implementation Agent");
+        event.actor_agent_display_name = None;
+        assert_eq!(audit_actor(&event), format!("agent:{}", short_id(agent_id)));
     }
 }

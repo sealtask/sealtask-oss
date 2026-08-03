@@ -318,6 +318,11 @@ pub(crate) enum Command {
         #[command(subcommand)]
         command: TasksCommand,
     },
+    /// Register, approve, inspect, assign, or revoke project-scoped agent identities.
+    Agents {
+        #[command(subcommand)]
+        command: AgentsCommand,
+    },
     /// Show current dashboard task counts.
     Stats,
     /// Inspect or continuously follow recent account activity.
@@ -371,6 +376,95 @@ pub(crate) enum Command {
     Notes {
         #[command(subcommand)]
         command: NotesCommand,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub(crate) enum AgentsCommand {
+    /// Create a local keypair and short-lived enrollment for this project checkout.
+    Register {
+        /// Suggested handle shown to the approving project owner.
+        #[arg(long)]
+        proposed_handle: Option<String>,
+        /// Project selector; defaults to the current project.
+        #[arg(long, conflicts_with = "work_list_id")]
+        project: Option<EntitySelector>,
+        /// Exact project UUID (automation-friendly alternative to --project).
+        #[arg(long)]
+        work_list_id: Option<Uuid>,
+        /// Repository checkout this identity is allowed to run against.
+        #[arg(long, default_value = ".")]
+        repository: PathBuf,
+        /// Read the account password from stdin if resolving the project requires unlock.
+        #[arg(long)]
+        password_stdin: bool,
+    },
+    /// Approve an enrollment and provision its encrypted project key and instructions.
+    Approve {
+        /// File containing the long-lived enrollment/grant-signing secret (use '-' for stdin).
+        #[arg(long, value_name = "PATH")]
+        enrollment_code_file: PathBuf,
+        /// Fingerprint confirmed with the agent operator out of band.
+        #[arg(long)]
+        fingerprint: String,
+        /// Stable lowercase project-local agent handle.
+        #[arg(long)]
+        handle: String,
+        /// Human-readable agent name; defaults to the handle.
+        #[arg(long)]
+        display_name: Option<String>,
+        /// UTF-8 file containing the managed role instructions.
+        #[arg(long, value_name = "PATH")]
+        instructions_file: PathBuf,
+        /// Project selector; defaults to the current project.
+        #[arg(long, conflicts_with = "work_list_id")]
+        project: Option<EntitySelector>,
+        /// Exact project UUID (automation-friendly alternative to --project).
+        #[arg(long)]
+        work_list_id: Option<Uuid>,
+        /// Read the account password from stdin when no local unlock is available.
+        #[arg(long)]
+        password_stdin: bool,
+    },
+    /// List agent identities owned by this account, or identities stored locally.
+    List {
+        /// Inspect only identities stored under the active local profile.
+        #[arg(long)]
+        local: bool,
+    },
+    /// Revoke an agent and invalidate all of its sessions and runnable grants.
+    Revoke {
+        agent_id: Uuid,
+        #[arg(long)]
+        reason: Option<String>,
+    },
+    /// Assign one project task to an active agent.
+    Assign {
+        agent_id: Uuid,
+        task_id: Uuid,
+        /// Project selector; defaults to the current project.
+        #[arg(long, conflicts_with = "work_list_id")]
+        project: Option<EntitySelector>,
+        /// Exact project UUID (automation-friendly alternative to --project).
+        #[arg(long)]
+        work_list_id: Option<Uuid>,
+        /// Read the account password from stdin if resolving the project requires unlock.
+        #[arg(long)]
+        password_stdin: bool,
+    },
+    /// Remove an agent assignment from one project task.
+    Unassign {
+        agent_id: Uuid,
+        task_id: Uuid,
+        /// Project selector; defaults to the current project.
+        #[arg(long, conflicts_with = "work_list_id")]
+        project: Option<EntitySelector>,
+        /// Exact project UUID (automation-friendly alternative to --project).
+        #[arg(long)]
+        work_list_id: Option<Uuid>,
+        /// Read the account password from stdin if resolving the project requires unlock.
+        #[arg(long)]
+        password_stdin: bool,
     },
 }
 

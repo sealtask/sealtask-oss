@@ -367,6 +367,27 @@ fn command_examples(path: &[String]) -> Option<&'static str> {
         "tasks attachments download" => {
             "Examples:\n  sealtask tasks attachments download \"Ship 0.4\" --attachment-id id:019f42ab\n  sealtask tasks attachments download \"Ship 0.4\" --attachment-id id:019f42ab --output ./release.pdf"
         }
+        "agents" => {
+            "Examples:\n  sealtask agents register --proposed-handle implementation\n  sealtask agents list --local"
+        }
+        "agents register" => {
+            "Examples:\n  sealtask agents register --proposed-handle implementation\n  sealtask agents register --project \"Release Engineering\" --repository ."
+        }
+        "agents approve" => {
+            "Examples:\n  sealtask agents approve --enrollment-code-file ./agent-code.txt --fingerprint <fingerprint> --handle implementation --instructions-file ./implementation-agent.md"
+        }
+        "agents list" => {
+            "Examples:\n  sealtask agents list\n  sealtask agents list --local\n  sealtask --json agents list"
+        }
+        "agents revoke" => {
+            "Examples:\n  sealtask agents revoke 019f42ab-0000-7000-8000-000000000000 --reason \"machine retired\""
+        }
+        "agents assign" => {
+            "Examples:\n  sealtask agents assign 019f42ab-0000-7000-8000-000000000000 019f42ab-0000-7000-8000-000000000001"
+        }
+        "agents unassign" => {
+            "Examples:\n  sealtask agents unassign 019f42ab-0000-7000-8000-000000000000 019f42ab-0000-7000-8000-000000000001"
+        }
         "stats" => "Examples:\n  sealtask stats\n  sealtask --json stats",
         "activity follow" => {
             "Examples:\n  sealtask activity follow\n  sealtask activity follow --since 30m --interval 10s\n  sealtask --format jsonl activity follow"

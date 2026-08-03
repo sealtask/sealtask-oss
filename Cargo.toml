@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "agent",
     "cli",
     "crates/client-api",
     "crates/client-auth",
@@ -29,6 +30,7 @@ clap_complete = "4.5"
 clap_mangen = "0.2"
 console = "0.16.4"
 dirs = "5.0"
+ed25519-dalek = "2.2.0"
 flate2 = "1.1"
 fs2 = "0.4.3"
 fuzzy-matcher = "0.3.7"
@@ -39,6 +41,7 @@ html2md = "0.2.15"
 hickory-resolver = { version = "0.26.1", features = ["tokio"] }
 keyring = { version = "3.6.3", features = ["apple-native", "windows-native", "sync-secret-service", "crypto-rust"] }
 libc = "0.2"
+windows-sys = { version = "0.61.2", features = ["Win32_Foundation", "Win32_System_Diagnostics_ToolHelp", "Win32_System_JobObjects", "Win32_System_Threading"] }
 opaque-ke = { version = "4.0.1", features = ["argon2", "ristretto255"] }
 rand_core = { version = "0.6", features = ["std"] }
 reqwest = { version = "0.12.4", default-features = false, features = ["brotli", "deflate", "gzip", "json", "rustls-tls"] }
@@ -61,6 +64,7 @@ unicode-normalization = "0.1.24"
 unicode-segmentation = "1.12.0"
 unicode-width = "0.2.0"
 uuid = { version = "1.18.1", features = ["serde", "v7"] }
+x25519-dalek = { version = "2.0", features = ["static_secrets"] }
 zeroize = { version = "1.8", features = ["zeroize_derive"] }
 zip = { version = "2.4.2", default-features = false, features = ["deflate"] }
 

@@ -46,6 +46,12 @@ version_group = "sealtask"
 git_tag_name = "v{{ version }}"
 
 [[package]]
+name = "sealtask-agent"
+release = true
+version_group = "sealtask"
+git_tag_name = "v{{ version }}"
+
+[[package]]
 name = "sealtask"
 release = true
 version_group = "sealtask"
@@ -58,4 +64,5 @@ changelog_include = [
     "sealtask-client-crypto",
     "sealtask-client-api",
     "sealtask-client-runtime",
+    "sealtask-agent",
 ]

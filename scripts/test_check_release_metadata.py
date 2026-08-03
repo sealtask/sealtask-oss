@@ -32,6 +32,12 @@ DEPENDENCIES = {
         "sealtask-client-core",
         "sealtask-client-crypto",
     ),
+    "sealtask-agent": (
+        "sealtask-client-api",
+        "sealtask-client-auth",
+        "sealtask-client-core",
+        "sealtask-client-crypto",
+    ),
     "sealtask": (
         "sealtask-client-api",
         "sealtask-client-auth",
@@ -168,10 +174,10 @@ class ReleaseMetadataValidationTests(unittest.TestCase):
 
         self.assert_failure(
             "publishable workspace crates must be exactly "
-            "[sealtask, sealtask-client-api, sealtask-client-auth, "
+            "[sealtask, sealtask-agent, sealtask-client-api, sealtask-client-auth, "
             "sealtask-client-core, sealtask-client-crypto, "
             "sealtask-client-runtime]; "
-            "found [sealtask, sealtask-client-api, sealtask-client-auth, "
+            "found [sealtask, sealtask-agent, sealtask-client-api, sealtask-client-auth, "
             "sealtask-client-core, sealtask-client-crypto, "
             "sealtask-client-runtime, strong-box]"
         )
@@ -191,7 +197,8 @@ class ReleaseMetadataValidationTests(unittest.TestCase):
             "publishable crates must share one workspace version; found "
             "sealtask-client-core=1.2.3, sealtask-client-auth=1.2.3, "
             "sealtask-client-crypto=1.2.3, sealtask-client-api=1.2.4, "
-            "sealtask-client-runtime=1.2.3, sealtask=1.2.3"
+            "sealtask-client-runtime=1.2.3, sealtask-agent=1.2.3, "
+            "sealtask=1.2.3"
         )
 
     def test_workspace_version_must_be_strict_semver(self) -> None:

@@ -7,6 +7,7 @@ the browser cryptography engine. The canonical repository is
 This repository contains the early public client surface for SealTask:
 
 - `sealtask`: command-line client for authenticating and working with decrypted projects, tasks, comments, notes, and task attachments
+- `sealtask-agent`: background runner that claims tasks for local project-scoped agent identities and launches Codex in isolated git worktrees
 - `sealtask-client-core`: shared public types and error handling
 - `sealtask-client-auth`: local credential storage and authentication helpers
 - `sealtask-client-api`: typed HTTP client for the SealTask API
@@ -16,6 +17,13 @@ This repository contains the early public client surface for SealTask:
 - `strong-box-wasm`: the Rust-to-WASM bindings shipped in the SealTask browser client
 - `@sealtask/crypto-web`: the TypeScript browser runtime, encrypted payload
   protocols, and trust verification code used by the production SPA
+
+The first `sealtask-agent` slice supports trusted assigned-task content only.
+Task content becomes an executable Codex prompt, and `workspace-write` does not
+hide the local agent seed or harness credentials readable by the daemon's OS
+principal. Run agents in disposable, project-specific environments; a separate
+account, container, VM, or VPS limits exposure of the wider host but does not
+isolate secrets placed inside that runner environment.
 
 ## Status
 
@@ -78,6 +86,7 @@ now asynchronous and must be awaited by downstream callers.
 
 ```text
 cli/                    # public CLI binary
+agent/                  # local first-class-agent service and Codex harness
 crates/client-core/     # shared public types and errors
 crates/client-auth/     # auth, credentials, and session helpers
 crates/client-api/      # typed API client
@@ -121,6 +130,8 @@ cargo run -p sealtask -- projects list
 cargo run -p sealtask -- pick project "Release Engineering"
 cargo run -p sealtask -- tasks get "Prepare release notes"
 cargo run -p sealtask -- --json tasks list --all
+cargo run -p sealtask -- agents list --local
+cargo run -p sealtask-agent -- --once
 ```
 
 ## Operator-friendly CLI workflows
@@ -669,10 +680,12 @@ Install it from the canonical public repository with:
 npx skills add sealtask/sealtask-oss --skill sealtask
 ```
 
-The skill operates as the signed-in user and does not create an agent identity,
-expand authorization, or turn project context into a security boundary. The
-native CLI remains the source of truth through `sealtask --json info` and
-`sealtask --json schema`.
+The skill operates as the signed-in user and does not itself create an agent
+principal, expand authorization, or turn project context into a security
+boundary. First-class project-scoped identities are explicitly enrolled and
+managed with `sealtask agents ...`; the separate `sealtask-agent` service uses
+those identities rather than the user's session. The native CLI remains the
+source of truth through `sealtask --json info` and `sealtask --json schema`.
 
 ## Agent task automation
 

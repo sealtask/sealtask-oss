@@ -54,8 +54,8 @@ jobs:
           RELEASE_TAG: ${{ inputs.release_tag }}
         run: |
           set -euo pipefail
-          if [[ "${RELEASE_TAG}" != "v0.3.0" ]]; then
-            echo "::error::The one-time ownership bootstrap is restricted to v0.3.0."
+          if [[ "${RELEASE_TAG}" != "v0.3.0" && "${RELEASE_TAG}" != "v0.4.0" ]]; then
+            echo "::error::The ownership bootstrap is restricted to the initial v0.3.0 crate set or the v0.4.0 sealtask-agent addition."
             exit 1
           fi
           if [[ "$(git cat-file -t "refs/tags/${RELEASE_TAG}")" != "tag" ]]; then
@@ -100,4 +100,4 @@ jobs:
 
       - name: Require credential teardown
         run: |
-          echo "::warning::Revoke the bootstrap token, delete CRATES_IO_BOOTSTRAP_TOKEN, and configure trusted publishers for all six crates before the next release."
+          echo "::warning::Revoke the bootstrap token, delete CRATES_IO_BOOTSTRAP_TOKEN, and configure trusted publishers for all seven crates before the next release."

@@ -1,19 +1,34 @@
 .ie \n(.g .ds Aq \(aq
 .el .ds Aq '
-.TH sealtask 1  "SealTask CLI 0.4.0" "SealTask Manual"
+.TH sealtask-agents-assign 1  "SealTask CLI 0.4.0" "SealTask Manual"
 .SH NAME
-sealtask \- CLI for working with SealTask tasks, comments, notes, attachments, and decrypted workspace data
+sealtask\-agents\-assign \- Assign one project task to an active agent
 .SH SYNOPSIS
-\fBsealtask\fR [\fB\-\-api\-url\fR] [\fB\-\-storage\-origin\fR] [\fB\-\-json\fR] [\fB\-\-format\fR] [\fB\-\-color\fR] [\fB\-\-pager\fR] [\fB\-\-no\-pager\fR] [\fB\-\-progress\fR] [\fB\-q\fR|\fB\-\-quiet\fR] [\fB\-\-non\-interactive\fR] [\fB\-v \fR]... [\fB\-\-debug\fR] [\fB\-\-connect\-timeout\fR] [\fB\-\-read\-timeout\fR] [\fB\-\-request\-timeout\fR] [\fB\-\-retry\fR] [\fB\-\-offline\fR] [\fB\-\-profile\fR] [\fB\-\-config\-dir\fR] [\fB\-h\fR|\fB\-\-help\fR] [\fB\-V\fR|\fB\-\-version\fR] [\fIsubcommands\fR]
+\fBsealtask agents assign\fR [\fB\-\-api\-url\fR] [\fB\-\-project\fR] [\fB\-\-storage\-origin\fR] [\fB\-\-work\-list\-id\fR] [\fB\-\-json\fR] [\fB\-\-password\-stdin\fR] [\fB\-\-format\fR] [\fB\-\-color\fR] [\fB\-\-pager\fR] [\fB\-\-no\-pager\fR] [\fB\-\-progress\fR] [\fB\-q\fR|\fB\-\-quiet\fR] [\fB\-\-non\-interactive\fR] [\fB\-v \fR]... [\fB\-\-debug\fR] [\fB\-\-connect\-timeout\fR] [\fB\-\-read\-timeout\fR] [\fB\-\-request\-timeout\fR] [\fB\-\-retry\fR] [\fB\-\-offline\fR] [\fB\-\-profile\fR] [\fB\-\-config\-dir\fR] [\fB\-h\fR|\fB\-\-help\fR] <\fIAGENT_ID\fR> <\fITASK_ID\fR>
 .SH DESCRIPTION
-CLI for working with SealTask tasks, comments, notes, attachments, and decrypted workspace data
+Assign one project task to an active agent
 .SH OPTIONS
 .TP
 \fB\-h\fR, \fB\-\-help\fR
-Print help
+Print help (see a summary with \*(Aq\-h\*(Aq)
+.SH OPTIONS
 .TP
-\fB\-V\fR, \fB\-\-version\fR
-Print version
+<\fIAGENT_ID\fR>
+
+.SH TARGET
+.TP
+\fB\-\-project\fR \fI<PROJECT>\fR
+Project selector; defaults to the current project
+.TP
+\fB\-\-work\-list\-id\fR \fI<WORK_LIST_ID>\fR
+Exact project UUID (automation\-friendly alternative to \-\-project)
+.TP
+<\fITASK_ID\fR>
+
+.SH INPUT
+.TP
+\fB\-\-password\-stdin\fR
+Read the account password from stdin if resolving the project requires unlock
 .SH CONNECTION
 .TP
 \fB\-\-api\-url\fR \fI<API_URL>\fR [default: https://sealtask.com]
@@ -162,74 +177,6 @@ Override the base directory used for credentials and local unlock state
 .RS
 May also be specified with the \fBSEALTASK_CONFIG_DIR\fR environment variable.
 .RE
-.SH SUBCOMMANDS
-.TP
-sealtask\-completion(1)
-Generate a shell completion script without reading configuration or credentials
-.TP
-sealtask\-man(1)
-Render a manual page for the root command or a nested command path
-.TP
-sealtask\-info(1)
-Show machine\-readable CLI capabilities and contract versions
-.TP
-sealtask\-schema(1)
-Describe commands and arguments as human help or versioned JSON
-.TP
-sealtask\-auth(1)
-Authenticate, inspect the session, and manage local unlock state
-.TP
-sealtask\-me(1)
-Show the current authenticated user
-.TP
-sealtask\-pick(1)
-Choose or resolve a project to activate, or interactively print a task selector
-.TP
-sealtask\-projects(1)
-List, inspect, archive, or restore projects and inspect saved context
-.TP
-sealtask\-tasks(1)
-List, inspect, create, update, move, or delete tasks
-.TP
-sealtask\-agents(1)
-Register, approve, inspect, assign, or revoke project\-scoped agent identities
-.TP
-sealtask\-stats(1)
-Show current dashboard task counts
-.TP
-sealtask\-activity(1)
-Inspect or continuously follow recent account activity
-.TP
-sealtask\-browse(1)
-Browse cached or live decrypted projects and tasks in a private TTY
-.TP
-sealtask\-cache(1)
-Inspect, verify, or clear the encrypted local read cache
-.TP
-sealtask\-batch(1)
-Validate, execute, and safely resume task mutations from JSON Lines
-.TP
-sealtask\-doctor(1)
-Diagnose local state, authentication, unlock, and API connectivity
-.TP
-sealtask\-config(1)
-Inspect resolved operator configuration
-.TP
-sealtask\-profile(1)
-List profiles or change the persisted default profile
-.TP
-sealtask\-comments(1)
-List, create, update, or delete task comments
-.TP
-sealtask\-notes(1)
-List, inspect, create, update, or delete encrypted notes
 .SH EXTRA
-Get started:
-  sealtask auth login
-  sealtask auth unlock
-  sealtask pick project
-  sealtask tasks list
-
-Run \*(Aqsealtask help <command>\*(Aq for command\-specific help.
-.SH VERSION
-v0.4.0
+Examples:
+  sealtask agents assign 019f42ab\-0000\-7000\-8000\-000000000000 019f42ab\-0000\-7000\-8000\-000000000001

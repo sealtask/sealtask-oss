@@ -17,14 +17,15 @@ private master
   -> registry install + release/asset/attestation verification
 ```
 
-The six crates are always versioned and published together in this order:
+The seven crates are always versioned and published together in this order:
 
 1. `sealtask-client-core`
 2. `sealtask-client-auth`
 3. `sealtask-client-crypto`
 4. `sealtask-client-api`
 5. `sealtask-client-runtime`
-6. `sealtask`
+6. `sealtask-agent`
+7. `sealtask`
 
 ## Steady-state procedure
 
@@ -44,9 +45,10 @@ The six crates are always versioned and published together in this order:
    merge is the solo-maintainer release approval. An explicit approval on the
    final PR head is also accepted when GitHub offers that action. Keep
    auto-merge disabled.
-5. Confirm the public **Release** workflow finishes. It must publish all six
-   exact crate archives, install the registry copy of `sealtask`, create an
-   immutable GitHub Release, and verify every downloaded asset and attestation.
+5. Confirm the public **Release** workflow finishes. It must publish all seven
+   exact crate archives, install the registry copies of `sealtask` and
+   `sealtask-agent`, create an immutable GitHub Release, and verify every
+   downloaded asset and attestation.
 
 Do not create or move release tags by hand. The private mirror workflow derives
 the tag from the reviewed workspace version and atomically pushes public `main`
@@ -124,9 +126,9 @@ cannot mirror files under `.github/workflows/`.
 
 ## First automated release
 
-All six crate names are initially unowned on crates.io, so trusted publishing
-cannot be configured until the bootstrap publication establishes ownership.
-The first release has one deliberate bootstrap detour:
+The initial six client and CLI crate names were unowned on crates.io, so trusted
+publishing could not be configured until the bootstrap publication established
+ownership. The first release had one deliberate bootstrap detour:
 
 1. Let **Prepare OSS Release** create the initial `v0.3.0` PR. This one-time
    transition moves the existing `0.2.1` workspace onto the new release
@@ -138,7 +140,8 @@ The first release has one deliberate bootstrap detour:
 4. In the public repository, run **Bootstrap crates.io ownership** with:
    - `release_tag`: `v0.3.0`
    - `confirmation`: `BOOTSTRAP-SEALTASK-CRATES`
-5. After all six crates exist, configure this trusted publisher on each crate:
+5. After the initial six crates exist, configure this trusted publisher on each
+   crate:
 
    ```text
    GitHub owner:        sealtask
@@ -147,9 +150,9 @@ The first release has one deliberate bootstrap detour:
    Environment:         crates-io
    ```
 
-   Configure it for all six names listed at the top of this document. The
-   trusted workflow is the caller `release.yml`, not the reusable
-   `publish-crates.yml`.
+   Configure it for the first six names in the publication graph (all except
+   `sealtask-agent`). The trusted workflow is the caller `release.yml`, not the
+   reusable `publish-crates.yml`.
 6. Revoke the bootstrap token and delete `CRATES_IO_BOOTSTRAP_TOKEN` from the
    environment.
 7. Choose **Re-run failed jobs** on the original public **Release** run. The
@@ -157,7 +160,22 @@ The first release has one deliberate bootstrap detour:
    already-published crate, performs the registry install verification, and
    continues to the immutable GitHub Release.
 
-Every later release uses OIDC and needs no crates.io token.
+The first `sealtask-agent` publication at `v0.4.0` uses the same bounded
+bootstrap once because trusted publishing cannot be configured for a crate name
+before ownership exists:
+
+1. Let the ordinary public **Release** run publish or verify the existing
+   dependency prefix. It may stop when it reaches the unowned
+   `sealtask-agent` name.
+2. Recreate the short-lived `CRATES_IO_BOOTSTRAP_TOKEN` only in the reviewed
+   `crates-io-bootstrap` environment and run **Bootstrap crates.io ownership**
+   with `release_tag` set to `v0.4.0` and the same confirmation phrase.
+3. Configure the `release.yml` trusted publisher for `sealtask-agent`, revoke
+   the bootstrap token, delete the environment secret, and rerun the failed
+   public release jobs. Checksum reconciliation makes already-published crates
+   safe to resume.
+
+Every subsequent release uses OIDC and needs no crates.io token.
 
 ## Retry and recovery rules
 
@@ -230,7 +248,7 @@ changes the command shape; remove it when upstream can scope the snapshot to
 the release-managed package graph.
 
 After committing a release candidate in a temporary standalone checkout, this
-packages all six archives without registry access or publication:
+packages all seven archives without registry access or publication:
 
 ```bash
 DRY_RUN=1 ./scripts/publish-crates.sh

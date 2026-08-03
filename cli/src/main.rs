@@ -29,9 +29,9 @@ mod terminal;
 use args::{Cli, Command};
 use clap::FromArgMatches;
 use commands::{
-    run_activity, run_auth, run_batch, run_browse, run_cache, run_comments, run_config, run_info,
-    run_lists_get, run_me, run_notes, run_pick, run_profile, run_projects, run_schema, run_stats,
-    run_tasks,
+    run_activity, run_agents, run_auth, run_batch, run_browse, run_cache, run_comments, run_config,
+    run_info, run_lists_get, run_me, run_notes, run_pick, run_profile, run_projects, run_schema,
+    run_stats, run_tasks,
 };
 use operator_config::{
     OperatorOverrides, parse_timeout, resolve_operator_config,
@@ -390,6 +390,7 @@ async fn run(
         (Command::Tasks { command }, Ok(runtime)) => {
             run_tasks(&runtime, format, cli.non_interactive, command).await
         }
+        (Command::Agents { command }, Ok(runtime)) => run_agents(&runtime, format, command).await,
         (Command::Stats, Ok(runtime)) => run_stats(&runtime, format).await,
         (Command::Activity { command }, Ok(runtime)) => {
             run_activity(&runtime, format, command).await
@@ -574,6 +575,7 @@ fn command_name(command: &Command) -> &'static str {
         Command::Pick { .. } => "pick",
         Command::Projects { .. } => "projects",
         Command::Tasks { .. } => "tasks",
+        Command::Agents { .. } => "agents",
         Command::Stats => "stats",
         Command::Activity { .. } => "activity",
         Command::Browse(_) => "browse",
@@ -615,6 +617,9 @@ fn validate_offline_command(cli: &Cli) -> CliResult<()> {
         Some(Command::Auth {
             command: args::AuthCommand::Status,
         }) => true,
+        Some(Command::Agents {
+            command: args::AgentsCommand::List { local: true },
+        }) => true,
         Some(Command::Projects {
             raw,
             command: None | Some(args::ProjectsCommand::Current { .. }),
@@ -653,7 +658,7 @@ fn validate_offline_command(cli: &Cli) -> CliResult<()> {
         Ok(())
     } else {
         Err(PublicError::validation(
-            "--offline is read-only and supports cached project/task/comment/note reads, pick, browse, cache controls, auth status, and local discovery commands; remove --offline for this command (no network request was attempted)",
+            "--offline is read-only and supports cached project/task/comment/note reads, local agent identity listing, pick, browse, cache controls, auth status, and local discovery commands; remove --offline for this command (no network request was attempted)",
         )
         .into())
     }
@@ -724,6 +729,7 @@ mod tests {
             vec!["cache", "status", "--offline"],
             vec!["doctor", "--offline"],
             vec!["--offline", "auth", "status"],
+            vec!["--offline", "agents", "list", "--local"],
         ] {
             let cli = parse(&arguments);
             assert!(
@@ -750,6 +756,14 @@ mod tests {
                 "must not run",
             ],
             vec!["--offline", "auth", "login"],
+            vec!["--offline", "agents", "list"],
+            vec![
+                "--offline",
+                "agents",
+                "assign",
+                "019f42ab-0000-7000-8000-000000000001",
+                "019f42ab-0000-7000-8000-000000000002",
+            ],
             vec!["--offline", "batch", "run", "--input", "-"],
         ] {
             let cli = parse(&arguments);

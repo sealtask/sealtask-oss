@@ -1,5 +1,18 @@
 #![cfg_attr(test, allow(clippy::unwrap_used))]
 
+mod agent_identities;
+
+pub use agent_identities::{
+    AgentEnrollmentDraft, AgentEnrollmentRegistration, AgentIdentity, AgentIdentityListing,
+    AgentIdentityLoadFailure, AgentKeyMaterial, AgentProjectBinding, LocalAgentStatus,
+    PrepareAgentEnrollmentDraft, SavePendingAgentIdentity, activate_agent_identity,
+    agent_fingerprint, agent_identity_path, agent_key_material_from_seed,
+    canonicalize_agent_audience, canonicalize_agent_display_name, canonicalize_agent_handle,
+    generate_agent_key_material, list_agent_identities, list_agent_identities_with_failures,
+    load_agent_identity, load_agent_key_material, mark_agent_identity_expired,
+    mark_agent_identity_revoked, prepare_agent_enrollment_draft, save_pending_agent_identity,
+};
+
 use std::ffi::OsStr;
 use std::fmt;
 use std::fs::{self, File, TryLockError};

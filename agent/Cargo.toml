@@ -1,0 +1,35 @@
+[package]
+name = "sealtask-agent"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Local SealTask agent runner for project-scoped Codex harnesses"
+repository = "https://github.com/sealtask/sealtask-oss"
+homepage = "https://sealtask.com"
+readme = "../README.md"
+keywords = ["sealtask", "agents", "codex", "automation"]
+categories = ["command-line-utilities", "development-tools"]
+publish = ["crates-io"]
+
+[dependencies]
+base64.workspace = true
+chrono.workspace = true
+clap.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+uuid.workspace = true
+zeroize.workspace = true
+
+sealtask-client-api = { version = "=0.4.0", path = "../crates/client-api" }
+sealtask-client-auth = { version = "=0.4.0", path = "../crates/client-auth" }
+sealtask-client-core = { version = "=0.4.0", path = "../crates/client-core" }
+sealtask-client-crypto = { version = "=0.4.0", path = "../crates/client-crypto" }
+
+[target.'cfg(unix)'.dependencies]
+libc.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+windows-sys.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

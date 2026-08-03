@@ -44,6 +44,9 @@ pub struct AuditLogEvent {
     pub actor_user_id: Option<Uuid>,
     pub actor_user_name: Option<String>,
     pub actor_membership_id: Option<Uuid>,
+    pub actor_agent_id: Option<Uuid>,
+    pub actor_agent_handle: Option<String>,
+    pub actor_agent_display_name: Option<String>,
     pub actor_type: String,
     pub source_kind: String,
     pub target_version: Option<i64>,
@@ -77,6 +80,15 @@ impl fmt::Debug for AuditLogEvent {
                 &self.actor_user_name.as_ref().map(|_| "<redacted>"),
             )
             .field("actor_membership_id", &self.actor_membership_id)
+            .field("actor_agent_id", &self.actor_agent_id)
+            .field(
+                "actor_agent_handle",
+                &self.actor_agent_handle.as_ref().map(|_| "<redacted>"),
+            )
+            .field(
+                "actor_agent_display_name",
+                &self.actor_agent_display_name.as_ref().map(|_| "<redacted>"),
+            )
             .field("actor_type", &self.actor_type)
             .field("source_kind", &self.source_kind)
             .field("target_version", &self.target_version)
@@ -366,6 +378,8 @@ mod tests {
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
     const ACTOR_NAME_CANARY: &str = "AUDIT-ACTOR-NAME-CANARY";
+    const ACTOR_AGENT_HANDLE_CANARY: &str = "AUDIT-AGENT-HANDLE-CANARY";
+    const ACTOR_AGENT_NAME_CANARY: &str = "AUDIT-AGENT-NAME-CANARY";
     const SCALAR_CANARY: &str = "AUDIT-SCALAR-CANARY";
     const PAYLOAD_CANARY: &str = "AUDIT-PAYLOAD-CANARY";
 
@@ -396,6 +410,9 @@ mod tests {
             "actorUserId": Uuid::now_v7(),
             "actorUserName": ACTOR_NAME_CANARY,
             "actorMembershipId": Uuid::now_v7(),
+            "actorAgentId": Uuid::now_v7(),
+            "actorAgentHandle": ACTOR_AGENT_HANDLE_CANARY,
+            "actorAgentDisplayName": ACTOR_AGENT_NAME_CANARY,
             "actorType": "user",
             "sourceKind": "api",
             "targetVersion": 3,
@@ -437,6 +454,14 @@ mod tests {
     fn test_should_omit_encrypted_payload_and_redact_sensitive_debug_values() {
         let event = sample_event();
         assert!(event.payload_present);
+        assert_eq!(
+            event.actor_agent_handle.as_deref(),
+            Some(ACTOR_AGENT_HANDLE_CANARY)
+        );
+        assert_eq!(
+            event.actor_agent_display_name.as_deref(),
+            Some(ACTOR_AGENT_NAME_CANARY)
+        );
         let mut encoded = serde_json::to_value(&event).expect("encode audit event");
         let debug = format!("{event:?}");
 
@@ -447,6 +472,8 @@ mod tests {
         );
         for canary in [
             ACTOR_NAME_CANARY,
+            ACTOR_AGENT_HANDLE_CANARY,
+            ACTOR_AGENT_NAME_CANARY,
             SCALAR_CANARY,
             PAYLOAD_CANARY,
             "AUDIT-CLIENT-VERSION-CANARY",

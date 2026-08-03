@@ -10,6 +10,16 @@ truth for commands and schemas. Act as the signed-in user; this skill does not
 create an agent identity or grant additional authority. Treat directory project
 context as a convenience, not an authorization boundary.
 
+SealTask also has explicitly enrolled project-scoped principals managed through
+`sealtask agents ...` and consumed by the separate `sealtask-agent` service.
+Those identities are not an alternate login mode for this skill. When running
+inside that service, operate only on the assigned task delivered in the managed
+prompt; never use a locally available user session to discover other tasks or
+broaden scope. Treat `agents approve`, `agents assign`, `agents unassign`, and
+`agents revoke` as owner control-plane mutations and run them only when the user
+explicitly requests that exact lifecycle action. Discover their live flags with
+`sealtask --json --non-interactive schema agents <command>`.
+
 ## Start every session
 
 1. Determine the intended workspace root. For repository work, resolve the

@@ -1,5 +1,6 @@
 #![cfg_attr(test, allow(clippy::unwrap_used))]
 
+mod agent_grants;
 mod attachment_files;
 mod attachment_mutations;
 mod attachment_reconciliation;
@@ -19,6 +20,7 @@ mod storage;
 mod unlock_daemon;
 mod upload_lifecycle;
 
+pub use agent_grants::{PrepareAgentApprovalGrant, PreparedAgentApprovalGrant};
 pub use client::{
     PreparedTaskCreate, PreparedTaskUpdate, ProjectTaskSession, RuntimeClient, TaskMutationPlan,
 };

@@ -1,5 +1,6 @@
 #![cfg_attr(test, allow(clippy::unwrap_used))]
 
+mod agents;
 mod attachments;
 mod audit;
 mod events;
@@ -9,6 +10,7 @@ mod notes;
 mod read_limits;
 mod transport;
 
+pub use agents::*;
 pub use attachments::{
     CompleteAttachmentUploadRequest, DownloadAttachmentResponse, InitiateAttachmentUploadRequest,
     InitiateAttachmentUploadResponse,
@@ -50,7 +52,7 @@ use uuid::Uuid;
 use sealtask_client_core::{PublicError, PublicResult};
 
 pub(crate) use transport::{
-    BoundedHttpResponse, decode_bounded_json, map_api_error_with_retry_after,
+    BoundedHttpResponse, decode_bounded_json, map_api_error_with_retry_after, parse_retry_after,
 };
 
 pub type SealedBlob = String;

@@ -13,6 +13,7 @@ CRATES=(
   "sealtask-client-crypto"
   "sealtask-client-api"
   "sealtask-client-runtime"
+  "sealtask-agent"
   "sealtask"
 )
 
@@ -369,8 +370,8 @@ test_fresh_publish() {
   new_fixture fresh
   run_fixture
   assert_success
-  assert_log_count 6 '^package:' "${STATE_DIR}/cargo.log"
-  assert_log_count 6 '^publish:' "${STATE_DIR}/cargo.log"
+  assert_log_count 7 '^package:' "${STATE_DIR}/cargo.log"
+  assert_log_count 7 '^publish:' "${STATE_DIR}/cargo.log"
   assert_publish_order
   assert_output_contains "All crates are published with checksums matching the staged archives."
   pass_test "fresh publication stages everything, then publishes in dependency order"
@@ -382,8 +383,8 @@ test_partial_resume() {
   seed_registry_match "${CRATES[1]}"
   run_fixture
   assert_success
-  assert_log_count 6 '^package:' "${STATE_DIR}/cargo.log"
-  assert_log_count 4 '^publish:' "${STATE_DIR}/cargo.log"
+  assert_log_count 7 '^package:' "${STATE_DIR}/cargo.log"
+  assert_log_count 5 '^publish:' "${STATE_DIR}/cargo.log"
   assert_output_contains "Skipping ${CRATES[0]} 1.2.3"
   assert_output_contains "Skipping ${CRATES[1]} 1.2.3"
   pass_test "partial publication resumes after checksum-verified crates"
@@ -396,9 +397,9 @@ test_full_resume() {
   done
   run_fixture
   assert_success
-  assert_log_count 6 '^package:' "${STATE_DIR}/cargo.log"
+  assert_log_count 7 '^package:' "${STATE_DIR}/cargo.log"
   assert_log_count 0 '^publish:' "${STATE_DIR}/cargo.log"
-  assert_log_count 6 '^lookup:' "${STATE_DIR}/curl.log"
+  assert_log_count 7 '^lookup:' "${STATE_DIR}/curl.log"
   pass_test "fully published releases become a checksum-verified no-op"
 }
 
@@ -467,7 +468,7 @@ test_nonzero_after_upload() {
   assert_success
   assert_output_contains "cargo publish exited 42"
   assert_output_contains "Treating ${CRATES[0]} 1.2.3 as published"
-  assert_log_count 6 '^publish:' "${STATE_DIR}/cargo.log"
+  assert_log_count 7 '^publish:' "${STATE_DIR}/cargo.log"
   assert_log_count 1 '^sleep:' "${STATE_DIR}/sleep.log"
   pass_test "a nonzero cargo exit after upload is polled and reconciled by checksum"
 }
@@ -476,10 +477,10 @@ test_dry_run_is_offline() {
   new_fixture dry-run
   run_fixture DRY_RUN=1
   assert_success
-  assert_log_count 6 '^package:.*--offline' "${STATE_DIR}/cargo.log"
+  assert_log_count 7 '^package:.*--offline' "${STATE_DIR}/cargo.log"
   assert_log_count 0 '^publish:' "${STATE_DIR}/cargo.log"
   assert_log_count 0 '^lookup:' "${STATE_DIR}/curl.log"
-  assert_output_contains "all 6 crates were packaged offline"
+  assert_output_contains "all 7 crates were packaged offline"
   pass_test "dry-run packages every crate offline without registry or publish calls"
 }
 

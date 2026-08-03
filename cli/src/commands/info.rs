@@ -60,6 +60,23 @@ pub(crate) fn run_info(runtime: &RuntimeClient, format: OutputFormat) -> CliResu
             "maximumPageItems": 100,
             "encryptedPayloadExcluded": true,
         },
+        "agentControlPlane": {
+            "version": 1,
+            "identityScope": "one_project_and_repository",
+            "multipleLocalIdentities": true,
+            "permissionPresets": ["assigned_task_worker"],
+            "commands": [
+                "agents register",
+                "agents approve",
+                "agents list",
+                "agents assign",
+                "agents unassign",
+                "agents revoke"
+            ],
+            "runnerBinary": "sealtask-agent",
+            "delivery": "bounded_polling",
+            "exclusiveRunLeases": true,
+        },
         "retries": {
             "configuredRetries": runtime.api_transport_options().retry_policy().max_retries(),
             "maximumRetries": MAX_API_RETRIES,
@@ -251,6 +268,7 @@ pub(crate) fn run_info(runtime: &RuntimeClient, format: OutputFormat) -> CliResu
             println!("Task lists: --columns, --sort, --field reference|id|title|url");
             println!("Streams: tasks watch, activity follow (--format jsonl for automation)");
             println!("Audit: projects audit [PROJECT]");
+            println!("Agent control plane: agents register|approve|list|assign|unassign|revoke");
             println!("Dry runs: tasks create|update --dry-run");
             println!("Batch: batch run --input PATH|- [--checkpoint PATH --resume]");
             println!("Offline reads: --offline (encrypted snapshots; never implicit fallback)");

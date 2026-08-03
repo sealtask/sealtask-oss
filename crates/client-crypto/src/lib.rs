@@ -1,11 +1,18 @@
 #![cfg_attr(test, allow(clippy::unwrap_used))]
 
+mod agent_grants;
 mod attachment_transport_limits;
 mod attachments;
 mod notes;
 mod read_cache;
 mod task_references;
 
+pub use agent_grants::{
+    AgentGrantAuthenticationInput, MAX_AGENT_INSTRUCTIONS_CIPHERTEXT_BYTES,
+    MAX_AGENT_INSTRUCTIONS_PLAINTEXT_BYTES, decrypt_agent_instructions, decrypt_agent_project_key,
+    decrypt_agent_run_result, derive_agent_enrollment_token, encrypt_agent_instructions,
+    encrypt_agent_project_key, encrypt_agent_run_result, sign_agent_grant, verify_agent_grant,
+};
 pub use attachment_transport_limits::{
     MAX_ATTACHMENT_CIPHERTEXT_BYTES, MAX_ATTACHMENT_PLAINTEXT_BYTES,
 };

@@ -1,5 +1,5 @@
 use crate::args::{
-    Command, CommentsCommand, NotesCommand, ProjectsCommand, TaskAttachmentsCommand,
+    AgentsCommand, Command, CommentsCommand, NotesCommand, ProjectsCommand, TaskAttachmentsCommand,
     TaskReferencesCommand, TasksCommand,
 };
 use crate::output::{
@@ -97,6 +97,7 @@ pub(crate) fn needs_mutation_supervision(command: Option<&Command>) -> bool {
                 | NotesCommand::Update(_)
                 | NotesCommand::Delete(_)
         ),
+        Some(Command::Agents { command }) => !matches!(command, AgentsCommand::List { .. }),
         Some(
             Command::Completion { .. }
             | Command::Man { .. }

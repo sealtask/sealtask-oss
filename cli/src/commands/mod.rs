@@ -1,4 +1,5 @@
 mod activity;
+mod agents;
 mod audit_output;
 mod auth;
 mod batch;
@@ -15,6 +16,7 @@ mod tasks;
 mod work_lists;
 
 pub(crate) use activity::run_activity;
+pub(crate) use agents::run_agents;
 pub(crate) use auth::run_auth;
 pub(crate) use batch::run_batch;
 pub(crate) use browse::run_browse;

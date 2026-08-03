@@ -18,6 +18,7 @@ CRATES=(
   "sealtask-client-crypto"
   "sealtask-client-api"
   "sealtask-client-runtime"
+  "sealtask-agent"
   "sealtask"
 )
 

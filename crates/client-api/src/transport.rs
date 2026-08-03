@@ -176,7 +176,7 @@ impl ApiCancellationToken {
             .store(boundary as u8, Ordering::Release);
     }
 
-    fn enter_mutation_request(
+    pub(crate) fn enter_mutation_request(
         &self,
         semantics: RequestSemantics,
     ) -> Option<ActiveRequestBoundaryGuard> {
@@ -788,6 +788,26 @@ impl PublicApiClient {
         .await
     }
 
+    pub(crate) async fn post_bounded_tracked_no_replay<
+        T: for<'de> Deserialize<'de>,
+        B: Serialize,
+    >(
+        &mut self,
+        path: &str,
+        body: &B,
+        max_decompressed_bytes: usize,
+        operation: &'static str,
+    ) -> PublicResult<T> {
+        let url = format!("{}{}", self.base_url, path);
+        self.send(
+            self.client.post(url).json(body),
+            path,
+            RequestSemantics::UnsafeMutation { operation },
+            max_decompressed_bytes,
+        )
+        .await
+    }
+
     pub(crate) async fn post_no_content_bounded_no_replay<B: Serialize>(
         &mut self,
         path: &str,
@@ -1176,7 +1196,8 @@ fn validate_timeout(name: &str, timeout: Duration) -> PublicResult<()> {
 /// `x-request-id` header, or generates one when none is configured. This is intended for
 /// control-plane flows implemented outside [`PublicApiClient`], such as login and logout; it must
 /// not be used for presigned storage URLs. [`ApiRetryPolicy`] is enforced by [`PublicApiClient`]
-/// after classifying replay safety, so this raw client never retries automatically.
+/// after classifying replay safety, so this raw client never retries automatically. Redirects are
+/// rejected so credentials carried in request bodies cannot be forwarded to another origin.
 pub fn build_control_plane_http_client(
     transport_options: ApiTransportOptions,
 ) -> PublicResult<reqwest::Client> {
@@ -1187,6 +1208,7 @@ pub fn build_control_plane_http_client(
         .connect_timeout(transport_options.connect_timeout())
         .read_timeout(transport_options.read_timeout())
         .timeout(transport_options.request_timeout())
+        .redirect(reqwest::redirect::Policy::none())
         .build()
         .map_err(|err| PublicError::unexpected(format!("failed to configure API client: {err}")))
 }
@@ -2591,6 +2613,62 @@ mod tests {
         assert_eq!(observed[1].0, CONTROL_PLANE_USER_AGENT);
         assert!(Uuid::parse_str(&observed[0].1).is_ok());
         assert_eq!(observed[1].1, request_id.to_string());
+    }
+
+    #[tokio::test]
+    async fn raw_control_plane_client_does_not_forward_post_bodies_across_redirects() {
+        let source_listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+            .await
+            .expect("source listener");
+        let source_url = format!(
+            "http://{}",
+            source_listener.local_addr().expect("source address")
+        );
+        let target_listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+            .await
+            .expect("target listener");
+        let target_url = format!(
+            "http://{}",
+            target_listener.local_addr().expect("target address")
+        );
+        let source = tokio::spawn(async move {
+            let (mut stream, _) = source_listener.accept().await.expect("source request");
+            let request = read_http_request(&mut stream).await;
+            assert_eq!(request.body, br#"{"assertion":"credential-canary"}"#);
+            write_test_response(
+                &mut stream,
+                "307 Temporary Redirect",
+                &format!("Location: {target_url}/capture\r\n"),
+                b"",
+            )
+            .await;
+        });
+        let target = tokio::spawn(async move {
+            let accepted =
+                tokio::time::timeout(Duration::from_secs(1), target_listener.accept()).await;
+            match accepted {
+                Ok(Ok((mut stream, _))) => {
+                    let request = read_http_request(&mut stream).await;
+                    write_test_response(&mut stream, "204 No Content", "", b"").await;
+                    Some(request.body)
+                }
+                Ok(Err(error)) => panic!("failed to accept redirect target request: {error}"),
+                Err(_) => None,
+            }
+        });
+
+        let client = build_control_plane_http_client(ApiTransportOptions::default())
+            .expect("raw control-plane client");
+        let response = client
+            .post(format!("{source_url}/auth/agents/token"))
+            .json(&serde_json::json!({ "assertion": "credential-canary" }))
+            .send()
+            .await
+            .expect("redirect response");
+
+        assert_eq!(response.status(), reqwest::StatusCode::TEMPORARY_REDIRECT);
+        source.await.expect("source server");
+        assert_eq!(target.await.expect("target server"), None);
     }
 
     fn test_credentials(api_url: &str) -> Credentials {

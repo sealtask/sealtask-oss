@@ -56,6 +56,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('projects', 'projects', [CompletionResultType]::ParameterValue, 'List, inspect, archive, or restore projects and inspect saved context')
             [CompletionResult]::new('lists', 'lists', [CompletionResultType]::ParameterValue, 'List, inspect, archive, or restore projects and inspect saved context')
             [CompletionResult]::new('tasks', 'tasks', [CompletionResultType]::ParameterValue, 'List, inspect, create, update, move, or delete tasks')
+            [CompletionResult]::new('agents', 'agents', [CompletionResultType]::ParameterValue, 'Register, approve, inspect, assign, or revoke project-scoped agent identities')
             [CompletionResult]::new('stats', 'stats', [CompletionResultType]::ParameterValue, 'Show current dashboard task counts')
             [CompletionResult]::new('activity', 'activity', [CompletionResultType]::ParameterValue, 'Inspect or continuously follow recent account activity')
             [CompletionResult]::new('browse', 'browse', [CompletionResultType]::ParameterValue, 'Browse cached or live decrypted projects and tasks in a private TTY')
@@ -2137,6 +2138,240 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
         'sealtask;tasks;help;help' {
             break
         }
+        'sealtask;agents' {
+            [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
+            [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
+            [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
+            [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
+            [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
+            [CompletionResult]::new('--connect-timeout', '--connect-timeout', [CompletionResultType]::ParameterName, 'Maximum time to establish a control-plane connection (for example 5s)')
+            [CompletionResult]::new('--read-timeout', '--read-timeout', [CompletionResultType]::ParameterName, 'Maximum idle time while reading a control-plane response (for example 30s)')
+            [CompletionResult]::new('--request-timeout', '--request-timeout', [CompletionResultType]::ParameterName, 'Maximum total time for one control-plane request (for example 1m)')
+            [CompletionResult]::new('--retry', '--retry', [CompletionResultType]::ParameterName, 'Retry replay-safe API requests after transient failures')
+            [CompletionResult]::new('--profile', '--profile', [CompletionResultType]::ParameterName, 'Isolate credentials and unlock state under a named profile')
+            [CompletionResult]::new('--config-dir', '--config-dir', [CompletionResultType]::ParameterName, 'Override the base directory used for credentials and local unlock state')
+            [CompletionResult]::new('--json', '--json', [CompletionResultType]::ParameterName, 'Emit compact JSON instead of human-readable output')
+            [CompletionResult]::new('--no-pager', '--no-pager', [CompletionResultType]::ParameterName, 'Disable paging (equivalent to --pager never)')
+            [CompletionResult]::new('-q', '-q', [CompletionResultType]::ParameterName, 'Suppress automatic paging, progress, and successful mutation acknowledgements')
+            [CompletionResult]::new('--quiet', '--quiet', [CompletionResultType]::ParameterName, 'Suppress automatic paging, progress, and successful mutation acknowledgements')
+            [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
+            [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
+            [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
+            [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
+            [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
+            [CompletionResult]::new('register', 'register', [CompletionResultType]::ParameterValue, 'Create a local keypair and short-lived enrollment for this project checkout')
+            [CompletionResult]::new('approve', 'approve', [CompletionResultType]::ParameterValue, 'Approve an enrollment and provision its encrypted project key and instructions')
+            [CompletionResult]::new('list', 'list', [CompletionResultType]::ParameterValue, 'List agent identities owned by this account, or identities stored locally')
+            [CompletionResult]::new('revoke', 'revoke', [CompletionResultType]::ParameterValue, 'Revoke an agent and invalidate all of its sessions and runnable grants')
+            [CompletionResult]::new('assign', 'assign', [CompletionResultType]::ParameterValue, 'Assign one project task to an active agent')
+            [CompletionResult]::new('unassign', 'unassign', [CompletionResultType]::ParameterValue, 'Remove an agent assignment from one project task')
+            [CompletionResult]::new('help', 'help', [CompletionResultType]::ParameterValue, 'Print this message or the help of the given subcommand(s)')
+            break
+        }
+        'sealtask;agents;register' {
+            [CompletionResult]::new('--proposed-handle', '--proposed-handle', [CompletionResultType]::ParameterName, 'Suggested handle shown to the approving project owner')
+            [CompletionResult]::new('--project', '--project', [CompletionResultType]::ParameterName, 'Project selector; defaults to the current project')
+            [CompletionResult]::new('--work-list-id', '--work-list-id', [CompletionResultType]::ParameterName, 'Exact project UUID (automation-friendly alternative to --project)')
+            [CompletionResult]::new('--repository', '--repository', [CompletionResultType]::ParameterName, 'Repository checkout this identity is allowed to run against')
+            [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
+            [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
+            [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
+            [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
+            [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
+            [CompletionResult]::new('--connect-timeout', '--connect-timeout', [CompletionResultType]::ParameterName, 'Maximum time to establish a control-plane connection (for example 5s)')
+            [CompletionResult]::new('--read-timeout', '--read-timeout', [CompletionResultType]::ParameterName, 'Maximum idle time while reading a control-plane response (for example 30s)')
+            [CompletionResult]::new('--request-timeout', '--request-timeout', [CompletionResultType]::ParameterName, 'Maximum total time for one control-plane request (for example 1m)')
+            [CompletionResult]::new('--retry', '--retry', [CompletionResultType]::ParameterName, 'Retry replay-safe API requests after transient failures')
+            [CompletionResult]::new('--profile', '--profile', [CompletionResultType]::ParameterName, 'Isolate credentials and unlock state under a named profile')
+            [CompletionResult]::new('--config-dir', '--config-dir', [CompletionResultType]::ParameterName, 'Override the base directory used for credentials and local unlock state')
+            [CompletionResult]::new('--password-stdin', '--password-stdin', [CompletionResultType]::ParameterName, 'Read the account password from stdin if resolving the project requires unlock')
+            [CompletionResult]::new('--json', '--json', [CompletionResultType]::ParameterName, 'Emit compact JSON instead of human-readable output')
+            [CompletionResult]::new('--no-pager', '--no-pager', [CompletionResultType]::ParameterName, 'Disable paging (equivalent to --pager never)')
+            [CompletionResult]::new('-q', '-q', [CompletionResultType]::ParameterName, 'Suppress automatic paging, progress, and successful mutation acknowledgements')
+            [CompletionResult]::new('--quiet', '--quiet', [CompletionResultType]::ParameterName, 'Suppress automatic paging, progress, and successful mutation acknowledgements')
+            [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
+            [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
+            [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
+            [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
+            [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
+            break
+        }
+        'sealtask;agents;approve' {
+            [CompletionResult]::new('--enrollment-code-file', '--enrollment-code-file', [CompletionResultType]::ParameterName, 'File containing the one-time enrollment code (use ''-'' for stdin)')
+            [CompletionResult]::new('--fingerprint', '--fingerprint', [CompletionResultType]::ParameterName, 'Fingerprint confirmed with the agent operator out of band')
+            [CompletionResult]::new('--handle', '--handle', [CompletionResultType]::ParameterName, 'Stable lowercase project-local agent handle')
+            [CompletionResult]::new('--display-name', '--display-name', [CompletionResultType]::ParameterName, 'Human-readable agent name; defaults to the handle')
+            [CompletionResult]::new('--instructions-file', '--instructions-file', [CompletionResultType]::ParameterName, 'UTF-8 file containing the managed role instructions')
+            [CompletionResult]::new('--project', '--project', [CompletionResultType]::ParameterName, 'Project selector; defaults to the current project')
+            [CompletionResult]::new('--work-list-id', '--work-list-id', [CompletionResultType]::ParameterName, 'Exact project UUID (automation-friendly alternative to --project)')
+            [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
+            [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
+            [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
+            [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
+            [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
+            [CompletionResult]::new('--connect-timeout', '--connect-timeout', [CompletionResultType]::ParameterName, 'Maximum time to establish a control-plane connection (for example 5s)')
+            [CompletionResult]::new('--read-timeout', '--read-timeout', [CompletionResultType]::ParameterName, 'Maximum idle time while reading a control-plane response (for example 30s)')
+            [CompletionResult]::new('--request-timeout', '--request-timeout', [CompletionResultType]::ParameterName, 'Maximum total time for one control-plane request (for example 1m)')
+            [CompletionResult]::new('--retry', '--retry', [CompletionResultType]::ParameterName, 'Retry replay-safe API requests after transient failures')
+            [CompletionResult]::new('--profile', '--profile', [CompletionResultType]::ParameterName, 'Isolate credentials and unlock state under a named profile')
+            [CompletionResult]::new('--config-dir', '--config-dir', [CompletionResultType]::ParameterName, 'Override the base directory used for credentials and local unlock state')
+            [CompletionResult]::new('--password-stdin', '--password-stdin', [CompletionResultType]::ParameterName, 'Read the account password from stdin when no local unlock is available')
+            [CompletionResult]::new('--json', '--json', [CompletionResultType]::ParameterName, 'Emit compact JSON instead of human-readable output')
+            [CompletionResult]::new('--no-pager', '--no-pager', [CompletionResultType]::ParameterName, 'Disable paging (equivalent to --pager never)')
+            [CompletionResult]::new('-q', '-q', [CompletionResultType]::ParameterName, 'Suppress automatic paging, progress, and successful mutation acknowledgements')
+            [CompletionResult]::new('--quiet', '--quiet', [CompletionResultType]::ParameterName, 'Suppress automatic paging, progress, and successful mutation acknowledgements')
+            [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
+            [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
+            [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
+            [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
+            [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
+            break
+        }
+        'sealtask;agents;list' {
+            [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
+            [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
+            [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
+            [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
+            [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
+            [CompletionResult]::new('--connect-timeout', '--connect-timeout', [CompletionResultType]::ParameterName, 'Maximum time to establish a control-plane connection (for example 5s)')
+            [CompletionResult]::new('--read-timeout', '--read-timeout', [CompletionResultType]::ParameterName, 'Maximum idle time while reading a control-plane response (for example 30s)')
+            [CompletionResult]::new('--request-timeout', '--request-timeout', [CompletionResultType]::ParameterName, 'Maximum total time for one control-plane request (for example 1m)')
+            [CompletionResult]::new('--retry', '--retry', [CompletionResultType]::ParameterName, 'Retry replay-safe API requests after transient failures')
+            [CompletionResult]::new('--profile', '--profile', [CompletionResultType]::ParameterName, 'Isolate credentials and unlock state under a named profile')
+            [CompletionResult]::new('--config-dir', '--config-dir', [CompletionResultType]::ParameterName, 'Override the base directory used for credentials and local unlock state')
+            [CompletionResult]::new('--local', '--local', [CompletionResultType]::ParameterName, 'Inspect only identities stored under the active local profile')
+            [CompletionResult]::new('--json', '--json', [CompletionResultType]::ParameterName, 'Emit compact JSON instead of human-readable output')
+            [CompletionResult]::new('--no-pager', '--no-pager', [CompletionResultType]::ParameterName, 'Disable paging (equivalent to --pager never)')
+            [CompletionResult]::new('-q', '-q', [CompletionResultType]::ParameterName, 'Suppress automatic paging, progress, and successful mutation acknowledgements')
+            [CompletionResult]::new('--quiet', '--quiet', [CompletionResultType]::ParameterName, 'Suppress automatic paging, progress, and successful mutation acknowledgements')
+            [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
+            [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
+            [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
+            [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
+            [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
+            break
+        }
+        'sealtask;agents;revoke' {
+            [CompletionResult]::new('--reason', '--reason', [CompletionResultType]::ParameterName, 'reason')
+            [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
+            [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
+            [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
+            [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
+            [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
+            [CompletionResult]::new('--connect-timeout', '--connect-timeout', [CompletionResultType]::ParameterName, 'Maximum time to establish a control-plane connection (for example 5s)')
+            [CompletionResult]::new('--read-timeout', '--read-timeout', [CompletionResultType]::ParameterName, 'Maximum idle time while reading a control-plane response (for example 30s)')
+            [CompletionResult]::new('--request-timeout', '--request-timeout', [CompletionResultType]::ParameterName, 'Maximum total time for one control-plane request (for example 1m)')
+            [CompletionResult]::new('--retry', '--retry', [CompletionResultType]::ParameterName, 'Retry replay-safe API requests after transient failures')
+            [CompletionResult]::new('--profile', '--profile', [CompletionResultType]::ParameterName, 'Isolate credentials and unlock state under a named profile')
+            [CompletionResult]::new('--config-dir', '--config-dir', [CompletionResultType]::ParameterName, 'Override the base directory used for credentials and local unlock state')
+            [CompletionResult]::new('--json', '--json', [CompletionResultType]::ParameterName, 'Emit compact JSON instead of human-readable output')
+            [CompletionResult]::new('--no-pager', '--no-pager', [CompletionResultType]::ParameterName, 'Disable paging (equivalent to --pager never)')
+            [CompletionResult]::new('-q', '-q', [CompletionResultType]::ParameterName, 'Suppress automatic paging, progress, and successful mutation acknowledgements')
+            [CompletionResult]::new('--quiet', '--quiet', [CompletionResultType]::ParameterName, 'Suppress automatic paging, progress, and successful mutation acknowledgements')
+            [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
+            [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
+            [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
+            [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
+            [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
+            break
+        }
+        'sealtask;agents;assign' {
+            [CompletionResult]::new('--project', '--project', [CompletionResultType]::ParameterName, 'Project selector; defaults to the current project')
+            [CompletionResult]::new('--work-list-id', '--work-list-id', [CompletionResultType]::ParameterName, 'Exact project UUID (automation-friendly alternative to --project)')
+            [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
+            [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
+            [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
+            [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
+            [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
+            [CompletionResult]::new('--connect-timeout', '--connect-timeout', [CompletionResultType]::ParameterName, 'Maximum time to establish a control-plane connection (for example 5s)')
+            [CompletionResult]::new('--read-timeout', '--read-timeout', [CompletionResultType]::ParameterName, 'Maximum idle time while reading a control-plane response (for example 30s)')
+            [CompletionResult]::new('--request-timeout', '--request-timeout', [CompletionResultType]::ParameterName, 'Maximum total time for one control-plane request (for example 1m)')
+            [CompletionResult]::new('--retry', '--retry', [CompletionResultType]::ParameterName, 'Retry replay-safe API requests after transient failures')
+            [CompletionResult]::new('--profile', '--profile', [CompletionResultType]::ParameterName, 'Isolate credentials and unlock state under a named profile')
+            [CompletionResult]::new('--config-dir', '--config-dir', [CompletionResultType]::ParameterName, 'Override the base directory used for credentials and local unlock state')
+            [CompletionResult]::new('--password-stdin', '--password-stdin', [CompletionResultType]::ParameterName, 'Read the account password from stdin if resolving the project requires unlock')
+            [CompletionResult]::new('--json', '--json', [CompletionResultType]::ParameterName, 'Emit compact JSON instead of human-readable output')
+            [CompletionResult]::new('--no-pager', '--no-pager', [CompletionResultType]::ParameterName, 'Disable paging (equivalent to --pager never)')
+            [CompletionResult]::new('-q', '-q', [CompletionResultType]::ParameterName, 'Suppress automatic paging, progress, and successful mutation acknowledgements')
+            [CompletionResult]::new('--quiet', '--quiet', [CompletionResultType]::ParameterName, 'Suppress automatic paging, progress, and successful mutation acknowledgements')
+            [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
+            [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
+            [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
+            [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
+            [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
+            break
+        }
+        'sealtask;agents;unassign' {
+            [CompletionResult]::new('--project', '--project', [CompletionResultType]::ParameterName, 'Project selector; defaults to the current project')
+            [CompletionResult]::new('--work-list-id', '--work-list-id', [CompletionResultType]::ParameterName, 'Exact project UUID (automation-friendly alternative to --project)')
+            [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
+            [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
+            [CompletionResult]::new('--format', '--format', [CompletionResultType]::ParameterName, 'Select human-readable, finite JSON, or streaming JSON Lines output')
+            [CompletionResult]::new('--color', '--color', [CompletionResultType]::ParameterName, 'Control colors in human-readable output')
+            [CompletionResult]::new('--pager', '--pager', [CompletionResultType]::ParameterName, 'Control paging of long human-readable output')
+            [CompletionResult]::new('--progress', '--progress', [CompletionResultType]::ParameterName, 'Control delayed progress indicators on stderr')
+            [CompletionResult]::new('--connect-timeout', '--connect-timeout', [CompletionResultType]::ParameterName, 'Maximum time to establish a control-plane connection (for example 5s)')
+            [CompletionResult]::new('--read-timeout', '--read-timeout', [CompletionResultType]::ParameterName, 'Maximum idle time while reading a control-plane response (for example 30s)')
+            [CompletionResult]::new('--request-timeout', '--request-timeout', [CompletionResultType]::ParameterName, 'Maximum total time for one control-plane request (for example 1m)')
+            [CompletionResult]::new('--retry', '--retry', [CompletionResultType]::ParameterName, 'Retry replay-safe API requests after transient failures')
+            [CompletionResult]::new('--profile', '--profile', [CompletionResultType]::ParameterName, 'Isolate credentials and unlock state under a named profile')
+            [CompletionResult]::new('--config-dir', '--config-dir', [CompletionResultType]::ParameterName, 'Override the base directory used for credentials and local unlock state')
+            [CompletionResult]::new('--password-stdin', '--password-stdin', [CompletionResultType]::ParameterName, 'Read the account password from stdin if resolving the project requires unlock')
+            [CompletionResult]::new('--json', '--json', [CompletionResultType]::ParameterName, 'Emit compact JSON instead of human-readable output')
+            [CompletionResult]::new('--no-pager', '--no-pager', [CompletionResultType]::ParameterName, 'Disable paging (equivalent to --pager never)')
+            [CompletionResult]::new('-q', '-q', [CompletionResultType]::ParameterName, 'Suppress automatic paging, progress, and successful mutation acknowledgements')
+            [CompletionResult]::new('--quiet', '--quiet', [CompletionResultType]::ParameterName, 'Suppress automatic paging, progress, and successful mutation acknowledgements')
+            [CompletionResult]::new('--non-interactive', '--non-interactive', [CompletionResultType]::ParameterName, 'Never prompt; fail with an actionable validation error when input is missing')
+            [CompletionResult]::new('-v', '-v', [CompletionResultType]::ParameterName, 'Emit redacted operator telemetry to stderr; repeat for more detail')
+            [CompletionResult]::new('--debug', '--debug', [CompletionResultType]::ParameterName, 'Emit maximum redacted diagnostic telemetry to stderr')
+            [CompletionResult]::new('--offline', '--offline', [CompletionResultType]::ParameterName, 'Read only from the encrypted local snapshot and never access the network')
+            [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
+            [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help (see more with ''--help'')')
+            break
+        }
+        'sealtask;agents;help' {
+            [CompletionResult]::new('register', 'register', [CompletionResultType]::ParameterValue, 'Create a local keypair and short-lived enrollment for this project checkout')
+            [CompletionResult]::new('approve', 'approve', [CompletionResultType]::ParameterValue, 'Approve an enrollment and provision its encrypted project key and instructions')
+            [CompletionResult]::new('list', 'list', [CompletionResultType]::ParameterValue, 'List agent identities owned by this account, or identities stored locally')
+            [CompletionResult]::new('revoke', 'revoke', [CompletionResultType]::ParameterValue, 'Revoke an agent and invalidate all of its sessions and runnable grants')
+            [CompletionResult]::new('assign', 'assign', [CompletionResultType]::ParameterValue, 'Assign one project task to an active agent')
+            [CompletionResult]::new('unassign', 'unassign', [CompletionResultType]::ParameterValue, 'Remove an agent assignment from one project task')
+            [CompletionResult]::new('help', 'help', [CompletionResultType]::ParameterValue, 'Print this message or the help of the given subcommand(s)')
+            break
+        }
+        'sealtask;agents;help;register' {
+            break
+        }
+        'sealtask;agents;help;approve' {
+            break
+        }
+        'sealtask;agents;help;list' {
+            break
+        }
+        'sealtask;agents;help;revoke' {
+            break
+        }
+        'sealtask;agents;help;assign' {
+            break
+        }
+        'sealtask;agents;help;unassign' {
+            break
+        }
+        'sealtask;agents;help;help' {
+            break
+        }
         'sealtask;stats' {
             [CompletionResult]::new('--api-url', '--api-url', [CompletionResultType]::ParameterName, 'SealTask API base URL')
             [CompletionResult]::new('--storage-origin', '--storage-origin', [CompletionResultType]::ParameterName, 'Trusted origin for presigned attachment transfers (repeatable)')
@@ -3097,6 +3332,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             [CompletionResult]::new('pick', 'pick', [CompletionResultType]::ParameterValue, 'Choose or resolve a project to activate, or interactively print a task selector')
             [CompletionResult]::new('projects', 'projects', [CompletionResultType]::ParameterValue, 'List, inspect, archive, or restore projects and inspect saved context')
             [CompletionResult]::new('tasks', 'tasks', [CompletionResultType]::ParameterValue, 'List, inspect, create, update, move, or delete tasks')
+            [CompletionResult]::new('agents', 'agents', [CompletionResultType]::ParameterValue, 'Register, approve, inspect, assign, or revoke project-scoped agent identities')
             [CompletionResult]::new('stats', 'stats', [CompletionResultType]::ParameterValue, 'Show current dashboard task counts')
             [CompletionResult]::new('activity', 'activity', [CompletionResultType]::ParameterValue, 'Inspect or continuously follow recent account activity')
             [CompletionResult]::new('browse', 'browse', [CompletionResultType]::ParameterValue, 'Browse cached or live decrypted projects and tasks in a private TTY')
@@ -3300,6 +3536,33 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             break
         }
         'sealtask;help;tasks;attachments;download' {
+            break
+        }
+        'sealtask;help;agents' {
+            [CompletionResult]::new('register', 'register', [CompletionResultType]::ParameterValue, 'Create a local keypair and short-lived enrollment for this project checkout')
+            [CompletionResult]::new('approve', 'approve', [CompletionResultType]::ParameterValue, 'Approve an enrollment and provision its encrypted project key and instructions')
+            [CompletionResult]::new('list', 'list', [CompletionResultType]::ParameterValue, 'List agent identities owned by this account, or identities stored locally')
+            [CompletionResult]::new('revoke', 'revoke', [CompletionResultType]::ParameterValue, 'Revoke an agent and invalidate all of its sessions and runnable grants')
+            [CompletionResult]::new('assign', 'assign', [CompletionResultType]::ParameterValue, 'Assign one project task to an active agent')
+            [CompletionResult]::new('unassign', 'unassign', [CompletionResultType]::ParameterValue, 'Remove an agent assignment from one project task')
+            break
+        }
+        'sealtask;help;agents;register' {
+            break
+        }
+        'sealtask;help;agents;approve' {
+            break
+        }
+        'sealtask;help;agents;list' {
+            break
+        }
+        'sealtask;help;agents;revoke' {
+            break
+        }
+        'sealtask;help;agents;assign' {
+            break
+        }
+        'sealtask;help;agents;unassign' {
             break
         }
         'sealtask;help;stats' {

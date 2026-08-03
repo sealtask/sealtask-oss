@@ -2452,6 +2452,270 @@ esac
     ;;
 esac
 ;;
+(agents)
+_arguments "${_arguments_options[@]}" : \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+":: :_sealtask__subcmd__agents_commands" \
+"*::: :->agents" \
+&& ret=0
+
+    case $state in
+    (agents)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:sealtask-agents-command-$line[1]:"
+        case $line[1] in
+            (register)
+_arguments "${_arguments_options[@]}" : \
+'--proposed-handle=[Suggested handle shown to the approving project owner]:PROPOSED_HANDLE:_default' \
+'(--work-list-id)--project=[Project selector; defaults to the current project]:PROJECT:_default' \
+'--work-list-id=[Exact project UUID (automation-friendly alternative to --project)]:WORK_LIST_ID:_default' \
+'--repository=[Repository checkout this identity is allowed to run against]:REPOSITORY:_files' \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'--password-stdin[Read the account password from stdin if resolving the project requires unlock]' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+&& ret=0
+;;
+(approve)
+_arguments "${_arguments_options[@]}" : \
+'--enrollment-code-file=[File containing the one-time enrollment code (use '\''-'\'' for stdin)]:PATH:_files' \
+'--fingerprint=[Fingerprint confirmed with the agent operator out of band]:FINGERPRINT:_default' \
+'--handle=[Stable lowercase project-local agent handle]:HANDLE:_default' \
+'--display-name=[Human-readable agent name; defaults to the handle]:DISPLAY_NAME:_default' \
+'--instructions-file=[UTF-8 file containing the managed role instructions]:PATH:_files' \
+'(--work-list-id)--project=[Project selector; defaults to the current project]:PROJECT:_default' \
+'--work-list-id=[Exact project UUID (automation-friendly alternative to --project)]:WORK_LIST_ID:_default' \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'--password-stdin[Read the account password from stdin when no local unlock is available]' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+&& ret=0
+;;
+(list)
+_arguments "${_arguments_options[@]}" : \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'--local[Inspect only identities stored under the active local profile]' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+&& ret=0
+;;
+(revoke)
+_arguments "${_arguments_options[@]}" : \
+'--reason=[]:REASON:_default' \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+':agent_id:_default' \
+&& ret=0
+;;
+(assign)
+_arguments "${_arguments_options[@]}" : \
+'(--work-list-id)--project=[Project selector; defaults to the current project]:PROJECT:_default' \
+'--work-list-id=[Exact project UUID (automation-friendly alternative to --project)]:WORK_LIST_ID:_default' \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'--password-stdin[Read the account password from stdin if resolving the project requires unlock]' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+':agent_id:_default' \
+':task_id:_default' \
+&& ret=0
+;;
+(unassign)
+_arguments "${_arguments_options[@]}" : \
+'(--work-list-id)--project=[Project selector; defaults to the current project]:PROJECT:_default' \
+'--work-list-id=[Exact project UUID (automation-friendly alternative to --project)]:WORK_LIST_ID:_default' \
+'--api-url=[SealTask API base URL]:API_URL:_default' \
+'*--storage-origin=[Trusted origin for presigned attachment transfers (repeatable)]:STORAGE_ORIGIN:_default' \
+'(--json)--format=[Select human-readable, finite JSON, or streaming JSON Lines output]:FORMAT:(table json json-pretty jsonl)' \
+'--color=[Control colors in human-readable output]:WHEN:(auto always never)' \
+'--pager=[Control paging of long human-readable output]:WHEN:(auto always never)' \
+'--progress=[Control delayed progress indicators on stderr]:WHEN:(auto always never)' \
+'--connect-timeout=[Maximum time to establish a control-plane connection (for example 5s)]:DURATION:_default' \
+'--read-timeout=[Maximum idle time while reading a control-plane response (for example 30s)]:DURATION:_default' \
+'--request-timeout=[Maximum total time for one control-plane request (for example 1m)]:DURATION:_default' \
+'--retry=[Retry replay-safe API requests after transient failures]:COUNT:_default' \
+'--profile=[Isolate credentials and unlock state under a named profile]:NAME:_default' \
+'--config-dir=[Override the base directory used for credentials and local unlock state]:PATH:_files' \
+'--password-stdin[Read the account password from stdin if resolving the project requires unlock]' \
+'(--format)--json[Emit compact JSON instead of human-readable output]' \
+'--no-pager[Disable paging (equivalent to --pager never)]' \
+'(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
+'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
+'--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
+'--offline[Read only from the encrypted local snapshot and never access the network]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+':agent_id:_default' \
+':task_id:_default' \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+":: :_sealtask__subcmd__agents__subcmd__help_commands" \
+"*::: :->help" \
+&& ret=0
+
+    case $state in
+    (help)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:sealtask-agents-help-command-$line[1]:"
+        case $line[1] in
+            (register)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(approve)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(list)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(revoke)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(assign)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(unassign)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+        esac
+    ;;
+esac
+;;
 (stats)
 _arguments "${_arguments_options[@]}" : \
 '--api-url=[SealTask API base URL]:API_URL:_default' \
@@ -3899,6 +4163,46 @@ esac
     ;;
 esac
 ;;
+(agents)
+_arguments "${_arguments_options[@]}" : \
+":: :_sealtask__subcmd__help__subcmd__agents_commands" \
+"*::: :->agents" \
+&& ret=0
+
+    case $state in
+    (agents)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:sealtask-help-agents-command-$line[1]:"
+        case $line[1] in
+            (register)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(approve)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(list)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(revoke)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(assign)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(unassign)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
 (stats)
 _arguments "${_arguments_options[@]}" : \
 && ret=0
@@ -4125,6 +4429,7 @@ _sealtask_commands() {
 'projects:List, inspect, archive, or restore projects and inspect saved context' \
 'lists:List, inspect, archive, or restore projects and inspect saved context' \
 'tasks:List, inspect, create, update, move, or delete tasks' \
+'agents:Register, approve, inspect, assign, or revoke project-scoped agent identities' \
 'stats:Show current dashboard task counts' \
 'activity:Inspect or continuously follow recent account activity' \
 'browse:Browse cached or live decrypted projects and tasks in a private TTY' \
@@ -4170,6 +4475,97 @@ _sealtask__subcmd__activity__subcmd__help__subcmd__follow_commands() {
 _sealtask__subcmd__activity__subcmd__help__subcmd__help_commands() {
     local commands; commands=()
     _describe -t commands 'sealtask activity help help commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__agents_commands] )) ||
+_sealtask__subcmd__agents_commands() {
+    local commands; commands=(
+'register:Create a local keypair and short-lived enrollment for this project checkout' \
+'approve:Approve an enrollment and provision its encrypted project key and instructions' \
+'list:List agent identities owned by this account, or identities stored locally' \
+'revoke:Revoke an agent and invalidate all of its sessions and runnable grants' \
+'assign:Assign one project task to an active agent' \
+'unassign:Remove an agent assignment from one project task' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'sealtask agents commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__agents__subcmd__approve_commands] )) ||
+_sealtask__subcmd__agents__subcmd__approve_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask agents approve commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__agents__subcmd__assign_commands] )) ||
+_sealtask__subcmd__agents__subcmd__assign_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask agents assign commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__agents__subcmd__help_commands] )) ||
+_sealtask__subcmd__agents__subcmd__help_commands() {
+    local commands; commands=(
+'register:Create a local keypair and short-lived enrollment for this project checkout' \
+'approve:Approve an enrollment and provision its encrypted project key and instructions' \
+'list:List agent identities owned by this account, or identities stored locally' \
+'revoke:Revoke an agent and invalidate all of its sessions and runnable grants' \
+'assign:Assign one project task to an active agent' \
+'unassign:Remove an agent assignment from one project task' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'sealtask agents help commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__agents__subcmd__help__subcmd__approve_commands] )) ||
+_sealtask__subcmd__agents__subcmd__help__subcmd__approve_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask agents help approve commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__agents__subcmd__help__subcmd__assign_commands] )) ||
+_sealtask__subcmd__agents__subcmd__help__subcmd__assign_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask agents help assign commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__agents__subcmd__help__subcmd__help_commands] )) ||
+_sealtask__subcmd__agents__subcmd__help__subcmd__help_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask agents help help commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__agents__subcmd__help__subcmd__list_commands] )) ||
+_sealtask__subcmd__agents__subcmd__help__subcmd__list_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask agents help list commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__agents__subcmd__help__subcmd__register_commands] )) ||
+_sealtask__subcmd__agents__subcmd__help__subcmd__register_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask agents help register commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__agents__subcmd__help__subcmd__revoke_commands] )) ||
+_sealtask__subcmd__agents__subcmd__help__subcmd__revoke_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask agents help revoke commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__agents__subcmd__help__subcmd__unassign_commands] )) ||
+_sealtask__subcmd__agents__subcmd__help__subcmd__unassign_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask agents help unassign commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__agents__subcmd__list_commands] )) ||
+_sealtask__subcmd__agents__subcmd__list_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask agents list commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__agents__subcmd__register_commands] )) ||
+_sealtask__subcmd__agents__subcmd__register_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask agents register commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__agents__subcmd__revoke_commands] )) ||
+_sealtask__subcmd__agents__subcmd__revoke_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask agents revoke commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__agents__subcmd__unassign_commands] )) ||
+_sealtask__subcmd__agents__subcmd__unassign_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask agents unassign commands' commands "$@"
 }
 (( $+functions[_sealtask__subcmd__auth_commands] )) ||
 _sealtask__subcmd__auth_commands() {
@@ -4524,6 +4920,7 @@ _sealtask__subcmd__help_commands() {
 'pick:Choose or resolve a project to activate, or interactively print a task selector' \
 'projects:List, inspect, archive, or restore projects and inspect saved context' \
 'tasks:List, inspect, create, update, move, or delete tasks' \
+'agents:Register, approve, inspect, assign, or revoke project-scoped agent identities' \
 'stats:Show current dashboard task counts' \
 'activity:Inspect or continuously follow recent account activity' \
 'browse:Browse cached or live decrypted projects and tasks in a private TTY' \
@@ -4550,6 +4947,48 @@ _sealtask__subcmd__help__subcmd__activity_commands() {
 _sealtask__subcmd__help__subcmd__activity__subcmd__follow_commands() {
     local commands; commands=()
     _describe -t commands 'sealtask help activity follow commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__agents_commands] )) ||
+_sealtask__subcmd__help__subcmd__agents_commands() {
+    local commands; commands=(
+'register:Create a local keypair and short-lived enrollment for this project checkout' \
+'approve:Approve an enrollment and provision its encrypted project key and instructions' \
+'list:List agent identities owned by this account, or identities stored locally' \
+'revoke:Revoke an agent and invalidate all of its sessions and runnable grants' \
+'assign:Assign one project task to an active agent' \
+'unassign:Remove an agent assignment from one project task' \
+    )
+    _describe -t commands 'sealtask help agents commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__agents__subcmd__approve_commands] )) ||
+_sealtask__subcmd__help__subcmd__agents__subcmd__approve_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help agents approve commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__agents__subcmd__assign_commands] )) ||
+_sealtask__subcmd__help__subcmd__agents__subcmd__assign_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help agents assign commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__agents__subcmd__list_commands] )) ||
+_sealtask__subcmd__help__subcmd__agents__subcmd__list_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help agents list commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__agents__subcmd__register_commands] )) ||
+_sealtask__subcmd__help__subcmd__agents__subcmd__register_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help agents register commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__agents__subcmd__revoke_commands] )) ||
+_sealtask__subcmd__help__subcmd__agents__subcmd__revoke_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help agents revoke commands' commands "$@"
+}
+(( $+functions[_sealtask__subcmd__help__subcmd__agents__subcmd__unassign_commands] )) ||
+_sealtask__subcmd__help__subcmd__agents__subcmd__unassign_commands() {
+    local commands; commands=()
+    _describe -t commands 'sealtask help agents unassign commands' commands "$@"
 }
 (( $+functions[_sealtask__subcmd__help__subcmd__auth_commands] )) ||
 _sealtask__subcmd__help__subcmd__auth_commands() {

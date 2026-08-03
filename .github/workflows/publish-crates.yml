@@ -63,6 +63,12 @@ jobs:
             --version "=${version}" \
             --locked \
             --root "${install_root}"
+          cargo install \
+            sealtask-agent \
+            --version "=${version}" \
+            --locked \
+            --root "${install_root}"
           ./scripts/verify-registry-package.sh \
             "${install_root}/bin/sealtask" \
             "${version}"
+          test "$("${install_root}/bin/sealtask-agent" --version)" = "sealtask-agent ${version}"

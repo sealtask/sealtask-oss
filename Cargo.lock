@@ -1119,6 +1119,7 @@ version = "2.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "115531babc129696a58c64a4fef0a8bf9e9698629fb97e9e40767d235cfbcd53"
 dependencies = [
+ "pkcs8",
  "serde",
  "signature",
 ]
@@ -1135,6 +1136,7 @@ dependencies = [
  "sha2",
  "signature",
  "subtle",
+ "zeroize",
 ]
 
 [[package]]
@@ -3192,6 +3194,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "sealtask-agent"
+version = "0.4.0"
+dependencies = [
+ "base64",
+ "chrono",
+ "clap",
+ "libc",
+ "sealtask-client-api",
+ "sealtask-client-auth",
+ "sealtask-client-core",
+ "sealtask-client-crypto",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "uuid",
+ "windows-sys 0.61.2",
+ "zeroize",
+]
+
+[[package]]
 name = "sealtask-client-api"
 version = "0.4.0"
 dependencies = [
@@ -3220,8 +3242,10 @@ dependencies = [
  "cap-std",
  "chrono",
  "dirs",
+ "ed25519-dalek",
  "fs2",
  "generic-array",
+ "hkdf",
  "keyring",
  "libc",
  "opaque-ke",
@@ -3235,6 +3259,7 @@ dependencies = [
  "thiserror 2.0.18",
  "tokio",
  "uuid",
+ "x25519-dalek",
  "zeroize",
 ]
 
@@ -3252,6 +3277,7 @@ dependencies = [
  "argon2",
  "base64",
  "chacha20poly1305",
+ "ed25519-dalek",
  "hkdf",
  "hmac",
  "rand_core 0.6.4",
