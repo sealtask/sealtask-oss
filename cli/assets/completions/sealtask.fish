@@ -1850,7 +1850,7 @@ complete -c sealtask -n "__fish_sealtask_using_subcommand agents; and __fish_see
 complete -c sealtask -n "__fish_sealtask_using_subcommand agents; and __fish_seen_subcommand_from register" -l debug -d 'Emit maximum redacted diagnostic telemetry to stderr'
 complete -c sealtask -n "__fish_sealtask_using_subcommand agents; and __fish_seen_subcommand_from register" -l offline -d 'Read only from the encrypted local snapshot and never access the network'
 complete -c sealtask -n "__fish_sealtask_using_subcommand agents; and __fish_seen_subcommand_from register" -s h -l help -d 'Print help (see more with \'--help\')'
-complete -c sealtask -n "__fish_sealtask_using_subcommand agents; and __fish_seen_subcommand_from approve" -l enrollment-code-file -d 'File containing the one-time enrollment code (use \'-\' for stdin)' -r -F
+complete -c sealtask -n "__fish_sealtask_using_subcommand agents; and __fish_seen_subcommand_from approve" -l enrollment-code-file -d 'File containing the long-lived enrollment/grant-signing secret (use \'-\' for stdin)' -r -F
 complete -c sealtask -n "__fish_sealtask_using_subcommand agents; and __fish_seen_subcommand_from approve" -l fingerprint -d 'Fingerprint confirmed with the agent operator out of band' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand agents; and __fish_seen_subcommand_from approve" -l handle -d 'Stable lowercase project-local agent handle' -r
 complete -c sealtask -n "__fish_sealtask_using_subcommand agents; and __fish_seen_subcommand_from approve" -l display-name -d 'Human-readable agent name; defaults to the handle' -r

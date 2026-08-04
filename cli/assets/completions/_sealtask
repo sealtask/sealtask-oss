@@ -2519,7 +2519,7 @@ _arguments "${_arguments_options[@]}" : \
 ;;
 (approve)
 _arguments "${_arguments_options[@]}" : \
-'--enrollment-code-file=[File containing the one-time enrollment code (use '\''-'\'' for stdin)]:PATH:_files' \
+'--enrollment-code-file=[File containing the long-lived enrollment/grant-signing secret (use '\''-'\'' for stdin)]:PATH:_files' \
 '--fingerprint=[Fingerprint confirmed with the agent operator out of band]:FINGERPRINT:_default' \
 '--handle=[Stable lowercase project-local agent handle]:HANDLE:_default' \
 '--display-name=[Human-readable agent name; defaults to the handle]:DISPLAY_NAME:_default' \

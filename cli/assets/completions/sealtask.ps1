@@ -2201,7 +2201,7 @@ Register-ArgumentCompleter -Native -CommandName 'sealtask' -ScriptBlock {
             break
         }
         'sealtask;agents;approve' {
-            [CompletionResult]::new('--enrollment-code-file', '--enrollment-code-file', [CompletionResultType]::ParameterName, 'File containing the one-time enrollment code (use ''-'' for stdin)')
+            [CompletionResult]::new('--enrollment-code-file', '--enrollment-code-file', [CompletionResultType]::ParameterName, 'File containing the long-lived enrollment/grant-signing secret (use ''-'' for stdin)')
             [CompletionResult]::new('--fingerprint', '--fingerprint', [CompletionResultType]::ParameterName, 'Fingerprint confirmed with the agent operator out of band')
             [CompletionResult]::new('--handle', '--handle', [CompletionResultType]::ParameterName, 'Stable lowercase project-local agent handle')
             [CompletionResult]::new('--display-name', '--display-name', [CompletionResultType]::ParameterName, 'Human-readable agent name; defaults to the handle')
