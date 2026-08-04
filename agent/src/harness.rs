@@ -29,6 +29,9 @@ const MAX_FINAL_MESSAGE_BYTES: u64 = 128 * 1024;
 const CODEX_SUBPROCESS_ENV_ALLOWLIST: &str =
     r#"shell_environment_policy.include_only=["PATH","TMPDIR","LANG","LC_ALL"]"#;
 
+#[cfg(unix)]
+static PROCESS_TREE_OWNERSHIP: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+
 #[derive(Debug)]
 pub(crate) struct HarnessOutput {
     pub(crate) succeeded: bool,
@@ -64,6 +67,7 @@ pub(crate) struct ProcessTreeGuard {
     process_group_id: Option<i32>,
     owner_process_id: i32,
     baseline_children: HashSet<i32>,
+    _exclusive_ownership: tokio::sync::MutexGuard<'static, ()>,
 }
 
 #[cfg(windows)]
@@ -75,6 +79,7 @@ pub(crate) struct ProcessTreeGuard {
 pub(crate) struct ProcessTreeConfiguration {
     owner_process_id: i32,
     baseline_children: HashSet<i32>,
+    exclusive_ownership: tokio::sync::MutexGuard<'static, ()>,
 }
 
 #[cfg(windows)]
@@ -114,6 +119,7 @@ impl ProcessTreeGuard {
             process_group_id: Some(process_group_id),
             owner_process_id: configuration.owner_process_id,
             baseline_children: configuration.baseline_children,
+            _exclusive_ownership: configuration.exclusive_ownership,
         })
     }
 
@@ -287,7 +293,7 @@ impl CodexHarness {
             .stderr(Stdio::piped())
             .kill_on_drop(true);
         apply_harness_environment(&mut command);
-        let process_tree_configuration = configure_process_tree(&mut command)?;
+        let process_tree_configuration = configure_process_tree(&mut command).await?;
 
         let mut child = command.spawn().map_err(|error| {
             PublicError::unexpected(format!("failed to launch Codex harness: {error}"))
@@ -373,13 +379,17 @@ fn apply_harness_environment(command: &mut Command) {
     }
 }
 
-pub(crate) fn configure_process_tree(
+pub(crate) async fn configure_process_tree(
     command: &mut Command,
 ) -> PublicResult<ProcessTreeConfiguration> {
     #[cfg(unix)]
     {
         use std::os::unix::process::CommandExt as _;
 
+        // Adopted descendants lose their original ancestry after setsid(2) or
+        // double-fork daemonization. Keep the baseline snapshot, spawn, and
+        // cleanup exclusive so one contained tree can never claim another.
+        let exclusive_ownership = PROCESS_TREE_OWNERSHIP.lock().await;
         #[cfg(target_os = "linux")]
         enable_child_subreaper()?;
         let owner_process_id = i32::try_from(std::process::id())
@@ -394,6 +404,7 @@ pub(crate) fn configure_process_tree(
         Ok(ProcessTreeConfiguration {
             owner_process_id,
             baseline_children,
+            exclusive_ownership,
         })
     }
     #[cfg(windows)]
@@ -901,7 +912,9 @@ mod tests {
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .kill_on_drop(true);
-        let configuration = configure_process_tree(&mut command).expect("configure process tree");
+        let configuration = configure_process_tree(&mut command)
+            .await
+            .expect("configure process tree");
         let mut child = command.spawn().expect("spawn process tree fixture");
         let process_group_id = i32::try_from(child.id().expect("fixture process ID"))
             .expect("fixture process ID fits platform");
@@ -940,7 +953,9 @@ mod tests {
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .kill_on_drop(true);
-        let configuration = configure_process_tree(&mut command).expect("configure process tree");
+        let configuration = configure_process_tree(&mut command)
+            .await
+            .expect("configure process tree");
         let mut child = command.spawn().expect("spawn process tree fixture");
         let process_group_id = i32::try_from(child.id().expect("fixture process ID"))
             .expect("fixture process ID fits platform");
@@ -987,7 +1002,9 @@ mod tests {
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .kill_on_drop(true);
-        let configuration = configure_process_tree(&mut command).expect("configure process tree");
+        let configuration = configure_process_tree(&mut command)
+            .await
+            .expect("configure process tree");
         let mut child = command.spawn().expect("spawn process identity fixture");
         let process_id = i32::try_from(child.id().expect("fixture process ID"))
             .expect("fixture process ID fits platform");
@@ -1111,7 +1128,9 @@ mod tests {
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .kill_on_drop(true);
-        let configuration = configure_process_tree(&mut command).expect("configure escaped tree");
+        let configuration = configure_process_tree(&mut command)
+            .await
+            .expect("configure escaped tree");
         let mut child = command.spawn().expect("spawn escaped process tree fixture");
         let mut guard =
             ProcessTreeGuard::new(&child, configuration).expect("own escaped process tree");
@@ -1170,7 +1189,9 @@ mod tests {
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .kill_on_drop(true);
-        let configuration = configure_process_tree(&mut command).expect("configure process job");
+        let configuration = configure_process_tree(&mut command)
+            .await
+            .expect("configure process job");
         let mut child = command.spawn().expect("spawn suspended process fixture");
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
         assert!(

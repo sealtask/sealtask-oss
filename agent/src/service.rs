@@ -1546,7 +1546,7 @@ async fn git_output<const N: usize>(repository: &Path, args: [&str; N]) -> Publi
         .stderr(Stdio::null());
     apply_git_environment(&mut command);
     command.kill_on_drop(true);
-    let process_tree_configuration = configure_process_tree(&mut command)?;
+    let process_tree_configuration = configure_process_tree(&mut command).await?;
     let mut child = command.spawn().map_err(|error| {
         PublicError::unexpected(format!("failed to run git for agent repository: {error}"))
     })?;
@@ -1619,7 +1619,7 @@ async fn create_run_worktree(
         .stderr(Stdio::null())
         .kill_on_drop(true);
     apply_git_environment(&mut command);
-    let process_tree_configuration = configure_process_tree(&mut command)?;
+    let process_tree_configuration = configure_process_tree(&mut command).await?;
     let mut child = command.spawn().map_err(|error| {
         PublicError::unexpected(format!("failed to create agent run worktree: {error}"))
     })?;
@@ -2361,21 +2361,61 @@ mod tests {
         assert!(git_object_id_length("unknown").is_err());
     }
 
-    async fn initialize_git_repository(repository: &Path) {
-        let status = Command::new("git")
-            .arg("init")
-            .arg(repository)
+    async fn run_git_fixture_command(mut command: Command, context: &str) {
+        command
             .stdin(Stdio::null())
             .stdout(Stdio::null())
             .stderr(Stdio::null())
-            .status()
+            .kill_on_drop(true);
+        apply_git_environment(&mut command);
+        let configuration = configure_process_tree(&mut command)
             .await
-            .expect("initialize Git fixture");
-        assert!(status.success(), "initialize Git fixture");
-        let status = Command::new("git")
-            .arg("-C")
-            .arg(repository)
-            .args([
+            .expect("configure Git fixture process tree");
+        let mut child = command.spawn().expect(context);
+        let mut process_tree =
+            ProcessTreeGuard::new(&child, configuration).expect("own Git fixture process tree");
+        resume_process_tree(&child).expect("resume Git fixture process tree");
+        let status = wait_for_process_tree(&mut child, &mut process_tree)
+            .await
+            .expect(context);
+        assert!(status.success(), "{context}");
+    }
+
+    async fn initialize_git_repository(repository: &Path) {
+        let mut command = Command::new("git");
+        command.arg("init").arg(repository);
+        run_git_fixture_command(command, "initialize Git fixture").await;
+
+        let mut command = Command::new("git");
+        command.arg("-C").arg(repository).args([
+            "-c",
+            "user.name=SealTask Test",
+            "-c",
+            "user.email=agent@example.test",
+            "-c",
+            "commit.gpgsign=false",
+            "commit",
+            "--allow-empty",
+            "-m",
+            "fixture",
+        ]);
+        run_git_fixture_command(command, "commit Git fixture").await;
+    }
+
+    #[tokio::test]
+    async fn repository_revision_accepts_sha1_and_sha256_repositories() {
+        let temporary = tempfile::tempdir().expect("git object-format fixture");
+        for (object_format, expected_length) in [("sha1", 40), ("sha256", 64)] {
+            let repository = temporary.path().join(object_format);
+            let mut command = Command::new("git");
+            command
+                .arg("init")
+                .arg(format!("--object-format={object_format}"))
+                .arg(&repository);
+            run_git_fixture_command(command, "initialize object-format fixture").await;
+
+            let mut command = Command::new("git");
+            command.arg("-C").arg(&repository).args([
                 "-c",
                 "user.name=SealTask Test",
                 "-c",
@@ -2386,54 +2426,8 @@ mod tests {
                 "--allow-empty",
                 "-m",
                 "fixture",
-            ])
-            .stdin(Stdio::null())
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .status()
-            .await
-            .expect("commit Git fixture");
-        assert!(status.success(), "commit Git fixture");
-    }
-
-    #[tokio::test]
-    async fn repository_revision_accepts_sha1_and_sha256_repositories() {
-        let temporary = tempfile::tempdir().expect("git object-format fixture");
-        for (object_format, expected_length) in [("sha1", 40), ("sha256", 64)] {
-            let repository = temporary.path().join(object_format);
-            let status = Command::new("git")
-                .arg("init")
-                .arg(format!("--object-format={object_format}"))
-                .arg(&repository)
-                .stdin(Stdio::null())
-                .stdout(Stdio::null())
-                .stderr(Stdio::null())
-                .status()
-                .await
-                .expect("initialize object-format fixture");
-            assert!(status.success(), "git init {object_format} fixture");
-            let status = Command::new("git")
-                .arg("-C")
-                .arg(&repository)
-                .args([
-                    "-c",
-                    "user.name=SealTask Test",
-                    "-c",
-                    "user.email=agent@example.test",
-                    "-c",
-                    "commit.gpgsign=false",
-                    "commit",
-                    "--allow-empty",
-                    "-m",
-                    "fixture",
-                ])
-                .stdin(Stdio::null())
-                .stdout(Stdio::null())
-                .stderr(Stdio::null())
-                .status()
-                .await
-                .expect("commit object-format fixture");
-            assert!(status.success(), "git commit {object_format} fixture");
+            ]);
+            run_git_fixture_command(command, "commit object-format fixture").await;
 
             let revision = repository_revision(&repository)
                 .await
