@@ -119,6 +119,12 @@ struct RunPaths {
     worktree: PathBuf,
 }
 
+struct ClaimExecution<'a> {
+    claim: &'a AgentClaimResponse,
+    lease_token: &'a str,
+    run_deadline: tokio::time::Instant,
+}
+
 #[derive(Debug)]
 struct PreparedClaim {
     project_key: SymmetricKey,
@@ -483,6 +489,11 @@ impl AgentService {
             }
         };
         let paths = run_paths(identity.agent_id, run_id)?;
+        let claim_execution = ClaimExecution {
+            claim: &claim,
+            lease_token: lease_token.as_str(),
+            run_deadline,
+        };
 
         let execution = if shutdown_requested(shutdown) {
             VersionedHarnessOutput::cancelled(initial_lease)
@@ -492,12 +503,10 @@ impl AgentService {
                     identity,
                     keys,
                     session,
-                    &claim,
-                    lease_token.as_str(),
+                    &claim_execution,
                     source_revision,
                     &paths,
                     initial_lease,
-                    run_deadline,
                     shutdown,
                 )
                 .await
@@ -507,13 +516,11 @@ impl AgentService {
                         identity,
                         keys,
                         session,
-                        &claim,
-                        lease_token.as_str(),
+                        &claim_execution,
                         &paths,
                         prompt.as_str(),
                         harness,
                         lease,
-                        run_deadline,
                         shutdown,
                     )
                     .await?
@@ -533,8 +540,8 @@ impl AgentService {
             identity,
             keys,
             session,
-            &claim,
-            lease_token.as_str(),
+            claim_execution.claim,
+            claim_execution.lease_token,
             &execution.lease,
             status,
             Some(result.base64.as_str()),
@@ -560,22 +567,18 @@ impl AgentService {
         identity: &AgentIdentity,
         keys: &AgentKeyMaterial,
         session: &mut AgentSession,
-        claim: &AgentClaimResponse,
-        lease_token: &str,
+        claim_execution: &ClaimExecution<'_>,
         source_revision: &str,
         paths: &RunPaths,
         initial_lease: RunLeaseState,
-        run_deadline: tokio::time::Instant,
         shutdown: &mut watch::Receiver<bool>,
     ) -> WorktreePreparation {
         self.supervise_worktree_setup(
             identity,
             keys,
             session,
-            claim,
-            lease_token,
+            claim_execution,
             initial_lease,
-            run_deadline,
             shutdown,
             create_run_worktree(&identity.project.repository_root, source_revision, paths),
             HEARTBEAT_INTERVAL,
@@ -589,10 +592,8 @@ impl AgentService {
         identity: &AgentIdentity,
         keys: &AgentKeyMaterial,
         session: &mut AgentSession,
-        claim: &AgentClaimResponse,
-        lease_token: &str,
+        claim_execution: &ClaimExecution<'_>,
         initial_lease: RunLeaseState,
-        run_deadline: tokio::time::Instant,
         shutdown: &mut watch::Receiver<bool>,
         setup: F,
         heartbeat_interval: Duration,
@@ -603,13 +604,13 @@ impl AgentService {
         // Confirm and refresh the lease before starting any potentially slow
         // local setup. This closes the claim-to-first-heartbeat window.
         let mut lease = match tokio::time::timeout_at(
-            run_deadline,
+            claim_execution.run_deadline,
             self.heartbeat_with_retry(
                 identity,
                 keys,
                 session,
-                claim.run.id,
-                lease_token,
+                claim_execution.claim.run.id,
+                claim_execution.lease_token,
                 &initial_lease,
             ),
         )
@@ -637,7 +638,7 @@ impl AgentService {
             tokio::time::Instant::now() + heartbeat_interval,
             heartbeat_interval,
         );
-        let setup_timeout = tokio::time::sleep_until(run_deadline);
+        let setup_timeout = tokio::time::sleep_until(claim_execution.run_deadline);
         tokio::pin!(setup_timeout);
 
         loop {
@@ -662,13 +663,13 @@ impl AgentService {
                 }
                 _ = heartbeat.tick() => {
                     match tokio::time::timeout_at(
-                        run_deadline,
+                        claim_execution.run_deadline,
                         self.heartbeat_with_retry(
                             identity,
                             keys,
                             session,
-                            claim.run.id,
-                            lease_token,
+                            claim_execution.claim.run.id,
+                            claim_execution.lease_token,
                             &lease,
                         ),
                     ).await {
@@ -703,8 +704,15 @@ impl AgentService {
         // confirmed lease, even when setup completed just before a scheduled
         // heartbeat.
         match tokio::time::timeout_at(
-            run_deadline,
-            self.heartbeat_with_retry(identity, keys, session, claim.run.id, lease_token, &lease),
+            claim_execution.run_deadline,
+            self.heartbeat_with_retry(
+                identity,
+                keys,
+                session,
+                claim_execution.claim.run.id,
+                claim_execution.lease_token,
+                &lease,
+            ),
         )
         .await
         {
@@ -728,13 +736,11 @@ impl AgentService {
         identity: &AgentIdentity,
         keys: &AgentKeyMaterial,
         session: &mut AgentSession,
-        claim: &AgentClaimResponse,
-        lease_token: &str,
+        claim_execution: &ClaimExecution<'_>,
         paths: &RunPaths,
         prompt: &str,
         harness: &dyn Harness,
         mut lease: RunLeaseState,
-        run_deadline: tokio::time::Instant,
         shutdown: &mut watch::Receiver<bool>,
     ) -> PublicResult<VersionedHarnessOutput> {
         let execution = harness.run(&paths.worktree, &paths.run_directory, prompt);
@@ -743,7 +749,7 @@ impl AgentService {
             tokio::time::Instant::now() + HEARTBEAT_INTERVAL,
             HEARTBEAT_INTERVAL,
         );
-        let timeout = tokio::time::sleep_until(run_deadline);
+        let timeout = tokio::time::sleep_until(claim_execution.run_deadline);
         tokio::pin!(timeout);
 
         loop {
@@ -766,13 +772,13 @@ impl AgentService {
                 }
                 _ = heartbeat.tick() => {
                     match tokio::time::timeout_at(
-                        run_deadline,
+                        claim_execution.run_deadline,
                         self.heartbeat_with_retry(
                             identity,
                             keys,
                             session,
-                            claim.run.id,
-                            lease_token,
+                            claim_execution.claim.run.id,
+                            claim_execution.lease_token,
                             &lease,
                         ),
                     ).await {
@@ -1917,15 +1923,18 @@ mod tests {
         let heartbeats_before_setup = Arc::new(AtomicUsize::new(0));
         let observed_before_setup = Arc::clone(&heartbeats_before_setup);
         let setup_heartbeat_count = Arc::clone(&heartbeat_count);
+        let claim_execution = ClaimExecution {
+            claim: &claim,
+            lease_token: "lease-token",
+            run_deadline: tokio::time::Instant::now() + Duration::from_secs(5),
+        };
         let prepared = service
             .supervise_worktree_setup(
                 &identity,
                 &keys,
                 &mut session,
-                &claim,
-                "lease-token",
+                &claim_execution,
                 RunLeaseState::from_claim(&claim),
-                tokio::time::Instant::now() + Duration::from_secs(5),
                 &mut shutdown,
                 async move {
                     observed_before_setup.store(
@@ -1978,15 +1987,18 @@ mod tests {
         let service = AgentService::new(Uuid::now_v7(), None, Duration::from_secs(60));
         let (_shutdown_sender, mut shutdown) = watch::channel(false);
         let started_at = tokio::time::Instant::now();
+        let claim_execution = ClaimExecution {
+            claim: &claim,
+            lease_token: "lease-token",
+            run_deadline: started_at + Duration::from_millis(100),
+        };
         let prepared = service
             .supervise_worktree_setup(
                 &identity,
                 &keys,
                 &mut session,
-                &claim,
-                "lease-token",
+                &claim_execution,
                 RunLeaseState::from_claim(&claim),
-                started_at + Duration::from_millis(100),
                 &mut shutdown,
                 std::future::pending::<PublicResult<()>>(),
                 Duration::from_secs(1),
