@@ -165,18 +165,15 @@ async fn run_batch_file(
         Err(error) => return Err(error),
     };
 
-    schedule_operations(
-        runtime,
+    let options = SchedulerOptions {
         format,
-        &mut pending,
         total,
-        usize::from(args.jobs),
-        args.continue_on_error,
-        args.dry_run,
+        jobs: usize::from(args.jobs),
+        continue_on_error: args.continue_on_error,
+        dry_run: args.dry_run,
         checkpoint,
-        &mut signal,
-    )
-    .await
+    };
+    schedule_operations(runtime, &mut pending, options, &mut signal).await
 }
 
 async fn read_batch_input_interruptibly(
@@ -794,40 +791,96 @@ impl RunningOperation {
     }
 }
 
-#[allow(clippy::too_many_arguments)]
-async fn schedule_operations(
-    runtime: &RuntimeClient,
+struct SchedulerOptions {
     format: OutputFormat,
-    pending: &mut VecDeque<ResolvedItem>,
     total: usize,
     jobs: usize,
     continue_on_error: bool,
     dry_run: bool,
     checkpoint: Option<Arc<CheckpointStore>>,
+}
+
+struct SchedulerOutcomeState {
+    active_targets: HashSet<(Uuid, Uuid)>,
+    counters: OutcomeCounters,
+    interrupted: bool,
+    ambiguous_interruption: bool,
+    session_ambiguous_interruption: bool,
+    first_output_error: Option<CliError>,
+    fatal_exit_code: Option<i32>,
+    checkpoint_io_failed: bool,
+}
+
+impl SchedulerOutcomeState {
+    fn new(interrupted: bool) -> Self {
+        Self {
+            active_targets: HashSet::new(),
+            counters: OutcomeCounters::default(),
+            interrupted,
+            ambiguous_interruption: false,
+            session_ambiguous_interruption: false,
+            first_output_error: None,
+            fatal_exit_code: None,
+            checkpoint_io_failed: false,
+        }
+    }
+
+    fn record(
+        &mut self,
+        format: OutputFormat,
+        target: Option<(Uuid, Uuid)>,
+        outcome: OperationOutcome,
+        continue_on_error: bool,
+    ) -> bool {
+        if let Some(target) = target {
+            self.active_targets.remove(&target);
+        }
+        self.counters.record(&outcome);
+        self.fatal_exit_code = merge_fatal_exit_code(self.fatal_exit_code, outcome.fatal_exit_code);
+        self.checkpoint_io_failed |= outcome
+            .error
+            .as_ref()
+            .is_some_and(|error| error.code == "checkpoint_io");
+        let outcome_error_code = outcome.error.as_ref().map(|error| error.code.as_str());
+        self.session_ambiguous_interruption |=
+            outcome_error_code == Some(SESSION_OUTCOME_AMBIGUOUS);
+        self.ambiguous_interruption |= outcome_error_code
+            .is_some_and(|code| matches!(code, "outcome_ambiguous" | SESSION_OUTCOME_AMBIGUOUS));
+        let mut should_stop = outcome.fatal_exit_code.is_some();
+        if outcome.status == OutcomeStatus::Interrupted {
+            self.interrupted = true;
+            should_stop = true;
+        }
+        if let Err(error) = emit_outcome(format, &outcome) {
+            self.first_output_error.get_or_insert(error);
+            should_stop = true;
+        }
+        should_stop || (outcome.status == OutcomeStatus::Failed && !continue_on_error)
+    }
+}
+
+async fn schedule_operations(
+    runtime: &RuntimeClient,
+    pending: &mut VecDeque<ResolvedItem>,
+    options: SchedulerOptions,
     signal: &mut SignalReceiver,
 ) -> CliResult<()> {
     let mut running = JoinSet::new();
     let mut running_operations = HashMap::<TaskId, RunningOperation>::new();
-    let mut active_targets = HashSet::new();
-    let mut counters = OutcomeCounters::default();
     let mut stop_scheduling = false;
-    let mut interrupted = signal.level().map_err(signal_listener_error)? > 0;
+    let mut outcomes =
+        SchedulerOutcomeState::new(signal.level().map_err(signal_listener_error)? > 0);
     let mut forced = false;
-    let mut ambiguous_interruption = false;
-    let mut session_ambiguous_interruption = false;
-    let mut first_output_error = None;
     let mut signal_error = None;
-    let mut fatal_exit_code = None;
-    let mut checkpoint_io_failed = false;
 
     loop {
-        while !stop_scheduling && !interrupted && running.len() < jobs {
+        while !stop_scheduling && !outcomes.interrupted && running.len() < options.jobs {
             if signal.level().map_err(signal_listener_error)? > 0 {
-                interrupted = true;
+                outcomes.interrupted = true;
                 stop_scheduling = true;
                 break;
             }
-            let Some(index) = next_schedulable(pending, &active_targets) else {
+            let Some(index) = next_schedulable(pending, &outcomes.active_targets) else {
                 break;
             };
             let item = pending
@@ -835,29 +888,18 @@ async fn schedule_operations(
                 .expect("next_schedulable returned an existing item");
             match item {
                 ResolvedItem::Immediate(outcome) => {
-                    stop_scheduling |= record_scheduled_outcome(
-                        format,
-                        None,
-                        outcome,
-                        continue_on_error,
-                        &mut active_targets,
-                        &mut counters,
-                        &mut interrupted,
-                        &mut ambiguous_interruption,
-                        &mut session_ambiguous_interruption,
-                        &mut first_output_error,
-                        &mut fatal_exit_code,
-                        &mut checkpoint_io_failed,
-                    );
+                    stop_scheduling |=
+                        outcomes.record(options.format, None, outcome, options.continue_on_error);
                 }
                 ResolvedItem::Mutation(operation) => {
                     let target = operation.target();
                     if let Some(target) = target {
-                        active_targets.insert(target);
+                        outcomes.active_targets.insert(target);
                     }
                     let (runtime, operation_cancellation) =
                         runtime_for_scheduled_operation(runtime);
-                    let checkpoint = checkpoint.clone();
+                    let checkpoint = options.checkpoint.clone();
+                    let dry_run = options.dry_run;
                     let operation_signal = signal.clone();
                     let progress = OperationProgress::new();
                     let credential_refresh_interrupted = Arc::new(AtomicBool::new(false));
@@ -891,7 +933,7 @@ async fn schedule_operations(
             changed = signal.changed() => {
                 match changed {
                     Ok(level) => {
-                        interrupted = true;
+                        outcomes.interrupted = true;
                         stop_scheduling = true;
                         for operation in running_operations.values() {
                             operation.observe_signal();
@@ -907,19 +949,11 @@ async fn schedule_operations(
                                             task_id,
                                             outcome,
                                         );
-                                        record_scheduled_outcome(
-                                            format,
+                                        outcomes.record(
+                                            options.format,
                                             target,
                                             outcome,
-                                            continue_on_error,
-                                            &mut active_targets,
-                                            &mut counters,
-                                            &mut interrupted,
-                                            &mut ambiguous_interruption,
-                                            &mut session_ambiguous_interruption,
-                                            &mut first_output_error,
-                                            &mut fatal_exit_code,
-                                            &mut checkpoint_io_failed,
+                                            options.continue_on_error,
                                         );
                                     }
                                 }
@@ -933,19 +967,11 @@ async fn schedule_operations(
                             for operation in cancelled {
                                 let target = operation.target;
                                 let outcome = operation.forced_outcome();
-                                record_scheduled_outcome(
-                                    format,
+                                outcomes.record(
+                                    options.format,
                                     target,
                                     outcome,
-                                    continue_on_error,
-                                    &mut active_targets,
-                                    &mut counters,
-                                    &mut interrupted,
-                                    &mut ambiguous_interruption,
-                                    &mut session_ambiguous_interruption,
-                                    &mut first_output_error,
-                                    &mut fatal_exit_code,
-                                    &mut checkpoint_io_failed,
+                                    options.continue_on_error,
                                 );
                             }
                             break;
@@ -968,43 +994,27 @@ async fn schedule_operations(
                             task_id,
                             outcome,
                         );
-                        stop_scheduling |= record_scheduled_outcome(
-                            format,
+                        stop_scheduling |= outcomes.record(
+                            options.format,
                             target,
                             outcome,
-                            continue_on_error,
-                            &mut active_targets,
-                            &mut counters,
-                            &mut interrupted,
-                            &mut ambiguous_interruption,
-                            &mut session_ambiguous_interruption,
-                            &mut first_output_error,
-                            &mut fatal_exit_code,
-                            &mut checkpoint_io_failed,
+                            options.continue_on_error,
                         );
                     }
                     Err(error) => {
                         if let Some((target, outcome)) =
                             finalize_join_error(&mut running_operations, error.id())
                         {
-                            stop_scheduling |= record_scheduled_outcome(
-                                format,
+                            stop_scheduling |= outcomes.record(
+                                options.format,
                                 target,
                                 outcome,
-                                continue_on_error,
-                                &mut active_targets,
-                                &mut counters,
-                                &mut interrupted,
-                                &mut ambiguous_interruption,
-                                &mut session_ambiguous_interruption,
-                                &mut first_output_error,
-                                &mut fatal_exit_code,
-                                &mut checkpoint_io_failed,
+                                options.continue_on_error,
                             );
                         } else {
-                            counters.failed += 1;
+                            outcomes.counters.failed += 1;
                             stop_scheduling = true;
-                            fatal_exit_code.get_or_insert(1);
+                            outcomes.fatal_exit_code.get_or_insert(1);
                         }
                     }
                 }
@@ -1018,84 +1028,61 @@ async fn schedule_operations(
                 Ok((task_id, outcome)) => {
                     let (target, outcome) =
                         finalize_joined_outcome(&mut running_operations, task_id, outcome);
-                    record_scheduled_outcome(
-                        format,
-                        target,
-                        outcome,
-                        continue_on_error,
-                        &mut active_targets,
-                        &mut counters,
-                        &mut interrupted,
-                        &mut ambiguous_interruption,
-                        &mut session_ambiguous_interruption,
-                        &mut first_output_error,
-                        &mut fatal_exit_code,
-                        &mut checkpoint_io_failed,
-                    );
+                    outcomes.record(options.format, target, outcome, options.continue_on_error);
                 }
                 Err(error) => {
                     if let Some((target, outcome)) =
                         finalize_join_error(&mut running_operations, error.id())
                     {
-                        record_scheduled_outcome(
-                            format,
-                            target,
-                            outcome,
-                            continue_on_error,
-                            &mut active_targets,
-                            &mut counters,
-                            &mut interrupted,
-                            &mut ambiguous_interruption,
-                            &mut session_ambiguous_interruption,
-                            &mut first_output_error,
-                            &mut fatal_exit_code,
-                            &mut checkpoint_io_failed,
-                        );
+                        outcomes.record(options.format, target, outcome, options.continue_on_error);
                     } else {
-                        counters.failed += 1;
-                        fatal_exit_code.get_or_insert(1);
+                        outcomes.counters.failed += 1;
+                        outcomes.fatal_exit_code.get_or_insert(1);
                     }
                 }
             }
         }
     }
 
-    if let Some(error) = first_output_error {
+    if let Some(error) = outcomes.first_output_error {
         return Err(error);
     }
     let summary = BatchSummary {
-        total,
-        succeeded: counters.succeeded,
-        failed: counters.failed,
-        skipped: counters.skipped,
-        planned: counters.planned,
-        not_run: total.saturating_sub(counters.processed()),
-        interrupted_count: counters.interrupted,
-        interrupted,
+        total: options.total,
+        succeeded: outcomes.counters.succeeded,
+        failed: outcomes.counters.failed,
+        skipped: outcomes.counters.skipped,
+        planned: outcomes.counters.planned,
+        not_run: options.total.saturating_sub(outcomes.counters.processed()),
+        interrupted_count: outcomes.counters.interrupted,
+        interrupted: outcomes.interrupted,
     };
-    emit_summary(format, &summary)?;
+    emit_summary(options.format, &summary)?;
 
     if let Some(error) = signal_error {
         return Err(error);
     }
-    if interrupted {
-        let message = if session_ambiguous_interruption {
+    if outcomes.interrupted {
+        let message = if outcomes.session_ambiguous_interruption {
             "batch interruption stopped waiting while credentials were rotating before durable local persistence was confirmed"
         } else if forced {
-            forced_interruption_message(checkpoint.is_some(), ambiguous_interruption)
+            forced_interruption_message(
+                options.checkpoint.is_some(),
+                outcomes.ambiguous_interruption,
+            )
         } else {
             "batch interrupted; in-flight operations reached a durable boundary and can be resumed"
         };
-        return Err(if session_ambiguous_interruption {
+        return Err(if outcomes.session_ambiguous_interruption {
             batch_session_ambiguous_interruption(message)
-        } else if ambiguous_interruption {
+        } else if outcomes.ambiguous_interruption {
             CliError::interrupted_ambiguous(message, &[])
         } else {
             CliError::interrupted(message, &[])
         });
     }
-    if fatal_exit_code == Some(4) {
-        return Err(if checkpoint_io_failed {
+    if outcomes.fatal_exit_code == Some(4) {
+        return Err(if outcomes.checkpoint_io_failed {
             CliError::checkpoint_io(
                 "batch stopped because checkpoint durability could not be guaranteed",
             )
@@ -1105,17 +1092,18 @@ async fn schedule_operations(
             )
         });
     }
-    if counters.failed > 0 {
-        let completed = counters.succeeded + counters.skipped + counters.planned;
-        if continue_on_error && completed > 0 {
+    if outcomes.counters.failed > 0 {
+        let completed =
+            outcomes.counters.succeeded + outcomes.counters.skipped + outcomes.counters.planned;
+        if options.continue_on_error && completed > 0 {
             return Err(CliError::batch_partial_failure(format!(
                 "{} batch operation(s) failed and {} completed",
-                counters.failed, completed
+                outcomes.counters.failed, completed
             )));
         }
         return Err(PublicError::validation(format!(
             "{} batch operation(s) failed",
-            counters.failed
+            outcomes.counters.failed
         ))
         .into());
     }
@@ -1141,46 +1129,6 @@ fn finalize_join_error(
     let operation = running_operations.remove(&task_id)?;
     let target = operation.target;
     Some((target, operation.join_failure_outcome()))
-}
-
-#[allow(clippy::too_many_arguments)]
-fn record_scheduled_outcome(
-    format: OutputFormat,
-    target: Option<(Uuid, Uuid)>,
-    outcome: OperationOutcome,
-    continue_on_error: bool,
-    active_targets: &mut HashSet<(Uuid, Uuid)>,
-    counters: &mut OutcomeCounters,
-    interrupted: &mut bool,
-    ambiguous_interruption: &mut bool,
-    session_ambiguous_interruption: &mut bool,
-    first_output_error: &mut Option<CliError>,
-    fatal_exit_code: &mut Option<i32>,
-    checkpoint_io_failed: &mut bool,
-) -> bool {
-    if let Some(target) = target {
-        active_targets.remove(&target);
-    }
-    counters.record(&outcome);
-    *fatal_exit_code = merge_fatal_exit_code(*fatal_exit_code, outcome.fatal_exit_code);
-    *checkpoint_io_failed |= outcome
-        .error
-        .as_ref()
-        .is_some_and(|error| error.code == "checkpoint_io");
-    let outcome_error_code = outcome.error.as_ref().map(|error| error.code.as_str());
-    *session_ambiguous_interruption |= outcome_error_code == Some(SESSION_OUTCOME_AMBIGUOUS);
-    *ambiguous_interruption |= outcome_error_code
-        .is_some_and(|code| matches!(code, "outcome_ambiguous" | SESSION_OUTCOME_AMBIGUOUS));
-    let mut should_stop = outcome.fatal_exit_code.is_some();
-    if outcome.status == OutcomeStatus::Interrupted {
-        *interrupted = true;
-        should_stop = true;
-    }
-    if let Err(error) = emit_outcome(format, &outcome) {
-        first_output_error.get_or_insert(error);
-        should_stop = true;
-    }
-    should_stop || (outcome.status == OutcomeStatus::Failed && !continue_on_error)
 }
 
 fn forced_interruption_message(
