@@ -119,6 +119,12 @@ struct RunPaths {
     worktree: PathBuf,
 }
 
+#[derive(Debug)]
+struct PreparedClaim {
+    project_key: SymmetricKey,
+    prompt: Zeroizing<String>,
+}
+
 impl AgentService {
     pub(crate) fn new(
         runner_instance_id: Uuid,
@@ -450,7 +456,10 @@ impl AgentService {
         let run_id = claim.run.id;
         let lease_token = Zeroizing::new(std::mem::take(&mut claim.lease_token));
         let initial_lease = RunLeaseState::from_claim(&claim);
-        let (project_key, prompt) = match prepare_claim(identity, keys, &claim) {
+        let PreparedClaim {
+            project_key,
+            prompt,
+        } = match prepare_claim(identity, keys, &claim) {
             Ok(prepared) => prepared,
             Err(error) => {
                 self.finish_run(
@@ -1343,7 +1352,7 @@ fn prepare_claim(
     identity: &AgentIdentity,
     keys: &AgentKeyMaterial,
     claim: &AgentClaimResponse,
-) -> PublicResult<(SymmetricKey, Zeroizing<String>)> {
+) -> PublicResult<PreparedClaim> {
     if claim.run.work_list_id != identity.project.work_list_id
         || claim.permission_preset != AGENT_PERMISSION_PRESET
         || claim.run.instructions_revision != identity.project.instructions_revision
@@ -1398,7 +1407,10 @@ fn prepare_claim(
         &title,
         &payload,
     ));
-    Ok((project_key, prompt))
+    Ok(PreparedClaim {
+        project_key,
+        prompt,
+    })
 }
 
 #[allow(clippy::too_many_arguments)]
