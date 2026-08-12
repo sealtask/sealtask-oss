@@ -94,16 +94,23 @@ export type NoteUpdateContext = { noteTitle: string }
 export type NoteDeleteContext = { noteTitle: string }
 export type TaskReferenceSchemeContext = Record<string, never>
 
-export type AuditOperation =
-  | { type: 'task.created'; context: TaskCreateContext }
-  | { type: 'task.deleted'; context: TaskDeleteContext }
+export type TaskUpdateAuditOperation =
   | { type: 'task.priority'; context: PriorityChangeContext }
   | { type: 'task.moved'; context: SectionMoveContext }
   | { type: 'task.dueDate'; context: DueDateChangeContext }
-  | { type: 'task.archived'; context: ArchiveContext }
-  | { type: 'task.unarchived'; context: ArchiveContext }
   | { type: 'task.details'; context: DetailsChangeContext }
   | { type: 'checklist.toggled'; context: ChecklistContext }
+
+export type AuditOperation =
+  | { type: 'task.created'; context: TaskCreateContext }
+  | { type: 'task.deleted'; context: TaskDeleteContext }
+  | TaskUpdateAuditOperation
+  | {
+      type: 'task.updated'
+      context: { changes: TaskUpdateAuditOperation[] }
+    }
+  | { type: 'task.archived'; context: ArchiveContext }
+  | { type: 'task.unarchived'; context: ArchiveContext }
   | { type: 'comment.created'; context: CommentCreateContext }
   | { type: 'comment.updated'; context: CommentUpdateContext }
   | { type: 'comment.deleted'; context: CommentDeleteContext }
@@ -142,6 +149,7 @@ export type AuditOperation =
 export const AUDIT_KINDS = {
   'task.created': 'audit.task_created',
   'task.deleted': 'audit.task_deleted',
+  'task.updated': 'audit.task_updated',
   'task.priority': 'audit.priority',
   'task.moved': 'audit.section_move',
   'task.dueDate': 'audit.due_date',
@@ -252,6 +260,12 @@ export function buildNarrativeDescriptor(
     case 'task.deleted':
       return descriptor('features.audit.narratives.taskDeleted', {
         title: operation.context.taskTitle,
+      })
+    case 'task.updated':
+      return descriptor('features.audit.narratives.taskChanges', {
+        changes: operation.context.changes
+          .filter(shouldGenerateAudit)
+          .map(buildNarrativeDescriptor),
       })
     case 'task.priority':
       return buildPriorityNarrativeDescriptor(operation.context)
@@ -525,19 +539,19 @@ export function taskDeleteAudit(
 
 export function priorityChangeAudit(
   context: PriorityChangeContext,
-): AuditOperation {
+): TaskUpdateAuditOperation {
   return { type: 'task.priority', context }
 }
 
 export function sectionMoveAudit(
   context: SectionMoveContext,
-): AuditOperation {
+): TaskUpdateAuditOperation {
   return { type: 'task.moved', context }
 }
 
 export function dueDateChangeAudit(
   context: DueDateChangeContext,
-): AuditOperation {
+): TaskUpdateAuditOperation {
   return { type: 'task.dueDate', context }
 }
 
@@ -551,7 +565,7 @@ export function unarchiveAudit(context: ArchiveContext): AuditOperation {
 
 export function detailsChangeAudit(
   context: DetailsChangeContext,
-): AuditOperation {
+): TaskUpdateAuditOperation {
   return { type: 'task.details', context }
 }
 
@@ -575,8 +589,22 @@ export function commentDeleteAudit(
 
 export function checklistChangedAudit(
   changes: ChecklistChange[],
-): AuditOperation {
+): TaskUpdateAuditOperation {
   return { type: 'checklist.toggled', context: { changes } }
+}
+
+/**
+ * Groups independent task edits into one audit operation. Single edits retain
+ * their existing envelope kind and narrative for backwards compatibility.
+ */
+export function taskUpdateAudit(
+  changes: TaskUpdateAuditOperation[],
+): AuditOperation {
+  const effectiveChanges = changes.filter(shouldGenerateAudit)
+  if (effectiveChanges.length === 1) {
+    return effectiveChanges[0]!
+  }
+  return { type: 'task.updated', context: { changes: effectiveChanges } }
 }
 
 /** @deprecated Use checklistChangedAudit. */
@@ -587,7 +615,7 @@ export function sectionMoveAuditFromIds(params: {
   fromSectionId: string | null
   toSectionId: string | null
   sections: Array<{ id: string; name: string }>
-}): AuditOperation {
+}): TaskUpdateAuditOperation {
   const findName = (id: string | null) =>
     id
       ? (params.sections.find((section) => section.id === id)?.name ??
@@ -837,6 +865,8 @@ function normalizeNarrativeOptions(
 
 function shouldGenerateAudit(operation: AuditOperation): boolean {
   switch (operation.type) {
+    case 'task.updated':
+      return operation.context.changes.some(shouldGenerateAudit)
     case 'task.priority':
       return operation.context.oldPriority !== operation.context.newPriority
     case 'task.dueDate':
@@ -856,6 +886,10 @@ function buildFieldsArray(
       return [{ field: 'task', changeKind: 'create' }]
     case 'task.deleted':
       return [{ field: 'task', changeKind: 'delete' }]
+    case 'task.updated':
+      return operation.context.changes
+        .filter(shouldGenerateAudit)
+        .flatMap(buildFieldsArray)
     case 'task.priority':
       return [
         {
