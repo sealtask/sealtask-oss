@@ -1,4 +1,5 @@
 import { decodeBase64 } from '../runtime/base64'
+import { constantTimeEquals } from '../runtime/bytes'
 import {
   computeStatementDigest,
   hashTransparencyLeaf,
@@ -437,7 +438,7 @@ export class TransparencyClient {
     }
     if (
       checkpoint.size === this.#trustedCheckpoint.size
-      && !bytesEqual(checkpoint.hash, this.#trustedCheckpoint.hash)
+      && !constantTimeEquals(checkpoint.hash, this.#trustedCheckpoint.hash)
     ) {
       throw new InvalidTransparencyCheckpointError(
         'Stored transparency checkpoint conflicts with the independently trusted root.',
@@ -453,7 +454,7 @@ export class TransparencyClient {
       checkpoint
       && this.#trustedCheckpoint
       && checkpoint.size === this.#trustedCheckpoint.size
-      && !bytesEqual(checkpoint.hash, this.#trustedCheckpoint.hash)
+      && !constantTimeEquals(checkpoint.hash, this.#trustedCheckpoint.hash)
     ) {
       throw new InvalidTransparencyCheckpointError(
         'Stored transparency checkpoint conflicts with the independently trusted root.',
@@ -476,7 +477,7 @@ export class TransparencyClient {
     const pinned = this.#identityStore.load(userId)
     if (
       pinned
-      && (pinned.length !== 32 || !bytesEqual(pinned, identityPublicKey))
+      && (pinned.length !== 32 || !constantTimeEquals(pinned, identityPublicKey))
     ) {
       throw new Error(
         'Transparency owner identity changed; the invite key was not accepted.',
@@ -492,7 +493,7 @@ export class TransparencyClient {
   ): Promise<void> {
     const pinned = this.#identityStore.load(userId)
     if (pinned) {
-      if (pinned.length !== 32 || !bytesEqual(pinned, identityPublicKey)) {
+      if (pinned.length !== 32 || !constantTimeEquals(pinned, identityPublicKey)) {
         throw new Error(
           'Transparency owner identity changed; the invite key was not accepted.',
         )
@@ -510,7 +511,7 @@ export class TransparencyClient {
     }
     await this.#identityStore.save(userId, identityPublicKey.slice())
     const persisted = this.#identityStore.load(userId)
-    if (!persisted || !bytesEqual(persisted, identityPublicKey)) {
+    if (!persisted || !constantTimeEquals(persisted, identityPublicKey)) {
       throw new Error('Transparency owner identity could not be durably pinned.')
     }
   }
@@ -603,7 +604,7 @@ function assertPublicationResponseMatchesRequest(params: {
       field.requested,
       field.length,
     )
-    if (!bytesEqual(responseBytes, requestedBytes)) {
+    if (!constantTimeEquals(responseBytes, requestedBytes)) {
       throw new Error(
         `Transparency publication response ${field.field} does not match the requested statement.`,
       )
@@ -718,7 +719,7 @@ export async function verifyInviteKeyTransparencyProof(params: {
   } else {
     throw new Error('invite_key_proof.statement.protocolVersion is unsupported.')
   }
-  if (!bytesEqual(statementDigest, localDigest)) {
+  if (!constantTimeEquals(statementDigest, localDigest)) {
     throw new Error('Invite key proof digest does not match the statement payload.')
   }
 
@@ -727,7 +728,7 @@ export async function verifyInviteKeyTransparencyProof(params: {
     proof.statement.leafHash,
   )
   const computedLeaf = await hashTransparencyLeaf(statementDigest)
-  if (!bytesEqual(leafHash, computedLeaf)) {
+  if (!constantTimeEquals(leafHash, computedLeaf)) {
     throw new Error('Invite key proof leaf hash does not match the statement digest.')
   }
 
@@ -755,7 +756,7 @@ export async function verifyInviteKeyTransparencyProof(params: {
     logRootSize,
     inclusionProof,
   )
-  if (!bytesEqual(reconstructedRoot, logRootHash)) {
+  if (!constantTimeEquals(reconstructedRoot, logRootHash)) {
     throw new Error('Invite key proof inclusion path does not match the log root hash.')
   }
 
@@ -794,7 +795,7 @@ export async function verifyInviteKeyTransparencyProof(params: {
         'Invite key proof consistency hashes must be empty when base matches the log size.',
       )
     }
-    if (previousCheckpoint && !bytesEqual(previousCheckpoint.hash, logRootHash)) {
+    if (previousCheckpoint && !constantTimeEquals(previousCheckpoint.hash, logRootHash)) {
       throw new TransparencyBaseMismatchError(
         'Invite key proof log root hash differs from the last verified root.',
       )
@@ -810,12 +811,12 @@ export async function verifyInviteKeyTransparencyProof(params: {
       logRootSize,
       consistencyHashes,
     )
-    if (!bytesEqual(fullRoot, logRootHash)) {
+    if (!constantTimeEquals(fullRoot, logRootHash)) {
       throw new Error(
         'Invite key proof consistency hashes do not reconstruct the log root hash.',
       )
     }
-    if (previousCheckpoint && !bytesEqual(prefixRoot, previousCheckpoint.hash)) {
+    if (previousCheckpoint && !constantTimeEquals(prefixRoot, previousCheckpoint.hash)) {
       throw new TransparencyBaseMismatchError(
         'Invite key proof does not extend the last verified log root.',
       )
@@ -856,7 +857,7 @@ export async function verifyInviteKeyTransparencyProof(params: {
     })
     if (
       currentHead.generation !== generation
-      || !bytesEqual(currentHead.statementDigest, statementDigest)
+      || !constantTimeEquals(currentHead.statementDigest, statementDigest)
     ) {
       throw new Error(
         'Transparency directory snapshot does not select the target user’s current authorized key.',
@@ -935,7 +936,7 @@ async function verifyTrustedConsistency(params: {
   if (fromSize === params.logRootSize) {
     if (
       hashes.length !== 0
-      || !bytesEqual(params.trustedCheckpoint.hash, params.logRootHash)
+      || !constantTimeEquals(params.trustedCheckpoint.hash, params.logRootHash)
     ) {
       throw new TransparencyBaseMismatchError(
         'Transparency proof conflicts with the independently trusted checkpoint.',
@@ -953,12 +954,12 @@ async function verifyTrustedConsistency(params: {
     params.logRootSize,
     hashes,
   )
-  if (!bytesEqual(prefixRoot, params.trustedCheckpoint.hash)) {
+  if (!constantTimeEquals(prefixRoot, params.trustedCheckpoint.hash)) {
     throw new TransparencyBaseMismatchError(
       'Transparency proof does not extend the independently trusted checkpoint.',
     )
   }
-  if (!bytesEqual(fullRoot, params.logRootHash)) {
+  if (!constantTimeEquals(fullRoot, params.logRootHash)) {
     throw new Error(
       'Transparency trusted consistency proof does not reconstruct the current log root.',
     )
@@ -982,7 +983,7 @@ async function verifyIdentityInclusionProof(params: {
     supplied.statementDigest,
   )
   if (
-    !bytesEqual(
+    !constantTimeEquals(
       statementDigest,
       params.firstOwnerAuthorizedStatementDigest,
     )
@@ -996,7 +997,7 @@ async function verifyIdentityInclusionProof(params: {
     supplied.leafHash,
   )
   const expectedLeafHash = await hashTransparencyLeaf(statementDigest)
-  if (!bytesEqual(leafHash, expectedLeafHash)) {
+  if (!constantTimeEquals(leafHash, expectedLeafHash)) {
     throw new Error(
       'Transparency identity inclusion proof leaf does not match its statement digest.',
     )
@@ -1021,7 +1022,7 @@ async function verifyIdentityInclusionProof(params: {
     params.logRootSize,
     hashes,
   )
-  if (!bytesEqual(reconstructedRoot, params.logRootHash)) {
+  if (!constantTimeEquals(reconstructedRoot, params.logRootHash)) {
     throw new Error(
       'Transparency identity inclusion proof does not match the current log root.',
     )
@@ -1167,7 +1168,7 @@ async function verifyCurrentDirectorySnapshot(params: {
           `invite_key_proof.directorySnapshot.${userId}[${index}].statementDigest`,
           statement.statementDigest,
         )
-        if (!bytesEqual(expectedDigest, storedDigest)) {
+        if (!constantTimeEquals(expectedDigest, storedDigest)) {
           throw new Error(
             `Legacy transparency directory digest mismatch for ${userId}.`,
           )
@@ -1178,7 +1179,7 @@ async function verifyCurrentDirectorySnapshot(params: {
   }
 
   const fullRoot = await computeTransparencyTreeRoot(leafHashes)
-  if (!bytesEqual(fullRoot, params.logRootHash)) {
+  if (!constantTimeEquals(fullRoot, params.logRootHash)) {
     throw new Error(
       'Transparency directory snapshot does not reconstruct the current log root.',
     )
@@ -1198,7 +1199,7 @@ async function verifyCurrentDirectorySnapshot(params: {
     const prefixRoot = await computeTransparencyTreeRoot(
       leafHashes.slice(0, checkpoint.size),
     )
-    if (!bytesEqual(prefixRoot, checkpoint.hash)) {
+    if (!constantTimeEquals(prefixRoot, checkpoint.hash)) {
       throw new TransparencyBaseMismatchError(
         'Transparency directory snapshot does not contain a required checkpoint prefix.',
       )
@@ -1346,7 +1347,7 @@ async function verifyTransparencyAuthorizationStatements(params: {
         generation,
         inviteKey: invitePublicKey,
       })
-      if (!bytesEqual(statementDigest, expectedDigest)) {
+      if (!constantTimeEquals(statementDigest, expectedDigest)) {
         throw new Error(`Legacy transparency digest mismatch at generation ${index}.`)
       }
     } else if (protocolVersion === 2) {
@@ -1392,10 +1393,10 @@ async function verifyTransparencyAuthorizationStatements(params: {
         if (linkedDigest !== null) {
           throw new Error('The initial owner-authorized statement cannot link a predecessor.')
         }
-      } else if (!linkedDigest || !previousDigest || !bytesEqual(linkedDigest, previousDigest)) {
+      } else if (!linkedDigest || !previousDigest || !constantTimeEquals(linkedDigest, previousDigest)) {
         throw new Error(`Transparency rotation link mismatch at generation ${index}.`)
       }
-      if (ownerIdentity && !bytesEqual(ownerIdentity, identityPublicKey)) {
+      if (ownerIdentity && !constantTimeEquals(ownerIdentity, identityPublicKey)) {
         throw new Error('Transparency owner identity changed inside the authorization chain.')
       }
       ownerIdentity ??= identityPublicKey.slice()
@@ -1408,7 +1409,7 @@ async function verifyTransparencyAuthorizationStatements(params: {
         identityPublicKey,
         previousStatementDigest: linkedDigest,
       })
-      if (!bytesEqual(statementDigest, expectedDigest)) {
+      if (!constantTimeEquals(statementDigest, expectedDigest)) {
         throw new Error(`Owner-authorized transparency digest mismatch at generation ${index}.`)
       }
       const signatureValid = await verifyOwnerAuthorizedTransparencyStatement({
@@ -1526,7 +1527,7 @@ export class MemoryTransparencyIdentityStore implements TransparencyIdentityStor
   async save(userId: string, identityPublicKey: Uint8Array): Promise<void> {
     const canonicalUserId = requireCanonicalTransparencyUserId(userId)
     const existing = this.#identities.get(canonicalUserId)
-    if (existing && !bytesEqual(existing, identityPublicKey)) {
+    if (existing && !constantTimeEquals(existing, identityPublicKey)) {
       throw new Error(
         'Transparency owner identity changed while it was being pinned.',
       )
@@ -1550,7 +1551,7 @@ function checkpointsEqual(
       ? right === null
       : right !== null
         && left.size === right.size
-        && bytesEqual(left.hash, right.hash)
+        && constantTimeEquals(left.hash, right.hash)
   )
 }
 
@@ -1611,17 +1612,6 @@ function ensureSafeInteger(value: number, field: string): number {
     throw new Error(`${field} must be a safe integer.`)
   }
   return value
-}
-
-function bytesEqual(left: Uint8Array, right: Uint8Array): boolean {
-  if (left.length !== right.length) {
-    return false
-  }
-  let difference = 0
-  for (let index = 0; index < left.length; index += 1) {
-    difference |= left[index] ^ right[index]
-  }
-  return difference === 0
 }
 
 function validateCheckpoint(checkpoint: TransparencyCheckpoint, field: string): void {

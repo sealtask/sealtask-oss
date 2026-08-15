@@ -1,3 +1,4 @@
+import { constantTimeEquals } from '../runtime/bytes'
 import { hkdfExpand } from '../runtime/hkdf'
 import {
   getPublicKeyAsync,
@@ -125,7 +126,7 @@ export async function verifyOwnerAuthorizedTransparencyStatement(
   requireExactBytes(statement.statementDigest, 32, 'statement_digest')
   requireExactBytes(statement.ownerSignature, 64, 'owner_signature')
   const expectedDigest = await computeOwnerAuthorizedStatementDigest(statement)
-  if (!constantTimeEqual(expectedDigest, statement.statementDigest)) {
+  if (!constantTimeEquals(expectedDigest, statement.statementDigest)) {
     return false
   }
 
@@ -193,15 +194,4 @@ function requireExactBytes(value: Uint8Array, length: number, field: string): vo
   if (!(value instanceof Uint8Array) || value.length !== length) {
     throw new Error(`${field} must be exactly ${length} bytes`)
   }
-}
-
-function constantTimeEqual(left: Uint8Array, right: Uint8Array): boolean {
-  if (left.length !== right.length) {
-    return false
-  }
-  let difference = 0
-  for (let index = 0; index < left.length; index += 1) {
-    difference |= left[index] ^ right[index]
-  }
-  return difference === 0
 }
