@@ -69,6 +69,20 @@ describe('owner-authorized transparency statements', () => {
     })).rejects.toThrow(/previous_statement_digest must be exactly 32 bytes/)
   })
 
+  it('preserves v2 statement framing at the safe uint64 generation boundary', async () => {
+    const digest = await computeOwnerAuthorizedStatementDigest({
+      userId: USER_ID,
+      generation: Number.MAX_SAFE_INTEGER,
+      invitePublicKey: INVITE_KEY,
+      identityPublicKey: new Uint8Array(32).fill(0x52),
+      previousStatementDigest: null,
+    })
+
+    expect(toHex(digest)).toBe(
+      '964a6e1bf8099811aaa53d26b8a0facc2c74e3a8d97a08117abd6ceb55d6b17b',
+    )
+  })
+
   it('uses a distinct owner identity for another user or data key', async () => {
     const first = await createOwnerAuthorizedTransparencyStatement({
       dataKey: DATA_KEY,
