@@ -94,6 +94,37 @@ describe('sealed protocol payloads', () => {
     }
   })
 
+  it('keeps strict sealed-payload framing separate from semantic decoding', () => {
+    const truncated = concatBytes(
+      Uint8Array.of(0xa2),
+      cborText('version'),
+      Uint8Array.of(0x01),
+      cborText('ciphertext'),
+      Uint8Array.of(0x42, 0x01),
+    )
+    const tooDeep = strictSealedPayloadWithVersion(nestedArrays(9))
+    const atDepthLimit = strictSealedPayloadWithVersion(nestedArrays(8))
+
+    for (const bytes of [
+      truncated,
+      strictSealedPayloadWithVersion(Uint8Array.of(0xc0, 0x01)),
+      strictSealedPayloadWithVersion(Uint8Array.of(0xf9, 0x3c, 0x00)),
+      strictSealedPayloadWithVersion(Uint8Array.of(0xf4)),
+      tooDeep,
+    ]) {
+      expect(() => parseStrictSealedPayload(encodeBase64(bytes))).toThrow(
+        'Invalid strict sealed payload structure',
+      )
+    }
+
+    // Eight nested containers is the sealed payload's historic limit. Its
+    // field is still invalid, but it reaches semantic validation rather than
+    // being rejected by the structural traversal.
+    expect(() =>
+      parseStrictSealedPayload(encodeBase64(atDepthLimit)),
+    ).toThrow('Invalid sealed payload structure')
+  })
+
   it('round-trips work-list, task, comment, and note envelopes with frozen contexts', async () => {
     const contexts: string[] = []
     const strongBox = identityBridge(contexts)
@@ -251,3 +282,33 @@ describe('sealed protocol payloads', () => {
     ])
   })
 })
+
+function strictSealedPayloadWithVersion(version: Uint8Array): Uint8Array {
+  return concatBytes(
+    Uint8Array.of(0xa2),
+    cborText('version'),
+    version,
+    cborText('ciphertext'),
+    Uint8Array.of(0x41, 0x01),
+  )
+}
+
+function cborText(value: string): Uint8Array {
+  return new Uint8Array(cborEncode(value))
+}
+
+function nestedArrays(depth: number): Uint8Array {
+  return Uint8Array.of(...Array<number>(depth).fill(0x81), 0x00)
+}
+
+function concatBytes(...parts: Uint8Array[]): Uint8Array {
+  const result = new Uint8Array(
+    parts.reduce((total, part) => total + part.byteLength, 0),
+  )
+  let offset = 0
+  for (const part of parts) {
+    result.set(part, offset)
+    offset += part.byteLength
+  }
+  return result
+}

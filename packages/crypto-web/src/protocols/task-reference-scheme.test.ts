@@ -311,6 +311,42 @@ describe('task reference scheme protocol', () => {
     ).rejects.toThrow('strict CBOR')
   })
 
+  it('keeps task-reference strict CBOR traversal at its deeper protocol limit', async () => {
+    const plaintext = await validTaskReferencePlaintext()
+    const atDepthLimit = taskReferencePlaintextWithExtraValue(
+      plaintext,
+      nestedArrays(16),
+    )
+
+    // Unlike the sealed outer payload, this fixed-size plaintext historically
+    // allows sixteen nested containers before its domain validation runs.
+    expect(() => decodeSchemePlaintext(atDepthLimit)).toThrow(
+      'Task reference scheme envelope is invalid',
+    )
+
+    for (const value of [
+      nestedArrays(17),
+      Uint8Array.of(0xc0, 0x01),
+      Uint8Array.of(0xf9, 0x3c, 0x00),
+      Uint8Array.of(0xf4),
+    ]) {
+      expect(() =>
+        decodeSchemePlaintext(
+          taskReferencePlaintextWithExtraValue(plaintext, value),
+        ),
+      ).toThrow('Task reference scheme plaintext is not valid strict CBOR')
+    }
+  })
+
+  it('rejects malformed and trailing fixed-size task-reference plaintexts', () => {
+    expect(() =>
+      decodeSchemePlaintext(truncatedTaskReferencePlaintext()),
+    ).toThrow('Task reference scheme plaintext is not valid strict CBOR')
+    expect(() =>
+      decodeSchemePlaintext(trailingTaskReferencePlaintext()),
+    ).toThrow('Task reference scheme plaintext is not valid strict CBOR')
+  })
+
   it('rejects uppercase UUID text in decrypted scheme envelopes', async () => {
     const valid = await encryptTaskReferenceScheme({
       scheme: buildTaskReferenceScheme({
@@ -424,4 +460,96 @@ function concatBytes(...parts: Uint8Array[]): Uint8Array {
     offset += part.byteLength
   }
   return result
+}
+
+async function validTaskReferencePlaintext(): Promise<Uint8Array> {
+  const sealed = await encryptTaskReferenceScheme({
+    scheme: buildTaskReferenceScheme({
+      workListId: WORK_LIST_ID,
+      schemeRevisionId: REVISION_ID,
+      revision: 1,
+      prefix: 'OPS',
+      minimumDigits: 1,
+    }),
+    listKey,
+    strongBox: framingBridge(),
+  })
+  return parseSealedPayload(sealed.base64).ciphertext.slice(
+    STRONG_BOX_FRAME_BYTES,
+  )
+}
+
+function decodeSchemePlaintext(plaintext: Uint8Array) {
+  return decodeTaskReferenceSchemePlaintext({
+    plaintext,
+    expectedWorkListId: WORK_LIST_ID,
+    expectedSchemeRevisionId: REVISION_ID,
+    expectedRevision: 1,
+  })
+}
+
+function taskReferencePlaintextWithExtraValue(
+  plaintext: Uint8Array,
+  rawValue: Uint8Array,
+): Uint8Array {
+  const envelope = cborDecode(plaintext) as Record<string, unknown>
+  const pairBytes = Object.entries(envelope)
+    .filter(([key]) => key !== 'padding')
+    .flatMap(([key, value]) => [
+      encodeCanonical(key),
+      encodeCanonical(value),
+    ])
+  const beforePadding = concatBytes(
+    Uint8Array.of(0xaa),
+    ...pairBytes,
+    encodeCanonical('padding'),
+  )
+  const afterPadding = concatBytes(encodeCanonical('extra'), rawValue)
+
+  let paddingLength = 0
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    const candidate = concatBytes(
+      beforePadding,
+      encodeCanonical(new Uint8Array(paddingLength)),
+      afterPadding,
+    )
+    const adjustment = TASK_REFERENCE_SCHEME_PLAINTEXT_BYTES - candidate.byteLength
+    if (adjustment === 0) return candidate
+    paddingLength += adjustment
+    if (paddingLength <= 0) break
+  }
+  throw new Error('could not create a fixed-size task reference plaintext')
+}
+
+function encodeCanonical(value: unknown): Uint8Array {
+  return new Uint8Array(canonicalEncoder.encode(value))
+}
+
+function truncatedTaskReferencePlaintext(): Uint8Array {
+  const plaintext = new Uint8Array(TASK_REFERENCE_SCHEME_PLAINTEXT_BYTES)
+  plaintext.set([
+    0xa1,
+    0x61,
+    0x61,
+    0x5b,
+    0x00,
+    0x1f,
+    0xff,
+    0xff,
+    0xff,
+    0xff,
+    0xff,
+    0xff,
+  ])
+  return plaintext
+}
+
+function trailingTaskReferencePlaintext(): Uint8Array {
+  const plaintext = new Uint8Array(TASK_REFERENCE_SCHEME_PLAINTEXT_BYTES)
+  plaintext.set([0xa1, 0x61, 0x61, 0x00])
+  return plaintext
+}
+
+function nestedArrays(depth: number): Uint8Array {
+  return Uint8Array.of(...Array<number>(depth).fill(0x81), 0x00)
 }
