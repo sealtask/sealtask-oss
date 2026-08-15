@@ -1,14 +1,10 @@
-import { encode as cborEncode } from 'cbor-x'
-
-import { toUint8Array } from '../runtime/bytes'
-import { SEALED_PAYLOAD_VERSION } from '../runtime/constants'
-import { getStrongBoxBridge, type StrongBoxBridge } from '../runtime/strong-box'
+import type { StrongBoxBridge } from '../runtime/strong-box'
 import type { AttachmentRef } from './attachment'
 import {
-  decodeAndValidatePayloadBytes,
-  validatePayloadBytes,
-  type PayloadValidationDependencies,
-} from './payload-validation'
+  openPayloadEnvelope,
+  sealPayloadEnvelope,
+} from './payload-sealing'
+import type { PayloadValidationDependencies } from './payload-validation'
 import type {
   PayloadRichText,
   RichTextBlock,
@@ -16,8 +12,6 @@ import type {
   TextMarkType,
   TextSpan,
 } from './rich-text'
-import { parseSealedPayload } from './sealed-payload'
-import { toSealedBlob } from './sealed-blob'
 import type { SealedBlobPayload } from './types'
 
 export type {
@@ -53,7 +47,10 @@ export type TaskPayloadEnvelope = {
   body: TaskPayloadBody
 }
 
-const TASK_PAYLOAD_CONTEXT = new TextEncoder().encode('worklist.task.v1')
+const TASK_PAYLOAD_DOMAIN = {
+  kind: 'task',
+  context: new TextEncoder().encode('worklist.task.v1'),
+} as const
 
 export function buildTaskPayloadEnvelope(
   body: TaskPayloadBody,
@@ -68,15 +65,13 @@ export async function encryptTaskPayload(params: {
   strongBox?: StrongBoxBridge
   validation?: PayloadValidationDependencies
 }): Promise<SealedBlobPayload> {
-  const plaintext = toUint8Array(cborEncode(params.envelope))
-  validatePayloadBytes(plaintext, 'task', params.validation)
-  const bridge = params.strongBox ?? (await getStrongBoxBridge())
-  const ciphertext = await bridge.encrypt({
-    key: params.listKey,
-    context: TASK_PAYLOAD_CONTEXT,
-    plaintext,
-  })
-  return toSealedBlob({ version: SEALED_PAYLOAD_VERSION, ciphertext })
+  return sealPayloadEnvelope(
+    params.envelope,
+    params.listKey,
+    TASK_PAYLOAD_DOMAIN,
+    params.strongBox,
+    params.validation,
+  )
 }
 
 export async function decryptTaskPayload(params: {
@@ -85,16 +80,11 @@ export async function decryptTaskPayload(params: {
   strongBox?: StrongBoxBridge
   validation?: PayloadValidationDependencies
 }): Promise<TaskPayloadEnvelope> {
-  const sealed = parseSealedPayload(params.ciphertext)
-  const bridge = params.strongBox ?? (await getStrongBoxBridge())
-  const plaintext = await bridge.decrypt({
-    key: params.listKey,
-    context: TASK_PAYLOAD_CONTEXT,
-    ciphertext: sealed.ciphertext,
-  })
-  const envelope = decodeAndValidatePayloadBytes(
-    plaintext,
-    'task',
+  const envelope = await openPayloadEnvelope(
+    params.ciphertext,
+    params.listKey,
+    TASK_PAYLOAD_DOMAIN,
+    params.strongBox,
     params.validation,
   )
   return {

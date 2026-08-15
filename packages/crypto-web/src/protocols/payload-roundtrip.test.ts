@@ -28,7 +28,10 @@ import {
   decryptTaskPayload,
   encryptTaskPayload,
 } from './task'
-import { encryptWorkListPayload } from './work-list'
+import {
+  decryptWorkListPayload,
+  encryptWorkListPayload,
+} from './work-list'
 
 const decoder = new TextDecoder()
 
@@ -91,7 +94,7 @@ describe('sealed protocol payloads', () => {
     }
   })
 
-  it('round-trips task, comment, and note envelopes with frozen contexts', async () => {
+  it('round-trips work-list, task, comment, and note envelopes with frozen contexts', async () => {
     const contexts: string[] = []
     const strongBox = identityBridge(contexts)
     const listKey = new Uint8Array(32).fill(7)
@@ -100,6 +103,24 @@ describe('sealed protocol payloads', () => {
       version: 1,
       blocks: [{ type: 'paragraph' as const, text: 'Body' }],
     }
+
+    const workList = {
+      kind: 'work_list' as const,
+      version: 1,
+      body: { title: 'Project', sections: [] },
+    }
+    const sealedWorkList = await encryptWorkListPayload({
+      envelope: workList,
+      listKey,
+      strongBox,
+    })
+    await expect(
+      decryptWorkListPayload({
+        ciphertext: sealedWorkList.base64,
+        listKey,
+        strongBox,
+      }),
+    ).resolves.toEqual(workList)
 
     const task = buildTaskPayloadEnvelope({
       title: 'Task',
@@ -152,6 +173,8 @@ describe('sealed protocol payloads', () => {
     ).resolves.toEqual(note)
 
     expect(contexts).toEqual([
+      'encrypt:worklist.work_list.v1',
+      'decrypt:worklist.work_list.v1',
       'encrypt:worklist.task.v1',
       'decrypt:worklist.task.v1',
       'encrypt:worklist.comment.v1',
@@ -208,6 +231,8 @@ describe('sealed protocol payloads', () => {
       expect(sealed).not.toHaveProperty('schemaHash')
     }
     expect(protocolExports).not.toHaveProperty('computeSchemaHash')
+    expect(protocolExports).not.toHaveProperty('sealPayloadEnvelope')
+    expect(protocolExports).not.toHaveProperty('openPayloadEnvelope')
   })
 
   it('wraps and unwraps private note keys with the note-key context', async () => {

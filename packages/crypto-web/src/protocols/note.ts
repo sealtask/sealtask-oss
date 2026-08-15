@@ -1,15 +1,12 @@
-import { encode as cborEncode } from 'cbor-x'
-
-import { toUint8Array } from '../runtime/bytes'
 import { SEALED_PAYLOAD_VERSION } from '../runtime/constants'
 import { randomBytes } from '../runtime/random'
 import { getStrongBoxBridge, type StrongBoxBridge } from '../runtime/strong-box'
 import type { AttachmentRef } from './attachment'
 import {
-  decodeAndValidatePayloadBytes,
-  validatePayloadBytes,
-  type PayloadValidationDependencies,
-} from './payload-validation'
+  openPayloadEnvelope,
+  sealPayloadEnvelope,
+} from './payload-sealing'
+import type { PayloadValidationDependencies } from './payload-validation'
 import type {
   PayloadRichText,
   RichTextBlock,
@@ -20,11 +17,13 @@ import {
   parseSealedPayload,
   serializeSealedPayloadBase64,
 } from './sealed-payload'
-import { toSealedBlob } from './sealed-blob'
 import type { SealedBlobPayload } from './types'
 
 const encoder = new TextEncoder()
-const NOTE_PAYLOAD_CONTEXT = encoder.encode('worklist.note.v1')
+const NOTE_PAYLOAD_DOMAIN = {
+  kind: 'note',
+  context: encoder.encode('worklist.note.v1'),
+} as const
 const NOTE_KEY_CONTEXT = encoder.encode('worklist.note.key.v1')
 
 export type { RichTextBlock, TextMark, TextSpan }
@@ -68,15 +67,13 @@ export async function encryptNotePayload(params: {
   strongBox?: StrongBoxBridge
   validation?: PayloadValidationDependencies
 }): Promise<SealedBlobPayload> {
-  const plaintext = toUint8Array(cborEncode(params.envelope))
-  validatePayloadBytes(plaintext, 'note', params.validation)
-  const bridge = params.strongBox ?? (await getStrongBoxBridge())
-  const ciphertext = await bridge.encrypt({
-    key: params.noteKey,
-    context: NOTE_PAYLOAD_CONTEXT,
-    plaintext,
-  })
-  return toSealedBlob({ version: SEALED_PAYLOAD_VERSION, ciphertext })
+  return sealPayloadEnvelope(
+    params.envelope,
+    params.noteKey,
+    NOTE_PAYLOAD_DOMAIN,
+    params.strongBox,
+    params.validation,
+  )
 }
 
 export async function decryptNotePayload(params: {
@@ -85,16 +82,11 @@ export async function decryptNotePayload(params: {
   strongBox?: StrongBoxBridge
   validation?: PayloadValidationDependencies
 }): Promise<NotePayloadEnvelope> {
-  const sealed = parseSealedPayload(params.ciphertext)
-  const bridge = params.strongBox ?? (await getStrongBoxBridge())
-  const plaintext = await bridge.decrypt({
-    key: params.noteKey,
-    context: NOTE_PAYLOAD_CONTEXT,
-    ciphertext: sealed.ciphertext,
-  })
-  const envelope = decodeAndValidatePayloadBytes(
-    plaintext,
-    'note',
+  const envelope = await openPayloadEnvelope(
+    params.ciphertext,
+    params.noteKey,
+    NOTE_PAYLOAD_DOMAIN,
+    params.strongBox,
     params.validation,
   )
   return {
