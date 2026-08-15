@@ -6,57 +6,11 @@ import type {
   StrongBoxDecryptInput,
   StrongBoxEncryptInput,
 } from './strong-box-types'
-
-type EncodedRequest =
-  | {
-      type: 'request'
-      id: number
-      op: 'encrypt' | 'decrypt'
-      key: ArrayBuffer
-      context: ArrayBuffer
-      payload: ArrayBuffer
-    }
-  | {
-      type: 'request'
-      id: number
-      op: 'hpke_encap'
-      recipientPublicKey: ArrayBuffer
-      info: ArrayBuffer
-      aad: ArrayBuffer
-      payload: ArrayBuffer
-    }
-  | {
-      type: 'request'
-      id: number
-      op: 'hpke_decap'
-      recipientPrivateKey: ArrayBuffer
-      info: ArrayBuffer
-      aad: ArrayBuffer
-      enc: ArrayBuffer
-      payload: ArrayBuffer
-    }
-
-type WorkerResponse =
-  | { type: 'ready' }
-  | { type: 'init-error'; error: SerializedWorkerError }
-  | {
-      type: 'response'
-      id: number
-      status: 'ok'
-      result: ArrayBuffer
-      meta?: { cacheHit?: boolean }
-    }
-  | {
-      type: 'response'
-      id: number
-      status: 'error'
-      error: SerializedWorkerError
-    }
-
-type SerializedWorkerError = {
-  message: string
-  name?: string
-}
+import type {
+  SerializedStrongBoxWorkerError as SerializedWorkerError,
+  StrongBoxWorkerRequest as EncodedRequest,
+  StrongBoxWorkerResponse as WorkerResponse,
+} from './strong-box-worker-protocol'
 
 export type StrongBoxWorkerFactory = () => Worker
 
