@@ -172,9 +172,14 @@ function skipStrictCborItemAtDepth(
     case 5:
       return skipStrictCborMap(bytes, header, depth, maxDepth)
     case 6:
-      throw new Error('CBOR tags are not supported')
+      return skipStrictCborItemAtDepth(
+        bytes,
+        header.nextOffset,
+        depth + 1,
+        maxDepth,
+      )
     case 7:
-      throw new Error('CBOR simple values and floats are not supported')
+      return header.nextOffset
     default:
       throw new Error('unsupported CBOR major type')
   }

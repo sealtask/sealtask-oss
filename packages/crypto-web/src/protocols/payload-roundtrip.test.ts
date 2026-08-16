@@ -107,9 +107,6 @@ describe('sealed protocol payloads', () => {
 
     for (const bytes of [
       truncated,
-      strictSealedPayloadWithVersion(Uint8Array.of(0xc0, 0x01)),
-      strictSealedPayloadWithVersion(Uint8Array.of(0xf9, 0x3c, 0x00)),
-      strictSealedPayloadWithVersion(Uint8Array.of(0xf4)),
       tooDeep,
     ]) {
       expect(() => parseStrictSealedPayload(encodeBase64(bytes))).toThrow(
@@ -123,6 +120,33 @@ describe('sealed protocol payloads', () => {
     expect(() =>
       parseStrictSealedPayload(encodeBase64(atDepthLimit)),
     ).toThrow('Invalid sealed payload structure')
+
+    expect(
+      parseStrictSealedPayload(encodeBase64(
+        strictSealedPayloadWithVersion(Uint8Array.of(0xf9, 0x3c, 0x00)),
+      )),
+    ).toEqual({ version: 1, ciphertext: Uint8Array.of(1) })
+    expect(() =>
+      parseStrictSealedPayload(encodeBase64(
+        strictSealedPayloadWithVersion(Uint8Array.of(0xf4)),
+      )),
+    ).toThrow('Invalid sealed payload structure')
+  })
+
+  it('accepts the tagged byte-string representation used by compatible CBOR writers', () => {
+    const taggedCiphertext = concatBytes(
+      Uint8Array.of(0xa2),
+      cborText('version'),
+      Uint8Array.of(0x01),
+      cborText('ciphertext'),
+      // RFC 8746 tag 64 wraps an unsigned 8-bit typed array.
+      Uint8Array.of(0xd8, 0x40, 0x43, 0x09, 0x08, 0x07),
+    )
+
+    expect(parseStrictSealedPayload(encodeBase64(taggedCiphertext))).toEqual({
+      version: 1,
+      ciphertext: Uint8Array.of(9, 8, 7),
+    })
   })
 
   it('round-trips work-list, task, comment, and note envelopes with frozen contexts', async () => {

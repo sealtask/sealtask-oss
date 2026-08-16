@@ -92,7 +92,7 @@ describe('strict CBOR reader', () => {
     expect(() => readStrictCborText(Uint8Array.of(0x61, 0xff), 0)).toThrow()
   })
 
-  it('walks only the strict definite CBOR subset', () => {
+  it('walks the compatible definite-length CBOR value set', () => {
     const value = Uint8Array.of(
       0xa1,
       0x61,
@@ -111,15 +111,14 @@ describe('strict CBOR reader', () => {
     expect(() =>
       skipStrictCborItem(Uint8Array.of(0x9f, 0x01, 0xff), 0, { maxDepth: 0 }),
     ).toThrow('unsupported or truncated CBOR argument')
-    expect(() =>
-      skipStrictCborItem(Uint8Array.of(0xc0, 0x01), 0, { maxDepth: 0 }),
-    ).toThrow('CBOR tags are not supported')
-    expect(() =>
-      skipStrictCborItem(Uint8Array.of(0xf9, 0x3c, 0x00), 0, { maxDepth: 0 }),
-    ).toThrow('CBOR simple values and floats are not supported')
-    expect(() =>
-      skipStrictCborItem(Uint8Array.of(0xf4), 0, { maxDepth: 0 }),
-    ).toThrow('CBOR simple values and floats are not supported')
+    expect(skipStrictCborItem(Uint8Array.of(0xc0, 0x01), 0, { maxDepth: 1 }))
+      .toBe(2)
+    expect(skipStrictCborItem(
+      Uint8Array.of(0xf9, 0x3c, 0x00),
+      0,
+      { maxDepth: 0 },
+    )).toBe(3)
+    expect(skipStrictCborItem(Uint8Array.of(0xf4), 0, { maxDepth: 0 })).toBe(1)
   })
 
   it('applies the caller-owned nesting policy at the boundary', () => {
@@ -128,6 +127,9 @@ describe('strict CBOR reader', () => {
     ).toBe(3)
     expect(() =>
       skipStrictCborItem(nestedArrays(3), 0, { maxDepth: 2 }),
+    ).toThrow('CBOR nesting is too deep')
+    expect(() =>
+      skipStrictCborItem(Uint8Array.of(0xc0, 0x01), 0, { maxDepth: 0 }),
     ).toThrow('CBOR nesting is too deep')
     expect(() =>
       skipStrictCborItem(Uint8Array.of(0x00), 0, { maxDepth: -1 }),
