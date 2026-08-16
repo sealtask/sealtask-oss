@@ -135,36 +135,41 @@ describe('strict CBOR reader', () => {
   })
 
   it('returns unique text map keys only when the entire map is consumed', () => {
-    expect(
-      readStrictCborTextMapKeys(
-        Uint8Array.of(
-          0xa2,
-          0x61,
-          0x61,
-          0x01,
-          0x61,
-          0x62,
-          0x82,
-          0x02,
-          0x03,
-        ),
-        { maxDepth: 2 },
-      ),
-    ).toEqual(['a', 'b'])
+    const mapWithNestedValue = Uint8Array.of(
+      0xa2,
+      0x61,
+      0x61,
+      0x01,
+      0x61,
+      0x62,
+      0x82,
+      0x02,
+      0x03,
+    )
+    expect(readStrictCborTextMapKeys(mapWithNestedValue, { maxDepth: 2 }))
+      .toEqual(['a', 'b'])
+    expect(() =>
+      readStrictCborTextMapKeys(mapWithNestedValue, { maxDepth: 1 }),
+    ).toThrow('CBOR nesting is too deep')
+    expect(() =>
+      readStrictCborTextMapKeys(Uint8Array.of(0xa1, 0x61, 0x61, 0x01), {
+        maxDepth: 0,
+      }),
+    ).toThrow('CBOR nesting is too deep')
     expect(() =>
       readStrictCborTextMapKeys(
         Uint8Array.of(0xa2, 0x61, 0x61, 0x01, 0x61, 0x61, 0x02),
-        { maxDepth: 0 },
+        { maxDepth: 1 },
       ),
     ).toThrow('duplicate top-level map key')
     expect(() =>
       readStrictCborTextMapKeys(Uint8Array.of(0xa1, 0x01, 0x01), {
-        maxDepth: 0,
+        maxDepth: 1,
       }),
     ).toThrow('CBOR map key is not text')
     expect(() =>
       readStrictCborTextMapKeys(Uint8Array.of(0xa1, 0x61, 0x61, 0x01, 0x00), {
-        maxDepth: 0,
+        maxDepth: 1,
       }),
     ).toThrow('trailing bytes')
   })

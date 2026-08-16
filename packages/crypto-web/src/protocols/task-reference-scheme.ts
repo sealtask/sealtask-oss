@@ -55,7 +55,8 @@ const taskReferenceCborEncoder = new Encoder({
   tagUint8Array: false,
 })
 const taskReferenceCborDecoder = new Decoder({ mapsAsObjects: true })
-const TASK_REFERENCE_STRICT_CBOR_POLICY = { maxDepth: 16 } as const
+// Outer map at depth 0, up to sixteen nested value containers, then their leaf.
+const TASK_REFERENCE_STRICT_CBOR_POLICY = { maxDepth: 17 } as const
 
 export type TaskReferenceScheme = {
   kind: 'task_reference_scheme'

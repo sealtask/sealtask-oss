@@ -8,6 +8,8 @@
  */
 
 const UTF8_DECODER = new TextDecoder('utf-8', { fatal: true })
+const ROOT_ITEM_DEPTH = 0
+const TOP_LEVEL_MAP_CHILD_DEPTH = ROOT_ITEM_DEPTH + 1
 
 export type StrictCborHeader = {
   majorType: number
@@ -105,6 +107,9 @@ export function readStrictCborTextMapKeys(
   const keys: string[] = []
   const seen = new Set<string>()
   let offset = header.nextOffset
+  if (header.argument > 0) {
+    requireTraversalDepth(TOP_LEVEL_MAP_CHILD_DEPTH, maxDepth)
+  }
   for (let index = 0; index < header.argument; index += 1) {
     const key = readStrictCborText(bytes, offset)
     if (seen.has(key.value)) {
@@ -115,7 +120,7 @@ export function readStrictCborTextMapKeys(
     offset = skipStrictCborItemAtDepth(
       bytes,
       key.nextOffset,
-      0,
+      TOP_LEVEL_MAP_CHILD_DEPTH,
       maxDepth,
     )
   }
@@ -131,7 +136,12 @@ export function skipStrictCborItem(
   offset: number,
   policy: StrictCborTraversalPolicy,
 ): number {
-  return skipStrictCborItemAtDepth(bytes, offset, 0, requireMaxDepth(policy))
+  return skipStrictCborItemAtDepth(
+    bytes,
+    offset,
+    ROOT_ITEM_DEPTH,
+    requireMaxDepth(policy),
+  )
 }
 
 function requireMaxDepth(policy: StrictCborTraversalPolicy): number {
@@ -147,9 +157,7 @@ function skipStrictCborItemAtDepth(
   depth: number,
   maxDepth: number,
 ): number {
-  if (depth > maxDepth) {
-    throw new Error('CBOR nesting is too deep')
-  }
+  requireTraversalDepth(depth, maxDepth)
 
   const header = readStrictCborHeader(bytes, offset)
   switch (header.majorType) {
@@ -169,6 +177,12 @@ function skipStrictCborItemAtDepth(
       throw new Error('CBOR simple values and floats are not supported')
     default:
       throw new Error('unsupported CBOR major type')
+  }
+}
+
+function requireTraversalDepth(depth: number, maxDepth: number): void {
+  if (depth > maxDepth) {
+    throw new Error('CBOR nesting is too deep')
   }
 }
 

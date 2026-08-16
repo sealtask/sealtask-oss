@@ -16,7 +16,8 @@ type SealedPayloadRecord = {
 
 type DefaultSealedPayloadVersion = typeof SEALED_PAYLOAD_VERSION
 type AllowedVersions<V extends number = number> = readonly V[]
-const STRICT_SEALED_PAYLOAD_CBOR_POLICY = { maxDepth: 8 } as const
+// Outer map at depth 0, up to eight nested value containers, then their leaf.
+const STRICT_SEALED_PAYLOAD_CBOR_POLICY = { maxDepth: 9 } as const
 
 function assertSealedPayload(value: unknown): asserts value is SealedPayloadRecord {
   if (
