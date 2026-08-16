@@ -1,0 +1,4 @@
+# Quarantine newly resolved npm releases while the ecosystem has time to detect
+# compromised publications. Keep this aligned with docs/javascript-dependency-security.md.
+[install]
+minimumReleaseAge = 604800
