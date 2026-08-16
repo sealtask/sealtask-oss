@@ -324,8 +324,16 @@ describe('task reference scheme protocol', () => {
       'Task reference scheme envelope is invalid',
     )
 
+    expect(() =>
+      decodeSchemePlaintext(
+        taskReferencePlaintextWithExtraValue(plaintext, nestedArrays(17)),
+      ),
+    ).toThrow('Task reference scheme plaintext is not valid strict CBOR')
+
+    // Tags, floats, and simple values remain valid structural CBOR. The
+    // task-reference schema, rather than the shared walker, rejects the extra
+    // field that carries them.
     for (const value of [
-      nestedArrays(17),
       Uint8Array.of(0xc0, 0x01),
       Uint8Array.of(0xf9, 0x3c, 0x00),
       Uint8Array.of(0xf4),
@@ -334,7 +342,7 @@ describe('task reference scheme protocol', () => {
         decodeSchemePlaintext(
           taskReferencePlaintextWithExtraValue(plaintext, value),
         ),
-      ).toThrow('Task reference scheme plaintext is not valid strict CBOR')
+      ).toThrow('Task reference scheme envelope is invalid')
     }
   })
 
