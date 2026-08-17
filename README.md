@@ -107,7 +107,7 @@ scripts/build-strong-box-wasm.sh
 
 Requirements:
 
-- Rust 1.94.0 (also pinned by `rust-toolchain.toml`)
+- Rust 1.97.0 (also pinned by `rust-toolchain.toml`)
 - Python 3.11 or newer for strict manifest generation and verification
 - Bun for the browser crypto package
 
@@ -632,7 +632,7 @@ JSON process contract.
 
 `crates/strong-box` and `crates/strong-box-wasm` are the production source for
 the WASM byte shipped by SealTask. All development, CI, and Docker builds use
-Rust 1.94.0, the `wasm32-unknown-unknown` target, Cargo's `wasm-release`
+Rust 1.97.0, the `wasm32-unknown-unknown` target, Cargo's `wasm-release`
 profile, the checked-in lockfile, and the same path-remapped build script.
 Unpinned, host-dependent `wasm-opt` post-processing is deliberately not used.
 

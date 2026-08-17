@@ -85,7 +85,7 @@ def expected_manifest(artifact: Path) -> dict[str, Any]:
             ],
         },
         "build": {
-            "rustToolchain": "1.94.0",
+            "rustToolchain": "1.97.0",
             "rustcVersion": tool_version("rustc"),
             "cargoVersion": tool_version("cargo"),
             "target": "wasm32-unknown-unknown",

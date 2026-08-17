@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "artifact": {
     "path": "artifacts/strong-box-wasm/strong_box_wasm_bg.wasm",
-    "sha256": "088d2e072b566fcbb480623213907041f212996d1681719ec2310d04bab0a5f4",
-    "sizeBytes": 160430
+    "sha256": "e39921b42692f9a822ad6d70e2453d6e3af98619912e00e97b4c9d6d01f122aa",
+    "sizeBytes": 156584
   },
   "source": {
     "repository": "https://github.com/sealtask/sealtask-oss",
@@ -25,9 +25,9 @@
     ]
   },
   "build": {
-    "rustToolchain": "1.94.0",
-    "rustcVersion": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
-    "cargoVersion": "cargo 1.94.0 (85eff7c80 2026-01-15)",
+    "rustToolchain": "1.97.0",
+    "rustcVersion": "rustc 1.97.0 (2d8144b78 2026-07-07)",
+    "cargoVersion": "cargo 1.97.0 (c980f4866 2026-06-30)",
     "target": "wasm32-unknown-unknown",
     "profile": "wasm-release",
     "canonicalPlatform": "linux/amd64",

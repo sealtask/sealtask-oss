@@ -106,10 +106,10 @@ fi
 
 RUST_VERSION="$(cd "$OSS_DIR" && rustc --version)"
 case "$RUST_VERSION" in
-  "rustc 1.94.0 "*)
+  "rustc 1.97.0 "*)
     ;;
   *)
-    echo "StrongBox WASM requires rustc 1.94.0; got $RUST_VERSION" >&2
+    echo "StrongBox WASM requires rustc 1.97.0; got $RUST_VERSION" >&2
     exit 1
     ;;
 esac
@@ -131,7 +131,7 @@ append_encoded_flag "--remap-path-prefix=$(canonical_dir "$RUST_SYSROOT")=rust"
 mkdir -p "$PROFILE_DIR/deps"
 rm -f "$BUILT_WASM" "$DEPS_WASM"
 
-echo "Building StrongBox WASM with rustc 1.94.0 and profile wasm-release..."
+echo "Building StrongBox WASM with rustc 1.97.0 and profile wasm-release..."
 (
   cd "$OSS_DIR"
   CARGO_TARGET_DIR="$TARGET_DIR" \
