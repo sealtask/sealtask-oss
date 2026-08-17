@@ -13,7 +13,7 @@ const TOP_LEVEL_MAP_CHILD_DEPTH = ROOT_ITEM_DEPTH + 1
 
 export type StrictCborHeader = {
   majorType: number
-  argument: number
+  argument: bigint
   nextOffset: number
 }
 
@@ -39,7 +39,7 @@ export function readStrictCborHeader(
   const majorType = initial >>> 5
   const additional = initial & 0x1f
   if (additional < 24) {
-    return { majorType, argument: additional, nextOffset: offset + 1 }
+    return { majorType, argument: BigInt(additional), nextOffset: offset + 1 }
   }
 
   const argumentBytes =
@@ -60,13 +60,9 @@ export function readStrictCborHeader(
   for (let index = 0; index < argumentBytes; index += 1) {
     argument = (argument << 8n) | BigInt(bytes[offset + 1 + index])
   }
-  if (argument > BigInt(Number.MAX_SAFE_INTEGER)) {
-    throw new Error('CBOR argument exceeds the safe integer range')
-  }
-
   return {
     majorType,
-    argument: Number(argument),
+    argument,
     nextOffset: offset + 1 + argumentBytes,
   }
 }
@@ -79,11 +75,12 @@ export function readStrictCborText(
   if (header.majorType !== 3) {
     throw new Error('CBOR map key is not text')
   }
-  if (header.argument > bytes.byteLength - header.nextOffset) {
+  const length = requireSafeCborLength(header.argument)
+  if (length > bytes.byteLength - header.nextOffset) {
     throw new Error('truncated CBOR text')
   }
 
-  const nextOffset = header.nextOffset + header.argument
+  const nextOffset = header.nextOffset + length
   return {
     value: UTF8_DECODER.decode(bytes.subarray(header.nextOffset, nextOffset)),
     nextOffset,
@@ -103,14 +100,15 @@ export function readStrictCborTextMapKeys(
   if (header.majorType !== 5) {
     throw new Error('top-level value is not a map')
   }
+  const pairCount = requireSafeCborLength(header.argument)
 
   const keys: string[] = []
   const seen = new Set<string>()
   let offset = header.nextOffset
-  if (header.argument > 0) {
+  if (pairCount > 0) {
     requireTraversalDepth(TOP_LEVEL_MAP_CHILD_DEPTH, maxDepth)
   }
-  for (let index = 0; index < header.argument; index += 1) {
+  for (let index = 0; index < pairCount; index += 1) {
     const key = readStrictCborText(bytes, offset)
     if (seen.has(key.value)) {
       throw new Error('duplicate top-level map key')
@@ -191,14 +189,22 @@ function requireTraversalDepth(depth: number, maxDepth: number): void {
   }
 }
 
+function requireSafeCborLength(argument: bigint): number {
+  if (argument > BigInt(Number.MAX_SAFE_INTEGER)) {
+    throw new Error('CBOR length exceeds the safe integer range')
+  }
+  return Number(argument)
+}
+
 function skipStrictCborString(
   bytes: Uint8Array,
   header: StrictCborHeader,
 ): number {
-  if (header.argument > bytes.byteLength - header.nextOffset) {
+  const length = requireSafeCborLength(header.argument)
+  if (length > bytes.byteLength - header.nextOffset) {
     throw new Error('truncated CBOR string')
   }
-  return header.nextOffset + header.argument
+  return header.nextOffset + length
 }
 
 function skipStrictCborArray(
@@ -207,8 +213,9 @@ function skipStrictCborArray(
   depth: number,
   maxDepth: number,
 ): number {
+  const itemCount = requireSafeCborLength(header.argument)
   let nextOffset = header.nextOffset
-  for (let index = 0; index < header.argument; index += 1) {
+  for (let index = 0; index < itemCount; index += 1) {
     nextOffset = skipStrictCborItemAtDepth(
       bytes,
       nextOffset,
@@ -225,8 +232,9 @@ function skipStrictCborMap(
   depth: number,
   maxDepth: number,
 ): number {
+  const pairCount = requireSafeCborLength(header.argument)
   let nextOffset = header.nextOffset
-  for (let index = 0; index < header.argument; index += 1) {
+  for (let index = 0; index < pairCount; index += 1) {
     nextOffset = skipStrictCborItemAtDepth(
       bytes,
       nextOffset,

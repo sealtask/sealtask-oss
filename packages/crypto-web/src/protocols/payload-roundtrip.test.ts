@@ -126,6 +126,21 @@ describe('sealed protocol payloads', () => {
         strictSealedPayloadWithVersion(Uint8Array.of(0xf9, 0x3c, 0x00)),
       )),
     ).toEqual({ version: 1, ciphertext: Uint8Array.of(1) })
+    expect(
+      parseStrictSealedPayload(encodeBase64(
+        strictSealedPayloadWithVersion(Uint8Array.of(
+          0xfb,
+          0x3f,
+          0xf0,
+          0x00,
+          0x00,
+          0x00,
+          0x00,
+          0x00,
+          0x00,
+        )),
+      )),
+    ).toEqual({ version: 1, ciphertext: Uint8Array.of(1) })
     expect(() =>
       parseStrictSealedPayload(encodeBase64(
         strictSealedPayloadWithVersion(Uint8Array.of(0xf4)),

@@ -11,7 +11,7 @@ describe('strict CBOR reader', () => {
   it('reads bounded definite-length headers without imposing a byte encoding', () => {
     expect(
       readStrictCborHeader(Uint8Array.of(0x1a, 0x00, 0x00, 0x01, 0x00), 0),
-    ).toEqual({ majorType: 0, argument: 256, nextOffset: 5 })
+    ).toEqual({ majorType: 0, argument: 256n, nextOffset: 5 })
     expect(
       readStrictCborHeader(
         Uint8Array.of(
@@ -29,19 +29,19 @@ describe('strict CBOR reader', () => {
       ),
     ).toEqual({
       majorType: 0,
-      argument: Number.MAX_SAFE_INTEGER,
+      argument: BigInt(Number.MAX_SAFE_INTEGER),
       nextOffset: 9,
     })
 
     // The protocol accepts a compatible writer's non-minimal definite form.
     expect(readStrictCborHeader(Uint8Array.of(0x18, 0x01), 0)).toEqual({
       majorType: 0,
-      argument: 1,
+      argument: 1n,
       nextOffset: 2,
     })
   })
 
-  it('rejects truncated, indefinite, reserved, and unsafe headers', () => {
+  it('rejects truncated, indefinite, and reserved headers', () => {
     expect(() => readStrictCborHeader(Uint8Array.of(0x00), -1)).toThrow(
       'CBOR offset must be a non-negative safe integer',
     )
@@ -60,22 +60,56 @@ describe('strict CBOR reader', () => {
     expect(() => readStrictCborHeader(Uint8Array.of(0x1f), 0)).toThrow(
       'unsupported or truncated CBOR argument',
     )
+  })
+
+  it('keeps wide scalar payloads out of length arithmetic', () => {
+    const wideInteger = Uint8Array.of(
+      0x1b,
+      0xff,
+      0xff,
+      0xff,
+      0xff,
+      0xff,
+      0xff,
+      0xff,
+      0xff,
+    )
+    const float64One = Uint8Array.of(
+      0xfb,
+      0x3f,
+      0xf0,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+    )
+
+    expect(readStrictCborHeader(wideInteger, 0)).toEqual({
+      majorType: 0,
+      argument: 0xffff_ffff_ffff_ffffn,
+      nextOffset: 9,
+    })
+    expect(skipStrictCborItem(wideInteger, 0, { maxDepth: 0 })).toBe(9)
+    expect(skipStrictCborItem(float64One, 0, { maxDepth: 0 })).toBe(9)
     expect(() =>
-      readStrictCborHeader(
+      skipStrictCborItem(
         Uint8Array.of(
-          0x1b,
-          0x00,
-          0x20,
-          0x00,
-          0x00,
-          0x00,
-          0x00,
-          0x00,
-          0x00,
+          0x5b,
+          0xff,
+          0xff,
+          0xff,
+          0xff,
+          0xff,
+          0xff,
+          0xff,
+          0xff,
         ),
         0,
+        { maxDepth: 0 },
       ),
-    ).toThrow('CBOR argument exceeds the safe integer range')
+    ).toThrow('CBOR length exceeds the safe integer range')
   })
 
   it('reads only complete, valid UTF-8 text keys', () => {
