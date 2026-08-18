@@ -35,11 +35,6 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if ! command -v cargo >/dev/null 2>&1; then
-  echo "cargo is required to build the StrongBox WASM bridge" >&2
-  exit 1
-fi
-
 if [[ "$MODE" != "build" ]]; then
   if ! command -v python3 >/dev/null 2>&1; then
     echo "Python 3.11 or newer is required to verify the WASM manifest" >&2
@@ -99,22 +94,48 @@ DEPS_WASM="$PROFILE_DIR/deps/strong_box_wasm.wasm"
 PUBLIC_ARTIFACT="$OSS_DIR/artifacts/strong-box-wasm/strong_box_wasm_bg.wasm"
 PATH_CHECK="$SCRIPT_DIR/check-strong-box-wasm-paths.sh"
 MANIFEST_TOOL="$SCRIPT_DIR/strong-box-wasm-manifest.py"
+PINNED_RUST_TOOLCHAIN="$(sed -n 's/^[[:space:]]*channel = "\([^"]*\)".*/\1/p' "$OSS_DIR/rust-toolchain.toml")"
+
+if [[ ! "$PINNED_RUST_TOOLCHAIN" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+  echo "expected an exact Rust channel in $OSS_DIR/rust-toolchain.toml; got '$PINNED_RUST_TOOLCHAIN'" >&2
+  exit 1
+fi
+
+PINNED_RUST_MINOR="${PINNED_RUST_TOOLCHAIN%.*}"
+
+if [[ "$MODE" == "build" ]]; then
+  if ! command -v cargo >/dev/null 2>&1 || ! command -v rustc >/dev/null 2>&1; then
+    echo "cargo and rustc are required to build the StrongBox WASM bridge" >&2
+    exit 1
+  fi
+  RUSTC_COMMAND=(rustc)
+  CARGO_COMMAND=(cargo)
+else
+  if ! command -v rustup >/dev/null 2>&1; then
+    echo "rustup is required for canonical StrongBox WASM $MODE" >&2
+    exit 1
+  fi
+  RUSTC_COMMAND=(rustup run "$PINNED_RUST_TOOLCHAIN" rustc)
+  CARGO_COMMAND=(rustup run "$PINNED_RUST_TOOLCHAIN" cargo)
+fi
 
 if [[ "$MODE" == "update" || "$MODE" == "verify" ]]; then
   require_canonical_platform
 fi
 
-RUST_VERSION="$(cd "$OSS_DIR" && rustc --version)"
-case "$RUST_VERSION" in
-  "rustc 1.97.0 "*)
-    ;;
-  *)
-    echo "StrongBox WASM requires rustc 1.97.0; got $RUST_VERSION" >&2
+RUST_VERSION="$(cd "$OSS_DIR" && "${RUSTC_COMMAND[@]}" --version)"
+RUST_RELEASE="$(awk '{print $2}' <<<"$RUST_VERSION")"
+if [[ "$MODE" == "build" ]]; then
+  if [[ "$RUST_RELEASE" != "$PINNED_RUST_MINOR".* ]]; then
+    echo "StrongBox WASM development builds require rustc $PINNED_RUST_MINOR.x; got $RUST_VERSION" >&2
     exit 1
-    ;;
-esac
+  fi
+elif [[ "$RUST_RELEASE" != "$PINNED_RUST_TOOLCHAIN" ]]; then
+  echo "canonical StrongBox WASM $MODE requires rustc $PINNED_RUST_TOOLCHAIN; got $RUST_VERSION" >&2
+  exit 1
+fi
 
-RUST_SYSROOT="$(cd "$OSS_DIR" && rustc --print sysroot)"
+RUST_SYSROOT="$(cd "$OSS_DIR" && "${RUSTC_COMMAND[@]}" --print sysroot)"
 CARGO_HOME_DIR="${CARGO_HOME:-$HOME/.cargo}"
 UNIT_SEPARATOR="$(printf '\037')"
 ENCODED_RUSTFLAGS=""
@@ -131,7 +152,7 @@ append_encoded_flag "--remap-path-prefix=$(canonical_dir "$RUST_SYSROOT")=rust"
 mkdir -p "$PROFILE_DIR/deps"
 rm -f "$BUILT_WASM" "$DEPS_WASM"
 
-echo "Building StrongBox WASM with rustc 1.97.0 and profile wasm-release..."
+echo "Building StrongBox WASM with rustc $RUST_RELEASE and profile wasm-release..."
 (
   cd "$OSS_DIR"
   CARGO_TARGET_DIR="$TARGET_DIR" \
@@ -139,7 +160,7 @@ echo "Building StrongBox WASM with rustc 1.97.0 and profile wasm-release..."
     CARGO_ENCODED_RUSTFLAGS="$ENCODED_RUSTFLAGS" \
     RUSTFLAGS= \
     SOURCE_DATE_EPOCH=0 \
-    cargo build \
+    "${CARGO_COMMAND[@]}" build \
       -p strong-box-wasm \
       --profile wasm-release \
       --locked \
@@ -168,21 +189,21 @@ case "$MODE" in
   update)
     mkdir -p "$(dirname "$PUBLIC_ARTIFACT")"
     cp "$BUILT_WASM" "$PUBLIC_ARTIFACT"
-    "$MANIFEST_TOOL" update
+    RUSTUP_TOOLCHAIN="$PINNED_RUST_TOOLCHAIN" "$MANIFEST_TOOL" update
     VERIFY_ARGS=(verify --built-wasm "$BUILT_WASM")
     if [[ -n "$OUTPUT_PATH" ]]; then
       mkdir -p "$(dirname "$OUTPUT_PATH")"
       cp "$BUILT_WASM" "$OUTPUT_PATH"
       VERIFY_ARGS+=(--frontend-wasm "$OUTPUT_PATH")
     fi
-    "$MANIFEST_TOOL" "${VERIFY_ARGS[@]}"
+    RUSTUP_TOOLCHAIN="$PINNED_RUST_TOOLCHAIN" "$MANIFEST_TOOL" "${VERIFY_ARGS[@]}"
     ;;
   verify)
     VERIFY_ARGS=(verify --built-wasm "$BUILT_WASM")
     if [[ -n "$OUTPUT_PATH" ]]; then
       VERIFY_ARGS+=(--frontend-wasm "$OUTPUT_PATH")
     fi
-    "$MANIFEST_TOOL" "${VERIFY_ARGS[@]}"
+    RUSTUP_TOOLCHAIN="$PINNED_RUST_TOOLCHAIN" "$MANIFEST_TOOL" "${VERIFY_ARGS[@]}"
     "$PATH_CHECK" "$PUBLIC_ARTIFACT"
     if [[ -n "$OUTPUT_PATH" ]]; then
       "$PATH_CHECK" "$OUTPUT_PATH"
