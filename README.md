@@ -109,6 +109,7 @@ Requirements:
 
 - Rust 1.97.x for development builds. Canonical artifact updates and
   verification use the exact 1.97.0 compiler pinned by `rust-toolchain.toml`.
+- The `wasm32-unknown-unknown` target for the selected development compiler
 - Python 3.11 or newer for strict manifest generation and verification
 - Bun for the browser crypto package
 
