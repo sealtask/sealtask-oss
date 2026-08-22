@@ -18,6 +18,7 @@ ARTIFACT_RELATIVE_PATH = Path(
 )
 MANIFEST_RELATIVE_PATH = Path("artifacts/strong-box-wasm/build-manifest.json")
 CARGO_LOCK_RELATIVE_PATH = Path("Cargo.lock")
+RUST_TOOLCHAIN_RELATIVE_PATH = Path("rust-toolchain.toml")
 REPOSITORY = "https://github.com/sealtask/sealtask-oss"
 MINIMUM_WASM_SIZE = 1024
 
@@ -47,6 +48,24 @@ def package_metadata(relative_manifest: str) -> dict[str, str]:
     }
 
 
+def pinned_rust_toolchain() -> str:
+    toolchain_path = OSS_DIR / RUST_TOOLCHAIN_RELATIVE_PATH
+    require_file(toolchain_path, "OSS Rust toolchain")
+    with toolchain_path.open("rb") as file:
+        channel = tomllib.load(file)["toolchain"]["channel"]
+
+    if not isinstance(channel, str):
+        raise ValueError(f"Rust toolchain channel must be a string in {toolchain_path}")
+    components = channel.split(".")
+    if len(components) != 3 or any(
+        not component.isdigit() for component in components
+    ):
+        raise ValueError(
+            f"expected an exact Rust channel in {toolchain_path}; got {channel!r}"
+        )
+    return channel
+
+
 def tool_version(command: str) -> str:
     return subprocess.check_output(
         [command, "--version"],
@@ -64,6 +83,17 @@ def expected_manifest(artifact: Path) -> dict[str, Any]:
     if artifact_size < MINIMUM_WASM_SIZE:
         raise ValueError(
             f"StrongBox WASM artifact is unexpectedly small: {artifact_size} bytes"
+        )
+
+    rust_toolchain = pinned_rust_toolchain()
+    rustc_version = tool_version("rustc")
+    rustc_version_parts = rustc_version.split()
+    if len(rustc_version_parts) < 2 or rustc_version_parts[:2] != [
+        "rustc",
+        rust_toolchain,
+    ]:
+        raise ValueError(
+            f"Rust toolchain pins {rust_toolchain}, but the active compiler is {rustc_version}"
         )
 
     return {
@@ -85,8 +115,8 @@ def expected_manifest(artifact: Path) -> dict[str, Any]:
             ],
         },
         "build": {
-            "rustToolchain": "1.97.0",
-            "rustcVersion": tool_version("rustc"),
+            "rustToolchain": rust_toolchain,
+            "rustcVersion": rustc_version,
             "cargoVersion": tool_version("cargo"),
             "target": "wasm32-unknown-unknown",
             "profile": "wasm-release",
