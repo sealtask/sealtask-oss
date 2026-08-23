@@ -55,6 +55,7 @@ jobs:
           python3 -m unittest scripts/test_check_release_metadata.py
           python3 -m unittest scripts/test_finalize_release_changelog.py
           python3 -m unittest scripts/test_prepare_initial_release.py
+          python3 -m unittest scripts/test_strong_box_wasm_manifest.py
           ./scripts/test-release-plz-cargo.sh
           ./scripts/test-publish-crates.sh
           ./scripts/test-verify-registry-package.sh
