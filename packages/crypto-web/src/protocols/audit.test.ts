@@ -11,6 +11,7 @@ import {
   extractAuditNarrative,
   priorityChangeAudit,
   sectionMoveAudit,
+  taskContentChangeAudit,
   taskUpdateAudit,
 } from './audit'
 
@@ -148,6 +149,35 @@ describe('audit protocol', () => {
     expect(createAuditPatchSemantics(operation)?.envelope.kind).toBe(
       'audit.due_date',
     )
+  })
+
+  it('describes every changed task content field with the compatible details narrative', () => {
+    const operation = taskContentChangeAudit({
+      taskTitle: 'Ship',
+      fields: ['title', 'details', 'attachments'],
+    })
+
+    expect(createAuditPatchSemantics(operation)).toEqual({
+      fields: [
+        { field: 'title', changeKind: 'update' },
+        { field: 'details', changeKind: 'update' },
+        { field: 'attachments', changeKind: 'update' },
+      ],
+      envelope: {
+        kind: 'audit.details',
+        version: 2,
+        body: {
+          narrativeKey: 'features.audit.narratives.taskDetails',
+          narrativeOptions: { title: 'Ship' },
+        },
+      },
+      payloadVersion: 1,
+    })
+    expect(
+      createAuditPatchSemantics(
+        taskContentChangeAudit({ taskTitle: 'Ship', fields: [] }),
+      ),
+    ).toBeNull()
   })
 
   it('encrypts, proves, and decrypts audit envelopes with audit-patch context', async () => {

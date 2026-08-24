@@ -54,7 +54,15 @@ export type DueDateChangeContext = {
 
 export type ArchiveContext = { taskTitle: string }
 export type ChecklistContext = { changes: ChecklistChange[] }
-export type DetailsChangeContext = { taskTitle: string }
+export type TaskContentField = 'title' | 'details' | 'attachments'
+export type DetailsChangeContext = {
+  taskTitle: string
+  fields?: readonly TaskContentField[]
+}
+export type TaskContentChangeContext = {
+  taskTitle: string
+  fields: readonly TaskContentField[]
+}
 export type CommentCreateContext = { taskTitle: string }
 export type CommentUpdateContext = { taskTitle: string }
 export type CommentDeleteContext = { taskTitle: string }
@@ -569,6 +577,14 @@ export function detailsChangeAudit(
   return { type: 'task.details', context }
 }
 
+// Reuse the established task.details descriptor on the wire so clients that
+// predate field-level content metadata can still render the narrative.
+export function taskContentChangeAudit(
+  context: TaskContentChangeContext,
+): TaskUpdateAuditOperation {
+  return { type: 'task.details', context }
+}
+
 export function commentCreateAudit(
   context: CommentCreateContext,
 ): AuditOperation {
@@ -873,6 +889,8 @@ function shouldGenerateAudit(operation: AuditOperation): boolean {
       return operation.context.oldDueAt !== operation.context.newDueAt
     case 'checklist.toggled':
       return operation.context.changes.length > 0
+    case 'task.details':
+      return operation.context.fields?.length !== 0
     default:
       return true
   }
@@ -924,7 +942,10 @@ function buildFieldsArray(
     case 'work_list.unarchived':
       return [{ field: 'archivedAt', changeKind: 'clear' }]
     case 'task.details':
-      return [{ field: 'details', changeKind: 'update' }]
+      return (operation.context.fields ?? ['details']).map((field) => ({
+        field,
+        changeKind: 'update',
+      }))
     case 'checklist.toggled':
       return [{ field: 'checklist', changeKind: 'update' }]
     case 'comment.created':
