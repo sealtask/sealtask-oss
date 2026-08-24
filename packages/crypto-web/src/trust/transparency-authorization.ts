@@ -1,3 +1,4 @@
+import { constantTimeEquals } from '../runtime/bytes'
 import { hkdfExpand } from '../runtime/hkdf'
 import {
   getPublicKeyAsync,
@@ -9,6 +10,12 @@ import {
   requireCanonicalTransparencyUserId,
   transparencyUserIdToBytes,
 } from './transparency-user-id'
+import {
+  concatBytes,
+  encodeUint32,
+  encodeUint64,
+  sha256,
+} from './transparency-wire'
 
 const encoder = new TextEncoder()
 const STATEMENT_V2_DOMAIN = encoder.encode('worklist.transparency.statement.v2')
@@ -104,16 +111,19 @@ export async function computeOwnerAuthorizedStatementDigest(params: {
     requireExactBytes(params.previousStatementDigest, 32, 'previous_statement_digest')
   }
 
-  return sha256(concatBytes(
-    STATEMENT_V2_DOMAIN,
-    userBytes,
-    generationBytes,
-    encodeUint32(params.invitePublicKey.length, 'invite_public_key.length'),
-    params.invitePublicKey,
-    params.identityPublicKey,
-    Uint8Array.of(params.previousStatementDigest === null ? 0 : 1),
-    params.previousStatementDigest ?? new Uint8Array(0),
-  ))
+  return sha256(
+    concatBytes(
+      STATEMENT_V2_DOMAIN,
+      userBytes,
+      generationBytes,
+      encodeUint32(params.invitePublicKey.length, 'invite_public_key.length'),
+      params.invitePublicKey,
+      params.identityPublicKey,
+      Uint8Array.of(params.previousStatementDigest === null ? 0 : 1),
+      params.previousStatementDigest ?? new Uint8Array(0),
+    ),
+    'WebCrypto subtle API is unavailable in this environment',
+  )
 }
 
 export async function verifyOwnerAuthorizedTransparencyStatement(
@@ -125,7 +135,7 @@ export async function verifyOwnerAuthorizedTransparencyStatement(
   requireExactBytes(statement.statementDigest, 32, 'statement_digest')
   requireExactBytes(statement.ownerSignature, 64, 'owner_signature')
   const expectedDigest = await computeOwnerAuthorizedStatementDigest(statement)
-  if (!constantTimeEqual(expectedDigest, statement.statementDigest)) {
+  if (!constantTimeEquals(expectedDigest, statement.statementDigest)) {
     return false
   }
 
@@ -137,71 +147,8 @@ export async function verifyOwnerAuthorizedTransparencyStatement(
   )
 }
 
-function encodeUint64(value: number, field: string): Uint8Array {
-  if (!Number.isSafeInteger(value) || value < 0) {
-    throw new Error(`${field} must be a non-negative safe integer`)
-  }
-  const view = new DataView(new ArrayBuffer(8))
-  view.setBigUint64(0, BigInt(value))
-  return new Uint8Array(view.buffer)
-}
-
-function encodeUint32(value: number, field: string): Uint8Array {
-  if (!Number.isSafeInteger(value) || value < 0 || value > 0xffffffff) {
-    throw new Error(`${field} must be a non-negative 32-bit integer`)
-  }
-  const view = new DataView(new ArrayBuffer(4))
-  view.setUint32(0, value)
-  return new Uint8Array(view.buffer)
-}
-
-function concatBytes(...parts: readonly Uint8Array[]): Uint8Array {
-  const output = new Uint8Array(parts.reduce((total, part) => total + part.length, 0))
-  let offset = 0
-  for (const part of parts) {
-    output.set(part, offset)
-    offset += part.length
-  }
-  return output
-}
-
-async function sha256(input: Uint8Array): Promise<Uint8Array> {
-  const digest = await getSubtleCrypto().digest('SHA-256', toArrayBuffer(input))
-  return new Uint8Array(digest)
-}
-
-function getSubtleCrypto(): SubtleCrypto {
-  const subtle = globalThis.crypto?.subtle
-  if (!subtle) {
-    throw new Error('WebCrypto subtle API is unavailable in this environment')
-  }
-  return subtle
-}
-
-function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
-  if (
-    bytes.byteOffset === 0
-    && bytes.byteLength === bytes.buffer.byteLength
-    && bytes.buffer instanceof ArrayBuffer
-  ) {
-    return bytes.buffer.slice(0)
-  }
-  return bytes.slice().buffer
-}
-
 function requireExactBytes(value: Uint8Array, length: number, field: string): void {
   if (!(value instanceof Uint8Array) || value.length !== length) {
     throw new Error(`${field} must be exactly ${length} bytes`)
   }
-}
-
-function constantTimeEqual(left: Uint8Array, right: Uint8Array): boolean {
-  if (left.length !== right.length) {
-    return false
-  }
-  let difference = 0
-  for (let index = 0; index < left.length; index += 1) {
-    difference |= left[index] ^ right[index]
-  }
-  return difference === 0
 }

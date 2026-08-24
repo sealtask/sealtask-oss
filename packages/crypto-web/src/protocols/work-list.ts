@@ -6,18 +6,15 @@ import {
 
 import { decodeBase64, encodeBase64 } from '../runtime/base64'
 import { toUint8Array, zeroBytes } from '../runtime/bytes'
-import {
-  KEY_SIZE_BYTES,
-  SEALED_PAYLOAD_VERSION,
-} from '../runtime/constants'
+import { KEY_SIZE_BYTES, SEALED_PAYLOAD_VERSION } from '../runtime/constants'
 import { hkdfExpand } from '../runtime/hkdf'
 import { hmacSha256 } from '../runtime/hmac'
 import { getStrongBoxBridge, type StrongBoxBridge } from '../runtime/strong-box'
 import {
-  decodeAndValidatePayloadBytes,
-  validatePayloadBytes,
-  type PayloadValidationDependencies,
-} from './payload-validation'
+  openPayloadEnvelope,
+  sealPayloadEnvelope,
+} from './payload-sealing'
+import type { PayloadValidationDependencies } from './payload-validation'
 import {
   PROJECT_EMOJI_POLICY,
   type ProjectEmojiPolicy,
@@ -35,7 +32,10 @@ const projectKeyEnvelopeEncoder = new Encoder({
 const PROJECT_KEY_ENVELOPE_KIND = 'sealtask-project-key'
 const PROJECT_KEY_ENVELOPE_VERSION = 2
 const PROJECT_KEY_CBOR_MAX_BYTES = 512
-const WORK_LIST_PAYLOAD_CONTEXT = encoder.encode('worklist.work_list.v1')
+const WORK_LIST_PAYLOAD_DOMAIN = {
+  kind: 'work_list',
+  context: encoder.encode('worklist.work_list.v1'),
+} as const
 const WORK_LIST_MEMBERSHIP_CONTEXT = encoder.encode('worklist.membership')
 const TEXT_VALUE_CONTEXTS = {
   workListTitle: encoder.encode('worklist.work_list.title.v1'),
@@ -111,16 +111,11 @@ export async function decryptWorkListPayload(params: {
   strongBox?: StrongBoxBridge
   validation?: PayloadValidationDependencies
 }): Promise<WorkListPayloadEnvelope> {
-  const sealed = parseSealedPayload(params.ciphertext)
-  const bridge = params.strongBox ?? (await getStrongBoxBridge())
-  const plaintext = await bridge.decrypt({
-    key: params.listKey,
-    context: WORK_LIST_PAYLOAD_CONTEXT,
-    ciphertext: sealed.ciphertext,
-  })
-  const envelope = decodeAndValidatePayloadBytes(
-    plaintext,
-    'work_list',
+  const envelope = await openPayloadEnvelope(
+    params.ciphertext,
+    params.listKey,
+    WORK_LIST_PAYLOAD_DOMAIN,
+    params.strongBox,
     params.validation,
   )
   return {
@@ -136,15 +131,13 @@ export async function encryptWorkListPayload(params: {
   strongBox?: StrongBoxBridge
   validation?: PayloadValidationDependencies
 }): Promise<SealedBlobPayload> {
-  const plaintext = toUint8Array(cborEncode(params.envelope))
-  validatePayloadBytes(plaintext, 'work_list', params.validation)
-  const bridge = params.strongBox ?? (await getStrongBoxBridge())
-  const ciphertext = await bridge.encrypt({
-    key: params.listKey,
-    context: WORK_LIST_PAYLOAD_CONTEXT,
-    plaintext,
-  })
-  return toSealedBlob({ version: SEALED_PAYLOAD_VERSION, ciphertext })
+  return sealPayloadEnvelope(
+    params.envelope,
+    params.listKey,
+    WORK_LIST_PAYLOAD_DOMAIN,
+    params.strongBox,
+    params.validation,
+  )
 }
 
 export async function sealWorkListKeyForOwner(params: {

@@ -42,6 +42,18 @@ describe('transparency proof wire compatibility', () => {
       '245d0390672b6979c291ca91dfd09d3e08465fac88a79ae6a149610f53d6b754',
     )
   })
+
+  it('retains legacy statement framing at the safe uint64 generation boundary', async () => {
+    const digest = await computeStatementDigest({
+      userId: ALICE_ID,
+      generation: Number.MAX_SAFE_INTEGER,
+      inviteKey: new Uint8Array(32).fill(0xa5),
+    })
+
+    expect(toHex(digest)).toBe(
+      '12105b9c73d85b3462e92d528bc57644ef1b82bf456b3bdebf9f34a838c2e7fb',
+    )
+  })
 })
 
 describe('TransparencyClient', () => {

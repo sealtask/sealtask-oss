@@ -22,6 +22,7 @@ describe('runtime primitives', () => {
     expect(copied).toEqual(new Uint8Array([1, 2, 3]))
     expect(new Uint8Array(toArrayBuffer(copied))).toEqual(copied)
     expect(constantTimeEquals(copied, new Uint8Array([1, 2, 3]))).toBe(true)
+    expect(constantTimeEquals(copied, new Uint8Array([1, 2, 4]))).toBe(false)
     expect(constantTimeEquals(copied, new Uint8Array([1, 2]))).toBe(false)
     zeroBytes(copied)
     expect(copied).toEqual(new Uint8Array(3))

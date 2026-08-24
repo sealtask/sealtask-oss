@@ -1,6 +1,11 @@
 import wasmUrl from '../../../../artifacts/strong-box-wasm/strong_box_wasm_bg.wasm?url'
 
 import { computeStrongBoxCacheKey, PlaintextCache } from './strong-box-cache'
+import type {
+  SerializedStrongBoxWorkerError as SerializedError,
+  StrongBoxWorkerRequest as WorkerRequest,
+  StrongBoxWorkerResponse as WorkerResponse,
+} from './strong-box-worker-protocol'
 
 type StrongBoxWorkerContext = typeof globalThis & {
   postMessage(message: WorkerResponse, transfer?: Transferable[]): void
@@ -9,57 +14,6 @@ type StrongBoxWorkerContext = typeof globalThis & {
 
 const ctx = self as StrongBoxWorkerContext
 export {}
-
-type WorkerRequest =
-  | {
-      type: 'request'
-      id: number
-      op: 'encrypt' | 'decrypt'
-      key: ArrayBuffer
-      context: ArrayBuffer
-      payload: ArrayBuffer
-    }
-  | {
-      type: 'request'
-      id: number
-      op: 'hpke_encap'
-      recipientPublicKey: ArrayBuffer
-      info: ArrayBuffer
-      aad: ArrayBuffer
-      payload: ArrayBuffer
-    }
-  | {
-      type: 'request'
-      id: number
-      op: 'hpke_decap'
-      recipientPrivateKey: ArrayBuffer
-      info: ArrayBuffer
-      aad: ArrayBuffer
-      enc: ArrayBuffer
-      payload: ArrayBuffer
-    }
-
-type WorkerResponse =
-  | { type: 'ready' }
-  | { type: 'init-error'; error: SerializedError }
-  | {
-      type: 'response'
-      id: number
-      status: 'ok'
-      result: ArrayBuffer
-      meta?: { cacheHit?: boolean }
-    }
-  | {
-      type: 'response'
-      id: number
-      status: 'error'
-      error: SerializedError
-    }
-
-type SerializedError = {
-  message: string
-  name?: string
-}
 
 interface StrongBoxExports {
   memory: WebAssembly.Memory

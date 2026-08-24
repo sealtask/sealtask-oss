@@ -28,7 +28,10 @@ import {
   decryptTaskPayload,
   encryptTaskPayload,
 } from './task'
-import { encryptWorkListPayload } from './work-list'
+import {
+  decryptWorkListPayload,
+  encryptWorkListPayload,
+} from './work-list'
 
 const decoder = new TextDecoder()
 
@@ -91,7 +94,77 @@ describe('sealed protocol payloads', () => {
     }
   })
 
-  it('round-trips task, comment, and note envelopes with frozen contexts', async () => {
+  it('keeps strict sealed-payload framing separate from semantic decoding', () => {
+    const truncated = concatBytes(
+      Uint8Array.of(0xa2),
+      cborText('version'),
+      Uint8Array.of(0x01),
+      cborText('ciphertext'),
+      Uint8Array.of(0x42, 0x01),
+    )
+    const tooDeep = strictSealedPayloadWithVersion(nestedArrays(9))
+    const atDepthLimit = strictSealedPayloadWithVersion(nestedArrays(8))
+
+    for (const bytes of [
+      truncated,
+      tooDeep,
+    ]) {
+      expect(() => parseStrictSealedPayload(encodeBase64(bytes))).toThrow(
+        'Invalid strict sealed payload structure',
+      )
+    }
+
+    // Eight nested containers is the sealed payload's historic limit. Its
+    // field is still invalid, but it reaches semantic validation rather than
+    // being rejected by the structural traversal.
+    expect(() =>
+      parseStrictSealedPayload(encodeBase64(atDepthLimit)),
+    ).toThrow('Invalid sealed payload structure')
+
+    expect(
+      parseStrictSealedPayload(encodeBase64(
+        strictSealedPayloadWithVersion(Uint8Array.of(0xf9, 0x3c, 0x00)),
+      )),
+    ).toEqual({ version: 1, ciphertext: Uint8Array.of(1) })
+    expect(
+      parseStrictSealedPayload(encodeBase64(
+        strictSealedPayloadWithVersion(Uint8Array.of(
+          0xfb,
+          0x3f,
+          0xf0,
+          0x00,
+          0x00,
+          0x00,
+          0x00,
+          0x00,
+          0x00,
+        )),
+      )),
+    ).toEqual({ version: 1, ciphertext: Uint8Array.of(1) })
+    expect(() =>
+      parseStrictSealedPayload(encodeBase64(
+        strictSealedPayloadWithVersion(Uint8Array.of(0xf4)),
+      )),
+    ).toThrow('Invalid sealed payload structure')
+  })
+
+  it('accepts the tagged byte-string representation used by compatible CBOR writers', () => {
+    const taggedCiphertext = concatBytes(
+      Uint8Array.of(0xa2),
+      cborText('version'),
+      Uint8Array.of(0x01),
+      cborText('ciphertext'),
+      // RFC 8746 tag 64 wraps an unsigned 8-bit typed array.
+      Uint8Array.of(0xd8, 0x40, 0x43, 0x09, 0x08, 0x07),
+    )
+
+    expect(parseStrictSealedPayload(encodeBase64(taggedCiphertext))).toEqual({
+      version: 1,
+      ciphertext: Uint8Array.of(9, 8, 7),
+    })
+  })
+
+  it('round-trips work-list, task, comment, and note envelopes with frozen contexts', async () => {
     const contexts: string[] = []
     const strongBox = identityBridge(contexts)
     const listKey = new Uint8Array(32).fill(7)
@@ -100,6 +173,24 @@ describe('sealed protocol payloads', () => {
       version: 1,
       blocks: [{ type: 'paragraph' as const, text: 'Body' }],
     }
+
+    const workList = {
+      kind: 'work_list' as const,
+      version: 1,
+      body: { title: 'Project', sections: [] },
+    }
+    const sealedWorkList = await encryptWorkListPayload({
+      envelope: workList,
+      listKey,
+      strongBox,
+    })
+    await expect(
+      decryptWorkListPayload({
+        ciphertext: sealedWorkList.base64,
+        listKey,
+        strongBox,
+      }),
+    ).resolves.toEqual(workList)
 
     const task = buildTaskPayloadEnvelope({
       title: 'Task',
@@ -152,6 +243,8 @@ describe('sealed protocol payloads', () => {
     ).resolves.toEqual(note)
 
     expect(contexts).toEqual([
+      'encrypt:worklist.work_list.v1',
+      'decrypt:worklist.work_list.v1',
       'encrypt:worklist.task.v1',
       'decrypt:worklist.task.v1',
       'encrypt:worklist.comment.v1',
@@ -208,6 +301,8 @@ describe('sealed protocol payloads', () => {
       expect(sealed).not.toHaveProperty('schemaHash')
     }
     expect(protocolExports).not.toHaveProperty('computeSchemaHash')
+    expect(protocolExports).not.toHaveProperty('sealPayloadEnvelope')
+    expect(protocolExports).not.toHaveProperty('openPayloadEnvelope')
   })
 
   it('wraps and unwraps private note keys with the note-key context', async () => {
@@ -226,3 +321,33 @@ describe('sealed protocol payloads', () => {
     ])
   })
 })
+
+function strictSealedPayloadWithVersion(version: Uint8Array): Uint8Array {
+  return concatBytes(
+    Uint8Array.of(0xa2),
+    cborText('version'),
+    version,
+    cborText('ciphertext'),
+    Uint8Array.of(0x41, 0x01),
+  )
+}
+
+function cborText(value: string): Uint8Array {
+  return new Uint8Array(cborEncode(value))
+}
+
+function nestedArrays(depth: number): Uint8Array {
+  return Uint8Array.of(...Array<number>(depth).fill(0x81), 0x00)
+}
+
+function concatBytes(...parts: Uint8Array[]): Uint8Array {
+  const result = new Uint8Array(
+    parts.reduce((total, part) => total + part.byteLength, 0),
+  )
+  let offset = 0
+  for (const part of parts) {
+    result.set(part, offset)
+    offset += part.byteLength
+  }
+  return result
+}

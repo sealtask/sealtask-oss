@@ -1,19 +1,16 @@
-import { encode as cborEncode } from 'cbor-x'
-
-import { toUint8Array } from '../runtime/bytes'
-import { SEALED_PAYLOAD_VERSION } from '../runtime/constants'
-import { getStrongBoxBridge, type StrongBoxBridge } from '../runtime/strong-box'
+import type { StrongBoxBridge } from '../runtime/strong-box'
 import {
-  decodeAndValidatePayloadBytes,
-  validatePayloadBytes,
-  type PayloadValidationDependencies,
-} from './payload-validation'
-import { parseSealedPayload } from './sealed-payload'
-import { toSealedBlob } from './sealed-blob'
+  openPayloadEnvelope,
+  sealPayloadEnvelope,
+} from './payload-sealing'
+import type { PayloadValidationDependencies } from './payload-validation'
 import type { TaskPayloadRichText } from './task'
 import type { SealedBlobPayload } from './types'
 
-const COMMENT_PAYLOAD_CONTEXT = new TextEncoder().encode('worklist.comment.v1')
+const COMMENT_PAYLOAD_DOMAIN = {
+  kind: 'comment',
+  context: new TextEncoder().encode('worklist.comment.v1'),
+} as const
 
 export type CommentPayloadBody = {
   content: TaskPayloadRichText
@@ -41,15 +38,13 @@ export async function encryptCommentPayload(params: {
   strongBox?: StrongBoxBridge
   validation?: PayloadValidationDependencies
 }): Promise<SealedBlobPayload> {
-  const plaintext = toUint8Array(cborEncode(params.envelope))
-  validatePayloadBytes(plaintext, 'comment', params.validation)
-  const bridge = params.strongBox ?? (await getStrongBoxBridge())
-  const ciphertext = await bridge.encrypt({
-    key: params.listKey,
-    context: COMMENT_PAYLOAD_CONTEXT,
-    plaintext,
-  })
-  return toSealedBlob({ version: SEALED_PAYLOAD_VERSION, ciphertext })
+  return sealPayloadEnvelope(
+    params.envelope,
+    params.listKey,
+    COMMENT_PAYLOAD_DOMAIN,
+    params.strongBox,
+    params.validation,
+  )
 }
 
 export async function decryptCommentPayload(params: {
@@ -58,16 +53,11 @@ export async function decryptCommentPayload(params: {
   strongBox?: StrongBoxBridge
   validation?: PayloadValidationDependencies
 }): Promise<CommentPayloadEnvelope> {
-  const sealed = parseSealedPayload(params.ciphertext)
-  const bridge = params.strongBox ?? (await getStrongBoxBridge())
-  const plaintext = await bridge.decrypt({
-    key: params.listKey,
-    context: COMMENT_PAYLOAD_CONTEXT,
-    ciphertext: sealed.ciphertext,
-  })
-  const envelope = decodeAndValidatePayloadBytes(
-    plaintext,
-    'comment',
+  const envelope = await openPayloadEnvelope(
+    params.ciphertext,
+    params.listKey,
+    COMMENT_PAYLOAD_DOMAIN,
+    params.strongBox,
     params.validation,
   )
   return {

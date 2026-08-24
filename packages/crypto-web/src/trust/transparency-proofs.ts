@@ -1,4 +1,10 @@
 import { transparencyUserIdToBytes } from './transparency-user-id'
+import {
+  concatBytes,
+  encodeUint32,
+  encodeUint64,
+  sha256,
+} from './transparency-wire'
 
 const encoder = new TextEncoder()
 const STATEMENT_DOMAIN = encoder.encode('worklist.transparency.v1')
@@ -15,6 +21,7 @@ export async function computeStatementDigest(params: {
   const keyLengthBytes = encodeUint32(params.inviteKey.length, 'invite_public_key.length')
   return sha256(
     concatBytes(STATEMENT_DOMAIN, userBytes, generationBytes, keyLengthBytes, params.inviteKey),
+    'WebCrypto digest API is unavailable in this environment',
   )
 }
 
@@ -22,7 +29,7 @@ export async function hashTransparencyLeaf(content: Uint8Array): Promise<Uint8Ar
   const prefixed = new Uint8Array(1 + content.length)
   prefixed[0] = LEAF_PREFIX
   prefixed.set(content, 1)
-  return sha256(prefixed)
+  return sha256(prefixed, 'WebCrypto digest API is unavailable in this environment')
 }
 
 export async function hashTransparencyNode(
@@ -33,7 +40,7 @@ export async function hashTransparencyNode(
   prefixed[0] = NODE_PREFIX
   prefixed.set(left, 1)
   prefixed.set(right, 1 + left.length)
-  return sha256(prefixed)
+  return sha256(prefixed, 'WebCrypto digest API is unavailable in this environment')
 }
 
 export async function reconstructInclusionRoot(
@@ -151,60 +158,12 @@ export async function verifyConsistencyProof(
   return { prefixRoot: result.prefixRoot, fullRoot: result.subtreeRoot }
 }
 
-function encodeUint64(value: number, field: string): Uint8Array {
-  if (!Number.isSafeInteger(value) || value < 0) {
-    throw new Error(`${field} must be a non-negative safe integer`)
-  }
-  const view = new DataView(new ArrayBuffer(8))
-  view.setBigUint64(0, BigInt(value))
-  return new Uint8Array(view.buffer)
-}
-
-function encodeUint32(value: number, field: string): Uint8Array {
-  if (!Number.isSafeInteger(value) || value < 0 || value > 0xffffffff) {
-    throw new Error(`${field} must be a non-negative 32-bit integer`)
-  }
-  const view = new DataView(new ArrayBuffer(4))
-  view.setUint32(0, value)
-  return new Uint8Array(view.buffer)
-}
-
-function concatBytes(...parts: Uint8Array[]): Uint8Array {
-  const output = new Uint8Array(parts.reduce((total, part) => total + part.length, 0))
-  let offset = 0
-  for (const part of parts) {
-    output.set(part, offset)
-    offset += part.length
-  }
-  return output
-}
-
 function largestPowerOfTwoLessThan(size: number): number {
   let power = 1
   while (power * 2 < size) {
     power *= 2
   }
   return power
-}
-
-async function sha256(input: Uint8Array): Promise<Uint8Array> {
-  const subtle = globalThis.crypto?.subtle
-  if (!subtle) {
-    throw new Error('WebCrypto digest API is unavailable in this environment')
-  }
-  const digest = await subtle.digest('SHA-256', toArrayBuffer(input))
-  return new Uint8Array(digest)
-}
-
-function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
-  if (
-    bytes.byteOffset === 0
-    && bytes.byteLength === bytes.buffer.byteLength
-    && bytes.buffer instanceof ArrayBuffer
-  ) {
-    return bytes.buffer.slice(0)
-  }
-  return bytes.slice().buffer
 }
 
 function requireHash(value: Uint8Array, field: string): void {
