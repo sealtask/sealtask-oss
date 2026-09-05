@@ -86,7 +86,7 @@ async fn create_note(
         ProjectLifecycle::Any,
     )
     .await?;
-    let input = resolve_note_create_input(&args)?;
+    let input = resolve_note_create_input(&args).await?;
     let note = with_progress(
         "Creating note…",
         runtime.create_note(CreateNoteArgs {
@@ -124,7 +124,7 @@ async fn update_note(
         args.password_stdin,
     )
     .await?;
-    let input = resolve_note_update_input(&args)?;
+    let input = resolve_note_update_input(&args).await?;
     let note = with_progress(
         "Updating note…",
         runtime.update_note(UpdateNoteArgs {
@@ -252,9 +252,11 @@ async fn delete_note(
         args.yes,
         args.input_stdin || args.password_stdin,
         &target,
-    )?;
+    )
+    .await?;
     let input =
-        resolve_delete_input::<DeleteNoteRequest>(args.input_file.as_deref(), args.input_stdin)?;
+        resolve_delete_input::<DeleteNoteRequest>(args.input_file.as_deref(), args.input_stdin)
+            .await?;
     with_progress(
         "Deleting note…",
         runtime.delete_note(DeleteNoteArgs {

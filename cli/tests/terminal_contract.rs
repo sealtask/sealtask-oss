@@ -1,5 +1,8 @@
 #![cfg(unix)]
 
+#[path = "support/idle_stdin.rs"]
+mod idle_stdin;
+
 use std::fs::File;
 use std::io::{self, Read};
 use std::os::fd::FromRawFd;
@@ -286,4 +289,188 @@ fn test_should_fail_when_parser_stderr_pipe_is_closed() {
         assert_eq!(output.status.code(), Some(1));
         assert!(output.stdout.is_empty());
     }
+}
+
+fn wait_bounded(child: &mut std::process::Child) -> std::process::ExitStatus {
+    let deadline = Instant::now() + Duration::from_secs(5);
+    loop {
+        if let Some(status) = child.try_wait().expect("poll CLI") {
+            return status;
+        }
+        if Instant::now() >= deadline {
+            child.kill().expect("kill stalled CLI");
+            child.wait().expect("reap CLI");
+            panic!("CLI did not exit while stdin remained open");
+        }
+        thread::sleep(Duration::from_millis(5));
+    }
+}
+
+#[test]
+fn test_should_cancel_idle_mutation_stdin_without_eof_or_network() {
+    let home = TempDir::new().expect("fixture");
+    let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("listener");
+    listener.set_nonblocking(true).expect("nonblocking");
+    let url = format!("http://{}", listener.local_addr().expect("address"));
+    let id = "00000000-0000-4000-8000-000000000001";
+    let code_path = home.path().join("enrollment-code");
+    std::fs::write(&code_path, "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+        .expect("fixture code");
+    let code_file = code_path.to_str().expect("path");
+    for input in [
+        vec!["tasks", "create", "--input-stdin"],
+        vec!["tasks", "create", "--title", "test", "--body-file", "-"],
+        vec!["tasks", "update", "--task-id", id, "--input-stdin"],
+        vec!["tasks", "delete", "--task-id", id, "--yes", "--input-stdin"],
+        vec!["notes", "create", "--input-stdin"],
+        vec!["notes", "update", "--note-id", id, "--input-stdin"],
+        vec!["notes", "delete", "--note-id", id, "--yes", "--input-stdin"],
+        vec!["comments", "create", "--task-id", id, "--input-stdin"],
+        vec![
+            "comments",
+            "update",
+            "--task-id",
+            id,
+            "--comment-id",
+            id,
+            "--input-stdin",
+        ],
+        vec![
+            "comments",
+            "delete",
+            "--task-id",
+            id,
+            "--comment-id",
+            id,
+            "--yes",
+            "--input-stdin",
+        ],
+        vec![
+            "agents",
+            "approve",
+            "--enrollment-code-file",
+            "-",
+            "--instructions-file",
+            code_file,
+            "--fingerprint",
+            "fixture",
+            "--handle",
+            "test",
+        ],
+        vec![
+            "agents",
+            "approve",
+            "--enrollment-code-file",
+            code_file,
+            "--instructions-file",
+            "-",
+            "--fingerprint",
+            "fixture",
+            "--handle",
+            "test",
+        ],
+    ] {
+        for signals in [
+            vec![libc::SIGINT],
+            vec![libc::SIGTERM],
+            vec![libc::SIGINT, libc::SIGTERM],
+        ] {
+            let stdin = idle_stdin::IdleStdin::new();
+            let mut child = cli(&home)
+                .env("SEALTASK_API_URL", &url)
+                .args(["--json", "--non-interactive"])
+                .args(&input)
+                .args(["--work-list-id", id])
+                .stdin(stdin.stdio())
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .spawn()
+                .expect("CLI");
+            stdin.wait_until_read(&mut child);
+            for signal in signals {
+                // SAFETY: child is our live subprocess; kill retains no memory.
+                assert_eq!(unsafe { libc::kill(child.id() as i32, signal) }, 0);
+            }
+            assert_eq!(wait_bounded(&mut child).code(), Some(130));
+            let output = child.wait_with_output().expect("output");
+            assert!(output.stdout.is_empty());
+            let error: Value = serde_json::from_slice(&output.stderr).expect("JSON interruption");
+            assert_eq!(error["error"]["code"], "interrupted");
+            assert!(
+                error["error"]["message"]
+                    .as_str()
+                    .expect("message")
+                    .contains("not ambiguous")
+            );
+            assert_eq!(
+                listener.accept().expect_err("no network request").kind(),
+                io::ErrorKind::WouldBlock
+            );
+        }
+    }
+}
+
+#[test]
+fn test_should_cancel_pending_confirmation_without_holding_stderr() {
+    use std::os::fd::AsRawFd;
+    let home = TempDir::new().expect("fixture");
+    let (mut master, slave) = pty();
+    // Keep the PTY queue alive until the final diagnostic is drained on macOS.
+    let _keep_slave_open = slave.try_clone().expect("keep slave");
+    // SAFETY: master is a live descriptor.
+    assert_eq!(
+        unsafe { libc::fcntl(master.as_raw_fd(), libc::F_SETFL, libc::O_NONBLOCK) },
+        0
+    );
+    let id = "00000000-0000-4000-8000-000000000001";
+    let mut child = cli(&home)
+        .args([
+            "--color",
+            "never",
+            "tasks",
+            "delete",
+            "--work-list-id",
+            id,
+            "--task-id",
+            id,
+        ])
+        .stdin(slave.try_clone().expect("clone slave"))
+        .stderr(slave)
+        .stdout(Stdio::piped())
+        .spawn()
+        .expect("CLI");
+    let mut bytes = Vec::new();
+    let mut buffer = [0; 4096];
+    let deadline = Instant::now() + Duration::from_secs(5);
+    while !String::from_utf8_lossy(&bytes).contains("[y/N]") {
+        if let Ok(count) = master.read(&mut buffer) {
+            bytes.extend_from_slice(&buffer[..count]);
+        }
+        if Instant::now() >= deadline || child.try_wait().expect("poll").is_some() {
+            let _ = child.kill();
+            let _ = child.wait();
+            panic!(
+                "confirmation not reached: {:?}",
+                String::from_utf8_lossy(&bytes)
+            );
+        }
+        thread::sleep(Duration::from_millis(5));
+    }
+    // SAFETY: child is our live subprocess.
+    assert_eq!(unsafe { libc::kill(child.id() as i32, libc::SIGINT) }, 0);
+    assert_eq!(wait_bounded(&mut child).code(), Some(130));
+    while let Ok(count) = master.read(&mut buffer) {
+        if count == 0 {
+            break;
+        }
+        bytes.extend_from_slice(&buffer[..count]);
+    }
+    let text = String::from_utf8_lossy(&bytes);
+    assert!(
+        text.split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ")
+            .contains("not ambiguous"),
+        "{text:?}"
+    );
 }

@@ -1,4 +1,4 @@
-use std::{fs, io::Read as _, path::Path};
+use std::{fs, io::Read, path::Path};
 
 use base64::{Engine as _, engine::general_purpose::STANDARD_NO_PAD};
 use serde::Serialize;
@@ -200,7 +200,8 @@ pub(crate) async fn run_agents(
                 &enrollment_code_file,
                 MAX_ENROLLMENT_CODE_FILE_BYTES,
                 "agent enrollment code",
-            )?;
+            )
+            .await?;
             let enrollment_code = enrollment_code.trim();
             if enrollment_code.is_empty() {
                 return Err(
@@ -212,7 +213,8 @@ pub(crate) async fn run_agents(
                 &instructions_file,
                 MAX_AGENT_INSTRUCTIONS_PLAINTEXT_BYTES as u64,
                 "agent instructions",
-            )?;
+            )
+            .await?;
             if instructions.trim().is_empty() {
                 return Err(PublicError::validation("agent instructions cannot be empty").into());
             }
@@ -483,36 +485,47 @@ fn persist_pending_identity(
     )
 }
 
-fn read_utf8_input(
+async fn read_utf8_input(
     path: &Path,
     max_bytes: u64,
     label: &str,
 ) -> PublicResult<zeroize::Zeroizing<String>> {
-    let mut bytes = Vec::new();
     if path == Path::new("-") {
-        std::io::stdin()
-            .take(max_bytes + 1)
-            .read_to_end(&mut bytes)
-            .map_err(|error| PublicError::unexpected(format!("failed to read {label}: {error}")))?;
-    } else {
-        let metadata = fs::metadata(path).map_err(|error| {
-            PublicError::validation(format!("failed to inspect {label} file: {error}"))
-        })?;
-        if !metadata.is_file() || metadata.len() > max_bytes {
-            return Err(PublicError::validation(format!(
-                "invalid {label} file size or type"
-            )));
-        }
-        bytes = fs::read(path).map_err(|error| {
-            PublicError::validation(format!("failed to read {label} file: {error}"))
-        })?;
+        let label = label.to_owned();
+        return crate::input::read_stdin(move || {
+            read_utf8_from(std::io::stdin().lock(), max_bytes, &label)
+        })
+        .await;
     }
+    let metadata = fs::metadata(path).map_err(|error| {
+        PublicError::validation(format!("failed to inspect {label} file: {error}"))
+    })?;
+    if !metadata.is_file() || metadata.len() > max_bytes {
+        return Err(PublicError::validation(format!(
+            "invalid {label} file size or type"
+        )));
+    }
+    let file = fs::File::open(path).map_err(|error| {
+        PublicError::validation(format!("failed to read {label} file: {error}"))
+    })?;
+    read_utf8_from(file, max_bytes, label)
+}
+
+fn read_utf8_from(
+    reader: impl Read,
+    max_bytes: u64,
+    label: &str,
+) -> PublicResult<zeroize::Zeroizing<String>> {
+    let mut bytes = zeroize::Zeroizing::new(Vec::new());
+    reader
+        .take(max_bytes + 1)
+        .read_to_end(&mut bytes)
+        .map_err(|error| PublicError::unexpected(format!("failed to read {label}: {error}")))?;
     if bytes.len() as u64 > max_bytes {
         return Err(PublicError::validation(format!(
             "{label} exceeds the supported size"
         )));
     }
-    let bytes = zeroize::Zeroizing::new(bytes);
     std::str::from_utf8(&bytes)
         .map(|value| zeroize::Zeroizing::new(value.to_string()))
         .map_err(|_| PublicError::validation(format!("{label} must be valid UTF-8")))

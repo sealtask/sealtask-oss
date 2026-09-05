@@ -378,7 +378,8 @@ async fn run_task_attachments(
                     entity_label("task", &task),
                     project_id
                 ),
-            )?;
+            )
+            .await?;
             with_progress(
                 "Deleting attachment…",
                 runtime.delete_task_attachment(DeleteTaskAttachmentArgs {
@@ -703,7 +704,8 @@ async fn create_task(
             args.body.as_deref(),
             args.body_file.as_deref(),
             args.password_stdin,
-        )?;
+        )
+        .await?;
         Some(if args.title.is_some() || seed_body.is_some() {
             editor::edit_existing_document(
                 "task",
@@ -721,7 +723,7 @@ async fn create_task(
         args.body = Some(edited.body.clone());
         args.body_file = None;
     }
-    let mut input = resolve_task_create_input(&args)?;
+    let mut input = resolve_task_create_input(&args).await?;
     if let Some(due) = args.due.as_deref() {
         let project_detail = load_project(runtime, project.id, args.password_stdin).await?;
         input.due_at = Some(parse_due_input(due, &project_detail.timezone, Utc::now())?);
@@ -855,7 +857,7 @@ async fn update_task(
         TaskLifecycle::Any,
     )
     .await?;
-    let mut input = resolve_task_update_input(&args)?;
+    let mut input = resolve_task_update_input(&args).await?;
     if let Some(due) = args.due.as_deref() {
         let project = load_project(runtime, project_id, args.password_stdin).await?;
         input.due_at = TaskFieldPatch::Set(parse_due_input(due, &project.timezone, Utc::now())?);
@@ -1105,9 +1107,11 @@ async fn delete_task(
         args.yes,
         args.input_stdin || args.password_stdin,
         &format!("{} in project {}", entity_label("task", &task), project_id),
-    )?;
+    )
+    .await?;
     let input =
-        resolve_delete_input::<DeleteTaskRequest>(args.input_file.as_deref(), args.input_stdin)?;
+        resolve_delete_input::<DeleteTaskRequest>(args.input_file.as_deref(), args.input_stdin)
+            .await?;
     with_progress(
         "Deleting task…",
         runtime.delete_task(DeleteTaskArgs {

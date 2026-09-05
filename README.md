@@ -836,9 +836,13 @@ against its exact checkpointed revision and change commitment. Do not edit or
 delete a checkpoint after an interrupted run until its in-flight state is
 understood.
 
-For ordinary one-shot project, task, comment, and note mutations, SIGINT or
-SIGTERM cancels promptly while no durable request is in flight. If a mutation
-request is active, the first signal waits up to 30 seconds for a definitive
+For ordinary one-shot project, task, comment, note, and agent mutations, SIGINT or
+SIGTERM cancels promptly while no durable request is in flight, including while
+waiting for structured stdin, `--body-file -`, `--password-stdin`, or a deletion
+confirmation (agent approval also supports cancellable code/instructions stdin).
+Attachment uploads use their own supervisor; their password input precedes it.
+Cancellation does not require stdin EOF and exits `130` without sending the
+requested mutation. If a mutation request is active, the first signal waits up to 30 seconds for a definitive
 response instead of dropping it. A second signal, or the grace deadline, exits
 `130` with a typed `ambiguous` outcome only while that request is still active
 and tells the operator to inspect the resource before retrying because the

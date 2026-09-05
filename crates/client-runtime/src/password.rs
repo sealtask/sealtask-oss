@@ -45,20 +45,34 @@ fn read_password(label: &str) -> PublicResult<String> {
         .map_err(|err| PublicError::unexpected(format!("failed to read password: {err}")))
 }
 
-fn read_password_from_stdin() -> PublicResult<String> {
+fn read_password_from_stdin() -> PublicResult<Zeroizing<String>> {
     let mut input = Zeroizing::new(String::new());
     io::stdin().read_to_string(&mut input).map_err(|err| {
         PublicError::unexpected(format!("failed to read password from stdin: {err}"))
     })?;
-    Ok(input.trim().to_string())
+    Ok(Zeroizing::new(input.trim().to_string()))
 }
 
-pub(crate) fn read_required_password(
+pub(crate) async fn read_required_password(
     password_stdin: bool,
     prompt_message: Option<&str>,
-) -> PublicResult<String> {
+) -> PublicResult<Zeroizing<String>> {
     let password = if password_stdin {
-        read_password_from_stdin()?
+        // An OS reader can be abandoned without blocking Tokio shutdown. Keep
+        // echo-changing interactive prompts on their synchronous cleanup path.
+        let (sender, receiver) = tokio::sync::oneshot::channel();
+        std::thread::Builder::new()
+            .name("sealtask-password-stdin".to_string())
+            .spawn(move || {
+                let result = read_password_from_stdin();
+                let _ = sender.send(result);
+            })
+            .map_err(|error| {
+                PublicError::unexpected(format!("failed to start password reader: {error}"))
+            })?;
+        receiver
+            .await
+            .map_err(|_| PublicError::unexpected("password reader stopped without a result"))??
     } else {
         if !io::stdin().is_terminal() {
             return Err(PublicError::validation(
@@ -68,7 +82,7 @@ pub(crate) fn read_required_password(
         let prompt = prompt_message
             .map(|message| format!("{message}\nPassword: "))
             .unwrap_or_else(|| "Password: ".to_string());
-        read_password(&prompt)?
+        Zeroizing::new(read_password(&prompt)?)
     };
 
     if password.is_empty() {

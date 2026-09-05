@@ -1,3 +1,7 @@
+#[cfg(unix)]
+#[path = "support/idle_stdin.rs"]
+mod idle_stdin;
+
 use std::collections::{HashMap, HashSet};
 use std::io::{Read, Write};
 #[cfg(unix)]
@@ -51,6 +55,77 @@ use zeroize::Zeroize;
 
 const CLI_READINESS_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(15);
 const MAX_CHILD_DIAGNOSTIC_BYTES: usize = 4 * 1024;
+
+#[cfg(unix)]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn mutation_password_stdin_can_be_cancelled_without_eof_or_network() {
+    let fixture = TestFixture::new();
+    let home = TempDir::new().expect("temp home");
+    let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("listener");
+    listener
+        .set_nonblocking(true)
+        .expect("nonblocking listener");
+    let url = format!("http://{}", listener.local_addr().expect("address"));
+    seed_credentials(home.path(), &fixture, &url);
+    for signals in [
+        vec![libc::SIGINT],
+        vec![libc::SIGTERM],
+        vec![libc::SIGINT, libc::SIGTERM],
+    ] {
+        let stdin = idle_stdin::IdleStdin::new();
+        let mut child = std::process::Command::new(assert_cmd::cargo::cargo_bin("sealtask"))
+            .env_clear()
+            .env("HOME", home.path())
+            .current_dir(home.path())
+            .args([
+                "--api-url",
+                &url,
+                "--json",
+                "--non-interactive",
+                "tasks",
+                "create",
+                "--work-list-id",
+                &fixture.work_list_id.to_string(),
+                "--title",
+                "test",
+                "--idempotency-key",
+                "stdin-cancellation",
+                "--password-stdin",
+            ])
+            .stdin(stdin.stdio())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .expect("CLI");
+        stdin.wait_until_read(&mut child);
+        for signal in signals {
+            signal_process(&mut child, signal);
+        }
+        let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(5);
+        while child.try_wait().expect("poll").is_none() {
+            if tokio::time::Instant::now() >= deadline {
+                let (_, _, stdout, stderr) = terminate_child(&mut child);
+                panic!("password read held shutdown open: {stdout:?} {stderr:?}");
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(5)).await;
+        }
+        let output = child.wait_with_output().expect("output");
+        assert_eq!(output.status.code(), Some(130));
+        assert!(output.stdout.is_empty());
+        let error: Value = serde_json::from_slice(&output.stderr).expect("JSON error");
+        assert_eq!(error["error"]["code"], "interrupted");
+        assert!(
+            error["error"]["message"]
+                .as_str()
+                .expect("message")
+                .contains("not ambiguous")
+        );
+        assert_eq!(
+            listener.accept().expect_err("no network request").kind(),
+            std::io::ErrorKind::WouldBlock
+        );
+    }
+}
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn d6_project_audit_excludes_encrypted_payload_canaries() {

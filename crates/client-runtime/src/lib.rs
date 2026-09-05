@@ -1,3 +1,11 @@
+//! Runtime services for SealTask clients.
+//!
+//! Operations using `password_stdin` own process stdin until EOF. Their reader
+//! runs outside Tokio so a one-shot CLI can exit promptly on cancellation. If a
+//! caller drops such a future while stdin is pending, it must terminate the
+//! process: the reader may still consume stdin until EOF. Long-lived hosts must
+//! complete stdin-based unlocking before running cancellable resource operations.
+
 #![cfg_attr(test, allow(clippy::unwrap_used))]
 
 mod agent_grants;

@@ -69,7 +69,7 @@ fn write_interaction_to(
     Ok(())
 }
 
-pub(crate) fn require_confirmation(
+pub(crate) async fn require_confirmation(
     format: OutputFormat,
     non_interactive: bool,
     confirmed: bool,
@@ -88,10 +88,14 @@ pub(crate) fn require_confirmation(
         .into());
     }
 
-    confirm_from(io::stdin().lock(), io::stderr().lock(), &target)
+    confirm_from(|| io::stdin().lock(), io::stderr().lock(), &target).await
 }
 
-fn confirm_from(mut reader: impl BufRead, writer: impl Write, target: &str) -> CliResult<()> {
+async fn confirm_from<R: BufRead>(
+    reader: impl FnOnce() -> R + Send + 'static,
+    writer: impl Write,
+    target: &str,
+) -> CliResult<()> {
     terminal::clear_active_progress();
     let target = sanitize_cell(target);
     write_to_stream(
@@ -101,10 +105,14 @@ fn confirm_from(mut reader: impl BufRead, writer: impl Write, target: &str) -> C
         "stderr",
         false,
     )?;
-    let mut response = String::new();
-    reader
-        .read_line(&mut response)
-        .map_err(|err| PublicError::unexpected(format!("failed to read confirmation: {err}")))?;
+    let response = crate::input::read_stdin(move || {
+        let mut response = zeroize::Zeroizing::new(String::new());
+        reader().read_line(&mut response).map_err(|err| {
+            PublicError::unexpected(format!("failed to read confirmation: {err}"))
+        })?;
+        Ok(response)
+    })
+    .await?;
     if matches!(response.trim().to_ascii_lowercase().as_str(), "y" | "yes") {
         return Ok(());
     }
@@ -124,34 +132,38 @@ mod tests {
         assert_eq!(output, b"Retry in 3s\n");
     }
 
-    #[test]
-    fn explicit_confirmation_never_needs_a_terminal() {
+    #[tokio::test]
+    async fn explicit_confirmation_never_needs_a_terminal() {
         require_confirmation(OutputFormat::Json, true, true, true, "task 123")
+            .await
             .expect("explicit confirmation");
     }
 
-    #[test]
-    fn machine_deletion_requires_explicit_confirmation() {
+    #[tokio::test]
+    async fn machine_deletion_requires_explicit_confirmation() {
         let error = require_confirmation(OutputFormat::Json, false, false, false, "task 123")
+            .await
             .expect_err("JSON deletion must not prompt");
         assert!(error.to_string().contains("requires --yes"));
     }
 
-    #[test]
-    fn interactive_confirmation_accepts_yes_case_insensitively() {
+    #[tokio::test]
+    async fn interactive_confirmation_accepts_yes_case_insensitively() {
         for response in ["y\n", "YES\n", " Yes \n"] {
             let mut prompt = Vec::new();
-            confirm_from(response.as_bytes(), &mut prompt, "task 123")
+            confirm_from(move || response.as_bytes(), &mut prompt, "task 123")
+                .await
                 .expect("affirmative confirmation");
             assert_eq!(prompt, b"Permanently delete task 123? [y/N] ");
         }
     }
 
-    #[test]
-    fn interactive_confirmation_defaults_to_no() {
+    #[tokio::test]
+    async fn interactive_confirmation_defaults_to_no() {
         for response in ["\n", "n\n", "anything else\n"] {
             let mut prompt = Vec::new();
-            let error = confirm_from(response.as_bytes(), &mut prompt, "task 123")
+            let error = confirm_from(move || response.as_bytes(), &mut prompt, "task 123")
+                .await
                 .expect_err("non-affirmative confirmation");
             assert_eq!(
                 error.to_string(),
@@ -161,12 +173,13 @@ mod tests {
         }
     }
 
-    #[test]
-    fn confirmation_sanitizes_untrusted_targets_in_prompts_and_cancellation_errors() {
+    #[tokio::test]
+    async fn confirmation_sanitizes_untrusted_targets_in_prompts_and_cancellation_errors() {
         let target = "task safe\nforged\u{1b}[31m\u{202e}reversed\u{202c}";
         let mut prompt = Vec::new();
 
-        let error = confirm_from(b"n\n".as_slice(), &mut prompt, target)
+        let error = confirm_from(|| b"n\n".as_slice(), &mut prompt, target)
+            .await
             .expect_err("confirmation should be declined");
 
         assert_eq!(

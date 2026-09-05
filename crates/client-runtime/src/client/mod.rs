@@ -605,8 +605,7 @@ impl RuntimeClient {
             if password_stdin {
                 return match data_key_ciphertext_version(&credentials.data_key_ciphertext)? {
                     DataKeyCiphertextVersion::LegacyPasswordV1 => {
-                        let password =
-                            Zeroizing::new(read_required_password(true, Some(prompt_message))?);
+                        let password = read_required_password(true, Some(prompt_message)).await?;
                         let ciphertext = credentials.data_key_ciphertext.clone();
                         let data_key = self
                             .blocking_crypto
@@ -627,7 +626,7 @@ impl RuntimeClient {
         }
 
         if password_stdin {
-            let password = Zeroizing::new(read_required_password(true, Some(prompt_message))?);
+            let password = read_required_password(true, Some(prompt_message)).await?;
             let data_key = self
                 .decrypt_data_key_with_password(credentials, &password)
                 .await?;

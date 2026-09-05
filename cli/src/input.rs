@@ -30,12 +30,16 @@ impl<'a> JsonInputSource<'a> {
     }
 }
 
-pub(crate) fn resolve_task_create_input(args: &TaskCreateArgsCli) -> PublicResult<TaskCreateInput> {
+pub(crate) async fn resolve_task_create_input(
+    args: &TaskCreateArgsCli,
+) -> PublicResult<TaskCreateInput> {
     if let Some(input) = load_structured_input::<TaskCreateInput>(
         args.input_file.as_deref(),
         args.input_stdin,
         args.password_stdin,
-    )? {
+    )
+    .await?
+    {
         return Ok(input);
     }
 
@@ -48,7 +52,8 @@ pub(crate) fn resolve_task_create_input(args: &TaskCreateArgsCli) -> PublicResul
         args.body.as_deref(),
         args.body_file.as_deref(),
         args.password_stdin,
-    )?;
+    )
+    .await?;
     Ok(TaskCreateInput {
         title,
         body,
@@ -61,12 +66,16 @@ pub(crate) fn resolve_task_create_input(args: &TaskCreateArgsCli) -> PublicResul
     })
 }
 
-pub(crate) fn resolve_task_update_input(args: &TaskUpdateArgsCli) -> PublicResult<TaskUpdateInput> {
+pub(crate) async fn resolve_task_update_input(
+    args: &TaskUpdateArgsCli,
+) -> PublicResult<TaskUpdateInput> {
     if let Some(input) = load_structured_input::<TaskUpdateInput>(
         args.input_file.as_deref(),
         args.input_stdin,
         args.password_stdin,
-    )? {
+    )
+    .await?
+    {
         return Ok(input);
     }
 
@@ -74,7 +83,8 @@ pub(crate) fn resolve_task_update_input(args: &TaskUpdateArgsCli) -> PublicResul
         args.body.as_deref(),
         args.body_file.as_deref(),
         args.password_stdin,
-    )?;
+    )
+    .await?;
     Ok(TaskUpdateInput {
         title: args.title.as_deref().map(str::to_owned),
         body: task_field_patch(body, args.clear_body),
@@ -95,7 +105,7 @@ fn task_field_patch<T>(value: Option<T>, clear: bool) -> TaskFieldPatch<T> {
     }
 }
 
-pub(crate) fn resolve_comment_input(
+pub(crate) async fn resolve_comment_input(
     body: Option<&str>,
     body_file: Option<&Path>,
     input_file: Option<&Path>,
@@ -103,17 +113,18 @@ pub(crate) fn resolve_comment_input(
     password_stdin: bool,
 ) -> PublicResult<CommentInput> {
     if let Some(input) =
-        load_structured_input::<CommentInput>(input_file, input_stdin, password_stdin)?
+        load_structured_input::<CommentInput>(input_file, input_stdin, password_stdin).await?
     {
         return Ok(input);
     }
 
-    let body = resolve_body_input(body, body_file, password_stdin)?
+    let body = resolve_body_input(body, body_file, password_stdin)
+        .await?
         .ok_or_else(|| PublicError::validation("comment body is required"))?;
     Ok(CommentInput { body })
 }
 
-pub(crate) fn resolve_body_input(
+pub(crate) async fn resolve_body_input(
     body: Option<&str>,
     body_file: Option<&Path>,
     password_stdin: bool,
@@ -123,7 +134,9 @@ pub(crate) fn resolve_body_input(
         return Ok(body.map(str::to_owned));
     };
     if path == Path::new("-") {
-        return read_body_input(io::stdin().lock(), "stdin").map(Some);
+        return read_stdin(|| read_body_input(io::stdin().lock(), "stdin").map(Zeroizing::new))
+            .await
+            .map(|mut body| Some(std::mem::take(&mut *body)));
     }
 
     let source = sanitize_cell(&path.to_string_lossy());
@@ -154,12 +167,16 @@ pub(crate) fn validate_body_input(
     Ok(())
 }
 
-pub(crate) fn resolve_note_create_input(args: &NoteCreateArgsCli) -> PublicResult<NoteCreateInput> {
+pub(crate) async fn resolve_note_create_input(
+    args: &NoteCreateArgsCli,
+) -> PublicResult<NoteCreateInput> {
     if let Some(input) = load_structured_input::<NoteCreateInput>(
         args.input_file.as_deref(),
         args.input_stdin,
         args.password_stdin,
-    )? {
+    )
+    .await?
+    {
         return Ok(input);
     }
 
@@ -180,12 +197,16 @@ pub(crate) fn resolve_note_create_input(args: &NoteCreateArgsCli) -> PublicResul
     })
 }
 
-pub(crate) fn resolve_note_update_input(args: &NoteUpdateArgsCli) -> PublicResult<NoteUpdateInput> {
+pub(crate) async fn resolve_note_update_input(
+    args: &NoteUpdateArgsCli,
+) -> PublicResult<NoteUpdateInput> {
     if let Some(input) = load_structured_input::<NoteUpdateInput>(
         args.input_file.as_deref(),
         args.input_stdin,
         args.password_stdin,
-    )? {
+    )
+    .await?
+    {
         return Ok(input);
     }
 
@@ -195,14 +216,16 @@ pub(crate) fn resolve_note_update_input(args: &NoteUpdateArgsCli) -> PublicResul
     })
 }
 
-pub(crate) fn resolve_delete_input<T: Default + DeserializeOwned>(
+pub(crate) async fn resolve_delete_input<T: Default + DeserializeOwned>(
     input_file: Option<&Path>,
     input_stdin: bool,
 ) -> PublicResult<T> {
-    load_structured_input(input_file, input_stdin, false).map(|input| input.unwrap_or_default())
+    load_structured_input(input_file, input_stdin, false)
+        .await
+        .map(|input| input.unwrap_or_default())
 }
 
-fn load_structured_input<T: DeserializeOwned>(
+async fn load_structured_input<T: DeserializeOwned>(
     input_file: Option<&Path>,
     input_stdin: bool,
     password_stdin: bool,
@@ -212,7 +235,7 @@ fn load_structured_input<T: DeserializeOwned>(
         return Ok(None);
     };
 
-    let contents = read_json_input(source)?;
+    let contents = read_json_input(source).await?;
     parse_json_input(&contents, source.label()).map(Some)
 }
 
@@ -240,20 +263,25 @@ fn select_json_input_source<'a>(
     })
 }
 
-fn read_json_input(source: JsonInputSource<'_>) -> PublicResult<String> {
+async fn read_json_input(source: JsonInputSource<'_>) -> PublicResult<Zeroizing<String>> {
     match source {
-        JsonInputSource::File(path) => fs::read_to_string(path).map_err(|err| {
-            PublicError::unexpected(format!(
-                "failed to read input file {}: {err}",
-                path.display()
-            ))
-        }),
+        JsonInputSource::File(path) => {
+            fs::read_to_string(path).map(Zeroizing::new).map_err(|err| {
+                PublicError::unexpected(format!(
+                    "failed to read input file {}: {err}",
+                    path.display()
+                ))
+            })
+        }
         JsonInputSource::Stdin => {
-            let mut input = String::new();
-            io::stdin().read_to_string(&mut input).map_err(|err| {
-                PublicError::unexpected(format!("failed to read input from stdin: {err}"))
-            })?;
-            Ok(input)
+            read_stdin(|| {
+                let mut input = Zeroizing::new(String::new());
+                io::stdin().read_to_string(&mut input).map_err(|err| {
+                    PublicError::unexpected(format!("failed to read input from stdin: {err}"))
+                })?;
+                Ok(input)
+            })
+            .await
         }
     }
 }
@@ -349,6 +377,30 @@ pub(crate) fn read_required_password(
     Ok(password)
 }
 
+// A detached OS reader does not pin Tokio shutdown when its awaiting command
+// is cancelled and the one-shot CLI exits. Until process exit it can still
+// consume stdin, so callers must not resume stdin use after cancellation.
+// It only reads; it cannot continue a mutation after cancellation.
+// Do not use this for raw-mode/echo-changing terminal prompts, whose cleanup
+// must finish before the process exits. Abandoned results are zeroized.
+pub(crate) async fn read_stdin(
+    read: impl FnOnce() -> PublicResult<Zeroizing<String>> + Send + 'static,
+) -> PublicResult<Zeroizing<String>> {
+    let (sender, receiver) = tokio::sync::oneshot::channel();
+    std::thread::Builder::new()
+        .name("sealtask-stdin".to_string())
+        .spawn(move || {
+            let result = read();
+            let _ = sender.send(result);
+        })
+        .map_err(|error| {
+            PublicError::unexpected(format!("failed to start stdin reader: {error}"))
+        })?;
+    receiver
+        .await
+        .map_err(|_| PublicError::unexpected("stdin reader stopped without a result"))?
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -362,8 +414,8 @@ mod tests {
         assert_eq!(password, "first line\nsecond line");
     }
 
-    #[test]
-    fn note_create_requires_a_process_recoverable_idempotency_key() {
+    #[tokio::test]
+    async fn note_create_requires_a_process_recoverable_idempotency_key() {
         let args = NoteCreateArgsCli {
             project: None,
             work_list_id: Some(Uuid::now_v7()),
@@ -377,6 +429,7 @@ mod tests {
         };
 
         let error = resolve_note_create_input(&args)
+            .await
             .expect_err("an ephemeral default cannot survive Ctrl-C or process loss");
         assert!(error.to_string().contains("--idempotency-key is required"));
     }
@@ -419,9 +472,10 @@ mod tests {
         assert!(error.to_string().contains("not valid UTF-8"));
     }
 
-    #[test]
-    fn stdin_body_and_password_inputs_cannot_compete() {
+    #[tokio::test]
+    async fn stdin_body_and_password_inputs_cannot_compete() {
         let error = resolve_body_input(None, Some(Path::new("-")), true)
+            .await
             .expect_err("stdin cannot provide both body and password");
         assert!(error.to_string().contains("both consume stdin"));
     }

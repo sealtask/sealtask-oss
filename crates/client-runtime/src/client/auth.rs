@@ -8,7 +8,6 @@ use sealtask_client_auth::{
     with_current_credentials,
 };
 use sealtask_client_core::PublicResult;
-use zeroize::Zeroizing;
 
 impl RuntimeClient {
     pub async fn get_me(&self) -> PublicResult<CurrentUserResponse> {
@@ -24,10 +23,11 @@ impl RuntimeClient {
     pub async fn unlock_daemon(&self, ttl_seconds: u64, password_stdin: bool) -> PublicResult<()> {
         unlock_daemon::validate_ttl(ttl_seconds)?;
         let mut credentials = self.require_logged_in_credentials()?;
-        let password = Zeroizing::new(read_required_password(
+        let password = read_required_password(
             password_stdin,
             Some("Password required to unlock workspace data."),
-        )?);
+        )
+        .await?;
         let data_key = self
             .decrypt_data_key_with_password(&mut credentials, &password)
             .await?;
@@ -39,10 +39,11 @@ impl RuntimeClient {
 
     pub async fn store_persisted_data_key(&self, password_stdin: bool) -> PublicResult<()> {
         let mut credentials = self.require_logged_in_credentials()?;
-        let password = Zeroizing::new(read_required_password(
+        let password = read_required_password(
             password_stdin,
             Some("Password required to save an unlock key."),
-        )?);
+        )
+        .await?;
         let data_key = self
             .decrypt_data_key_with_password(&mut credentials, &password)
             .await?;

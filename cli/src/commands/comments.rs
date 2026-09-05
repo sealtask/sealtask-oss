@@ -93,7 +93,8 @@ async fn create_comment(
         args.input_file.as_deref(),
         args.input_stdin,
         args.password_stdin,
-    )?;
+    )
+    .await?;
     let created = with_progress(
         "Creating comment…",
         runtime.create_comment(CreateCommentArgs {
@@ -129,7 +130,8 @@ async fn update_comment(
         args.input_file.as_deref(),
         args.input_stdin,
         args.password_stdin,
-    )?;
+    )
+    .await?;
     let updated = with_progress(
         "Updating comment…",
         runtime.update_comment(UpdateCommentArgs {
@@ -172,9 +174,11 @@ async fn delete_comment(
             entity_label("task", &task),
             project.id
         ),
-    )?;
+    )
+    .await?;
     let input =
-        resolve_delete_input::<DeleteCommentRequest>(args.input_file.as_deref(), args.input_stdin)?;
+        resolve_delete_input::<DeleteCommentRequest>(args.input_file.as_deref(), args.input_stdin)
+            .await?;
     with_progress(
         "Deleting comment…",
         runtime.delete_comment(DeleteCommentArgs {
