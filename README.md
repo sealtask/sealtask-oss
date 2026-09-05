@@ -265,6 +265,9 @@ Human output adapts to the terminal while machine output stays byte-stable:
   `--no-pager` is the explicit short form of `--pager never`. The pager command
   is the first configured value of `SEALTASK_PAGER`, then `PAGER`, then the
   platform default. An empty configured value disables paging.
+  `--non-interactive` disables automatic and environment-inherited paging, even
+  when stdout is a terminal. Explicit `--pager always` conflicts with that mode;
+  `--no-pager` retains its disabling override.
 - `--progress auto|always|never` controls delayed, phase-only indicators on
   stderr. Automatic progress requires human output plus terminal stdout and
   stderr, and never claims a byte percentage the runtime cannot measure.
@@ -1052,7 +1055,7 @@ interactive prompts use the controlling terminal instead of stdout or stderr;
 when no terminal is available, the command fails with a structured, actionable
 error. Pass `--non-interactive` to make that policy explicit.
 
-`--json` controls presentation; `--non-interactive` controls prompts. Automation
+`--json` controls presentation; `--non-interactive` disables prompts and paging. Automation
 should pass both. Human sessions can request pretty JSON while retaining
 interactive auth prompts.
 

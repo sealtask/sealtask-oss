@@ -4,7 +4,7 @@
 mod idle_stdin;
 
 use std::fs::File;
-use std::io::{self, Read};
+use std::io::{self, Read, Seek};
 use std::os::fd::FromRawFd;
 use std::os::unix::process::CommandExt;
 use std::process::{Command, Stdio};
@@ -52,7 +52,12 @@ fn pty() -> (File, File) {
     (master, slave)
 }
 
-fn parser_stderr_pty(mut command: Command) -> (i32, String) {
+fn parser_stderr_pty(command: Command) -> (i32, String) {
+    let (code, captured, _) = capture_pty(command, false);
+    (code, captured)
+}
+
+fn capture_pty(mut command: Command, stdout: bool) -> (i32, String, Vec<u8>) {
     use std::os::fd::AsRawFd;
     let (mut master, slave) = pty();
     // SAFETY: master is a live descriptor; no flags other than O_NONBLOCK change.
@@ -60,11 +65,15 @@ fn parser_stderr_pty(mut command: Command) -> (i32, String) {
         unsafe { libc::fcntl(master.as_raw_fd(), libc::F_SETFL, libc::O_NONBLOCK) },
         0
     );
-    let mut child = command
-        .stdout(Stdio::null())
-        .stderr(slave)
-        .spawn()
-        .expect("spawn CLI");
+    let mut stderr_capture = tempfile::tempfile().expect("stderr capture");
+    if stdout {
+        command
+            .stdout(slave)
+            .stderr(stderr_capture.try_clone().expect("clone capture"));
+    } else {
+        command.stdout(Stdio::null()).stderr(slave);
+    }
+    let mut child = command.spawn().expect("spawn CLI");
     drop(command);
     let deadline = Instant::now() + Duration::from_secs(5);
     let mut captured = Vec::new();
@@ -94,11 +103,17 @@ fn parser_stderr_pty(mut command: Command) -> (i32, String) {
         }
         thread::sleep(Duration::from_millis(5));
     };
+    let mut stderr = Vec::new();
+    stderr_capture.rewind().expect("rewind stderr");
+    stderr_capture
+        .read_to_end(&mut stderr)
+        .expect("read stderr");
     (
         status.code().expect("exit code"),
         String::from_utf8(captured)
             .expect("UTF-8")
             .replace("\r\n", "\n"),
+        stderr,
     )
 }
 
@@ -473,4 +488,108 @@ fn test_should_cancel_pending_confirmation_without_holding_stderr() {
             .contains("not ambiguous"),
         "{text:?}"
     );
+}
+
+#[test]
+fn test_should_never_launch_a_pager_non_interactively_on_stdout_pty() {
+    use std::os::unix::fs::PermissionsExt;
+    let home = TempDir::new().expect("fixture");
+    let pager = home.path().join("pager with 'quotes'");
+    let marker = home.path().join("pager-launched");
+    std::fs::write(&pager, "#!/bin/sh\n: > \"$PAGER_MARKER\"\nexec /bin/cat\n")
+        .expect("pager fixture");
+    std::fs::set_permissions(&pager, std::fs::Permissions::from_mode(0o700))
+        .expect("executable pager");
+    for (args, mode, expected_code, launches) in [
+        (vec!["--non-interactive", "schema"], "auto", 0, false),
+        (vec!["--non-interactive", "schema"], "always", 0, false),
+        (
+            vec!["--non-interactive", "--pager", "auto", "schema"],
+            "always",
+            0,
+            false,
+        ),
+        (
+            vec!["--non-interactive", "--pager", "always", "schema"],
+            "auto",
+            1,
+            false,
+        ),
+        (
+            vec![
+                "--non-interactive",
+                "--pager",
+                "always",
+                "--no-pager",
+                "schema",
+            ],
+            "auto",
+            0,
+            false,
+        ),
+        (vec!["schema"], "auto", 0, true),
+        (vec!["--pager", "always", "schema"], "auto", 0, true),
+    ] {
+        let _ = std::fs::remove_file(&marker);
+        let mut command = cli(&home);
+        let quoted_pager =
+            shlex::try_quote(pager.to_str().expect("pager path")).expect("quote pager");
+        command
+            .env("SEALTASK_PAGER", quoted_pager.as_ref())
+            .env("PAGER_MARKER", &marker)
+            .env("SEALTASK_PAGER_MODE", mode)
+            .args(args);
+        let (code, stdout, stderr) = capture_pty(command, true);
+        assert_eq!(code, expected_code, "{}", String::from_utf8_lossy(&stderr));
+        assert_eq!(marker.exists(), launches);
+        if expected_code == 0 {
+            assert!(stdout.contains("Usage: sealtask"));
+            assert!(stderr.is_empty());
+        } else {
+            assert!(stdout.is_empty());
+            assert!(String::from_utf8_lossy(&stderr).contains("--non-interactive"));
+        }
+    }
+}
+
+#[test]
+fn test_should_explain_pager_conflict_precedence_and_publish_policy() {
+    let home = TempDir::new().expect("fixture");
+    for args in [vec!["schema"], vec!["activity", "follow"]] {
+        let output = cli(&home)
+            .args(["--non-interactive", "--pager", "always"])
+            .args(args)
+            .output()
+            .expect("CLI");
+        assert_eq!(output.status.code(), Some(1));
+        assert!(
+            String::from_utf8_lossy(&output.stderr)
+                .contains("--non-interactive cannot be combined")
+        );
+    }
+    let output = cli(&home)
+        .args(["--json", "--non-interactive", "--pager", "always", "schema"])
+        .output()
+        .expect("CLI");
+    assert_eq!(output.status.code(), Some(1));
+    let error: Value = serde_json::from_slice(&output.stderr).expect("JSON error");
+    assert!(
+        error["error"]["message"]
+            .as_str()
+            .expect("message")
+            .contains("JSON output")
+    );
+    let output = cli(&home).args(["--json", "info"]).output().expect("info");
+    assert!(output.status.success());
+    let info: Value = serde_json::from_slice(&output.stdout).expect("JSON info");
+    assert_eq!(
+        info["terminalPolicies"]["nonInteractivePaging"]["explicitAlways"],
+        "validation_error"
+    );
+    assert_eq!(
+        info["terminalPolicies"]["nonInteractivePaging"]["automatic"],
+        "disabled"
+    );
+    let output = cli(&home).arg("--help").output().expect("help");
+    assert!(String::from_utf8_lossy(&output.stdout).contains("Never prompt or page"));
 }

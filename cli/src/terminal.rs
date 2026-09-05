@@ -31,6 +31,7 @@ pub(crate) struct TerminalOptions {
     pub(crate) pager: PagerArg,
     pub(crate) pager_explicit: bool,
     pub(crate) no_pager: bool,
+    pub(crate) non_interactive: bool,
     pub(crate) progress: ProgressArg,
     pub(crate) progress_explicit: bool,
     pub(crate) quiet: bool,
@@ -239,7 +240,16 @@ impl TerminalPolicy {
             )
             .into());
         }
-        let pager_mode = if options.quiet
+        if options.non_interactive
+            && requested_pager_mode == PagerArg::Always
+            && options.pager_explicit
+        {
+            return Err(PublicError::validation(
+                "--non-interactive cannot be combined with --pager always; use --no-pager or --pager never",
+            ).into());
+        }
+        let pager_mode = if options.non_interactive
+            || options.quiet
             || options.format.is_json()
             || (!options.pager_allowed && !options.pager_explicit)
         {
@@ -908,6 +918,7 @@ mod tests {
             pager: PagerArg::Auto,
             pager_explicit: false,
             no_pager: false,
+            non_interactive: false,
             progress: ProgressArg::Auto,
             progress_explicit: false,
             quiet: false,
@@ -1002,6 +1013,33 @@ mod tests {
             .expect("resolve quiet policy");
         assert!(!policy.progress_enabled);
         assert!(policy.stdout_color);
+    }
+
+    #[test]
+    fn non_interactive_paging_suppresses_defaults_and_rejects_explicit_forcing() {
+        for mode in [PagerArg::Auto, PagerArg::Always, PagerArg::Never] {
+            let mut options = options();
+            options.non_interactive = true;
+            options.pager = mode;
+            let policy = TerminalPolicy::resolve(options, &environment(), snapshot(true, true))
+                .expect("inherited modes are suppressed");
+            assert_eq!(policy.pager_mode, PagerArg::Never);
+            assert!(!policy.should_page(&"line\n".repeat(100)));
+        }
+        let mut options = options();
+        options.non_interactive = true;
+        options.pager = PagerArg::Always;
+        options.pager_explicit = true;
+        assert!(
+            TerminalPolicy::resolve(options, &environment(), snapshot(true, true))
+                .expect_err("explicit conflict")
+                .to_string()
+                .contains("--non-interactive")
+        );
+        options.no_pager = true;
+        let policy = TerminalPolicy::resolve(options, &environment(), snapshot(true, true))
+            .expect("no-pager disabling override");
+        assert_eq!(policy.pager_mode, PagerArg::Never);
     }
 
     #[test]

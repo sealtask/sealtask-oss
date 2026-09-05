@@ -235,6 +235,12 @@ pub(crate) fn run_info(runtime: &RuntimeClient, format: OutputFormat) -> CliResu
             "progress": ["auto", "always", "never"],
             "quietFlag": "--quiet",
             "pagerCommandEnvironment": ["SEALTASK_PAGER", "PAGER"],
+            "nonInteractivePaging": {
+                "automatic": "disabled",
+                "inherited": "disabled",
+                "explicitAlways": "validation_error",
+                "noPagerOverride": true,
+            },
             "noColorEnvironment": "NO_COLOR",
         },
         "nonInteractiveFlag": "--non-interactive",

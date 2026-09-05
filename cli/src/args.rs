@@ -107,7 +107,7 @@ pub(crate) struct Cli {
     )]
     pub(crate) quiet: bool,
 
-    /// Never prompt; fail with an actionable validation error when input is missing.
+    /// Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set.
     #[arg(long, global = true)]
     pub(crate) non_interactive: bool,
 

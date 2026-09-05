@@ -32,7 +32,7 @@ _sealtask() {
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -67,7 +67,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -95,7 +95,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -122,7 +122,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -148,7 +148,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -175,7 +175,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -211,7 +211,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -240,7 +240,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -266,7 +266,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -292,7 +292,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -327,7 +327,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -353,7 +353,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -411,7 +411,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -437,7 +437,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -531,7 +531,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -557,7 +557,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -595,7 +595,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -627,7 +627,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -689,7 +689,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -727,7 +727,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -755,7 +755,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -784,7 +784,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -813,7 +813,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -841,7 +841,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -868,7 +868,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -894,7 +894,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -931,7 +931,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -989,7 +989,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -1092,7 +1092,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -1130,7 +1130,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -1158,7 +1158,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -1187,7 +1187,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -1216,7 +1216,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -1244,7 +1244,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -1271,7 +1271,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -1297,7 +1297,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -1334,7 +1334,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -1392,7 +1392,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -1491,7 +1491,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -1536,7 +1536,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -1567,7 +1567,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -1596,7 +1596,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -1623,7 +1623,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -1659,7 +1659,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -1689,7 +1689,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -1719,7 +1719,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -1786,7 +1786,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -1829,7 +1829,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -1859,7 +1859,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -1907,7 +1907,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -1942,7 +1942,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -1973,7 +1973,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -2004,7 +2004,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -2035,7 +2035,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -2066,7 +2066,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -2100,7 +2100,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -2127,7 +2127,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -2168,7 +2168,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -2201,7 +2201,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -2233,7 +2233,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -2267,7 +2267,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -2470,7 +2470,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -2509,7 +2509,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -2543,7 +2543,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -2570,7 +2570,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -2597,7 +2597,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -2627,7 +2627,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -2658,7 +2658,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -2734,7 +2734,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -2760,7 +2760,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -2796,7 +2796,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -2853,7 +2853,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -2879,7 +2879,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -2913,7 +2913,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -2940,7 +2940,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -2966,7 +2966,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -3028,7 +3028,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -3068,7 +3068,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -3124,7 +3124,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -3150,7 +3150,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -3185,7 +3185,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -3239,7 +3239,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -3273,7 +3273,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -3299,7 +3299,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -3359,7 +3359,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -3386,7 +3386,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -3424,7 +3424,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -3459,7 +3459,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -3494,7 +3494,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -3529,7 +3529,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -3596,7 +3596,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -3633,7 +3633,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -3663,7 +3663,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -3699,7 +3699,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -3729,7 +3729,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -3764,7 +3764,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \
@@ -3798,7 +3798,7 @@ _arguments "${_arguments_options[@]}" : \
 '--no-pager[Disable paging (equivalent to --pager never)]' \
 '(-v --debug)-q[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
 '(-v --debug)--quiet[Suppress automatic paging, progress, and successful mutation acknowledgements]' \
-'--non-interactive[Never prompt; fail with an actionable validation error when input is missing]' \
+'--non-interactive[Never prompt or page; fail when input is missing. Conflicts with --pager always unless --no-pager is set]' \
 '*-v[Emit redacted operator telemetry to stderr; repeat for more detail]' \
 '--debug[Emit maximum redacted diagnostic telemetry to stderr]' \
 '--offline[Read only from the encrypted local snapshot and never access the network]' \

@@ -86,6 +86,7 @@ async fn main() {
             pager: cli.pager,
             pager_explicit: long_option_present(&args, "--pager"),
             no_pager: cli.no_pager,
+            non_interactive: cli.non_interactive,
             progress: cli.progress,
             progress_explicit: long_option_present(&args, "--progress"),
             quiet: cli.quiet,
