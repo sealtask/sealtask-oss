@@ -841,7 +841,8 @@ understood.
 
 For ordinary one-shot project, task, comment, note, and agent mutations, SIGINT or
 SIGTERM cancels promptly while no durable request is in flight, including while
-waiting for structured stdin, `--body-file -`, `--password-stdin`, or a deletion
+waiting for structured stdin, `--input-file`, `--body-file` (including FIFOs and
+`-` for stdin), `--password-stdin`, or a deletion
 confirmation (agent approval also supports cancellable code/instructions stdin).
 Attachment uploads use their own supervisor; their password input precedes it.
 Cancellation does not require stdin EOF and exits `130` without sending the

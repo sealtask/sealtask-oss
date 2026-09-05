@@ -105,7 +105,7 @@ async fn confirm_from<R: BufRead>(
         "stderr",
         false,
     )?;
-    let response = crate::input::read_stdin(move || {
+    let response = crate::input::read_input(move || {
         let mut response = zeroize::Zeroizing::new(String::new());
         reader().read_line(&mut response).map_err(|err| {
             PublicError::unexpected(format!("failed to read confirmation: {err}"))

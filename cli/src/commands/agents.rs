@@ -492,7 +492,7 @@ async fn read_utf8_input(
 ) -> PublicResult<zeroize::Zeroizing<String>> {
     if path == Path::new("-") {
         let label = label.to_owned();
-        return crate::input::read_stdin(move || {
+        return crate::input::read_input(move || {
             read_utf8_from(std::io::stdin().lock(), max_bytes, &label)
         })
         .await;

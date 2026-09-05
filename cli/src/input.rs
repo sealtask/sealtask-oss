@@ -134,16 +134,21 @@ pub(crate) async fn resolve_body_input(
         return Ok(body.map(str::to_owned));
     };
     if path == Path::new("-") {
-        return read_stdin(|| read_body_input(io::stdin().lock(), "stdin").map(Zeroizing::new))
+        return read_input(|| read_body_input(io::stdin().lock(), "stdin").map(Zeroizing::new))
             .await
             .map(|mut body| Some(std::mem::take(&mut *body)));
     }
 
-    let source = sanitize_cell(&path.to_string_lossy());
-    let file = fs::File::open(path).map_err(|error| {
-        PublicError::unexpected(format!("failed to open body file {source}: {error}"))
-    })?;
-    read_body_input(file, &format!("file {source}")).map(Some)
+    let path = path.to_owned();
+    read_input(move || {
+        let source = sanitize_cell(&path.to_string_lossy());
+        let file = fs::File::open(&path).map_err(|error| {
+            PublicError::unexpected(format!("failed to open body file {source}: {error}"))
+        })?;
+        read_body_input(file, &format!("file {source}")).map(Zeroizing::new)
+    })
+    .await
+    .map(|mut body| Some(std::mem::take(&mut *body)))
 }
 
 pub(crate) fn validate_body_input(
@@ -266,15 +271,21 @@ fn select_json_input_source<'a>(
 async fn read_json_input(source: JsonInputSource<'_>) -> PublicResult<Zeroizing<String>> {
     match source {
         JsonInputSource::File(path) => {
-            fs::read_to_string(path).map(Zeroizing::new).map_err(|err| {
-                PublicError::unexpected(format!(
-                    "failed to read input file {}: {err}",
-                    path.display()
-                ))
+            let path = path.to_owned();
+            read_input(move || {
+                fs::read_to_string(&path)
+                    .map(Zeroizing::new)
+                    .map_err(|err| {
+                        PublicError::unexpected(format!(
+                            "failed to read input file {}: {err}",
+                            path.display()
+                        ))
+                    })
             })
+            .await
         }
         JsonInputSource::Stdin => {
-            read_stdin(|| {
+            read_input(|| {
                 let mut input = Zeroizing::new(String::new());
                 io::stdin().read_to_string(&mut input).map_err(|err| {
                     PublicError::unexpected(format!("failed to read input from stdin: {err}"))
@@ -379,26 +390,26 @@ pub(crate) fn read_required_password(
 
 // A detached OS reader does not pin Tokio shutdown when its awaiting command
 // is cancelled and the one-shot CLI exits. Until process exit it can still
-// consume stdin, so callers must not resume stdin use after cancellation.
-// It only reads; it cannot continue a mutation after cancellation.
+// consume its input or finish opening a file, so callers must not resume input
+// use after cancellation. It only reads; it cannot continue a mutation.
 // Do not use this for raw-mode/echo-changing terminal prompts, whose cleanup
 // must finish before the process exits. Abandoned results are zeroized.
-pub(crate) async fn read_stdin(
+pub(crate) async fn read_input(
     read: impl FnOnce() -> PublicResult<Zeroizing<String>> + Send + 'static,
 ) -> PublicResult<Zeroizing<String>> {
     let (sender, receiver) = tokio::sync::oneshot::channel();
     std::thread::Builder::new()
-        .name("sealtask-stdin".to_string())
+        .name("sealtask-input".to_string())
         .spawn(move || {
             let result = read();
             let _ = sender.send(result);
         })
         .map_err(|error| {
-            PublicError::unexpected(format!("failed to start stdin reader: {error}"))
+            PublicError::unexpected(format!("failed to start input reader: {error}"))
         })?;
     receiver
         .await
-        .map_err(|_| PublicError::unexpected("stdin reader stopped without a result"))?
+        .map_err(|_| PublicError::unexpected("input reader stopped without a result"))?
 }
 
 #[cfg(test)]
