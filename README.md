@@ -622,7 +622,7 @@ exceed the request timeout. Best-effort old-session revocation during login and
 logout honors shorter request timeouts but remains capped at `5s` so local
 authentication cleanup cannot hang an operator session.
 
-For troubleshooting, `-v` writes redacted start/finish events to stderr;
+For troubleshooting runtime commands, `-v` writes redacted start/finish events to stderr;
 `-vv` and `--debug` also include the safe API origin, configuration sources,
 and resolved timeouts. Profile names, configuration paths, URL credentials and
 paths, and request payloads are omitted. Telemetry never occupies stdout. Each
@@ -1045,7 +1045,14 @@ with `--json --non-interactive`, version 2 guarantees:
 
 Help and version output retain Clap's human-readable text format. Use
 `sealtask --json schema [COMMAND ...]` for a versioned machine-readable command
-and argument description.
+and argument description. Schema discovery is local: it does not resolve API,
+profile, or timeout settings, read credentials, or create config state. It remains
+available when runtime configuration is invalid; output-mode and command-path
+validation still apply. Explicit `--api-url`, `--profile`, `--config-dir`, and
+connect/read/request timeout flags are accepted without runtime validation and
+have no effect on schema discovery. Schema emits no runtime telemetry: human
+`-v`, `-vv`, and `--debug` are accepted without diagnostic events; combining
+these flags with JSON remains a validation error.
 
 Running `sealtask` without arguments prints the same canonical root reference
 as `sealtask help` and `sealtask --help`, then exits successfully. Human global

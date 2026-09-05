@@ -284,6 +284,10 @@ async fn run(
         .into());
     }
 
+    if let Some(Command::Schema { command }) = cli.command.as_ref() {
+        return run_schema(format, command);
+    }
+
     let operator_overrides = cli_overrides(&cli, raw_args)?;
     let resolved_config = if matches!(cli.command.as_ref(), Some(Command::Doctor { .. })) {
         resolve_operator_config_for_diagnostics(operator_overrides)?
@@ -363,10 +367,9 @@ async fn run(
 
     let result = match (command, runtime) {
         (Command::Info, Ok(runtime)) => run_info(&runtime, format),
-        (Command::Completion { .. } | Command::Man { .. }, Ok(_)) => {
+        (Command::Completion { .. } | Command::Man { .. } | Command::Schema { .. }, _) => {
             unreachable!("discovery commands return before operator configuration")
         }
-        (Command::Schema { command }, _) => run_schema(format, &command),
         (Command::Auth { command }, Ok(runtime)) => {
             run_auth(&runtime, format, cli.non_interactive, command).await
         }
