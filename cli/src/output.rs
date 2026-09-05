@@ -326,7 +326,12 @@ impl OutputFormat {
     #[must_use]
     pub(crate) fn from_raw_args(args: &[OsString]) -> Self {
         let mut detected = Self::Table;
-        for (index, arg) in args.iter().enumerate() {
+        for (index, arg) in args.iter().enumerate().skip(1) {
+            // The executable name and operands after the terminator are data,
+            // even when they look like presentation flags.
+            if arg == OsStr::new("--") {
+                break;
+            }
             if arg == OsStr::new("--json") {
                 return Self::Json;
             }
@@ -815,6 +820,14 @@ mod tests {
     use super::*;
 
     struct AlwaysFailWriter;
+
+    #[test]
+    fn raw_format_detection_ignores_the_executable_name() {
+        for name in ["--json", "--format=json", "--format=jsonl"] {
+            let args = [OsString::from(name), OsString::from("--bogus")];
+            assert_eq!(OutputFormat::from_raw_args(&args), OutputFormat::Table);
+        }
+    }
 
     #[test]
     fn raw_json_detection_survives_an_invalid_or_conflicting_format_flag() {

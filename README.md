@@ -1032,6 +1032,8 @@ with `--json --non-interactive`, version 2 guarantees:
 - warnings and runtime errors are written to stderr as one JSON envelope, for
   example `{"warnings":[...]}` or
   `{"error":{"code":"validation","message":"...","retryable":false}}`
+- parser errors also honor the selected output format; tokens after the `--`
+  option terminator are operands and cannot change diagnostic formatting
 - errors may also expose `retryAfterSeconds`, `backendCode`, `httpStatus`,
   `outcome`, and an actionable `hint`; agents should branch on fields rather
   than message copy
