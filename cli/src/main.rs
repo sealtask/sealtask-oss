@@ -38,8 +38,7 @@ use operator_config::{
     resolve_operator_config_for_diagnostics,
 };
 use output::{
-    CliError, CliResult, OutputFormat, finish_with_warnings, print_clap_error, print_cli_error,
-    warning_result,
+    CliError, CliResult, OutputFormat, finish_with_warnings, print_cli_error, warning_result,
 };
 use sealtask_client_api::{ApiCancellationToken, ApiRetryPolicy, ApiTransportOptions};
 use sealtask_client_auth::configure_local_state;
@@ -127,11 +126,15 @@ async fn main() {
 }
 
 fn parse_cli_or_exit(args: &[OsString], format: OutputFormat) -> Cli {
-    let command = discovery::command().color(terminal::clap_color_choice(args, format));
+    let mut command = discovery::command().color(terminal::clap_color_choice(args, format));
+    if format.is_json() {
+        // Machine diagnostics serialize source values, including literal ESC bytes.
+        command = command.styles(clap::builder::Styles::plain());
+    }
     let matches = command
         .try_get_matches_from(args.iter().cloned())
-        .unwrap_or_else(|err| exit_after_clap_error(err, format));
-    Cli::from_arg_matches(&matches).unwrap_or_else(|err| exit_after_clap_error(err, format))
+        .unwrap_or_else(|err| exit_after_clap_error(err, format, args));
+    Cli::from_arg_matches(&matches).unwrap_or_else(|err| exit_after_clap_error(err, format, args))
 }
 
 fn private_terminal_command(command: Option<&Command>) -> Option<PrivateTerminalCommand> {
@@ -157,13 +160,15 @@ fn private_terminal_command(command: Option<&Command>) -> Option<PrivateTerminal
     }
 }
 
-fn exit_after_clap_error(err: clap::Error, format: OutputFormat) -> ! {
-    if format.is_json() && err.use_stderr() {
-        let _ = print_clap_error(&err, format);
-        std::process::exit(err.exit_code());
+fn exit_after_clap_error(err: clap::Error, format: OutputFormat, args: &[OsString]) -> ! {
+    match output::print_parser_output(&err, format, args) {
+        Ok(()) => std::process::exit(err.exit_code()),
+        Err(CliError::BrokenPipe) => std::process::exit(0),
+        Err(error) => {
+            let _ = print_cli_error(&error, format);
+            std::process::exit(error.exit_code());
+        }
     }
-
-    err.exit()
 }
 
 async fn run(

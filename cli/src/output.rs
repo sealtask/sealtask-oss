@@ -480,11 +480,73 @@ fn write_table_error<W: Write>(mut stream: W, err: &CliError) -> CliResult<()> {
     Ok(())
 }
 
+pub(crate) fn print_parser_output(
+    err: &clap::Error,
+    format: OutputFormat,
+    args: &[OsString],
+) -> CliResult<()> {
+    if format.is_json() && err.use_stderr() {
+        return print_clap_error(err, format);
+    }
+
+    // Clap's styled diagnostics interpolate argv, environment values, and parser
+    // error sources. Keep its layout for ordinary diagnostics, but make the whole
+    // message a literal line when any source can forge terminal operations/rows.
+    // This intentionally sacrifices even trusted layout in that fallback: Clap
+    // does not expose the boundaries between interpolated data and its layout.
+    let unsafe_input = args
+        .iter()
+        .any(|arg| unsafe_parser_text(&arg.to_string_lossy()))
+        || err
+            .context()
+            .any(|(_, value)| unsafe_parser_text(&value.to_string()))
+        || std::error::Error::source(err)
+            .is_some_and(|source| unsafe_parser_text(&source.to_string()));
+    if err.use_stderr() && unsafe_input {
+        let message = err.to_string();
+        let mut escaped = String::new();
+        for ch in message.trim_end().chars() {
+            if unsafe_parser_character(ch) {
+                escaped.extend(ch.escape_default());
+            } else {
+                escaped.push(ch);
+            }
+        }
+        write_stderr_line(format_args!("{escaped}"))?;
+    } else {
+        err.print().map_err(|error| {
+            map_stream_error(
+                error,
+                "print to",
+                if err.use_stderr() { "stderr" } else { "stdout" },
+                !err.use_stderr(),
+            )
+        })?;
+    }
+    if err.use_stderr() {
+        io::stderr()
+            .flush()
+            .map_err(|error| map_stream_error(error, "flush", "stderr", false))
+    } else {
+        io::stdout()
+            .flush()
+            .map_err(|error| map_stream_error(error, "flush", "stdout", true))
+    }
+}
+
+fn unsafe_parser_text(value: &str) -> bool {
+    value.chars().any(unsafe_parser_character)
+}
+
+fn unsafe_parser_character(ch: char) -> bool {
+    ch.is_control() || is_bidi_control(ch) || matches!(ch, '\u{2028}' | '\u{2029}')
+}
+
 pub(crate) fn print_clap_error(err: &clap::Error, format: OutputFormat) -> CliResult<()> {
     print_json_error(
         format,
         "validation",
-        err.to_string().trim_end().to_string(),
+        err.render().ansi().to_string().trim_end().to_string(),
         "serializing clap parse error should succeed",
     )
 }

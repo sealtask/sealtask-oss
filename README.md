@@ -260,7 +260,7 @@ Human output adapts to the terminal while machine output stays byte-stable:
 
 - `--color auto|always|never` defaults to color only on the destination TTY.
   `NO_COLOR` (when non-empty), `CLICOLOR=0`, and `TERM=dumb` disable automatic
-  color; an explicit `--color always` overrides them. JSON never contains ANSI.
+  color; an explicit `--color always` overrides them. JSON contains no generated ANSI styling; serialized data may contain escaped control characters.
 - `--pager auto|always|never` pages only long human output by default.
   `--no-pager` is the explicit short form of `--pager never`. The pager command
   is the first configured value of `SEALTASK_PAGER`, then `PAGER`, then the
@@ -1028,7 +1028,9 @@ with `--json --non-interactive`, version 2 guarantees:
   `outcome`, and an actionable `hint`; agents should branch on fields rather
   than message copy
 - successful commands exit `0`, runtime/validation failures exit `1`, and Clap
-  argument-parsing failures retain Clap's exit code (`2` for usage errors)
+  argument-parsing failures retain Clap's exit code (`2` for usage errors) when
+  diagnostics are delivered; output write/flush failures exit `1`, including a
+  closed stderr pipe
 - a closed stdout pipe is treated as successful consumer termination and exits
   `0`
 - permanent task, comment, note, and attachment deletion requires `--yes`;
@@ -1127,3 +1129,11 @@ hosted web delivery and licensed self-hosted distributions.
 ## License
 
 This workspace is licensed under `GPL-3.0-only`. See [LICENSE](./LICENSE).
+
+Parser help uses the canonical `sealtask` program name and displays environment
+variable names without their current values. Ordinary diagnostics retain their
+multiline layout. If parser input contains terminal controls or line-forging
+characters, human diagnostics use a single escaped line; this deliberately
+sacrifices layout to prevent forged rows. Machine error messages preserve source
+data through JSON escaping. Consumers displaying decoded messages in a terminal
+must escape untrusted control characters themselves.

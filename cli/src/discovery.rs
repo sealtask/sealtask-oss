@@ -9,7 +9,7 @@ use std::io::Write;
 use std::path::Path;
 
 pub(crate) fn command() -> Command {
-    configure_command(Cli::command(), &[])
+    configure_command(Cli::command().bin_name("sealtask"), &[])
 }
 
 pub(crate) fn print_root_help(color: clap::ColorChoice) -> CliResult<()> {
@@ -180,7 +180,9 @@ fn configure_command(mut command: Command, parent_path: &[String]) -> Command {
 
     command = command.mut_args(|argument| {
         let heading = argument_heading(&path, &argument);
-        argument.help_heading(heading)
+        // Environment values are data, and may contain terminal controls or secrets.
+        // Help documents their names; config show is the explicit inspection surface.
+        argument.help_heading(heading).hide_env_values(true)
     });
     if let Some(examples) = command_examples(&path) {
         command = command.after_long_help(examples);
