@@ -76,7 +76,14 @@ export function transformProjectDuplication(params: {
   const { source, ids } = params
   const sourceId = uuid(source.workListId)
   const body = validatedBody(source.envelope, 'work_list')
-  onlyKeys(body, ['title', 'description', 'theme', 'sections', 'stage_metadata', 'client_meta'])
+  onlyKeys(body, ['title', 'description', 'theme', 'sections', 'stage_metadata', 'client_meta', 'share_targets'])
+  // Existing web-created projects retain invitation display metadata here.
+  // Validate the known shape, then exclude it from the private destination.
+  for (const value of array(body.share_targets)) {
+    const target = record(value)
+    onlyKeys(target, ['id', 'display_name', 'role', 'availability'])
+    for (const field of ['id', 'display_name', 'role', 'availability']) string(target[field])
+  }
   const sections = array(body.sections).map(record)
   const stages = array(body.stage_metadata).map(record)
   const snapshots = [...source.sectionSnapshots].sort((a, b) => a.position - b.position)

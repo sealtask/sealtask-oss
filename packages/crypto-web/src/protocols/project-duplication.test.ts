@@ -57,6 +57,12 @@ describe('project duplication v1', () => {
     await expect(decryptProjectDuplicationEnvelope({ kind, ciphertext, listKey: new Uint8Array(32), strongBox })).rejects.toThrow('unsupported structural content')
   })
 
+  it.each([{}, [null], [{ id: 'member' }]])('rejects malformed share-target metadata: %j', (targets) => {
+    const input = clone()
+    input.source.envelope.body.share_targets = targets
+    expect(() => transformProjectDuplication(input)).toThrow()
+  })
+
   it('excludes identities, archived tasks, schedules, progress, and unknown client metadata', () => {
     const plan = transformProjectDuplication(clone())
     expect(plan.tasks).toHaveLength(2)

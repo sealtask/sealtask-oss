@@ -56,7 +56,15 @@
           "private.unknown": {
             "sourceOwner": "00000000-0000-4000-8000-000000000020"
           }
-        }
+        },
+        "share_targets": [
+          {
+            "id": "00000000-0000-4000-8000-000000000020",
+            "display_name": "Excluded source collaborator",
+            "role": "member",
+            "availability": "active"
+          }
+        ]
       }
     },
     "sectionSnapshots": [
