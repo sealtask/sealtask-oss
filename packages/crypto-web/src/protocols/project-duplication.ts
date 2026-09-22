@@ -1,4 +1,6 @@
-import { encode as cborEncode } from 'cbor-x'
+import { decode as cborDecode, encode as cborEncode } from 'cbor-x'
+import { getStrongBoxBridge, type StrongBoxBridge } from '../runtime/strong-box'
+import { parseSealedPayload } from './sealed-payload'
 
 import { decodeAndValidatePayloadBytes, validatePayloadBytes } from './payload-validation'
 import type { TaskPayloadEnvelope, TaskPayloadRichText } from './task'
@@ -247,6 +249,24 @@ export function transformProjectDuplication(params: {
     },
     tasks,
   }
+}
+
+/** Decode without the display reader's lossy envelope normalization. */
+export async function decryptProjectDuplicationEnvelope<Kind extends 'work_list' | 'task'>(params: {
+  kind: Kind; ciphertext: string; listKey: Uint8Array; strongBox?: StrongBoxBridge
+}): Promise<Kind extends 'task' ? TaskPayloadEnvelope : WorkListPayloadEnvelope> {
+  const bridge = params.strongBox ?? await getStrongBoxBridge()
+  const sealed = parseSealedPayload(params.ciphertext)
+  const plaintext = await bridge.decrypt({
+    key: params.listKey,
+    context: new TextEncoder().encode(params.kind === 'task' ? 'worklist.task.v1' : 'worklist.work_list.v1'),
+    ciphertext: sealed.ciphertext,
+  })
+  try {
+    const envelope = cborDecode(plaintext)
+    const body = validatedBody(envelope, params.kind)
+    return { kind: params.kind, version: 1, body } as Kind extends 'task' ? TaskPayloadEnvelope : WorkListPayloadEnvelope
+  } finally { plaintext.fill(0) }
 }
 
 function copyTheme(theme: Record<string, unknown>): Record<string, unknown> {
