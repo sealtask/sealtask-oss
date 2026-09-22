@@ -1,0 +1,89 @@
+{
+  "fixtureVersion": 1,
+  "name": "legacy-empty-project",
+  "source": {
+    "workListId": "00000000-0000-4000-8000-000000000001",
+    "timezone": "Europe/Prague",
+    "envelope": {
+      "kind": "work_list",
+      "version": 1,
+      "body": {
+        "title": "Empty",
+        "sections": []
+      }
+    },
+    "sectionSnapshots": [],
+    "tasks": [],
+    "referenceScheme": null
+  },
+  "ids": {
+    "operationId": "019a0000-0000-7000-8000-000000000100",
+    "workListId": "00000000-0000-4000-8000-000000000101",
+    "sections": {
+      "00000000-0000-4000-8000-000000000002": "00000000-0000-4000-8000-000000000102",
+      "00000000-0000-4000-8000-000000000003": "00000000-0000-4000-8000-000000000103"
+    },
+    "tasks": {
+      "00000000-0000-4000-8000-000000000004": "00000000-0000-4000-8000-000000000104",
+      "00000000-0000-4000-8000-000000000005": "00000000-0000-4000-8000-000000000105"
+    },
+    "checklists": {
+      "00000000-0000-4000-8000-000000000004": {
+        "00000000-0000-4000-8000-000000000007": "00000000-0000-4000-8000-000000000107"
+      },
+      "00000000-0000-4000-8000-000000000005": {}
+    },
+    "fallbackSectionId": "00000000-0000-4000-8000-000000000108",
+    "schemeRevisionId": "00000000-0000-4000-8000-000000000109"
+  },
+  "title": "Empty copy",
+  "fallbackSectionName": "Tasks",
+  "expected": {
+    "protocolVersion": 1,
+    "resetPolicy": "incomplete-without-dates-v1",
+    "operationId": "019a0000-0000-7000-8000-000000000100",
+    "workList": {
+      "workListId": "00000000-0000-4000-8000-000000000101",
+      "timezone": "Europe/Prague",
+      "envelope": {
+        "kind": "work_list",
+        "version": 1,
+        "body": {
+          "title": "Empty copy",
+          "description": null,
+          "theme": null,
+          "sections": [
+            {
+              "id": "00000000-0000-4000-8000-000000000108",
+              "name": "Tasks",
+              "wip_limit": null
+            }
+          ],
+          "stage_metadata": [],
+          "client_meta": {
+            "web.view": {
+              "layout": "kanban",
+              "default_section": "00000000-0000-4000-8000-000000000108",
+              "active_stage_ids": [
+                "00000000-0000-4000-8000-000000000108"
+              ]
+            }
+          }
+        }
+      },
+      "sectionSnapshots": [
+        {
+          "id": "00000000-0000-4000-8000-000000000108",
+          "position": 0,
+          "autoArchiveEnabled": false,
+          "autoArchiveAfterDays": null
+        }
+      ],
+      "referenceScheme": null
+    },
+    "tasks": []
+  },
+  "listKeyHex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+  "canonical": "{\"operationId\":\"019a0000-0000-7000-8000-000000000100\",\"protocolVersion\":1,\"resetPolicy\":\"incomplete-without-dates-v1\",\"tasks\":[],\"workList\":{\"envelope\":{\"body\":{\"client_meta\":{\"web.view\":{\"active_stage_ids\":[\"00000000-0000-4000-8000-000000000108\"],\"default_section\":\"00000000-0000-4000-8000-000000000108\",\"layout\":\"kanban\"}},\"description\":null,\"sections\":[{\"id\":\"00000000-0000-4000-8000-000000000108\",\"name\":\"Tasks\",\"wip_limit\":null}],\"stage_metadata\":[],\"theme\":null,\"title\":\"Empty copy\"},\"kind\":\"work_list\",\"version\":1},\"referenceScheme\":null,\"sectionSnapshots\":[{\"autoArchiveAfterDays\":null,\"autoArchiveEnabled\":false,\"id\":\"00000000-0000-4000-8000-000000000108\",\"position\":0}],\"timezone\":\"Europe/Prague\",\"workListId\":\"00000000-0000-4000-8000-000000000101\"}}",
+  "commitment": "xXJccvlCr8Rihib7GuODCZG2ZrCQxefq00jY1HPSULs"
+}

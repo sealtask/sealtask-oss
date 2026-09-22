@@ -1,0 +1,421 @@
+{
+  "fixtureVersion": 1,
+  "name": "custom-project-with-progress-and-identities",
+  "source": {
+    "workListId": "00000000-0000-4000-8000-000000000001",
+    "timezone": "Europe/Prague",
+    "envelope": {
+      "kind": "work_list",
+      "version": 1,
+      "body": {
+        "title": "Launch 🦭",
+        "description": "Keep café / é and 東京",
+        "theme": {
+          "color": "#912B36",
+          "emoji": "🦭"
+        },
+        "sections": [
+          {
+            "id": "00000000-0000-4000-8000-000000000002",
+            "name": "Review",
+            "wip_limit": 3
+          },
+          {
+            "id": "00000000-0000-4000-8000-000000000003",
+            "name": "Ready",
+            "wip_limit": null
+          }
+        ],
+        "stage_metadata": [
+          {
+            "id": "00000000-0000-4000-8000-000000000002",
+            "label": "Review",
+            "description": "Check details",
+            "enabled": true,
+            "is_custom": true,
+            "order": 0
+          },
+          {
+            "id": "00000000-0000-4000-8000-000000000003",
+            "label": "Ready",
+            "description": "Ship",
+            "enabled": true,
+            "is_custom": true,
+            "order": 1
+          }
+        ],
+        "client_meta": {
+          "web.view": {
+            "layout": "list",
+            "default_section": "00000000-0000-4000-8000-000000000003",
+            "active_stage_ids": [
+              "00000000-0000-4000-8000-000000000002",
+              "00000000-0000-4000-8000-000000000003"
+            ]
+          },
+          "private.unknown": {
+            "sourceOwner": "00000000-0000-4000-8000-000000000020"
+          }
+        }
+      }
+    },
+    "sectionSnapshots": [
+      {
+        "id": "00000000-0000-4000-8000-000000000003",
+        "position": 1,
+        "autoArchiveEnabled": true,
+        "autoArchiveAfterDays": 7
+      },
+      {
+        "id": "00000000-0000-4000-8000-000000000002",
+        "position": 0,
+        "autoArchiveEnabled": false,
+        "autoArchiveAfterDays": null
+      }
+    ],
+    "tasks": [
+      {
+        "id": "00000000-0000-4000-8000-000000000004",
+        "sectionId": "00000000-0000-4000-8000-000000000002",
+        "priority": 5,
+        "archivedAt": null,
+        "completedAt": "2026-09-01T00:00:00Z",
+        "dueAt": "2026-10-01T00:00:00Z",
+        "startAt": "2026-09-20T00:00:00Z",
+        "assigneeUserIds": [
+          "00000000-0000-4000-8000-000000000020"
+        ],
+        "envelope": {
+          "kind": "task",
+          "version": 1,
+          "body": {
+            "title": "Finished task → copy incomplete",
+            "rich_text": {
+              "format": "prosemirror",
+              "version": 1,
+              "blocks": [
+                {
+                  "type": "heading",
+                  "text": "Hello @Zoë — link",
+                  "attrs": {
+                    "level": 2,
+                    "user_id": "00000000-0000-4000-8000-000000000020"
+                  },
+                  "content": [
+                    {
+                      "text": "Hello "
+                    },
+                    {
+                      "text": "@Zoë",
+                      "marks": [
+                        {
+                          "type": "mention",
+                          "attrs": {
+                            "id": "00000000-0000-4000-8000-000000000020",
+                            "label": "Zoë"
+                          }
+                        },
+                        {
+                          "type": "bold"
+                        }
+                      ]
+                    },
+                    {
+                      "text": " — link",
+                      "marks": [
+                        {
+                          "type": "link",
+                          "attrs": {
+                            "href": "https://example.org/original?q=🦭",
+                            "user_id": "00000000-0000-4000-8000-000000000020"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            "checklist": [
+              {
+                "id": "00000000-0000-4000-8000-000000000007",
+                "title": "Review café",
+                "is_done": true,
+                "completed_at": 1788220800,
+                "assignee_user_ids": [
+                  "00000000-0000-4000-8000-000000000020"
+                ]
+              }
+            ],
+            "attachments": [
+              {
+                "id": "00000000-0000-4000-8000-000000000021",
+                "file_name": "private.pdf",
+                "content_type": "application/pdf",
+                "size_bytes": 123,
+                "blob_key": [
+                  1,
+                  2,
+                  3
+                ],
+                "created_by_membership_id": "00000000-0000-4000-8000-000000000020"
+              }
+            ],
+            "references": [
+              {
+                "kind": "task",
+                "label": "Original task",
+                "uri": "sealtask://task/00000000-0000-4000-8000-000000000004"
+              }
+            ],
+            "mentions": [
+              "00000000-0000-4000-8000-000000000020"
+            ],
+            "client_meta": {
+              "private": {
+                "id": "00000000-0000-4000-8000-000000000020"
+              }
+            },
+            "recurrence_state": {
+              "template_id": "00000000-0000-4000-8000-000000000008",
+              "occurrence": "2026-09-01"
+            }
+          }
+        }
+      },
+      {
+        "id": "00000000-0000-4000-8000-000000000005",
+        "sectionId": null,
+        "priority": null,
+        "archivedAt": null,
+        "envelope": {
+          "kind": "task",
+          "version": 1,
+          "body": {
+            "title": "Unsectioned",
+            "checklist": []
+          }
+        }
+      },
+      {
+        "id": "00000000-0000-4000-8000-000000000006",
+        "sectionId": "00000000-0000-4000-8000-000000000003",
+        "priority": 2,
+        "archivedAt": "2026-09-21T00:00:00Z",
+        "envelope": null
+      }
+    ],
+    "referenceScheme": {
+      "kind": "task_reference_scheme",
+      "version": 1,
+      "workListId": "00000000-0000-4000-8000-000000000001",
+      "schemeRevisionId": "00000000-0000-4000-8000-000000000009",
+      "revision": 3,
+      "prefix": "COPY",
+      "separator": "-",
+      "minimumDigits": 4
+    },
+    "membershipCiphertext": "excluded-source-membership-envelope"
+  },
+  "ids": {
+    "operationId": "019a0000-0000-7000-8000-000000000100",
+    "workListId": "00000000-0000-4000-8000-000000000101",
+    "sections": {
+      "00000000-0000-4000-8000-000000000002": "00000000-0000-4000-8000-000000000102",
+      "00000000-0000-4000-8000-000000000003": "00000000-0000-4000-8000-000000000103"
+    },
+    "tasks": {
+      "00000000-0000-4000-8000-000000000004": "00000000-0000-4000-8000-000000000104",
+      "00000000-0000-4000-8000-000000000005": "00000000-0000-4000-8000-000000000105"
+    },
+    "checklists": {
+      "00000000-0000-4000-8000-000000000004": {
+        "00000000-0000-4000-8000-000000000007": "00000000-0000-4000-8000-000000000107"
+      },
+      "00000000-0000-4000-8000-000000000005": {}
+    },
+    "fallbackSectionId": "00000000-0000-4000-8000-000000000108",
+    "schemeRevisionId": "00000000-0000-4000-8000-000000000109"
+  },
+  "title": "Copy of Launch 🦭",
+  "fallbackSectionName": "Tasks",
+  "expected": {
+    "protocolVersion": 1,
+    "resetPolicy": "incomplete-without-dates-v1",
+    "operationId": "019a0000-0000-7000-8000-000000000100",
+    "workList": {
+      "workListId": "00000000-0000-4000-8000-000000000101",
+      "timezone": "Europe/Prague",
+      "envelope": {
+        "kind": "work_list",
+        "version": 1,
+        "body": {
+          "title": "Copy of Launch 🦭",
+          "description": "Keep café / é and 東京",
+          "theme": {
+            "color": "#912B36",
+            "emoji": "🦭"
+          },
+          "sections": [
+            {
+              "id": "00000000-0000-4000-8000-000000000102",
+              "name": "Review",
+              "wip_limit": 3
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000103",
+              "name": "Ready",
+              "wip_limit": null
+            }
+          ],
+          "stage_metadata": [
+            {
+              "id": "00000000-0000-4000-8000-000000000102",
+              "label": "Review",
+              "description": "Check details",
+              "enabled": true,
+              "is_custom": true,
+              "order": 0
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000103",
+              "label": "Ready",
+              "description": "Ship",
+              "enabled": true,
+              "is_custom": true,
+              "order": 1
+            }
+          ],
+          "client_meta": {
+            "web.view": {
+              "layout": "list",
+              "default_section": "00000000-0000-4000-8000-000000000103",
+              "active_stage_ids": [
+                "00000000-0000-4000-8000-000000000102",
+                "00000000-0000-4000-8000-000000000103"
+              ]
+            }
+          }
+        }
+      },
+      "sectionSnapshots": [
+        {
+          "id": "00000000-0000-4000-8000-000000000102",
+          "position": 0,
+          "autoArchiveEnabled": false,
+          "autoArchiveAfterDays": null
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000103",
+          "position": 1,
+          "autoArchiveEnabled": false,
+          "autoArchiveAfterDays": null
+        }
+      ],
+      "referenceScheme": {
+        "kind": "task_reference_scheme",
+        "version": 1,
+        "workListId": "00000000-0000-4000-8000-000000000101",
+        "schemeRevisionId": "00000000-0000-4000-8000-000000000109",
+        "revision": 1,
+        "prefix": "COPY",
+        "separator": "-",
+        "minimumDigits": 4
+      }
+    },
+    "tasks": [
+      {
+        "taskId": "00000000-0000-4000-8000-000000000104",
+        "sectionId": "00000000-0000-4000-8000-000000000102",
+        "priority": 5,
+        "dueAt": null,
+        "startAt": null,
+        "completedAt": null,
+        "envelope": {
+          "kind": "task",
+          "version": 1,
+          "body": {
+            "title": "Finished task → copy incomplete",
+            "rich_text": {
+              "format": "prosemirror",
+              "version": 1,
+              "blocks": [
+                {
+                  "type": "heading",
+                  "text": "Hello @Zoë — link",
+                  "attrs": {
+                    "level": 2
+                  },
+                  "content": [
+                    {
+                      "text": "Hello ",
+                      "marks": []
+                    },
+                    {
+                      "text": "@Zoë",
+                      "marks": [
+                        {
+                          "type": "bold"
+                        }
+                      ]
+                    },
+                    {
+                      "text": " — link",
+                      "marks": [
+                        {
+                          "type": "link",
+                          "attrs": {
+                            "href": "https://example.org/original?q=🦭"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            "checklist": [
+              {
+                "id": "00000000-0000-4000-8000-000000000107",
+                "title": "Review café",
+                "is_done": false,
+                "completed_at": null,
+                "assignee_user_ids": []
+              }
+            ],
+            "attachments": [],
+            "references": [],
+            "mentions": [],
+            "client_meta": {},
+            "recurrence_state": null
+          }
+        }
+      },
+      {
+        "taskId": "00000000-0000-4000-8000-000000000105",
+        "sectionId": null,
+        "priority": null,
+        "dueAt": null,
+        "startAt": null,
+        "completedAt": null,
+        "envelope": {
+          "kind": "task",
+          "version": 1,
+          "body": {
+            "title": "Unsectioned",
+            "rich_text": null,
+            "checklist": [],
+            "attachments": [],
+            "references": [],
+            "mentions": [],
+            "client_meta": {},
+            "recurrence_state": null
+          }
+        }
+      }
+    ]
+  },
+  "listKeyHex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+  "canonical": "{\"operationId\":\"019a0000-0000-7000-8000-000000000100\",\"protocolVersion\":1,\"resetPolicy\":\"incomplete-without-dates-v1\",\"tasks\":[{\"completedAt\":null,\"dueAt\":null,\"envelope\":{\"body\":{\"attachments\":[],\"checklist\":[{\"assignee_user_ids\":[],\"completed_at\":null,\"id\":\"00000000-0000-4000-8000-000000000107\",\"is_done\":false,\"title\":\"Review café\"}],\"client_meta\":{},\"mentions\":[],\"recurrence_state\":null,\"references\":[],\"rich_text\":{\"blocks\":[{\"attrs\":{\"level\":2},\"content\":[{\"marks\":[],\"text\":\"Hello \"},{\"marks\":[{\"type\":\"bold\"}],\"text\":\"@Zoë\"},{\"marks\":[{\"attrs\":{\"href\":\"https://example.org/original?q=🦭\"},\"type\":\"link\"}],\"text\":\" — link\"}],\"text\":\"Hello @Zoë — link\",\"type\":\"heading\"}],\"format\":\"prosemirror\",\"version\":1},\"title\":\"Finished task → copy incomplete\"},\"kind\":\"task\",\"version\":1},\"priority\":5,\"sectionId\":\"00000000-0000-4000-8000-000000000102\",\"startAt\":null,\"taskId\":\"00000000-0000-4000-8000-000000000104\"},{\"completedAt\":null,\"dueAt\":null,\"envelope\":{\"body\":{\"attachments\":[],\"checklist\":[],\"client_meta\":{},\"mentions\":[],\"recurrence_state\":null,\"references\":[],\"rich_text\":null,\"title\":\"Unsectioned\"},\"kind\":\"task\",\"version\":1},\"priority\":null,\"sectionId\":null,\"startAt\":null,\"taskId\":\"00000000-0000-4000-8000-000000000105\"}],\"workList\":{\"envelope\":{\"body\":{\"client_meta\":{\"web.view\":{\"active_stage_ids\":[\"00000000-0000-4000-8000-000000000102\",\"00000000-0000-4000-8000-000000000103\"],\"default_section\":\"00000000-0000-4000-8000-000000000103\",\"layout\":\"list\"}},\"description\":\"Keep café / é and 東京\",\"sections\":[{\"id\":\"00000000-0000-4000-8000-000000000102\",\"name\":\"Review\",\"wip_limit\":3},{\"id\":\"00000000-0000-4000-8000-000000000103\",\"name\":\"Ready\",\"wip_limit\":null}],\"stage_metadata\":[{\"description\":\"Check details\",\"enabled\":true,\"id\":\"00000000-0000-4000-8000-000000000102\",\"is_custom\":true,\"label\":\"Review\",\"order\":0},{\"description\":\"Ship\",\"enabled\":true,\"id\":\"00000000-0000-4000-8000-000000000103\",\"is_custom\":true,\"label\":\"Ready\",\"order\":1}],\"theme\":{\"color\":\"#912B36\",\"emoji\":\"🦭\"},\"title\":\"Copy of Launch 🦭\"},\"kind\":\"work_list\",\"version\":1},\"referenceScheme\":{\"kind\":\"task_reference_scheme\",\"minimumDigits\":4,\"prefix\":\"COPY\",\"revision\":1,\"schemeRevisionId\":\"00000000-0000-4000-8000-000000000109\",\"separator\":\"-\",\"version\":1,\"workListId\":\"00000000-0000-4000-8000-000000000101\"},\"sectionSnapshots\":[{\"autoArchiveAfterDays\":null,\"autoArchiveEnabled\":false,\"id\":\"00000000-0000-4000-8000-000000000102\",\"position\":0},{\"autoArchiveAfterDays\":null,\"autoArchiveEnabled\":false,\"id\":\"00000000-0000-4000-8000-000000000103\",\"position\":1}],\"timezone\":\"Europe/Prague\",\"workListId\":\"00000000-0000-4000-8000-000000000101\"}}",
+  "commitment": "96YWg2+qV5gUwhoMPLRYSKASkVrP90BZcG4lWT1eHJ0"
+}
