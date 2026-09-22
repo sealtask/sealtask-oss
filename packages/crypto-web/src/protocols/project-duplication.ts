@@ -263,10 +263,23 @@ export async function decryptProjectDuplicationEnvelope<Kind extends 'work_list'
     ciphertext: sealed.ciphertext,
   })
   try {
-    const envelope = cborDecode(plaintext)
+    const envelope = normalizeCborMaps(cborDecode(plaintext))
     const body = validatedBody(envelope, params.kind)
     return { kind: params.kind, version: 1, body } as Kind extends 'task' ? TaskPayloadEnvelope : WorkListPayloadEnvelope
   } finally { plaintext.fill(0) }
+}
+
+function normalizeCborMaps(value: unknown): unknown {
+  if (value instanceof Uint8Array) return value.slice()
+  if (value instanceof Map) {
+    if ([...value.keys()].some((key) => typeof key !== 'string')) fail('non-text structural map key')
+    return Object.fromEntries([...value].map(([key, child]) => [key, normalizeCborMaps(child)]))
+  }
+  if (Array.isArray(value)) return value.map(normalizeCborMaps)
+  if (value !== null && typeof value === 'object' && (Object.getPrototypeOf(value) === Object.prototype || Object.getPrototypeOf(value) === null)) {
+    return Object.fromEntries(Object.entries(value).map(([key, child]) => [key, normalizeCborMaps(child)]))
+  }
+  return value
 }
 
 function copyTheme(theme: Record<string, unknown>): Record<string, unknown> {

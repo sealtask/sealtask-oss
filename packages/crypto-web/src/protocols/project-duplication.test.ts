@@ -4,10 +4,11 @@ import { describe, expect, it } from 'vitest'
 import type { StrongBoxBridge } from '../runtime/strong-box'
 import { decryptTaskPayload, encryptTaskPayload } from './task'
 import { encode as cborEncode } from 'cbor-x'
+import { toSealedBlob } from './sealed-blob'
 import { decodeAndValidatePayloadBytes } from './payload-validation'
 import { computeTemplateImportSemanticCommitment } from './template-import-commitment'
 import { decryptWorkListPayload, deriveWorkListKey, encryptWorkListPayload } from './work-list'
-import { transformProjectDuplication, type ProjectDuplicationIds, type ProjectDuplicationPlan, type ProjectDuplicationSource } from './project-duplication'
+import { decryptProjectDuplicationEnvelope, transformProjectDuplication, type ProjectDuplicationIds, type ProjectDuplicationPlan, type ProjectDuplicationSource } from './project-duplication'
 import { canonicalizeProjectDuplicationPlan, computeProjectDuplicationCommitment } from './project-duplication-commitment'
 
 type Fixture = {
@@ -40,6 +41,21 @@ describe('project duplication v1', () => {
       expect(commitment).not.toBe(await computeTemplateImportSemanticCommitment({ listKey, plan: result }))
     })
   }
+
+  it.each(['work_list', 'task'] as const)('normalizes supported %s CBOR maps without discarding unknown fields', async (kind) => {
+    const fixture = clone()
+    const envelope = kind === 'work_list' ? fixture.source.envelope : fixture.source.tasks[0].envelope!
+    const toMaps = (value: unknown): unknown => Array.isArray(value) ? value.map(toMaps)
+      : value !== null && typeof value === 'object' ? new Map(Object.entries(value).map(([key, child]) => [key, toMaps(child)])) : value
+    const mapped = toMaps(envelope) as Map<string, unknown>
+    let bytes = new Uint8Array(cborEncode(mapped))
+    const strongBox: StrongBoxBridge = { encrypt: async () => new Uint8Array(), decrypt: async () => bytes.slice() }
+    const ciphertext = toSealedBlob({ version: 1, ciphertext: new Uint8Array(64) }).base64
+    await expect(decryptProjectDuplicationEnvelope({ kind, ciphertext, listKey: new Uint8Array(32), strongBox })).resolves.toEqual(decodeAndValidatePayloadBytes(cborEncode(envelope), kind))
+    mapped.set('future_structure', true)
+    bytes = new Uint8Array(cborEncode(mapped))
+    await expect(decryptProjectDuplicationEnvelope({ kind, ciphertext, listKey: new Uint8Array(32), strongBox })).rejects.toThrow('unsupported structural content')
+  })
 
   it('excludes identities, archived tasks, schedules, progress, and unknown client metadata', () => {
     const plan = transformProjectDuplication(clone())
