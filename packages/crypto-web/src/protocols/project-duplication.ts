@@ -17,11 +17,19 @@ export type ProjectDuplicationSource = {
     id: string
     sectionId: string | null
     priority: number | null
+    recurrenceId?: string | null
     archivedAt: string | null
     /** Required for every non-archived task; callers must never skip failed decryption. */
     envelope: TaskPayloadEnvelope | null
   }[]
   referenceScheme: TaskReferenceScheme | null
+  recurrences?: {
+    id: string
+    cronExpression: string
+    sectionId: string
+    isActive: boolean
+    envelope: TaskPayloadEnvelope
+  }[]
 }
 
 export type ProjectDuplicationIds = {
@@ -31,12 +39,14 @@ export type ProjectDuplicationIds = {
   sections: Record<string, string>
   tasks: Record<string, string>
   checklists: Record<string, Record<string, string>>
+  recurrences?: Record<string, string>
+  recurrenceChecklists?: Record<string, Record<string, string>>
   fallbackSectionId: string
   schemeRevisionId: string
 }
 
 export type ProjectDuplicationPlan = {
-  protocolVersion: 1
+  protocolVersion: 1 | 2
   resetPolicy: 'incomplete-without-dates-v1'
   operationId: string
   workList: {
@@ -53,6 +63,7 @@ export type ProjectDuplicationPlan = {
   }
   tasks: {
     taskId: string
+    recurrenceId?: string
     sectionId: string | null
     priority: number | null
     dueAt: null
@@ -60,10 +71,17 @@ export type ProjectDuplicationPlan = {
     completedAt: null
     envelope: TaskPayloadEnvelope
   }[]
+  recurrences?: {
+    recurrenceId: string
+    cronExpression: string
+    sectionId: string
+    isActive: boolean
+    envelope: TaskPayloadEnvelope
+  }[]
 }
 
 /**
- * Strict, immutable v1 copy contract. Inputs are complete decrypted envelopes,
+ * Strict copy contract, preserving v1 output for projects without schedules. Inputs are complete decrypted envelopes,
  * never display summaries. The result contains only destination data; ID maps
  * and source identity are deliberately absent from the committed plaintext.
  */
@@ -124,6 +142,16 @@ export function transformProjectDuplication(params: {
     const taskBody = validatedBody(task.envelope, 'task')
     for (const item of array(taskBody.checklist)) allSourceIds.add(uuid(record(item).id))
     return taskBody
+  })
+  const sourceRecurrences = source.recurrences ?? []
+  if (sourceRecurrences.length > 200) fail('more than 200 recurrence schedules')
+  const recurrenceBodies = sourceRecurrences.map((recurrence) => {
+    const id = uuid(recurrence.id)
+    if (allSourceIds.has(id)) fail('duplicate source recurrence')
+    allSourceIds.add(id)
+    const body = validatedBody(recurrence.envelope, 'task')
+    for (const item of array(body.checklist)) allSourceIds.add(uuid(record(item).id))
+    return body
   })
   if (source.referenceScheme) allSourceIds.add(uuid(source.referenceScheme.schemeRevisionId))
   const destinationIds = new Set<string>()
@@ -202,11 +230,8 @@ export function transformProjectDuplication(params: {
   }
   const envelope: WorkListPayloadEnvelope = { kind: 'work_list', version: 1, body: copiedBody }
   validatePayloadBytes(cborEncode(envelope), 'work_list')
-  const tasks = included.map((task, index) => {
-    const taskBody = taskBodies[index]
+  const copyTaskEnvelope = (taskBody: Record<string, unknown>, checklistMap: Record<string, string>): TaskPayloadEnvelope => {
     onlyKeys(taskBody, ['title', 'rich_text', 'checklist', 'attachments', 'references', 'mentions', 'client_meta', 'recurrence_state'])
-    if (task.priority !== null && ![1, 3, 5, 8].includes(task.priority)) fail('invalid task priority')
-    if (task.sectionId !== null && !sectionIds.has(uuid(task.sectionId))) fail('unknown task section')
     const checklistIds = new Set<string>()
     const checklist = array(taskBody.checklist).map((value) => {
       const item = record(value)
@@ -215,7 +240,7 @@ export function transformProjectDuplication(params: {
       if (checklistIds.has(id)) fail('duplicate checklist item')
       checklistIds.add(id)
       return {
-        id: fresh(mapped(record(mapped(ids.checklists, uuid(task.id))), id)),
+        id: fresh(mapped(checklistMap, id)),
         title: string(item.title), is_done: false, completed_at: null, assignee_user_ids: [],
       }
     })
@@ -228,8 +253,29 @@ export function transformProjectDuplication(params: {
       },
     }
     validatePayloadBytes(cborEncode(taskEnvelope), 'task')
+    return taskEnvelope
+  }
+  const recurrenceMap = new Map<string, string>()
+  const recurrences = sourceRecurrences.map((recurrence, index) => {
+    if (!sectionIds.has(uuid(recurrence.sectionId))) fail('unknown recurrence section')
+    if (typeof recurrence.isActive !== 'boolean') fail('missing recurrence active state')
+    const recurrenceId = fresh(mapped(ids.recurrences ?? {}, uuid(recurrence.id)))
+    recurrenceMap.set(uuid(recurrence.id), recurrenceId)
+    return {
+      recurrenceId, cronExpression: string(recurrence.cronExpression),
+      sectionId: mappedSection(recurrence.sectionId), isActive: recurrence.isActive,
+      envelope: copyTaskEnvelope(recurrenceBodies[index], ids.recurrenceChecklists?.[uuid(recurrence.id)] ?? {}),
+    }
+  })
+  const tasks = included.map((task, index) => {
+    if (task.priority !== null && ![1, 3, 5, 8].includes(task.priority)) fail('invalid task priority')
+    if (task.sectionId !== null && !sectionIds.has(uuid(task.sectionId))) fail('unknown task section')
+    const taskEnvelope = copyTaskEnvelope(taskBodies[index], ids.checklists[uuid(task.id)] ?? {})
+    const recurrenceId = task.recurrenceId == null ? undefined : recurrenceMap.get(uuid(task.recurrenceId))
+    if (task.recurrenceId != null && !recurrenceId) fail('missing task recurrence')
     return {
       taskId: fresh(mapped(ids.tasks, uuid(task.id))),
+      ...(recurrenceId ? { recurrenceId } : {}),
       sectionId: task.sectionId === null ? null : mappedSection(task.sectionId),
       priority: task.priority, dueAt: null, startAt: null, completedAt: null, envelope: taskEnvelope,
     }
@@ -246,7 +292,7 @@ export function transformProjectDuplication(params: {
   }
   if (!source.timezone || typeof source.timezone !== 'string') fail('missing timezone')
   return {
-    protocolVersion: 1, resetPolicy: 'incomplete-without-dates-v1', operationId,
+    protocolVersion: recurrences.length ? 2 : 1, resetPolicy: 'incomplete-without-dates-v1', operationId,
     workList: {
       workListId, timezone: source.timezone, envelope,
       sectionSnapshots: copiedSections.map((section, position) => ({
@@ -255,6 +301,7 @@ export function transformProjectDuplication(params: {
       referenceScheme,
     },
     tasks,
+    ...(recurrences.length ? { recurrences } : {}),
   }
 }
 

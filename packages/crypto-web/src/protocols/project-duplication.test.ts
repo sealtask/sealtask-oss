@@ -21,7 +21,7 @@ type Fixture = {
   canonical: string
   commitment: string
 }
-const fixtures = ['custom-project-v1', 'empty-project-v1'].map((name) => JSON.parse(
+const fixtures = ['custom-project-v1', 'empty-project-v1', 'recurring-project-v2'].map((name) => JSON.parse(
   readFileSync(new URL(`../../test/fixtures/project-duplication/${name}.json`, import.meta.url), 'utf8'),
 ) as Fixture)
 const uuid = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`
@@ -41,6 +41,39 @@ describe('project duplication v1', () => {
       expect(commitment).not.toBe(await computeTemplateImportSemanticCommitment({ listKey, plan: result }))
     })
   }
+
+  it('copies shared active and paused schedules independently with fresh template checklists', async () => {
+    const input = clone()
+    const template = structuredClone(input.source.tasks[0].envelope!)
+    input.source.recurrences = [true, false].map((isActive, index) => ({
+      id: uuid(40 + index), cronExpression: '0 0 9 * * MON',
+      sectionId: input.source.sectionSnapshots[0].id, isActive, envelope: template,
+    }))
+    input.source.tasks[0].recurrenceId = uuid(40)
+    input.source.tasks[1].recurrenceId = uuid(40)
+    input.ids.recurrences = { [uuid(40)]: uuid(140), [uuid(41)]: uuid(141) }
+    input.ids.recurrenceChecklists = Object.fromEntries(input.source.recurrences.map((recurrence, index) => [
+      recurrence.id, Object.fromEntries((template.body.checklist ?? []).map((item, itemIndex) => [item.id, uuid(200 + index * 10 + itemIndex)])),
+    ]))
+    const before = structuredClone(input)
+    const result = transformProjectDuplication(input)
+    expect(result.protocolVersion).toBe(2)
+    expect(result.tasks.map((task) => task.recurrenceId)).toEqual([uuid(140), uuid(140)])
+    expect(result.recurrences?.map((recurrence) => recurrence.isActive)).toEqual([true, false])
+    expect(result.recurrences?.[0]).toMatchObject({ recurrenceId: uuid(140), cronExpression: '0 0 9 * * MON', sectionId: input.ids.sections[input.source.sectionSnapshots[0].id] })
+    expect(result.recurrences?.[0].envelope.body.checklist?.[0]).toMatchObject({ id: uuid(200), is_done: false })
+    expect(result.recurrences?.[0].envelope.body.rich_text).toEqual(result.tasks[0].envelope.body.rich_text)
+    expect(input).toEqual(before)
+    const commitment = await computeProjectDuplicationCommitment({ listKey: new Uint8Array(32), plan: result })
+    result.recurrences![0].isActive = false
+    expect(await computeProjectDuplicationCommitment({ listKey: new Uint8Array(32), plan: result })).not.toBe(commitment)
+  })
+
+  it('rejects a linked card when its schedule is missing', () => {
+    const input = clone()
+    input.source.tasks[0].recurrenceId = uuid(40)
+    expect(() => transformProjectDuplication(input)).toThrow('missing task recurrence')
+  })
 
   it.each(['work_list', 'task'] as const)('normalizes supported %s CBOR maps without discarding unknown fields', async (kind) => {
     const fixture = clone()
