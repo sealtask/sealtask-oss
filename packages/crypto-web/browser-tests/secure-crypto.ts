@@ -15,6 +15,7 @@ import {
   type PendingInvitationCrypto,
 } from '../src/trust/invite-verification'
 import passwordV1Fixture from '../test/fixtures/password-v1.json'
+import { verifyWitnessNote } from '../src/trust/transparency-witness'
 
 const encoder = new TextEncoder()
 const decoder = new TextDecoder()
@@ -32,7 +33,12 @@ type SecureCryptoFlowResult = {
 declare global {
   interface Window {
     runSecureCryptoFlow: () => Promise<SecureCryptoFlowResult>
+    verifyWitnessCheckpoint: (input: { note: string; name: string; logOrigin: string; publicKey: string }) => Promise<number>
   }
+}
+
+window.verifyWitnessCheckpoint = async ({ note, name, logOrigin, publicKey }) => {
+  return (await verifyWitnessNote(note, { name, logOrigin, publicKey: decodeBase64(publicKey) })).size
 }
 
 window.runSecureCryptoFlow = async () => {

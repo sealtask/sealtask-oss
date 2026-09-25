@@ -8,7 +8,8 @@
   "scripts": {
     "check:crypto-web": "bun run test:release-manifest && bun run --cwd packages/crypto-web check",
     "test:release-manifest": "node --test scripts/crypto-release-manifest.test.mjs",
-    "test:crypto-web": "bun run --cwd packages/crypto-web test"
+    "test:crypto-web": "bun run --cwd packages/crypto-web test",
+    "check:witness": "bun run --cwd packages/transparency-witness check"
   },
   "devDependencies": {
     "@playwright/test": "1.60.0",

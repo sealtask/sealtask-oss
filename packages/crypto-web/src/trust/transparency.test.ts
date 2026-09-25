@@ -1,4 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
+import { generateKeyPairSync, sign } from 'node:crypto'
+import { witnessKeyId } from './transparency-witness'
 
 import { encodeBase64 } from '../runtime/base64'
 import {
@@ -383,6 +385,53 @@ describe('TransparencyClient', () => {
       .rejects.toThrow(/not covered by the independently trusted checkpoint/i)
     expect(identityStore.load(ALICE_ID)).toBeNull()
     expect(checkpointStore.load()).toBeNull()
+  })
+
+  it.each(['current', 'historical', 'ingested'])('authenticates a post-release identity with a witness for %s proofs', async (operation) => {
+    const statements = [
+      { userId: BOB_ID, inviteKey: createInviteKeyBytes(0x87) },
+      { userId: ALICE_ID, inviteKey: createInviteKeyBytes(0x88) },
+    ]
+    const anchor = await buildOwnerAuthorizedProofFixture({ statements: statements.slice(0, 1), targetIndex: 0, baseSize: 0 })
+    const proof = await buildOwnerAuthorizedProofFixture({ statements, targetIndex: 1, baseSize: 1 })
+    const keys = generateKeyPairSync('ed25519')
+    const identity = {
+      name: 'independent.example/w1', logOrigin: 'sealtask.com/transparency/v1',
+      publicKey: new Uint8Array(Buffer.from(keys.publicKey.export({ format: 'jwk' }).x!, 'base64url')),
+    }
+    const now = Math.floor(Date.now() / 1000)
+    const body = `${identity.logOrigin}\n2\n${proof.logRoot.hash}=\n`
+    const bytes = Buffer.alloc(76)
+    bytes.set(await witnessKeyId(identity))
+    bytes.writeBigUInt64BE(BigInt(now), 4)
+    bytes.set(sign(null, Buffer.from(`cosignature/v1\ntime ${now}\n${body}`), keys.privateKey), 12)
+    const signedNote = `${body}\n— ${identity.name} ${bytes.toString('base64')}\n`
+    const identityStore = new MemoryTransparencyIdentityStore()
+    const checkpointStore = new MemoryTransparencyCheckpointStore()
+    const fetchCheckpoint = vi.fn().mockResolvedValue(signedNote)
+    const options = {
+      checkpointStore, identityStore, fetchProof: async () => proof,
+      trustedCheckpoint: { size: 1, hash: decodeProofHash(anchor.logRoot.hash) },
+      witness: { ...identity, fetchCheckpoint, fetchMonitor: vi.fn() },
+    }
+    const client = createClient(options)
+    const run = () => operation === 'current'
+      ? client.resolveCurrentInviteKey({ userId: ALICE_ID })
+      : operation === 'historical'
+        ? client.verifyHistoricalInviteKey({ userId: ALICE_ID, generation: 0 })
+        : client.ingestCurrentInviteKeyProof({ userId: ALICE_ID, proof })
+    fetchCheckpoint.mockResolvedValueOnce(signedNote.replace('\n2\n', '\n3\n'))
+    await expect(run()).rejects.toThrow(/signature/)
+    expect(identityStore.load(ALICE_ID)).toBeNull()
+    expect(checkpointStore.load()).toBeNull()
+    await expect(run()).resolves.toMatchObject({ generation: 0, authorization: 'owner-authorized' })
+    expect(identityStore.load(ALICE_ID)).toEqual(decodeProofHash(proof.statement.identityPublicKey!))
+    expect(checkpointStore.load()?.size).toBe(2)
+    // Even a valid witness must never replace an existing identity pin.
+    const wrongPins = new MemoryTransparencyIdentityStore()
+    await wrongPins.save(ALICE_ID, new Uint8Array(32).fill(99))
+    await expect(createClient({ ...options, checkpointStore: new MemoryTransparencyCheckpointStore(), identityStore: wrongPins })
+      .resolveCurrentInviteKey({ userId: ALICE_ID })).rejects.toThrow(/identity changed/)
   })
 
   it('does not pin an identity while merely inspecting it for migration', async () => {
