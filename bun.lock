@@ -22,6 +22,13 @@
         "cbor-x": "1.6.0",
       },
     },
+    "packages/transparency-witness": {
+      "name": "@sealtask/transparency-witness",
+      "version": "0.1.0",
+      "dependencies": {
+        "@sealtask/crypto-web": "workspace:*",
+      },
+    },
   },
   "packages": {
     "@cbor-extract/cbor-extract-darwin-arm64": ["@cbor-extract/cbor-extract-darwin-arm64@2.2.2", "", { "os": "darwin", "cpu": "arm64" }, "sha512-ZKZ/F8US7JR92J4DMct6cLW/Y66o2K576+zjlEN/MevH70bFIsB10wkZEQPLzl2oNh2SMGy55xpJ9JoBRl5DOA=="],
@@ -145,6 +152,8 @@
     "@rollup/rollup-win32-x64-msvc": ["@rollup/rollup-win32-x64-msvc@4.62.2", "", { "os": "win32", "cpu": "x64" }, "sha512-BfzEnDJOt9T8M989/lA37EcJgat01wLRnoi5dQf3QzOH7jzpqTAzdDbVfRljVr5r+jzKqpbHeyOfAaXxAd0PAA=="],
 
     "@sealtask/crypto-web": ["@sealtask/crypto-web@workspace:packages/crypto-web"],
+
+    "@sealtask/transparency-witness": ["@sealtask/transparency-witness@workspace:packages/transparency-witness"],
 
     "@serenity-kit/opaque": ["@serenity-kit/opaque@1.1.0", "", { "bin": { "opaque": "bin/index.js" } }, "sha512-Y6v/+hRMn0MdMEk5+/ArM0vPIiFfFEbdTZc7oAx+cWyvGODGezAQ/sMjXBVogf7NsS9z9EV0Ve5paZCVULuedw=="],
 

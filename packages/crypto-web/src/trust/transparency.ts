@@ -12,6 +12,7 @@ import {
   verifyOwnerAuthorizedTransparencyStatement,
 } from './transparency-authorization'
 import { requireCanonicalTransparencyUserId } from './transparency-user-id'
+import { validateWitnessIdentity, verifyWitnessCoverage, type TransparencyWitness } from './transparency-witness'
 
 export type TransparencyAuthorizationStatement = {
   userId: string
@@ -144,6 +145,7 @@ export type TransparencyClientOptions = {
   publishProof?: PublishTransparencyProof
   trustedCheckpoint?: TransparencyCheckpoint
   allowUnanchoredBootstrap?: boolean
+  witness?: TransparencyWitness
 }
 
 export class TransparencyClient {
@@ -152,6 +154,7 @@ export class TransparencyClient {
   readonly #fetchProof: FetchTransparencyProof
   readonly #publishProof: PublishTransparencyProof | undefined
   readonly #trustedCheckpoint: TransparencyCheckpoint | null
+  readonly #witness: TransparencyWitness | undefined
   #transitionQueue: Promise<void> = Promise.resolve()
 
   constructor(options: TransparencyClientOptions) {
@@ -180,6 +183,11 @@ export class TransparencyClient {
     if (options.trustedCheckpoint) {
       validateCheckpoint(options.trustedCheckpoint, 'trusted transparency checkpoint')
     }
+    if (options.witness) {
+      if (!options.trustedCheckpoint) throw new Error('Witness trust requires a released checkpoint.')
+      validateWitnessIdentity(options.witness)
+    }
+    this.#witness = options.witness ? { ...options.witness, publicKey: options.witness.publicKey.slice() } : undefined
     this.#checkpointStore = options.checkpointStore
     this.#identityStore = options.identityStore
     this.#fetchProof = options.fetchProof
@@ -391,6 +399,7 @@ export class TransparencyClient {
           verified.identityPublicKey,
           verified.firstOwnerAuthorizedLeafIndex,
           params.operation,
+          { size: verified.logRootSize, hash: verified.logRootHash },
         )
       }
     }
@@ -490,6 +499,7 @@ export class TransparencyClient {
     identityPublicKey: Uint8Array,
     firstOwnerAuthorizedLeafIndex: number,
     operation: 'ordinary-current' | 'ordinary-historical' | 'publication',
+    checkpoint: TransparencyCheckpoint,
   ): Promise<void> {
     const pinned = this.#identityStore.load(userId)
     if (pinned) {
@@ -505,9 +515,12 @@ export class TransparencyClient {
       && this.#trustedCheckpoint
       && firstOwnerAuthorizedLeafIndex >= this.#trustedCheckpoint.size
     ) {
-      throw new Error(
-        'The transparency owner identity is not covered by the independently trusted checkpoint.',
-      )
+      if (!this.#witness) {
+        throw new Error(
+          'The transparency owner identity is not covered by the independently trusted checkpoint.',
+        )
+      }
+      await verifyWitnessCoverage(this.#witness, checkpoint, firstOwnerAuthorizedLeafIndex)
     }
     await this.#identityStore.save(userId, identityPublicKey.slice())
     const persisted = this.#identityStore.load(userId)

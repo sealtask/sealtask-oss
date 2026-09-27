@@ -1,0 +1,12 @@
+{
+  "name": "@sealtask/transparency-witness",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "GPL-3.0-only",
+  "scripts": {
+    "check": "tsc --noEmit && vitest run",
+    "build": "bun build src/main.ts --compile --target=bun-linux-x64-baseline --outfile dist/transparency-witness"
+  },
+  "dependencies": { "@sealtask/crypto-web": "workspace:*" }
+}
