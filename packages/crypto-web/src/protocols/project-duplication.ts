@@ -26,7 +26,7 @@ export type ProjectDuplicationSource = {
   recurrences?: {
     id: string
     cronExpression: string
-    sectionId: string
+    sectionId: string | null
     isActive: boolean
     envelope: TaskPayloadEnvelope
   }[]
@@ -74,7 +74,7 @@ export type ProjectDuplicationPlan = {
   recurrences?: {
     recurrenceId: string
     cronExpression: string
-    sectionId: string
+    sectionId: string | null
     isActive: boolean
     envelope: TaskPayloadEnvelope
   }[]
@@ -257,13 +257,13 @@ export function transformProjectDuplication(params: {
   }
   const recurrenceMap = new Map<string, string>()
   const recurrences = sourceRecurrences.map((recurrence, index) => {
-    if (!sectionIds.has(uuid(recurrence.sectionId))) fail('unknown recurrence section')
+    if (recurrence.sectionId !== null && !sectionIds.has(uuid(recurrence.sectionId))) fail('unknown recurrence section')
     if (typeof recurrence.isActive !== 'boolean') fail('missing recurrence active state')
     const recurrenceId = fresh(mapped(ids.recurrences ?? {}, uuid(recurrence.id)))
     recurrenceMap.set(uuid(recurrence.id), recurrenceId)
     return {
       recurrenceId, cronExpression: string(recurrence.cronExpression),
-      sectionId: mappedSection(recurrence.sectionId), isActive: recurrence.isActive,
+      sectionId: recurrence.sectionId === null ? null : mappedSection(recurrence.sectionId), isActive: recurrence.isActive,
       envelope: copyTaskEnvelope(recurrenceBodies[index], ids.recurrenceChecklists?.[uuid(recurrence.id)] ?? {}),
     }
   })

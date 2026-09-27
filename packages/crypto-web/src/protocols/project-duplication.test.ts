@@ -69,6 +69,15 @@ describe('project duplication v1', () => {
     expect(await computeProjectDuplicationCommitment({ listKey: new Uint8Array(32), plan: result })).not.toBe(commitment)
   })
 
+  it('keeps a legacy unsectioned schedule unassigned', () => {
+    const input = structuredClone(fixtures[2])
+    input.source.recurrences![0].sectionId = null
+    const result = transformProjectDuplication(input)
+    expect(result.recurrences?.[0].sectionId).toBeNull()
+    expect(result.recurrences?.[1].sectionId).toBe(input.ids.sections[input.source.recurrences![1].sectionId!])
+    expect(result.tasks[0].recurrenceId).toBe(result.recurrences?.[0].recurrenceId)
+  })
+
   it('rejects a linked card when its schedule is missing', () => {
     const input = clone()
     input.source.tasks[0].recurrenceId = uuid(40)
