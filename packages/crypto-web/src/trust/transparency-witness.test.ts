@@ -36,7 +36,14 @@ describe('timestamped witness checkpoints', () => {
     if (attack === 'root') value = value.replace(Buffer.from(root).toString('base64'), Buffer.alloc(32, 8).toString('base64'))
     if (attack === 'origin') value = value.replace(identity.logOrigin, 'another.example/log')
     if (attack === 'size') value = value.replace('\n2\n', '\n3\n')
-    if (attack === 'signature') value = value.replace(/..==\n$/, 'AA==\n')
+    if (attack === 'signature') {
+      value = value.replace(/([A-Za-z0-9+/]+={0,2})\n$/, (_, encoded: string) => {
+        const payload = Buffer.from(encoded, 'base64')
+        // Flip a signature bit; replacing a fixed suffix can leave it unchanged.
+        payload[12] ^= 1
+        return `${payload.toString('base64')}\n`
+      })
+    }
     if (attack === 'unknown-key') value = value.replace(identity.name, 'unknown.example/key')
     if (attack === 'expired') value = await note(2, root, timestamp - 601)
     if (attack === 'future') value = await note(2, root, timestamp + 61)
