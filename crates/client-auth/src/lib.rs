@@ -20,7 +20,7 @@ use std::io::{Read, Write};
 #[cfg(all(unix, not(target_os = "redox")))]
 use std::os::fd::{AsRawFd as _, FromRawFd as _};
 use std::path::{Component, Path, PathBuf};
-use std::sync::OnceLock;
+use std::sync::{LazyLock, OnceLock};
 use std::thread;
 use std::time::{Duration as StdDuration, Instant};
 
@@ -72,6 +72,7 @@ const DEFAULT_PROFILE: &str = "default";
 const MAX_PROFILE_NAME_BYTES: usize = 64;
 
 static LOCAL_STATE_OVERRIDE: OnceLock<LocalStateOverride> = OnceLock::new();
+static PLATFORM_KEYRING: LazyLock<keyring::Result<()>> = LazyLock::new(initialize_platform_keyring);
 
 #[derive(Debug, Clone)]
 struct LocalStateOverride {
@@ -2105,9 +2106,34 @@ fn persisted_data_key_backend() -> PersistedDataKeyBackend {
 }
 
 fn platform_keyring_entry(credentials: &Credentials) -> PublicResult<keyring::Entry> {
+    PLATFORM_KEYRING.as_ref().map_err(|err| {
+        PublicError::validation(format!("failed to initialize the platform keychain: {err}"))
+    })?;
     let entry_name = persisted_data_key_entry_name(credentials)?;
     keyring::Entry::new(DATA_KEY_KEYCHAIN_SERVICE, &entry_name)
         .map_err(|err| map_keyring_error("create the platform keychain entry", err))
+}
+
+fn initialize_platform_keyring() -> keyring::Result<()> {
+    #[cfg(target_os = "macos")]
+    let store = apple_native_keyring_store::keychain::Store::new()?;
+    #[cfg(target_os = "windows")]
+    let store = windows_native_keyring_store::Store::new()?;
+    #[cfg(all(
+        unix,
+        not(any(target_os = "macos", target_os = "ios", target_os = "android"))
+    ))]
+    let store = dbus_secret_service_keyring_store::Store::new()?;
+    #[cfg(all(any(unix, windows), not(any(target_os = "ios", target_os = "android"))))]
+    {
+        keyring::set_default_store(store);
+        Ok(())
+    }
+    #[cfg(not(all(any(unix, windows), not(any(target_os = "ios", target_os = "android")))))]
+    Err(keyring::Error::Invalid(
+        "platform".into(),
+        "no native keychain backend is available".into(),
+    ))
 }
 
 fn persisted_data_key_entry_name(credentials: &Credentials) -> PublicResult<String> {

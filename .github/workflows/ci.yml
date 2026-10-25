@@ -63,6 +63,11 @@ jobs:
       - name: Install pinned cargo-audit
         run: cargo install cargo-audit --version 0.22.2 --locked
 
+      - name: Verify temporary audit exception scope
+        run: |
+          python3 scripts/test-cargo-audit-exceptions.py
+          python3 scripts/check-cargo-audit-exceptions.py --scope oss
+
       - name: Audit dependencies
         run: cargo audit --deny warnings --file Cargo.lock
 

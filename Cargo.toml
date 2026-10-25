@@ -39,7 +39,7 @@ hkdf = "0.12.4"
 hmac = "0.12.1"
 html2md = "0.2.15"
 hickory-resolver = { version = "0.26.1", features = ["tokio"] }
-keyring = { version = "3.6.3", features = ["apple-native", "windows-native", "sync-secret-service", "crypto-rust"] }
+keyring = { package = "keyring-core", version = "1.0.1" }
 libc = "0.2"
 windows-sys = { version = "0.61.2", features = ["Win32_Foundation", "Win32_System_Diagnostics_ToolHelp", "Win32_System_JobObjects", "Win32_System_Threading"] }
 opaque-ke = { version = "4.0.1", features = ["argon2", "ristretto255"] }
@@ -66,7 +66,7 @@ unicode-width = "0.2.0"
 uuid = { version = "1.18.1", features = ["serde", "v7"] }
 x25519-dalek = { version = "2.0", features = ["static_secrets"] }
 zeroize = { version = "1.8", features = ["zeroize_derive"] }
-zip = { version = "2.4.2", default-features = false, features = ["deflate"] }
+zip = { version = "9.1.0", default-features = false, features = ["deflate"] }
 
 [profile.wasm-release]
 inherits = "release"

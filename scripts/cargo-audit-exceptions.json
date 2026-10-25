@@ -1,0 +1,40 @@
+{
+  "expires": "2026-11-25",
+  "crypto_packages": {
+    "crypto-bigint 0.5.5": "0dc92fb57ca44df6db8059111ab3af99a63d5d0f8375d9972e319a379c6bab76",
+    "elliptic-curve 0.13.8": "b5e6043086bf7973472e0c7dff2142ea0b680d30e18d9cc40f267efbf222bd47",
+    "opaque-ke 4.0.1": "ded22991b43cd15561b62b2e1cf9ace1344a8534eebec96202d5c96a77a6616a",
+    "voprf 0.5.0": "28f59c30c76e2fea54cdece6a054e2662feffa7ab19658a7887524265ee39470",
+    "ecdsa 0.16.9": "ee27f32b5c5292967d2d4a9d7f1e0b0aed2c15daded5a60300e4abb9d8020bca"
+  },
+  "docx_packages": {
+    "zip 2.6.1": "1dcb24d0152526ae49b9b96c1dcf71850ca1e0b882e4e28ed898a93c41334744",
+    "zip 4.6.1": "caa8cd6af31c3b31c6631b8f483848b91589021b28fffe50adada48d4f4d2ed1",
+    "undocx 0.5.2": "b4adeb7818e22d7a831661b23e7e9d91630af5dca290977ca425c14e7220e1e4",
+    "rs-docx 0.2.0": "f653a51d8cbd6dc75a5f56b8bede530afdd5e0b1eec9a29597e87e6b5af3e13b"
+  },
+  "docx_reader": {
+    "path": "crates/client-runtime/src/attachment_rendering.rs",
+    "sha256": "0778d6300426cb42886200856def32fed0752e8d722ba3b2e1b028276ffaca7e"
+  },
+  "scopes": {
+    "root": {
+      "config": ".cargo/audit.toml",
+      "suites": {
+        "crates/crypto/src/opaque.rs:DefaultCipherSuite": "typeOprfCs=Ristretto255;typeKeyExchange=TripleDh<Ristretto255,Sha512>;typeKsf=Argon2<'static>;"
+      }
+    },
+    "oss": {
+      "config": ".cargo/audit.toml",
+      "suites": {
+        "crates/client-auth/src/lib.rs:ClientCipherSuite": "typeOprfCs=Ristretto255;typeKeyExchange=TripleDh<Ristretto255,Sha512>;typeKsf=ClientKsf;"
+      }
+    },
+    "ios": {
+      "config": "../../.cargo/audit.toml",
+      "suites": {
+        "src/lib.rs:DefaultCipherSuite": "typeOprfCs=Ristretto255;typeKeyExchange=TripleDh<Ristretto255,Sha512>;typeKsf=Argon2<'static>;"
+      }
+    }
+  }
+}

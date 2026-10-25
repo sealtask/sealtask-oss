@@ -38,6 +38,15 @@ zeroize.workspace = true
 
 sealtask-client-core = { version = "=0.4.0", path = "../client-core" }
 
+[target.'cfg(target_os = "macos")'.dependencies]
+apple-native-keyring-store = { version = "1.0.2", features = ["keychain"] }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+windows-native-keyring-store = "1.1.0"
+
+[target.'cfg(all(unix, not(any(target_os = "macos", target_os = "ios", target_os = "android"))))'.dependencies]
+dbus-secret-service-keyring-store = { version = "1.0.1", features = ["crypto-rust"] }
+
 [dev-dependencies]
 axum = "0.8.6"
 tempfile.workspace = true

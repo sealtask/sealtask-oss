@@ -1,0 +1,9 @@
+# Reviewed applicability and expiry: docs/security-audit-exceptions.md
+# CI rejects changed versions, dependency routes, and DOCX/cipher-suite scope.
+[advisories]
+ignore = [
+    "RUSTSEC-2026-0387",
+    "RUSTSEC-2026-0367",
+    "RUSTSEC-2026-0368",
+    "RUSTSEC-2026-0369",
+]

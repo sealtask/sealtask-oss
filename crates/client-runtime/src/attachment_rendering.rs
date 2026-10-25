@@ -143,7 +143,20 @@ fn validate_docx_archive(file_name: &str, bytes: &[u8]) -> PublicResult<()> {
                 "attachment '{file_name}' contains an invalid DOCX entry: {err}"
             ))
         })?;
-        if entry.enclosed_name().is_none() || (!entry.is_dir() && !entry.is_file()) {
+        let name = entry.name().map_err(|err| {
+            PublicError::validation(format!(
+                "attachment '{file_name}' contains an invalid DOCX entry name: {err}"
+            ))
+        })?;
+        // ZIP 9 can normalize absolute paths in enclosed_name. DOCX input must
+        // use relative member names without traversal, even when not extracted.
+        if name.starts_with(['/', '\\'])
+            || name.as_bytes().get(1) == Some(&b':')
+            || name.split(['/', '\\']).any(|part| part == "..")
+            || entry.enclosed_name().is_none()
+            || entry.is_symlink()
+            || (!entry.is_dir() && !entry.is_file())
+        {
             return Err(docx_render_limit_error(
                 file_name,
                 "archive contains an unsafe entry",
@@ -573,6 +586,46 @@ mod tests {
 
         assert!(error.to_string().contains("unsafe compression ratio"));
         assert!(error.to_string().contains("download it instead"));
+    }
+
+    #[test]
+    fn test_should_reject_docx_archive_paths_and_symlinks_before_rendering() {
+        let dir = tempfile::tempdir().expect("temporary canary directory");
+        let canary = dir.path().join("must-not-be-written");
+        for kind in ["absolute", "traversal", "symlink"] {
+            let bytes = base64::engine::general_purpose::STANDARD
+                .decode(TEST_DOCX_BASE64)
+                .expect("decode docx fixture");
+            let mut writer = zip::ZipWriter::new_append(Cursor::new(bytes)).expect("open fixture");
+            if kind == "symlink" {
+                writer
+                    .add_symlink(
+                        "word/media/escape",
+                        canary.to_string_lossy(),
+                        SimpleFileOptions::default(),
+                    )
+                    .expect("add external symlink target");
+            } else {
+                let name = if kind == "absolute" {
+                    canary.to_string_lossy().into_owned()
+                } else {
+                    "../must-not-be-written".into()
+                };
+                writer
+                    .start_file(name, SimpleFileOptions::default())
+                    .expect("add unsafe path");
+                writer.write_all(b"unexpected write").expect("write entry");
+            }
+            let bytes = writer.finish().expect("finish archive").into_inner();
+            let error = render_docx_attachment_as_markdown("untrusted.docx", &bytes)
+                .expect_err(&format!("reject unsafe {kind} archive before conversion"));
+            assert!(
+                error.to_string().contains("unsafe entry"),
+                "{kind}: {error}"
+            );
+            assert!(!canary.exists());
+            assert_eq!(std::fs::read_dir(dir.path()).unwrap().count(), 0);
+        }
     }
 
     #[test]
