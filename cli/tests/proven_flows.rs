@@ -6971,6 +6971,16 @@ async fn cli_login_reuses_a_valid_session_and_unlocks_without_another_mfa_login(
     let result = parse_stdout_json(&output.stdout);
     assert_eq!(result["alreadyLoggedIn"], true);
     assert_eq!(result["unlocked"], true);
+    let before_reuse = run_cli(
+        home.path(),
+        &server.base_url,
+        &["--json", "auth", "status"],
+        None,
+    );
+    assert!(before_reuse.status.success());
+    let initial_deadline = parse_stdout_json(&before_reuse.stdout)["unlockDaemon"]["expiresAtUnix"]
+        .as_u64()
+        .expect("initial unlock deadline");
     // A second login needs no secret and does not mint another session or unlock key.
     let again = run_cli(
         home.path(),
@@ -6984,11 +6994,163 @@ async fn cli_login_reuses_a_valid_session_and_unlocks_without_another_mfa_login(
         again.stderr
     );
     assert_eq!(parse_stdout_json(&again.stdout)["unlocked"], true);
+    let after_reuse = run_cli(
+        home.path(),
+        &server.base_url,
+        &["--json", "auth", "status"],
+        None,
+    );
+    assert!(after_reuse.status.success());
+    assert_eq!(
+        parse_stdout_json(&after_reuse.stdout)["unlockDaemon"]["expiresAtUnix"],
+        initial_deadline,
+        "valid session reuse must preserve the existing unlock deadline"
+    );
     let state = state.lock().expect("state");
-    assert_eq!(state.refresh_request_count, 1);
+    assert_eq!(state.refresh_request_count, 2);
     assert_eq!(state.opaque_export_key_start_count, 1);
     drop(state);
     assert_workspace_unlocked_and_lock(home.path(), &server.base_url);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn cli_login_recovers_a_server_revoked_session_with_one_password_and_mfa_input() {
+    const EMAIL: &str = "revoked@example.test";
+    const PASSWORD: &str = "revoked-login-password";
+    const CODE: &str = "012345";
+    for expired_access in [true, false] {
+        let observed_code = Arc::new(Mutex::new(None));
+        let server = spawn_raw_login_server(
+            EMAIL,
+            PASSWORD,
+            "revoked-login-challenge",
+            observed_code.clone(),
+            RawLoginFinishOutcome::MfaRequired,
+            RawMfaVerifyOutcome::Authenticate {
+                expected_code: CODE.to_string(),
+            },
+        )
+        .await;
+        let home = TempDir::new().expect("home");
+        let keychain_dir = TempDir::new().expect("test keychain");
+        let fixture = TestFixture::new();
+        seed_credentials_with_expiry(
+            home.path(),
+            &fixture,
+            &server.base_url,
+            Utc::now()
+                + if expired_access {
+                    -Duration::minutes(1)
+                } else {
+                    Duration::minutes(15)
+                },
+            Utc::now() + Duration::days(10),
+        );
+        let path = home.path().join(".sealtask/credentials.json");
+        let mut previous: Credentials =
+            serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+        previous.email = EMAIL.to_string();
+        std::fs::write(&path, serde_json::to_vec(&previous).unwrap()).unwrap();
+        if !expired_access {
+            let unlocked = run_cli_with_test_keychain(
+                home.path(),
+                &server.base_url,
+                keychain_dir.path(),
+                &[
+                    "--json",
+                    "--non-interactive",
+                    "auth",
+                    "unlock",
+                    "--password-stdin",
+                ],
+                Some(&fixture.password),
+            );
+            assert!(
+                unlocked.status.success(),
+                "unlock old key: {}",
+                unlocked.stderr
+            );
+            assert_eq!(parse_stdout_json(&unlocked.stdout)["unlocked"], true);
+        }
+        let output = run_cli_with_test_keychain(
+            home.path(),
+            &server.base_url,
+            keychain_dir.path(),
+            &[
+                "--json",
+                "--non-interactive",
+                "auth",
+                "login",
+                "--password-stdin",
+            ],
+            Some(&format!("{PASSWORD}\n{CODE}\n")),
+        );
+        assert!(
+            output.status.success(),
+            "revoked-session recovery failed: {}",
+            output.stderr
+        );
+        assert!(
+            output.stderr.is_empty(),
+            "unexpected warning: {}",
+            output.stderr
+        );
+        assert_eq!(output.stdout.lines().count(), 1);
+        let result = parse_stdout_json(&output.stdout);
+        assert_eq!(result["alreadyLoggedIn"], false);
+        assert_eq!(result["email"], EMAIL);
+        assert_eq!(result["unlocked"], true);
+        assert_eq!(observed_code.lock().unwrap().as_deref(), Some(CODE));
+        assert_final_process_login_credentials(
+            home.path(),
+            PASSWORD,
+            "revoked-login-challenge",
+            Some(CODE),
+        );
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn cli_login_preserves_credentials_without_falling_back_when_refresh_is_unavailable() {
+    let observed_login_starts = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    let server = spawn_raw_login_server(
+        FIXTURE_EMAIL,
+        "unused-login-password",
+        "unused-challenge",
+        Arc::new(Mutex::new(None)),
+        RawLoginFinishOutcome::RefreshUnavailable(observed_login_starts.clone()),
+        RawMfaVerifyOutcome::Reject,
+    )
+    .await;
+    let home = TempDir::new().expect("home");
+    let keychain_dir = TempDir::new().expect("test keychain");
+    seed_credentials(home.path(), &TestFixture::new(), &server.base_url);
+    let path = home.path().join(".sealtask/credentials.json");
+    let previous = std::fs::read(&path).unwrap();
+    let output = run_cli_with_test_keychain(
+        home.path(),
+        &server.base_url,
+        keychain_dir.path(),
+        &[
+            "--json",
+            "--non-interactive",
+            "auth",
+            "login",
+            "--password-stdin",
+        ],
+        Some("unused-login-password\n"),
+    );
+    assert!(!output.status.success());
+    assert!(output.stdout.is_empty());
+    assert_eq!(
+        parse_stderr_json(&output.stderr)["error"]["httpStatus"],
+        503
+    );
+    assert_eq!(std::fs::read(&path).unwrap(), previous);
+    assert_eq!(
+        observed_login_starts.load(std::sync::atomic::Ordering::SeqCst),
+        0
+    );
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -8158,6 +8320,7 @@ struct RawMfaLoginState {
     data_key_ciphertext: String,
     observed_code: Arc<Mutex<Option<String>>>,
     observed_logout_refresh_token: Arc<Mutex<Option<String>>>,
+    issued_refresh_token: Arc<Mutex<Option<String>>>,
     login_finish: RawLoginFinishOutcome,
     mfa_verify: RawMfaVerifyOutcome,
 }
@@ -8166,6 +8329,7 @@ struct RawMfaLoginState {
 enum RawLoginFinishOutcome {
     Authenticated,
     UnlockUnavailable,
+    RefreshUnavailable(Arc<std::sync::atomic::AtomicUsize>),
     LogoutDuringLogin(std::path::PathBuf),
     RotateDuringLogin(std::path::PathBuf),
     ReplaceDuringLogin(std::path::PathBuf),
@@ -8291,6 +8455,7 @@ async fn spawn_raw_login_server_with_logout_observer(
         data_key_ciphertext,
         observed_code,
         observed_logout_refresh_token,
+        issued_refresh_token: Arc::new(Mutex::new(None)),
         login_finish,
         mfa_verify,
     };
@@ -8299,6 +8464,7 @@ async fn spawn_raw_login_server_with_logout_observer(
         .route("/auth/opaque/login/finish", post(raw_mfa_login_finish))
         .route("/auth/opaque/export-key/start", post(raw_export_key_start))
         .route("/auth/mfa/login/verify", post(raw_mfa_verify))
+        .route("/auth/refresh", post(raw_login_refresh))
         .route("/auth/logout", post(raw_login_logout))
         .with_state(state);
 
@@ -8330,9 +8496,45 @@ async fn raw_login_logout(
     StatusCode::OK
 }
 
+async fn raw_login_refresh(
+    State(state): State<RawMfaLoginState>,
+    Json(request): Json<RefreshRequestBody>,
+) -> (StatusCode, Json<Value>) {
+    if matches!(
+        state.login_finish,
+        RawLoginFinishOutcome::RefreshUnavailable(_)
+    ) {
+        return (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(json!({"error": "temporarily_unavailable", "message": "refresh unavailable"})),
+        );
+    }
+    let mut issued = state.issued_refresh_token.lock().expect("refresh state");
+    if issued.as_deref() != Some(request.refresh_token.as_str()) {
+        return (
+            StatusCode::UNAUTHORIZED,
+            Json(json!({"error": "invalid_refresh_token", "message": "session revoked"})),
+        );
+    }
+    let rotated = format!("process-refreshed-refresh-token-{}", Uuid::now_v7());
+    *issued = Some(rotated.clone());
+    (
+        StatusCode::OK,
+        Json(json!({
+            "accessToken": "process-refreshed-access-token",
+            "refreshToken": rotated,
+            "expiresIn": 900,
+            "refreshExpiresIn": 2_592_000,
+            "tokenType": "Bearer"
+        })),
+    )
+}
+
 async fn raw_mfa_login_finish(State(state): State<RawMfaLoginState>) -> (StatusCode, Json<Value>) {
     match &state.login_finish {
-        RawLoginFinishOutcome::Authenticated | RawLoginFinishOutcome::UnlockUnavailable => {
+        RawLoginFinishOutcome::Authenticated
+        | RawLoginFinishOutcome::UnlockUnavailable
+        | RawLoginFinishOutcome::RefreshUnavailable(_) => {
             (StatusCode::OK, Json(raw_successful_auth_body(&state)))
         }
         RawLoginFinishOutcome::LogoutDuringLogin(path) => {
@@ -8391,9 +8593,10 @@ async fn raw_export_key_start(
     headers: HeaderMap,
     Json(payload): Json<OpaqueExportKeyStartRequestBody>,
 ) -> (StatusCode, Json<Value>) {
-    assert_eq!(
-        headers.get("authorization").unwrap(),
-        "Bearer process-final-access-token"
+    let authorization = headers.get("authorization").unwrap();
+    assert!(
+        authorization == "Bearer process-final-access-token"
+            || authorization == "Bearer process-refreshed-access-token"
     );
     if matches!(state.login_finish, RawLoginFinishOutcome::UnlockUnavailable) {
         return (
@@ -8418,6 +8621,9 @@ async fn raw_mfa_login_start(
 ) -> (StatusCode, Json<Value>) {
     const SERVER_ID: &[u8] = b"worklist.api";
 
+    if let RawLoginFinishOutcome::RefreshUnavailable(observed_starts) = &state.login_finish {
+        observed_starts.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+    }
     assert_eq!(request.email, state.email);
     let client_message = STANDARD_NO_PAD
         .decode(request.client_login_state)
@@ -8523,6 +8729,8 @@ async fn raw_mfa_verify(
 }
 
 fn raw_successful_auth_body(state: &RawMfaLoginState) -> Value {
+    *state.issued_refresh_token.lock().expect("refresh state") =
+        Some("process-final-refresh-token".to_string());
     json!({
         "accessToken": "process-final-access-token",
         "refreshToken": "process-final-refresh-token",

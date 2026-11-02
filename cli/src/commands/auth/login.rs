@@ -11,7 +11,7 @@ use sealtask_client_auth::{
     AuthResponse, CompleteMfaLoginError, Credentials, LoginOutcome, SecretMfaCode,
     auth_response_to_credentials, begin_login, clear_persisted_data_key, complete_mfa_login,
     credentials_path, credentials_share_session, load_credentials, logout as revoke_session,
-    normalize_api_url, refresh_credentials_if_needed_with_timeout, replace_credentials_atomically,
+    normalize_api_url, refresh_credentials_with_timeout, replace_credentials_atomically,
     with_current_credential_identity,
 };
 use sealtask_client_core::{PublicError, PublicResult};
@@ -52,27 +52,37 @@ pub(super) async fn run(
             .is_none_or(|email| credentials.email.eq_ignore_ascii_case(email.trim()))
     {
         let client = runtime.control_plane_http_client()?;
-        let mut refreshed = refresh_credentials_if_needed_with_timeout(
+        // Explicit sign-in checks server validity even if the cached access
+        // token and daemon key are still usable locally. A revoked session
+        // must not trap the operator in an "already logged in" loop.
+        match refresh_credentials_with_timeout(
             &client,
             api_url,
             credentials,
-            30,
             runtime.api_transport_options().request_timeout(),
         )
-        .await?;
-        if !reused_session_is_unlocked(runtime, &refreshed)? {
-            let input = read_login_input(password_stdin, non_interactive)?;
-            runtime
-                .unlock_daemon_with_credentials(
-                    &mut refreshed,
-                    &input.password,
-                    resolve_unlock_ttl(None, None)?,
-                )
-                .await?;
+        .await
+        {
+            Ok(mut refreshed) => {
+                if !reused_session_is_unlocked(runtime, &refreshed)? {
+                    let input = read_login_input(password_stdin, non_interactive)?;
+                    runtime
+                        .unlock_daemon_with_credentials(
+                            &mut refreshed,
+                            &input.password,
+                            resolve_unlock_ttl(None, None)?,
+                        )
+                        .await?;
+                }
+                let result = build_login_result(normalized_api_url, refreshed.email, true)?;
+                print_login_result(format, &result, api_url)?;
+                return Ok(());
+            }
+            // No password has been consumed yet, so fresh authentication can
+            // use the same ordinary password/MFA input contract exactly once.
+            Err(error) if refresh_requires_sign_in(&error) => {}
+            Err(error) => return Err(error.into()),
         }
-        let result = build_login_result(normalized_api_url, refreshed.email, true)?;
-        print_login_result(format, &result, api_url)?;
-        return Ok(());
     }
 
     let email = email_flag.or_else(|| {
@@ -97,6 +107,10 @@ pub(super) async fn run(
         &warnings,
         print_login_result(format, &result, api_url),
     )
+}
+
+fn refresh_requires_sign_in(error: &PublicError) -> bool {
+    matches!(error, PublicError::LoginRequired) || error.http_status() == Some(401)
 }
 
 fn reused_session_is_unlocked(
@@ -608,6 +622,26 @@ mod tests {
     use super::*;
     use std::cell::RefCell;
     use uuid::Uuid;
+
+    #[test]
+    fn test_should_reauthenticate_only_after_definitive_refresh_rejection() {
+        assert!(refresh_requires_sign_in(&PublicError::LoginRequired));
+        assert!(refresh_requires_sign_in(&PublicError::http(
+            401, None, None
+        )));
+        for status in [400, 403, 404, 408, 429, 500, 503] {
+            assert!(!refresh_requires_sign_in(&PublicError::http(
+                status, None, None
+            )));
+        }
+        for error in [
+            PublicError::transport(sealtask_client_core::TransportFailureKind::Connect),
+            PublicError::transport(sealtask_client_core::TransportFailureKind::Timeout),
+            PublicError::conflict("concurrent account change"),
+        ] {
+            assert!(!refresh_requires_sign_in(&error));
+        }
+    }
 
     #[tokio::test]
     async fn test_should_revoke_previous_session_after_a_committed_persistence_error() {

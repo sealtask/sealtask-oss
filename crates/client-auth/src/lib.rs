@@ -1388,6 +1388,24 @@ pub async fn refresh_credentials_if_needed(
     .await
 }
 
+/// Validate and rotate the saved session even when its access token is fresh.
+/// The current token is loaded and replaced under the credential lock so a
+/// concurrent refresh cannot cause redemption of a stale rotating token.
+pub async fn refresh_credentials_with_timeout(
+    client: &reqwest::Client,
+    base_url: &str,
+    expected: &Credentials,
+    refresh_timeout: StdDuration,
+) -> PublicResult<Credentials> {
+    if refresh_timeout.is_zero() {
+        return Err(PublicError::validation(
+            "credential refresh timeout must be greater than zero",
+        ));
+    }
+    let dir = config_dir()?;
+    refresh_credentials_in(&dir, client, base_url, expected, None, refresh_timeout).await
+}
+
 pub async fn refresh_credentials_if_needed_with_timeout(
     client: &reqwest::Client,
     base_url: &str,
@@ -1420,6 +1438,30 @@ async fn refresh_credentials_if_needed_in(
     access_expiry_window_seconds: i64,
     refresh_timeout: StdDuration,
 ) -> PublicResult<Credentials> {
+    refresh_credentials_in(
+        dir,
+        client,
+        base_url,
+        expected,
+        Some(access_expiry_window_seconds),
+        refresh_timeout,
+    )
+    .await
+}
+
+async fn refresh_credentials_in(
+    dir: &Path,
+    client: &reqwest::Client,
+    base_url: &str,
+    expected: &Credentials,
+    access_expiry_window_seconds: Option<i64>,
+    refresh_timeout: StdDuration,
+) -> PublicResult<Credentials> {
+    if refresh_timeout.is_zero() {
+        return Err(PublicError::validation(
+            "credential refresh timeout must be greater than zero",
+        ));
+    }
     let credentials_lock = CredentialsFileLock::acquire_async(dir).await?;
     let result = async {
         let current = credentials_lock
@@ -1428,7 +1470,8 @@ async fn refresh_credentials_if_needed_in(
             .filter(|current| credentials_share_refresh_context(current, expected))
             .ok_or_else(credentials_changed_error)?;
 
-        if !current.access_expires_within(access_expiry_window_seconds) {
+        if access_expiry_window_seconds.is_some_and(|window| !current.access_expires_within(window))
+        {
             return Ok(current);
         }
         if current.is_refresh_expired() {
@@ -4021,6 +4064,118 @@ mod tests {
             .expect("refreshed credentials");
         assert_eq!(persisted.access_token, "refreshed-access");
         assert_eq!(persisted.refresh_token, "refreshed-refresh");
+    }
+
+    #[tokio::test]
+    async fn test_should_force_refresh_fresh_access_and_preserve_session_lineage() {
+        let request_count = Arc::new(AtomicUsize::new(0));
+        let handler_request_count = Arc::clone(&request_count);
+        let app = Router::new().route(
+            "/auth/refresh",
+            post(move |Json(body): Json<serde_json::Value>| {
+                let request_count = Arc::clone(&handler_request_count);
+                async move {
+                    assert_eq!(body["refreshToken"], "refresh");
+                    request_count.fetch_add(1, Ordering::SeqCst);
+                    Json(json!({
+                        "accessToken": "refreshed-access",
+                        "refreshToken": "refreshed-refresh",
+                        "expiresIn": 3600,
+                        "refreshExpiresIn": 86400,
+                        "tokenType": "Bearer"
+                    }))
+                }
+            }),
+        );
+        let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind");
+        let address = listener.local_addr().expect("address");
+        tokio::spawn(async move {
+            axum::serve(listener, app).await.expect("serve refresh API");
+        });
+        let base_url = format!("http://{address}");
+        let temp = private_temp_dir();
+        let mut original = test_credentials();
+        original.api_url.clone_from(&base_url);
+        original.local_session_id = Some("existing-login-session".to_string());
+        replace_credentials_atomically_in(temp.path(), &original, |_| Ok(()))
+            .expect("store original credentials");
+        let client = reqwest::Client::new();
+
+        let unchanged = refresh_credentials_if_needed_in(
+            temp.path(),
+            &client,
+            &base_url,
+            &original,
+            60,
+            StdDuration::from_secs(5),
+        )
+        .await
+        .expect("fresh access does not need ordinary refresh");
+        assert_eq!(unchanged, original);
+        assert_eq!(request_count.load(Ordering::SeqCst), 0);
+
+        let refreshed = refresh_credentials_in(
+            temp.path(),
+            &client,
+            &base_url,
+            &original,
+            None,
+            StdDuration::from_secs(5),
+        )
+        .await
+        .expect("explicit session validation refreshes fresh access");
+
+        assert_eq!(request_count.load(Ordering::SeqCst), 1);
+        assert_eq!(refreshed.access_token, "refreshed-access");
+        assert_eq!(refreshed.refresh_token, "refreshed-refresh");
+        assert_eq!(refreshed.local_session_id, original.local_session_id);
+        assert!(credentials_share_session(&refreshed, &original));
+        assert_eq!(
+            load_credentials_unlocked(&temp.path().join(CREDENTIALS_FILE_NAME))
+                .expect("load refreshed credentials"),
+            Some(refreshed)
+        );
+    }
+
+    #[tokio::test]
+    async fn test_should_preserve_credentials_when_forced_refresh_is_rejected() {
+        let app = Router::new().route(
+            "/auth/refresh",
+            post(|Json(body): Json<serde_json::Value>| async move {
+                assert_eq!(body["refreshToken"], "refresh");
+                (
+                    StatusCode::UNAUTHORIZED,
+                    Json(json!({"error": "unauthorized", "message": "session revoked"})),
+                )
+            }),
+        );
+        let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind");
+        let address = listener.local_addr().expect("address");
+        tokio::spawn(async move {
+            axum::serve(listener, app).await.expect("serve refresh API");
+        });
+        let base_url = format!("http://{address}");
+        let temp = private_temp_dir();
+        let mut original = test_credentials();
+        original.api_url.clone_from(&base_url);
+        replace_credentials_atomically_in(temp.path(), &original, |_| Ok(()))
+            .expect("store original credentials");
+        let path = temp.path().join(CREDENTIALS_FILE_NAME);
+        let before = fs::read(&path).expect("read original credentials");
+
+        let error = refresh_credentials_in(
+            temp.path(),
+            &reqwest::Client::new(),
+            &base_url,
+            &original,
+            None,
+            StdDuration::from_secs(5),
+        )
+        .await
+        .expect_err("revoked session must fail even with fresh access");
+
+        assert_eq!(error.http_status(), Some(401));
+        assert_eq!(fs::read(&path).expect("read preserved credentials"), before);
     }
 
     #[tokio::test]

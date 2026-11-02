@@ -105,7 +105,10 @@ A successful password-based `auth login` also unlocks workspace data in memory
 for eight hours. It does not save the password or opt into keychain storage.
 If clearing a previous account's optional keychain entry fails, login continues
 with a warning; it still removes that account's in-memory unlock key.
-Login reuses a valid session and unlocks it if needed; an already unlocked
+Explicit login verifies a saved session with the server through token refresh;
+if the server has revoked it, login starts the password/MFA flow again. Network
+failures do not trigger reauthentication. Ordinary commands still refresh only
+when needed. Login reuses a valid session and unlocks it if needed; an already unlocked
 session needs no password and keeps its current unlock deadline. Use `auth unlock --ttl 30m` (or `8h`) to choose an unlock duration.
 
 Expired-session recovery requires an online sign-in, including for legacy
