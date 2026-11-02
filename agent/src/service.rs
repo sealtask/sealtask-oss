@@ -1758,24 +1758,6 @@ mod tests {
                 .local_addr()
                 .expect("pending reconciliation server address")
         );
-        let server = tokio::spawn(async move {
-            let (mut stream, _) = tokio::time::timeout(Duration::from_secs(5), listener.accept())
-                .await
-                .expect("pending identity reaches reconciliation")
-                .expect("accept pending token mint");
-            let mut request = [0_u8; 8192];
-            let bytes_read = stream.read(&mut request).await.expect("read token mint");
-            assert!(
-                String::from_utf8_lossy(&request[..bytes_read])
-                    .starts_with("POST /auth/agents/token ")
-            );
-            stream
-                .write_all(
-                    b"HTTP/1.1 401 Unauthorized\r\nContent-Type: application/json\r\nContent-Length: 2\r\nConnection: close\r\n\r\n{}",
-                )
-                .await
-                .expect("write pending reconciliation response");
-        });
 
         let invalid_repository = temporary.path().join("invalid-active");
         std::fs::create_dir(&invalid_repository).expect("create invalid active repository");
@@ -1835,6 +1817,26 @@ mod tests {
             &pending_keys,
         )
         .expect("save pending identity");
+
+        // Bound reconciliation itself, after key generation and Git fixture setup.
+        let server = tokio::spawn(async move {
+            let (mut stream, _) = tokio::time::timeout(Duration::from_secs(5), listener.accept())
+                .await
+                .expect("pending identity reaches reconciliation")
+                .expect("accept pending token mint");
+            let mut request = [0_u8; 8192];
+            let bytes_read = stream.read(&mut request).await.expect("read token mint");
+            assert!(
+                String::from_utf8_lossy(&request[..bytes_read])
+                    .starts_with("POST /auth/agents/token ")
+            );
+            stream
+                .write_all(
+                    b"HTTP/1.1 401 Unauthorized\r\nContent-Type: application/json\r\nContent-Length: 2\r\nConnection: close\r\n\r\n{}",
+                )
+                .await
+                .expect("write pending reconciliation response");
+        });
 
         let service = AgentService::new(Uuid::now_v7(), None, Duration::from_secs(60));
         let harness = FakeHarness {
