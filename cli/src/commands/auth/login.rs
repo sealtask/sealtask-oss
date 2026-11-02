@@ -232,6 +232,7 @@ pub(super) async fn authenticate_and_unlock(
             }
         }
     };
+    let mut warnings = Vec::new();
     let (mut credentials, persistence_result) =
         persist_final_auth_response(api_url, auth_response, |credentials| {
             replace_credentials_atomically(credentials, |previous_credentials| {
@@ -250,6 +251,7 @@ pub(super) async fn authenticate_and_unlock(
                         runtime,
                         previous_credentials,
                         credentials,
+                        &mut warnings,
                     )?;
                 } else {
                     runtime.clear_read_cache()?;
@@ -269,12 +271,14 @@ pub(super) async fn authenticate_and_unlock(
                 .as_ref()
                 .is_some_and(|current| credentials_share_session(current, &credentials))
             {
-                return Err(PublicError::committed_but_local_processing_failed(
-                    "login",
-                    "session",
-                    format!("{error}; run 'sealtask auth unlock'"),
-                )
-                .into());
+                return crate::output::public_result_with_warnings(
+                    Err(PublicError::committed_but_local_processing_failed(
+                        "login",
+                        "session",
+                        format!("{error}; run 'sealtask auth unlock'"),
+                    )),
+                    &warnings,
+                );
             }
             // Authentication has issued a new server session, but this command
             // could not install it locally. Keep the primary error and make a
@@ -295,14 +299,11 @@ pub(super) async fn authenticate_and_unlock(
                     format!("failed to revoke the unused sign-in session: {message}"),
                 )
             });
-            return crate::output::public_result_with_warnings(
-                Err(error),
-                &warning.into_iter().collect::<Vec<_>>(),
-            );
+            warnings.extend(warning);
+            return crate::output::public_result_with_warnings(Err(error), &warnings);
         }
     };
 
-    let mut warnings = Vec::new();
     if let Some(previous_credentials) = previous_credentials.as_ref().filter(|previous| {
         !previous.is_refresh_expired() && previous.refresh_token != credentials.refresh_token
     }) && let Some(warning) = previous_session_revoke_warning(
@@ -344,6 +345,7 @@ fn clear_previous_local_auth_state_if_changed(
     runtime: &RuntimeClient,
     previous: &Credentials,
     current: &Credentials,
+    warnings: &mut Vec<WarningResult>,
 ) -> PublicResult<()> {
     let local_state_is_unchanged = normalize_api_url(&previous.api_url) == current.api_url
         && previous.user_id == current.user_id
@@ -358,7 +360,15 @@ fn clear_previous_local_auth_state_if_changed(
         &previous.data_key_ciphertext,
     )?;
     clear_session(&previous_session_key)?;
-    clear_persisted_data_key(previous)?;
+    // Keychain bootstrap is optional, including on headless machines where
+    // the OS service is unavailable. Match logout: report cleanup failure
+    // without making password-based login depend on a desktop keychain.
+    if let Err(error) = clear_persisted_data_key(previous) {
+        warnings.push(warning_result(
+            "login_persisted_bootstrap_clear_failed",
+            format!("failed to clear the previous platform keychain entry: {error}"),
+        ));
+    }
     runtime.clear_read_cache()?;
     Ok(())
 }

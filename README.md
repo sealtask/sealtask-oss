@@ -103,6 +103,8 @@ identifier is local metadata, not a server credential or an unlock key.
 
 A successful password-based `auth login` also unlocks workspace data in memory
 for eight hours. It does not save the password or opt into keychain storage.
+If clearing a previous account's optional keychain entry fails, login continues
+with a warning; it still removes that account's in-memory unlock key.
 Login reuses a valid session and unlocks it if needed; an already unlocked
 session needs no password and keeps its current unlock deadline. Use `auth unlock --ttl 30m` (or `8h`) to choose an unlock duration.
 

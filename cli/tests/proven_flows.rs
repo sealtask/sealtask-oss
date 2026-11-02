@@ -7012,15 +7012,17 @@ async fn cli_expired_unlock_reauthenticates_once_and_unlocks_with_optional_mfa()
         )
         .await;
         let home = TempDir::new().expect("home");
+        let keychain_dir = TempDir::new().expect("temp keychain");
         seed_expired_login_credentials(home.path(), &server.base_url, EMAIL);
         let input = match code {
             Some(code) => format!("{PASSWORD}\n{code}\n"),
             None => format!("{PASSWORD}\n"),
         };
         let invoked_at = Utc::now().timestamp();
-        let output = run_cli(
+        let output = run_cli_with_test_keychain(
             home.path(),
             &server.base_url,
+            keychain_dir.path(),
             &[
                 "--json",
                 "--non-interactive",
@@ -7229,6 +7231,7 @@ async fn cli_account_switch_accepts_concurrent_rotation_of_the_previous_session(
     const PASSWORD: &str = "switched-password";
     for established_lineage in [false, true] {
         let home = TempDir::new().expect("home");
+        let keychain_dir = TempDir::new().expect("temp keychain");
         let path = home.path().join(".sealtask/credentials.json");
         let observed_logout_refresh_token = Arc::new(Mutex::new(None));
         let server = spawn_raw_login_server_with_logout_observer(
@@ -7249,9 +7252,10 @@ async fn cli_account_switch_accepts_concurrent_rotation_of_the_previous_session(
             previous.local_session_id = Some(Uuid::now_v7().to_string());
             std::fs::write(&path, serde_json::to_vec(&previous).unwrap()).unwrap();
         }
-        let output = run_cli(
+        let output = run_cli_with_test_keychain(
             home.path(),
             &server.base_url,
+            keychain_dir.path(),
             &[
                 "--json",
                 "--non-interactive",
@@ -7268,6 +7272,11 @@ async fn cli_account_switch_accepts_concurrent_rotation_of_the_previous_session(
             "account switch failed: {}",
             output.stderr
         );
+        assert!(
+            output.stderr.is_empty(),
+            "unexpected warning: {}",
+            output.stderr
+        );
         let credentials: Credentials =
             serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
         assert_eq!(credentials.email, EMAIL);
@@ -7279,6 +7288,103 @@ async fn cli_account_switch_accepts_concurrent_rotation_of_the_previous_session(
         );
         assert_workspace_unlocked_and_lock(home.path(), &server.base_url);
     }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn cli_account_switch_warns_when_old_keychain_cleanup_fails_and_remains_unlocked() {
+    const EMAIL: &str = "keychain-warning@example.test";
+    const PASSWORD: &str = "keychain-warning-password";
+    let server = spawn_raw_login_server(
+        EMAIL,
+        PASSWORD,
+        "unused-challenge",
+        Arc::new(Mutex::new(None)),
+        RawLoginFinishOutcome::Authenticated,
+        RawMfaVerifyOutcome::Reject,
+    )
+    .await;
+    let home = TempDir::new().expect("home");
+    let keychain_dir = TempDir::new().expect("temp keychain");
+    let fixture = TestFixture::new();
+    seed_credentials(home.path(), &fixture, &server.base_url);
+    let stored = run_cli_with_test_keychain(
+        home.path(),
+        &server.base_url,
+        keychain_dir.path(),
+        &["auth", "keychain", "store", "--password-stdin"],
+        Some(&fixture.password),
+    );
+    assert!(
+        stored.status.success(),
+        "keychain store failed: {}",
+        stored.stderr
+    );
+    replace_stored_test_keychain_secret_with_directory(keychain_dir.path());
+
+    let output = run_cli_with_test_keychain(
+        home.path(),
+        &server.base_url,
+        keychain_dir.path(),
+        &[
+            "--json",
+            "--non-interactive",
+            "auth",
+            "login",
+            "--email",
+            EMAIL,
+            "--password-stdin",
+        ],
+        Some(PASSWORD),
+    );
+    assert!(
+        output.status.success(),
+        "account switch failed: {}",
+        output.stderr
+    );
+    let result = parse_stdout_json(&output.stdout);
+    assert_eq!(result["email"], EMAIL);
+    assert_eq!(result["unlocked"], true);
+    assert_json_warning_contains(
+        &output.stderr,
+        "login_persisted_bootstrap_clear_failed",
+        "keychain",
+    );
+    let credentials: Credentials = serde_json::from_slice(
+        &std::fs::read(home.path().join(".sealtask/credentials.json")).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(credentials.email, EMAIL);
+    assert_eq!(credentials.refresh_token, "process-final-refresh-token");
+
+    // Reuse without secret input proves the new credentials and daemon key are usable.
+    let again = run_cli_with_test_keychain(
+        home.path(),
+        &server.base_url,
+        keychain_dir.path(),
+        &["--json", "--non-interactive", "auth", "login"],
+        None,
+    );
+    assert!(
+        again.status.success(),
+        "session reuse failed: {}",
+        again.stderr
+    );
+    let result = parse_stdout_json(&again.stdout);
+    assert_eq!(result["alreadyLoggedIn"], true);
+    assert_eq!(result["unlocked"], true);
+    assert!(again.stderr.is_empty());
+    let lock = run_cli_with_test_keychain(
+        home.path(),
+        &server.base_url,
+        keychain_dir.path(),
+        &["auth", "lock"],
+        None,
+    );
+    assert!(
+        lock.status.success(),
+        "daemon cleanup failed: {}",
+        lock.stderr
+    );
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -7385,13 +7491,21 @@ fn seed_expired_login_credentials(home: &FsPath, api_url: &str, email: &str) {
 }
 
 fn assert_workspace_unlocked_and_lock(home: &FsPath, api_url: &str) {
-    let status = run_cli(home, api_url, &["--json", "auth", "status"], None);
+    let keychain_dir = TempDir::new().expect("temp keychain for daemon status");
+    let status = run_cli_with_test_keychain(
+        home,
+        api_url,
+        keychain_dir.path(),
+        &["--json", "auth", "status"],
+        None,
+    );
     assert!(status.status.success(), "status failed: {}", status.stderr);
     assert_eq!(
         parse_stdout_json(&status.stdout)["unlockDaemon"]["active"],
         true
     );
-    let lock = run_cli(home, api_url, &["auth", "lock"], None);
+    let lock =
+        run_cli_with_test_keychain(home, api_url, keychain_dir.path(), &["auth", "lock"], None);
     assert!(lock.status.success(), "lock failed: {}", lock.stderr);
 }
 
@@ -7402,7 +7516,14 @@ fn assert_unlock_deadline(
     completed_at: i64,
     ttl_seconds: i64,
 ) {
-    let status = run_cli(home, api_url, &["--json", "auth", "status"], None);
+    let keychain_dir = TempDir::new().expect("temp keychain for daemon deadline");
+    let status = run_cli_with_test_keychain(
+        home,
+        api_url,
+        keychain_dir.path(),
+        &["--json", "auth", "status"],
+        None,
+    );
     assert!(status.status.success(), "status failed: {}", status.stderr);
     let status = parse_stdout_json(&status.stdout);
     assert_eq!(status["unlockDaemon"]["active"], true);
