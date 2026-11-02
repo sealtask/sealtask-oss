@@ -54,6 +54,6 @@ pub use read_cache::{
 };
 pub use unlock_daemon::{
     SessionKey, UnlockStatus, clear_session, fetch_data_key, lock, serve, session_key, socket_path,
-    unlock, unlock_status,
+    unlock, unlock_status, validate_ttl as validate_unlock_ttl,
 };
 pub use upload_lifecycle::AttachmentUploadFailureReport;

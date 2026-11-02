@@ -1,4 +1,5 @@
 use super::revoke_session_with_timeout;
+use crate::human_input::resolve_unlock_ttl;
 use crate::input::{prompt, read_required_password};
 use crate::interaction::write_interaction_line;
 use crate::output::{
@@ -10,7 +11,7 @@ use sealtask_client_auth::{
     AuthResponse, CompleteMfaLoginError, Credentials, LoginOutcome, SecretMfaCode,
     auth_response_to_credentials, begin_login, clear_persisted_data_key, complete_mfa_login,
     credentials_path, load_credentials, logout as revoke_session, normalize_api_url,
-    replace_credentials_atomically,
+    refresh_credentials_if_needed_with_timeout, replace_credentials_atomically,
 };
 use sealtask_client_core::{PublicError, PublicResult};
 use sealtask_client_runtime::{RuntimeClient, clear_session, session_key};
@@ -29,6 +30,7 @@ struct LoginResult {
     email: String,
     api_url: String,
     credentials_path: String,
+    unlocked: bool,
 }
 
 pub(super) async fn run(
@@ -48,18 +50,73 @@ pub(super) async fn run(
             .as_deref()
             .is_none_or(|email| credentials.email.eq_ignore_ascii_case(email.trim()))
     {
-        let result = build_login_result(normalized_api_url, credentials.email.clone(), true)?;
+        let client = runtime.control_plane_http_client()?;
+        let mut refreshed = refresh_credentials_if_needed_with_timeout(
+            &client,
+            api_url,
+            credentials,
+            30,
+            runtime.api_transport_options().request_timeout(),
+        )
+        .await?;
+        if !runtime.unlock_status()?.unlocked {
+            let input = read_login_input(password_stdin, non_interactive)?;
+            runtime
+                .unlock_daemon_with_credentials(
+                    &mut refreshed,
+                    &input.password,
+                    resolve_unlock_ttl(None, None)?,
+                )
+                .await?;
+        }
+        let result = build_login_result(normalized_api_url, refreshed.email, true)?;
         print_login_result(format, &result, api_url)?;
         return Ok(());
     }
 
-    if non_interactive && email_flag.is_none() {
+    let email = email_flag.or_else(|| {
+        stored_credentials
+            .as_ref()
+            .filter(|credentials| credentials.api_url == normalized_api_url)
+            .map(|credentials| credentials.email.clone())
+    });
+    let (credentials, warnings) = authenticate_and_unlock(
+        format,
+        runtime,
+        email,
+        password_stdin,
+        non_interactive,
+        resolve_unlock_ttl(None, None)?,
+        stored_credentials.as_ref(),
+    )
+    .await?;
+    let result = build_login_result(credentials.api_url, credentials.email, false)?;
+    finish_with_warnings(
+        format,
+        &warnings,
+        print_login_result(format, &result, api_url),
+    )
+}
+
+/// Shared by explicit login and expired-session unlock. Emits no success
+/// output so the calling command produces exactly one result.
+pub(super) async fn authenticate_and_unlock(
+    format: OutputFormat,
+    runtime: &RuntimeClient,
+    email: Option<String>,
+    password_stdin: bool,
+    non_interactive: bool,
+    ttl_seconds: u64,
+    expected_credentials: Option<&Credentials>,
+) -> CliResult<(Credentials, Vec<WarningResult>)> {
+    sealtask_client_runtime::validate_unlock_ttl(ttl_seconds)?;
+    let api_url = runtime.api_url();
+    if non_interactive && email.is_none() {
         return Err(
             PublicError::validation("--non-interactive auth login requires --email").into(),
         );
     }
-
-    let email = match email_flag {
+    let email = match email {
         Some(email) => email.trim().to_string(),
         None => prompt(format, "Email: ")?,
     };
@@ -73,12 +130,8 @@ pub(super) async fn run(
         .into());
     }
 
-    let mut login_stdin = password_stdin.then(read_login_stdin_lines).transpose()?;
-    let password = Zeroizing::new(if let Some(lines) = &mut login_stdin {
-        std::mem::take(&mut lines.password)
-    } else {
-        read_required_password(false, None)?
-    });
+    let mut input = read_login_input(password_stdin, non_interactive)?;
+    let password = Zeroizing::new(std::mem::take(&mut input.password));
 
     let client = runtime.control_plane_http_client()?;
     let auth_response = match with_progress(
@@ -92,7 +145,7 @@ pub(super) async fn run(
             mut pending,
             mut challenge,
         } => {
-            let mut supplied_code = login_stdin.as_mut().and_then(|lines| lines.mfa_code.take());
+            let mut supplied_code = input.mfa_code.take();
             loop {
                 challenge.expires_in = pending.remaining_seconds();
                 if mfa_challenge_is_terminal(challenge.expires_in, challenge.attempts_remaining) {
@@ -120,7 +173,7 @@ pub(super) async fn run(
                         expires_in,
                         retry_after_seconds,
                     }) => {
-                        if password_stdin {
+                        if password_stdin || non_interactive {
                             drop(retry_pending);
                             return Err(PublicError::validation(message).into());
                         }
@@ -155,6 +208,7 @@ pub(super) async fn run(
                         pending: retry_pending,
                     }) => {
                         if password_stdin
+                            || non_interactive
                             || !retry_pending
                                 .challenge()
                                 .methods
@@ -178,9 +232,14 @@ pub(super) async fn run(
             }
         }
     };
-    let (credentials, previous_credentials) =
+    let (mut credentials, previous_credentials) =
         persist_final_auth_response(api_url, auth_response, |credentials| {
             replace_credentials_atomically(credentials, |previous_credentials| {
+                if previous_credentials != expected_credentials {
+                    return Err(PublicError::conflict(
+                        "credentials changed during sign-in; retry with the current profile",
+                    ));
+                }
                 if let Some(previous_credentials) = previous_credentials {
                     clear_previous_local_auth_state_if_changed(
                         runtime,
@@ -214,13 +273,22 @@ pub(super) async fn run(
         warnings.push(warning);
     }
 
-    let print_result = build_login_result(
-        credentials.api_url.clone(),
-        credentials.email.clone(),
-        false,
-    )
-    .and_then(|result| print_login_result(format, &result, api_url));
-    finish_with_warnings(format, &warnings, print_result)
+    let unlock_result = runtime
+        .unlock_daemon_with_credentials(&mut credentials, &password, ttl_seconds)
+        .await;
+    // Login is already persisted. Report a distinct partial result if the
+    // subsequent local unlock fails so callers do not repeat MFA blindly.
+    if let Err(error) = unlock_result {
+        return crate::output::public_result_with_warnings(
+            Err(PublicError::committed_but_local_processing_failed(
+                "login",
+                "session",
+                format!("{error}; run 'sealtask auth unlock'"),
+            )),
+            &warnings,
+        );
+    }
+    Ok((credentials, warnings))
 }
 
 fn clear_previous_local_auth_state_if_changed(
@@ -313,6 +381,22 @@ struct LoginStdinLines {
     mfa_code: Option<String>,
 }
 
+fn read_login_input(password_stdin: bool, non_interactive: bool) -> CliResult<LoginStdinLines> {
+    if password_stdin {
+        read_login_stdin_lines()
+    } else if non_interactive {
+        Err(
+            PublicError::validation("--non-interactive auth login requires --password-stdin")
+                .into(),
+        )
+    } else {
+        Ok(LoginStdinLines {
+            password: read_required_password(false, None)?,
+            mfa_code: None,
+        })
+    }
+}
+
 fn read_login_stdin_lines() -> CliResult<LoginStdinLines> {
     read_login_stdin_lines_from(io::stdin().lock())
 }
@@ -385,19 +469,20 @@ fn build_login_result(
         email,
         api_url,
         credentials_path: credentials_path()?.display().to_string(),
+        unlocked: true,
     })
 }
 
 fn print_login_result(format: OutputFormat, result: &LoginResult, api_url: &str) -> CliResult<()> {
     let table_message = if result.already_logged_in {
         format!(
-            "Already logged in as {} ({})",
+            "Already logged in as {} ({})\nWorkspace data unlocked.\nNext: sealtask lists",
             terminal_line(&result.email),
             terminal_line(api_url)
         )
     } else {
         format!(
-            "Logged in as {}\nCredentials saved to {}\nNext: sealtask auth unlock",
+            "Logged in as {}\nCredentials saved to {}\nWorkspace data unlocked.\nNext: sealtask lists",
             terminal_line(&result.email),
             terminal_line(&result.credentials_path)
         )

@@ -1428,9 +1428,7 @@ async fn refresh_credentials_if_needed_in(
             return Ok(current);
         }
         if current.is_refresh_expired() {
-            return Err(PublicError::validation(
-                "session expired, please login again",
-            ));
+            return Err(PublicError::LoginRequired);
         }
 
         let refresh_response = tokio::time::timeout(

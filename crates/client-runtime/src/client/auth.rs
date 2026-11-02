@@ -3,11 +3,12 @@ use crate::password::read_required_password;
 use crate::unlock_daemon;
 use sealtask_client_api::{CurrentUserResponse, DashboardStatsResponse};
 use sealtask_client_auth::{
-    PersistedDataKeyStatus, clear_persisted_data_key as clear_persisted_data_key_secret,
-    load_credentials, load_credentials_for_url, persisted_data_key_status, save_persisted_data_key,
+    Credentials, PersistedDataKeyStatus,
+    clear_persisted_data_key as clear_persisted_data_key_secret, load_credentials,
+    load_credentials_for_url, persisted_data_key_status, save_persisted_data_key,
     with_current_credentials,
 };
-use sealtask_client_core::PublicResult;
+use sealtask_client_core::{PublicError, PublicResult};
 
 impl RuntimeClient {
     pub async fn get_me(&self) -> PublicResult<CurrentUserResponse> {
@@ -28,11 +29,30 @@ impl RuntimeClient {
             Some("Password required to unlock workspace data."),
         )
         .await?;
+        self.unlock_daemon_with_credentials(&mut credentials, &password, ttl_seconds)
+            .await
+    }
+
+    /// Unlock using the credentials and password from a completed login. The
+    /// credential guard prevents a concurrent logout/account switch from
+    /// publishing a key for a stale session.
+    pub async fn unlock_daemon_with_credentials(
+        &self,
+        credentials: &mut Credentials,
+        password: &str,
+        ttl_seconds: u64,
+    ) -> PublicResult<()> {
+        unlock_daemon::validate_ttl(ttl_seconds)?;
+        if credentials.api_url != self.api_url() {
+            return Err(PublicError::validation(
+                "unlock credentials belong to a different API URL",
+            ));
+        }
         let data_key = self
-            .decrypt_data_key_with_password(&mut credentials, &password)
+            .decrypt_data_key_with_password(credentials, password)
             .await?;
-        let session_key = self.current_session_key(&credentials)?;
-        with_current_credentials(&credentials, |_| {
+        let session_key = self.current_session_key(credentials)?;
+        with_current_credentials(credentials, |_| {
             unlock_daemon::unlock(&session_key, &data_key, ttl_seconds)
         })
     }

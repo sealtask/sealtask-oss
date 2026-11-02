@@ -228,7 +228,7 @@ pub fn unlock(
     }
 }
 
-pub(crate) fn validate_ttl(ttl_seconds: u64) -> PublicResult<()> {
+pub fn validate_ttl(ttl_seconds: u64) -> PublicResult<()> {
     unlock_expiration(unix_now(), ttl_seconds).map(|_| ())
 }
 

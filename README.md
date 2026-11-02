@@ -65,8 +65,9 @@ whitespace, Unicode, and a lone carriage return are sent to the server unchanged
 A missing or exactly empty second line means no factor was supplied. Extra lines
 containing non-whitespace are rejected. An enrolled account given only line one
 returns `mfa_input_required` and never prints the raw challenge or falls back to
-a terminal prompt. Other `--password-stdin` commands keep their existing
-whole-input password contract.
+a terminal prompt. Expired-session `auth unlock --password-stdin` uses the same
+two-line format. Unlock with a still-valid session and other `--password-stdin`
+commands keep their existing whole-input password contract.
 
 The CLI accepts both data-key wrapper formats used by SealTask accounts. Legacy
 version 1 wrappers are unwrapped locally from the password. Version 2 wrappers
@@ -81,6 +82,39 @@ in credentials, the daemon, or the platform keychain.
 Because version 2 password unwrap performs an authenticated network request,
 `RuntimeClient::unlock_daemon` and `RuntimeClient::store_persisted_data_key` are
 now asynchronous and must be awaited by downstream callers.
+
+## CLI sign-in and unlock
+
+Human refresh sessions use a rolling 30-day lifetime in the default server and
+checked-in deployment configurations. Access tokens still last 15 minutes and
+refresh automatically during online use. MFA sessions retain their fixed
+30-day reauthentication deadline; refresh cannot extend it. This shared server
+policy applies to web and iOS clients too. Configuration changes take effect on
+newly issued tokens, including successful refreshes; expired tokens are not
+revived. Deploy the backend configuration and CLI together. Reverting the
+configuration shortens future tokens but does not revoke already issued ones.
+
+A successful password-based `auth login` also unlocks workspace data in memory
+for eight hours. It does not save the password or opt into keychain storage.
+Login reuses a valid session and unlocks it if needed; an already unlocked
+session needs no password and keeps its current unlock deadline. Use `auth unlock --ttl 30m` (or `8h`) to choose an unlock duration.
+
+If the saved refresh session has expired, `auth unlock` signs in again using
+its saved email, asks for the password once and completes MFA if required, then
+unlocks for the requested duration. With `--password-stdin`, use password on
+line one and an optional MFA code on line two for this recovery. Missing MFA
+returns `mfa_input_required`; neither credentials nor decrypted keys are
+installed before MFA succeeds. `--non-interactive` never prompts.
+
+Commands that require absent or expired local credentials return
+`login_required` with an actionable hint. `auth status` shows access/refresh
+expiry separately from the memory unlock. If login succeeds but the subsequent
+unlock fails, the command reports `committed_but_local_processing_failed`:
+credentials are saved, and `auth unlock` can be retried without repeating login.
+
+For unattended assigned-task workers, use the separately enrolled
+`sealtask-agent` identity. Its automatic token minting does not depend on a
+human refresh session; broader general CLI agent permissions are separate work.
 
 ## Layout
 
@@ -697,8 +731,8 @@ source of truth through `sealtask --json info` and `sealtask --json schema`.
 ## Agent task automation
 
 The supported automation mode acts through an authenticated user session. Log
-in once, then either unlock workspace data for a bounded session or save an
-unlock key in the platform keychain:
+in once to unlock workspace data for eight hours. To choose a different duration
+or unlock again later, use `auth unlock`; keychain storage remains optional:
 
 ```bash
 printf '%s\n' "$SEALTASK_PASSWORD" \

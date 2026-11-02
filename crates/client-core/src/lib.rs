@@ -221,6 +221,8 @@ pub enum PublicError {
     MfaRequiredUseBeginLogin,
     #[error("MFA code required on the second stdin line for enrolled accounts")]
     MfaInputRequired,
+    #[error("session missing or expired; run 'sealtask auth login' or 'sealtask auth unlock'")]
+    LoginRequired,
 }
 
 impl PublicError {
@@ -248,6 +250,7 @@ impl PublicError {
             }
             Self::MfaRequiredUseBeginLogin => "mfa_required_use_begin_login",
             Self::MfaInputRequired => "mfa_input_required",
+            Self::LoginRequired => "login_required",
         }
     }
 

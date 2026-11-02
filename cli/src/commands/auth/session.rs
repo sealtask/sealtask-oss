@@ -1,4 +1,4 @@
-use super::revoke_session_with_timeout;
+use super::{login, revoke_session_with_timeout};
 use crate::args::KeychainCommand;
 use crate::output::{
     CliResult, OutputFormat, WarningResult, finish_with_warnings, print_simple_result,
@@ -51,7 +51,34 @@ pub(super) async fn unlock(
     password_stdin: bool,
     non_interactive: bool,
 ) -> CliResult<()> {
+    sealtask_client_runtime::validate_unlock_ttl(ttl_seconds)?;
     require_password_stdin_for_non_interactive(non_interactive, password_stdin, "auth unlock")?;
+    let credentials =
+        load_credentials_for_url(runtime.api_url())?.ok_or(PublicError::LoginRequired)?;
+    if credentials.is_refresh_expired() {
+        let (_, warnings) = login::authenticate_and_unlock(
+            format,
+            runtime,
+            Some(credentials.email.clone()),
+            password_stdin,
+            non_interactive,
+            ttl_seconds,
+            Some(&credentials),
+        )
+        .await?;
+        return finish_with_warnings(
+            format,
+            &warnings,
+            print_unlock_result(
+                format,
+                true,
+                Some(ttl_seconds),
+                &format!(
+                    "Workspace data unlocked for {ttl_seconds} seconds.\nNext: sealtask lists"
+                ),
+            ),
+        );
+    }
     if password_stdin {
         with_progress(
             "Unlocking workspace data…",

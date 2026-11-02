@@ -306,18 +306,14 @@ impl RuntimeClient {
     }
 
     pub fn require_logged_in_credentials(&self) -> PublicResult<Credentials> {
-        load_credentials_for_url(&self.api_url)?.ok_or_else(|| {
-            PublicError::validation("not logged in - run 'sealtask auth login' first")
-        })
+        load_credentials_for_url(&self.api_url)?.ok_or(PublicError::LoginRequired)
     }
 
     pub fn authenticated_api_client(&self) -> PublicResult<PublicApiClient> {
         self.require_online("authenticated API requests")?;
         let credentials = self.require_logged_in_credentials()?;
         if credentials.is_refresh_expired() {
-            return Err(PublicError::validation(
-                "session expired - run 'sealtask auth login' to authenticate",
-            ));
+            return Err(PublicError::LoginRequired);
         }
         self.api_client_with_credentials(credentials)
     }

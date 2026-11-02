@@ -6932,6 +6932,321 @@ async fn cli_login_stdin_persists_only_final_no_mfa_credentials() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn cli_login_reuses_a_valid_session_and_unlocks_without_another_mfa_login() {
+    let fixture = TestFixture::new_v2();
+    let state = Arc::new(Mutex::new(TestState::new(fixture.clone())));
+    let server = spawn_server(state.clone()).await;
+    let home = TempDir::new().expect("home");
+    seed_credentials_with_expiry(
+        home.path(),
+        &fixture,
+        &server.base_url,
+        Utc::now() - Duration::minutes(1),
+        Utc::now() + Duration::days(1),
+    );
+    let output = run_cli(
+        home.path(),
+        &server.base_url,
+        &[
+            "--json",
+            "--non-interactive",
+            "auth",
+            "login",
+            "--password-stdin",
+        ],
+        Some(&format!("{}\n012345\n", fixture.password)),
+    );
+    assert!(output.status.success(), "login failed: {}", output.stderr);
+    let result = parse_stdout_json(&output.stdout);
+    assert_eq!(result["alreadyLoggedIn"], true);
+    assert_eq!(result["unlocked"], true);
+    // A second login needs no secret and does not mint another session or unlock key.
+    let again = run_cli(
+        home.path(),
+        &server.base_url,
+        &["--json", "--non-interactive", "auth", "login"],
+        None,
+    );
+    assert!(
+        again.status.success(),
+        "idempotent login failed: {}",
+        again.stderr
+    );
+    assert_eq!(parse_stdout_json(&again.stdout)["unlocked"], true);
+    let state = state.lock().expect("state");
+    assert_eq!(state.refresh_request_count, 1);
+    assert_eq!(state.opaque_export_key_start_count, 1);
+    drop(state);
+    assert_workspace_unlocked_and_lock(home.path(), &server.base_url);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn cli_expired_unlock_reauthenticates_once_and_unlocks_with_optional_mfa() {
+    const EMAIL: &str = "expired-unlock@example.test";
+    const PASSWORD: &str = "expired-unlock-password";
+    for code in [None, Some("012345")] {
+        let server = spawn_raw_login_server(
+            EMAIL,
+            PASSWORD,
+            "expired-unlock-challenge",
+            Arc::new(Mutex::new(None)),
+            if code.is_some() {
+                RawLoginFinishOutcome::MfaRequired
+            } else {
+                RawLoginFinishOutcome::Authenticated
+            },
+            RawMfaVerifyOutcome::Authenticate {
+                expected_code: "012345".to_string(),
+            },
+        )
+        .await;
+        let home = TempDir::new().expect("home");
+        seed_expired_login_credentials(home.path(), &server.base_url, EMAIL);
+        let input = match code {
+            Some(code) => format!("{PASSWORD}\n{code}\n"),
+            None => format!("{PASSWORD}\n"),
+        };
+        let output = run_cli(
+            home.path(),
+            &server.base_url,
+            &[
+                "--json",
+                "--non-interactive",
+                "auth",
+                "unlock",
+                "--ttl",
+                "30m",
+                "--password-stdin",
+            ],
+            Some(&input),
+        );
+        assert!(output.status.success(), "unlock failed: {}", output.stderr);
+        assert_eq!(output.stdout.lines().count(), 1, "one command, one result");
+        let result = parse_stdout_json(&output.stdout);
+        assert_eq!(result["unlocked"], true);
+        assert_eq!(result["ttlSeconds"], 1800);
+        assert!(output.stderr.is_empty());
+        assert_final_process_login_credentials(
+            home.path(),
+            PASSWORD,
+            "expired-unlock-challenge",
+            code,
+        );
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn cli_expired_unlock_preserves_credentials_when_mfa_is_missing_or_rejected() {
+    const EMAIL: &str = "expired-unlock@example.test";
+    const PASSWORD: &str = "expired-unlock-password";
+    for code in [None, Some("123456")] {
+        let server = spawn_raw_login_server(
+            EMAIL,
+            PASSWORD,
+            "expired-unlock-challenge",
+            Arc::new(Mutex::new(None)),
+            RawLoginFinishOutcome::MfaRequired,
+            RawMfaVerifyOutcome::Reject,
+        )
+        .await;
+        let home = TempDir::new().expect("home");
+        seed_expired_login_credentials(home.path(), &server.base_url, EMAIL);
+        let credentials_path = home.path().join(".sealtask/credentials.json");
+        let before = std::fs::read(&credentials_path).expect("credentials before login");
+        let input = match code {
+            Some(code) => format!("{PASSWORD}\n{code}\n"),
+            None => format!("{PASSWORD}\n"),
+        };
+        let output = run_cli(
+            home.path(),
+            &server.base_url,
+            &[
+                "--json",
+                "--non-interactive",
+                "auth",
+                "unlock",
+                "--password-stdin",
+            ],
+            Some(&input),
+        );
+        assert!(!output.status.success());
+        assert!(output.stdout.is_empty());
+        let error = parse_stderr_json(&output.stderr);
+        assert_eq!(
+            error["error"]["code"],
+            if code.is_none() {
+                "mfa_input_required"
+            } else {
+                "validation"
+            }
+        );
+        assert_eq!(
+            before,
+            std::fs::read(&credentials_path).expect("credentials after failed MFA")
+        );
+        let status = run_cli(
+            home.path(),
+            &server.base_url,
+            &["--json", "auth", "status"],
+            None,
+        );
+        assert_eq!(
+            parse_stdout_json(&status.stdout)["unlockDaemon"]["active"],
+            false
+        );
+        for secret in [PASSWORD, "expired-unlock-challenge"] {
+            assert!(!output.stderr.contains(secret));
+        }
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn cli_login_reports_persisted_session_when_unlock_fails() {
+    let server = spawn_raw_login_server(
+        "partial@example.test",
+        "partial-password",
+        "unused-challenge",
+        Arc::new(Mutex::new(None)),
+        RawLoginFinishOutcome::UnlockUnavailable,
+        RawMfaVerifyOutcome::Reject,
+    )
+    .await;
+    let home = TempDir::new().expect("home");
+    let output = run_cli(
+        home.path(),
+        &server.base_url,
+        &[
+            "--json",
+            "--non-interactive",
+            "auth",
+            "login",
+            "--email",
+            "partial@example.test",
+            "--password-stdin",
+        ],
+        Some("partial-password\n"),
+    );
+    assert!(!output.status.success());
+    assert!(output.stdout.is_empty());
+    let error = parse_stderr_json(&output.stderr);
+    assert_eq!(
+        error["error"]["code"],
+        "committed_but_local_processing_failed"
+    );
+    assert!(
+        error["error"]["message"]
+            .as_str()
+            .unwrap()
+            .contains("auth unlock")
+    );
+    assert!(home.path().join(".sealtask/credentials.json").exists());
+    let status = run_cli(
+        home.path(),
+        &server.base_url,
+        &["--json", "auth", "status"],
+        None,
+    );
+    assert_eq!(
+        parse_stdout_json(&status.stdout)["unlockDaemon"]["active"],
+        false
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn cli_expired_unlock_does_not_replace_a_concurrent_logout() {
+    let home = TempDir::new().expect("home");
+    let path = home.path().join(".sealtask/credentials.json");
+    let server = spawn_raw_login_server(
+        "race@example.test",
+        "race-password",
+        "unused-challenge",
+        Arc::new(Mutex::new(None)),
+        RawLoginFinishOutcome::LogoutDuringLogin(path.clone()),
+        RawMfaVerifyOutcome::Reject,
+    )
+    .await;
+    seed_expired_login_credentials(home.path(), &server.base_url, "race@example.test");
+    let output = run_cli(
+        home.path(),
+        &server.base_url,
+        &[
+            "--json",
+            "--non-interactive",
+            "auth",
+            "unlock",
+            "--password-stdin",
+        ],
+        Some("race-password\n"),
+    );
+    assert!(!output.status.success());
+    assert_eq!(
+        parse_stderr_json(&output.stderr)["error"]["code"],
+        "conflict"
+    );
+    assert!(!path.exists(), "a concurrent logout must remain logged out");
+    let status = run_cli(
+        home.path(),
+        &server.base_url,
+        &["--json", "auth", "status"],
+        None,
+    );
+    assert_eq!(
+        parse_stdout_json(&status.stdout)["unlockDaemon"]["active"],
+        false
+    );
+}
+
+#[test]
+fn cli_missing_and_expired_sessions_have_an_actionable_machine_error() {
+    let api_url = "http://127.0.0.1:9";
+    for expired in [false, true] {
+        let home = TempDir::new().expect("home");
+        if expired {
+            seed_expired_login_credentials(home.path(), api_url, "expired@example.test");
+        }
+        let output = run_cli(
+            home.path(),
+            api_url,
+            &["--json", "--non-interactive", "me"],
+            None,
+        );
+        assert!(!output.status.success());
+        let error = parse_stderr_json(&output.stderr);
+        assert_eq!(error["error"]["code"], "login_required");
+        assert!(
+            error["error"]["hint"]
+                .as_str()
+                .unwrap()
+                .contains("auth login")
+        );
+        assert_eq!(error["error"]["retryable"], false);
+    }
+}
+
+fn seed_expired_login_credentials(home: &FsPath, api_url: &str, email: &str) {
+    let fixture = TestFixture::new();
+    seed_credentials(home, &fixture, api_url);
+    let path = home.join(".sealtask/credentials.json");
+    let mut credentials: Credentials =
+        serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+    credentials.email = email.to_string();
+    credentials.access_expires_at = Utc::now() - Duration::days(2);
+    credentials.refresh_expires_at = Utc::now() - Duration::days(1);
+    std::fs::write(path, serde_json::to_vec(&credentials).unwrap()).unwrap();
+}
+
+fn assert_workspace_unlocked_and_lock(home: &FsPath, api_url: &str) {
+    let status = run_cli(home, api_url, &["--json", "auth", "status"], None);
+    assert!(status.status.success(), "status failed: {}", status.stderr);
+    assert_eq!(
+        parse_stdout_json(&status.stdout)["unlockDaemon"]["active"],
+        true
+    );
+    let lock = run_cli(home, api_url, &["auth", "lock"], None);
+    assert!(lock.status.success(), "lock failed: {}", lock.stderr);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn cli_human_login_styles_the_complete_success_and_next_hint() {
     const EMAIL: &str = "process-login@example.test";
     const PASSWORD: &str = "human-login-password";
@@ -6970,7 +7285,7 @@ async fn cli_human_login_styles_the_complete_success_and_next_hint() {
         output.stderr
     );
     let expected = format!(
-        "Logged in as {EMAIL}\nCredentials saved to {}\nNext: sealtask auth unlock",
+        "Logged in as {EMAIL}\nCredentials saved to {}\nWorkspace data unlocked.\nNext: sealtask lists",
         home.path().join(".sealtask/credentials.json").display()
     );
     assert_eq!(
@@ -6978,6 +7293,7 @@ async fn cli_human_login_styles_the_complete_success_and_next_hint() {
         format!("\u{1b}[32m{expected}\u{1b}[0m\n"),
         "the complete login result must use the same success style as auth unlock"
     );
+    assert_workspace_unlocked_and_lock(home.path(), &server.base_url);
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -7109,7 +7425,7 @@ async fn test_should_replace_active_credentials_when_login_requests_another_acco
     );
     let status = parse_stdout_json(&status_output.stdout);
     assert_eq!(status["loggedIn"], false);
-    assert_eq!(status["unlockDaemon"]["active"], false);
+    assert_eq!(status["unlockDaemon"]["active"], true);
 
     let lock_output = run_cli_with_test_keychain(
         home.path(),
@@ -7522,15 +7838,18 @@ struct RawMfaLoginState {
     challenge_token: String,
     setup: Vec<u8>,
     password_file: Vec<u8>,
+    data_key_ciphertext: String,
     observed_code: Arc<Mutex<Option<String>>>,
     observed_logout_refresh_token: Arc<Mutex<Option<String>>>,
     login_finish: RawLoginFinishOutcome,
     mfa_verify: RawMfaVerifyOutcome,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 enum RawLoginFinishOutcome {
     Authenticated,
+    UnlockUnavailable,
+    LogoutDuringLogin(std::path::PathBuf),
     MfaRequired,
     UpgradeRequired,
 }
@@ -7634,6 +7953,14 @@ async fn spawn_raw_login_server_with_logout_observer(
             ClientRegistrationFinishParameters::new(identifiers, None),
         )
         .expect("finish mock OPAQUE client registration");
+    let export_key: [u8; OPAQUE_EXPORT_KEY_BYTES] = registration_upload
+        .export_key
+        .as_slice()
+        .try_into()
+        .expect("export key length");
+    let data_key_ciphertext =
+        encode_opaque_data_key_ciphertext(&export_key, &SymmetricKey::new([42; 32]))
+            .expect("wrap login data key");
     let password_file =
         ServerRegistration::<ClientCipherSuite>::finish(registration_upload.message);
 
@@ -7642,6 +7969,7 @@ async fn spawn_raw_login_server_with_logout_observer(
         challenge_token: challenge_token.to_string(),
         setup: setup.serialize().to_vec(),
         password_file: password_file.serialize().to_vec(),
+        data_key_ciphertext,
         observed_code,
         observed_logout_refresh_token,
         login_finish,
@@ -7650,6 +7978,7 @@ async fn spawn_raw_login_server_with_logout_observer(
     let app = Router::new()
         .route("/auth/opaque/login/start", post(raw_mfa_login_start))
         .route("/auth/opaque/login/finish", post(raw_mfa_login_finish))
+        .route("/auth/opaque/export-key/start", post(raw_export_key_start))
         .route("/auth/mfa/login/verify", post(raw_mfa_verify))
         .route("/auth/logout", post(raw_login_logout))
         .with_state(state);
@@ -7683,8 +8012,14 @@ async fn raw_login_logout(
 }
 
 async fn raw_mfa_login_finish(State(state): State<RawMfaLoginState>) -> (StatusCode, Json<Value>) {
-    match state.login_finish {
-        RawLoginFinishOutcome::Authenticated => (StatusCode::OK, Json(raw_successful_auth_body())),
+    match &state.login_finish {
+        RawLoginFinishOutcome::Authenticated | RawLoginFinishOutcome::UnlockUnavailable => {
+            (StatusCode::OK, Json(raw_successful_auth_body(&state)))
+        }
+        RawLoginFinishOutcome::LogoutDuringLogin(path) => {
+            std::fs::remove_file(path).expect("concurrent local logout");
+            (StatusCode::OK, Json(raw_successful_auth_body(&state)))
+        }
         RawLoginFinishOutcome::MfaRequired => (
             StatusCode::OK,
             Json(json!({
@@ -7704,6 +8039,32 @@ async fn raw_mfa_login_finish(State(state): State<RawMfaLoginState>) -> (StatusC
             })),
         ),
     }
+}
+
+async fn raw_export_key_start(
+    State(state): State<RawMfaLoginState>,
+    headers: HeaderMap,
+    Json(payload): Json<OpaqueExportKeyStartRequestBody>,
+) -> (StatusCode, Json<Value>) {
+    assert_eq!(
+        headers.get("authorization").unwrap(),
+        "Bearer process-final-access-token"
+    );
+    if matches!(state.login_finish, RawLoginFinishOutcome::UnlockUnavailable) {
+        return (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(json!({"error": "temporarily_unavailable"})),
+        );
+    }
+    let email = state.email.clone();
+    raw_mfa_login_start(
+        State(state),
+        Json(RawMfaLoginStartRequest {
+            email,
+            client_login_state: payload.client_login_state,
+        }),
+    )
+    .await
 }
 
 async fn raw_mfa_login_start(
@@ -7760,9 +8121,9 @@ async fn raw_mfa_verify(
         .lock()
         .expect("observed code lock")
         .replace(request.code.clone());
-    match state.mfa_verify {
-        RawMfaVerifyOutcome::Authenticate { expected_code } if request.code == expected_code => {
-            (StatusCode::OK, Json(raw_successful_auth_body()))
+    match &state.mfa_verify {
+        RawMfaVerifyOutcome::Authenticate { expected_code } if request.code == *expected_code => {
+            (StatusCode::OK, Json(raw_successful_auth_body(&state)))
         }
         RawMfaVerifyOutcome::Expired => (
             StatusCode::UNAUTHORIZED,
@@ -7816,7 +8177,7 @@ async fn raw_mfa_verify(
     }
 }
 
-fn raw_successful_auth_body() -> Value {
+fn raw_successful_auth_body(state: &RawMfaLoginState) -> Value {
     json!({
         "accessToken": "process-final-access-token",
         "refreshToken": "process-final-refresh-token",
@@ -7825,14 +8186,14 @@ fn raw_successful_auth_body() -> Value {
         "tokenType": "Bearer",
         "user": {
             "id": "01900000-0000-7000-8000-000000000001",
-            "email": "process-login@example.test",
+            "email": state.email,
             "name": "Process Login",
             "timezone": "UTC",
             "avatarColor": "blue",
             "themePreference": "system",
             "emailVerified": true
         },
-        "dataKeyCiphertext": "process-encrypted-data-key"
+        "dataKeyCiphertext": state.data_key_ciphertext
     })
 }
 
@@ -7850,6 +8211,7 @@ fn assert_final_process_login_credentials(
 
     assert_eq!(credentials.access_token, "process-final-access-token");
     assert_eq!(credentials.refresh_token, "process-final-refresh-token");
+    assert_workspace_unlocked_and_lock(home, &credentials.api_url);
     for secret in [Some(password), Some(challenge_token), code]
         .into_iter()
         .flatten()

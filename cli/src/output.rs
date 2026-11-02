@@ -788,10 +788,10 @@ fn public_error_outcome(error: &PublicError) -> Option<&'static str> {
 
 fn error_hint(code: &str) -> Option<&'static str> {
     match code {
-        "authentication" => Some("Run 'sealtask auth login' and retry."),
-        "mfa_input_required" => {
-            Some("Provide the authenticator or backup code on login stdin line 2.")
-        }
+        "authentication" | "login_required" => Some("Run 'sealtask auth login' and retry."),
+        "mfa_input_required" => Some(
+            "Provide the authenticator or backup code on stdin line 2 for auth login or expired-session auth unlock.",
+        ),
         "conflict" => Some("Re-read the resource, reconcile the latest state, and retry."),
         "rate_limited" => Some("Wait for retryAfterSeconds when present before retrying."),
         "request_timeout" => Some("Retry the command after the blocking condition clears."),
