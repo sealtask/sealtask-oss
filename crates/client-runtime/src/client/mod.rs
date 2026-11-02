@@ -889,6 +889,7 @@ mod tests {
                 .expect("encode legacy data-key payload"),
         );
         Credentials {
+            local_session_id: None,
             api_url: "http://127.0.0.1:9".to_string(),
             access_token: "access".to_string(),
             refresh_token: "refresh".to_string(),
@@ -910,6 +911,7 @@ mod tests {
             .expect("encode OPAQUE data-key payload"),
         );
         Credentials {
+            local_session_id: None,
             api_url: api_url.to_string(),
             access_token: "access".to_string(),
             refresh_token: "refresh".to_string(),

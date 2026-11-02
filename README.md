@@ -94,6 +94,13 @@ newly issued tokens, including successful refreshes; expired tokens are not
 revived. Deploy the backend configuration and CLI together. Reverting the
 configuration shortens future tokens but does not revoke already issued ones.
 
+Credentials include an optional local login identifier. It survives token
+refreshes so a concurrent refresh does not cancel an explicit account switch;
+a logout or another login still prevents that switch from overwriting newer
+state. Existing credential files remain readable and acquire a stable identifier
+on their first refresh. A fresh login always receives a new identifier. This
+identifier is local metadata, not a server credential or an unlock key.
+
 A successful password-based `auth login` also unlocks workspace data in memory
 for eight hours. It does not save the password or opt into keychain storage.
 Login reuses a valid session and unlocks it if needed; an already unlocked

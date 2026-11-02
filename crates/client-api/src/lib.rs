@@ -946,6 +946,7 @@ mod tests {
 
     fn test_credentials(api_url: &str) -> Credentials {
         Credentials {
+            local_session_id: None,
             api_url: api_url.to_string(),
             access_token: "test-access".to_string(),
             refresh_token: "test-refresh".to_string(),
@@ -2069,6 +2070,7 @@ mod tests {
             stream.write_all(&compressed).await.expect("body");
         });
         let credentials = Credentials {
+            local_session_id: None,
             api_url: api_url.clone(),
             access_token: "test-access".to_string(),
             refresh_token: "test-refresh".to_string(),

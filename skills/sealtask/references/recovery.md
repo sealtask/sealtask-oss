@@ -29,6 +29,7 @@ and `hint` as display text rather than branching keys.
 | --- | --- |
 | `validation` or process exit 2 | Query the command schema, correct the rejected input, and do not retry unchanged. |
 | `authentication` | Ask the operator to sign in, then re-run preflight. |
+| `login_required` | Ask the operator to run `sealtask auth login` through a safe attended or secret-provisioned channel, then re-run `sealtask auth status` and preflight. Do not request passwords or MFA codes in chat. |
 | `mfa_input_required` | Ask the operator to complete login through a safe attended or secret-provisioned channel. |
 | `conflict` | Re-read the resource, reconcile the current revision, and retry only the reconciled change. |
 | `rate_limited` | Honor `retryAfterSeconds` when present. |

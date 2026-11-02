@@ -1288,6 +1288,7 @@ fn credential_refresh_failure_may_have_rotated(error: &PublicError) -> bool {
         | PublicError::Crypto(_)
         | PublicError::Cancelled(_)
         | PublicError::Http(_)
+        | PublicError::LoginRequired
         | PublicError::MfaRequiredUseBeginLogin
         | PublicError::MfaInputRequired => false,
         _ => true,
@@ -1495,6 +1496,19 @@ mod tests {
     struct ObservedRequest {
         headers: String,
         body: Vec<u8>,
+    }
+
+    #[test]
+    fn test_should_finish_expired_session_refresh_without_ambiguity() {
+        let cancellation = ApiCancellationToken::new();
+        let refresh = cancellation.enter_credential_refresh();
+        assert!(cancellation.credential_refresh_in_flight());
+
+        cancellation.finish_credential_refresh(&Err(PublicError::LoginRequired));
+        drop(refresh);
+
+        assert!(!cancellation.credential_refresh_in_flight());
+        assert!(!cancellation.credential_refresh_may_have_rotated());
     }
 
     #[test]
@@ -2673,6 +2687,7 @@ mod tests {
 
     fn test_credentials(api_url: &str) -> Credentials {
         Credentials {
+            local_session_id: None,
             api_url: api_url.to_string(),
             access_token: "test-access".to_string(),
             refresh_token: "test-refresh".to_string(),

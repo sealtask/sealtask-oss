@@ -2205,6 +2205,7 @@ mod tests {
                 .expect("encode data-key binding fixture"),
         );
         Credentials {
+            local_session_id: None,
             api_url: "https://api.example.test/".to_string(),
             access_token: "access".to_string(),
             refresh_token: "refresh".to_string(),

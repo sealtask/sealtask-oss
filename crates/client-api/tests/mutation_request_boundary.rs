@@ -205,6 +205,7 @@ fn authenticated_client(api_url: &str, cancellation: ApiCancellationToken) -> Pu
     PublicApiClient::with_credentials(
         api_url,
         Credentials {
+            local_session_id: None,
             api_url: api_url.to_string(),
             access_token: "access-token".to_string(),
             refresh_token: "refresh-token".to_string(),

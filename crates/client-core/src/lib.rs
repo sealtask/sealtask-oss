@@ -221,7 +221,7 @@ pub enum PublicError {
     MfaRequiredUseBeginLogin,
     #[error("MFA code required on the second stdin line for enrolled accounts")]
     MfaInputRequired,
-    #[error("session missing or expired; run 'sealtask auth login' or 'sealtask auth unlock'")]
+    #[error("session missing or expired; run 'sealtask auth login'")]
     LoginRequired,
 }
 

@@ -163,6 +163,7 @@ fn seed_credentials(local_state: &TempDir, api_url: &str, user_id: Uuid) {
     let config_dir = local_state.path().join("sealtask-config");
     fs::create_dir_all(&config_dir).expect("create CLI config directory");
     let credentials = Credentials {
+        local_session_id: None,
         api_url: api_url.to_string(),
         access_token: ACCESS_TOKEN_SECRET.to_string(),
         refresh_token: REFRESH_TOKEN_SECRET.to_string(),

@@ -1060,6 +1060,7 @@ mod tests {
 
     fn credentials(api_url: &str, user_id: Uuid) -> Credentials {
         Credentials {
+            local_session_id: None,
             api_url: api_url.to_string(),
             access_token: "access-token-secret".to_string(),
             refresh_token: "refresh-token-secret".to_string(),

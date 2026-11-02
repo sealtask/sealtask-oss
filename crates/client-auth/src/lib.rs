@@ -106,6 +106,10 @@ pub struct AuthSession {
 
 #[derive(Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Credentials {
+    /// Local login lineage, retained across refreshes and renewed on sign-in.
+    /// Older files acquire a stable lineage on their first token rotation.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub local_session_id: Option<String>,
     pub api_url: String,
     pub access_token: String,
     pub refresh_token: String,
@@ -1569,11 +1573,30 @@ fn credentials_changed_error() -> PublicError {
     PublicError::conflict(CREDENTIALS_CHANGED_MESSAGE)
 }
 
+/// Compare login sessions without treating token rotation as a replacement.
+/// Account/key identity alone cannot distinguish a later login to the same account.
+pub fn credentials_share_session(left: &Credentials, right: &Credentials) -> bool {
+    credentials_share_refresh_context(left, right)
+        && credential_session_id(left) == credential_session_id(right)
+}
+
 fn credentials_share_refresh_context(left: &Credentials, right: &Credentials) -> bool {
     left.api_url == right.api_url
         && left.user_id == right.user_id
         && left.email == right.email
         && left.data_key_ciphertext == right.data_key_ciphertext
+}
+
+fn credential_session_id(credentials: &Credentials) -> String {
+    credentials.local_session_id.clone().unwrap_or_else(|| {
+        // Pin legacy lineage to the token before its first rotation. Hashing
+        // avoids retaining the old bearer token; the namespace separates this
+        // migration value from identifiers issued by new logins.
+        format!(
+            "legacy:{}",
+            URL_SAFE_NO_PAD.encode(Sha256::digest(credentials.refresh_token.as_bytes()))
+        )
+    })
 }
 
 fn credentials_share_identity(left: &Credentials, right: &Credentials) -> bool {
@@ -2024,6 +2047,7 @@ pub async fn logout(
 pub fn auth_response_to_credentials(api_url: &str, response: AuthResponse) -> Credentials {
     let now = Utc::now();
     Credentials {
+        local_session_id: Some(format!("login:{}", Uuid::now_v7())),
         api_url: normalize_api_url(api_url),
         access_token: response.access_token,
         refresh_token: response.refresh_token,
@@ -2040,6 +2064,7 @@ pub fn update_credentials_with_refresh(
     refresh_response: RefreshResponse,
 ) {
     let now = Utc::now();
+    credentials.local_session_id = Some(credential_session_id(credentials));
     credentials.access_token = refresh_response.access_token;
     credentials.refresh_token = refresh_response.refresh_token;
     credentials.access_expires_at = expires_at_from(now, refresh_response.expires_in);
@@ -3355,6 +3380,7 @@ mod tests {
 
     fn test_credentials() -> Credentials {
         Credentials {
+            local_session_id: None,
             api_url: "https://sealtask.example.test".to_string(),
             access_token: "access".to_string(),
             refresh_token: "refresh".to_string(),
@@ -3364,6 +3390,72 @@ mod tests {
             email: "test@example.com".to_string(),
             data_key_ciphertext: STANDARD_NO_PAD.encode(b"ciphertext"),
         }
+    }
+
+    #[test]
+    fn test_should_preserve_legacy_session_lineage_across_rotations_and_reload() {
+        let legacy_json = serde_json::to_string(&test_credentials()).unwrap();
+        assert!(!legacy_json.contains("local_session_id"));
+        let original: Credentials = serde_json::from_str(&legacy_json).unwrap();
+        let mut current = original.clone();
+        for sequence in 1..=2 {
+            update_credentials_with_refresh(
+                &mut current,
+                RefreshResponse {
+                    access_token: format!("rotated-access-{sequence}"),
+                    refresh_token: format!("rotated-refresh-{sequence}"),
+                    expires_in: 900,
+                    refresh_expires_in: 2_592_000,
+                    token_type: "Bearer".to_string(),
+                },
+            );
+            current = serde_json::from_str(&serde_json::to_string(&current).unwrap()).unwrap();
+            assert!(credentials_share_session(&original, &current));
+            assert!(credentials_share_session(&current, &original));
+        }
+        assert!(current.local_session_id.is_some());
+        assert_ne!(current.refresh_token, original.refresh_token);
+    }
+
+    #[test]
+    fn test_should_distinguish_same_account_logins_and_preserve_new_session_lineage() {
+        let original = test_credentials();
+        let response = || AuthResponse {
+            access_token: "new-access".to_string(),
+            refresh_token: "new-refresh".to_string(),
+            expires_in: 900,
+            refresh_expires_in: 2_592_000,
+            token_type: "Bearer".to_string(),
+            user: UserResponse {
+                id: original.user_id,
+                email: original.email.clone(),
+                name: "Test".to_string(),
+                timezone: "UTC".to_string(),
+                avatar_color: "blue".to_string(),
+                theme_preference: "system".to_string(),
+                email_verified: true,
+            },
+            data_key_ciphertext: original.data_key_ciphertext.clone(),
+        };
+        let first = auth_response_to_credentials(&original.api_url, response());
+        let second = auth_response_to_credentials(&original.api_url, response());
+        assert!(!credentials_share_session(&original, &first));
+        assert!(!credentials_share_session(&first, &second));
+        let mut rotated = first.clone();
+        update_credentials_with_refresh(
+            &mut rotated,
+            RefreshResponse {
+                access_token: "rotated-access".to_string(),
+                refresh_token: "rotated-refresh".to_string(),
+                expires_in: 900,
+                refresh_expires_in: 2_592_000,
+                token_type: "Bearer".to_string(),
+            },
+        );
+        assert!(credentials_share_session(&first, &rotated));
+        assert_eq!(first.local_session_id, rotated.local_session_id);
+        rotated.user_id = Uuid::now_v7();
+        assert!(!credentials_share_session(&first, &rotated));
     }
 
     fn private_temp_dir() -> TempDir {

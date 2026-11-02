@@ -1163,6 +1163,7 @@ mod tests {
         let mut client = PublicApiClient::with_credentials(
             &api_url,
             sealtask_client_auth::Credentials {
+                local_session_id: None,
                 api_url: api_url.clone(),
                 access_token: "test-access".to_string(),
                 refresh_token: "test-refresh".to_string(),
@@ -1326,6 +1327,7 @@ mod tests {
         PublicApiClient::with_credentials(
             api_url,
             sealtask_client_auth::Credentials {
+                local_session_id: None,
                 api_url: api_url.to_string(),
                 access_token: "test-access".to_string(),
                 refresh_token: "test-refresh".to_string(),

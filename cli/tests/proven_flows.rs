@@ -28,7 +28,9 @@ use opaque_ke::{
 };
 use rand_core::OsRng;
 use sealtask_client_api::{AuditPatchFieldRequest, AuditPatchRequest, CONTROL_PLANE_USER_AGENT};
-use sealtask_client_auth::{ClientCipherSuite, Credentials};
+use sealtask_client_auth::{
+    ClientCipherSuite, Credentials, RefreshResponse, update_credentials_with_refresh,
+};
 use sealtask_client_crypto::{
     ATTACHMENT_BLOB_CONTEXT, ATTACHMENT_BLOB_CONTEXT_LABEL, ATTACHMENT_BLOB_REF_VERSION,
     AttachmentBlobRef, CommentPayloadBody, FlexibleValue, NOTE_TITLE_CONTEXT,
@@ -6907,6 +6909,7 @@ async fn cli_login_stdin_persists_only_final_no_mfa_credentials() {
     let home = TempDir::new().expect("temp home");
     let stdin = format!("{PASSWORD}\n");
 
+    let invoked_at = Utc::now().timestamp();
     let output = run_cli(
         home.path(),
         &server.base_url,
@@ -6920,6 +6923,7 @@ async fn cli_login_stdin_persists_only_final_no_mfa_credentials() {
         ],
         Some(&stdin),
     );
+    let completed_at = Utc::now().timestamp();
 
     assert!(output.status.success(), "login failed: {}", output.stderr);
     assert!(
@@ -6928,6 +6932,13 @@ async fn cli_login_stdin_persists_only_final_no_mfa_credentials() {
         output.stderr
     );
     assert!(observed_code.lock().expect("observed code lock").is_none());
+    assert_unlock_deadline(
+        home.path(),
+        &server.base_url,
+        invoked_at,
+        completed_at,
+        8 * 3600,
+    );
     assert_final_process_login_credentials(home.path(), PASSWORD, CHALLENGE_TOKEN, None);
 }
 
@@ -7006,6 +7017,7 @@ async fn cli_expired_unlock_reauthenticates_once_and_unlocks_with_optional_mfa()
             Some(code) => format!("{PASSWORD}\n{code}\n"),
             None => format!("{PASSWORD}\n"),
         };
+        let invoked_at = Utc::now().timestamp();
         let output = run_cli(
             home.path(),
             &server.base_url,
@@ -7020,12 +7032,20 @@ async fn cli_expired_unlock_reauthenticates_once_and_unlocks_with_optional_mfa()
             ],
             Some(&input),
         );
+        let completed_at = Utc::now().timestamp();
         assert!(output.status.success(), "unlock failed: {}", output.stderr);
         assert_eq!(output.stdout.lines().count(), 1, "one command, one result");
         let result = parse_stdout_json(&output.stdout);
         assert_eq!(result["unlocked"], true);
         assert_eq!(result["ttlSeconds"], 1800);
         assert!(output.stderr.is_empty());
+        assert_unlock_deadline(
+            home.path(),
+            &server.base_url,
+            invoked_at,
+            completed_at,
+            1800,
+        );
         assert_final_process_login_credentials(
             home.path(),
             PASSWORD,
@@ -7156,13 +7176,15 @@ async fn cli_login_reports_persisted_session_when_unlock_fails() {
 async fn cli_expired_unlock_does_not_replace_a_concurrent_logout() {
     let home = TempDir::new().expect("home");
     let path = home.path().join(".sealtask/credentials.json");
-    let server = spawn_raw_login_server(
+    let observed_logout_refresh_token = Arc::new(Mutex::new(None));
+    let server = spawn_raw_login_server_with_logout_observer(
         "race@example.test",
         "race-password",
         "unused-challenge",
         Arc::new(Mutex::new(None)),
         RawLoginFinishOutcome::LogoutDuringLogin(path.clone()),
         RawMfaVerifyOutcome::Reject,
+        observed_logout_refresh_token.clone(),
     )
     .await;
     seed_expired_login_credentials(home.path(), &server.base_url, "race@example.test");
@@ -7184,12 +7206,139 @@ async fn cli_expired_unlock_does_not_replace_a_concurrent_logout() {
         "conflict"
     );
     assert!(!path.exists(), "a concurrent logout must remain logged out");
+    assert_eq!(
+        observed_logout_refresh_token.lock().unwrap().as_deref(),
+        Some("process-final-refresh-token"),
+        "the newly issued session must be revoked when logout prevents persistence"
+    );
     let status = run_cli(
         home.path(),
         &server.base_url,
         &["--json", "auth", "status"],
         None,
     );
+    assert_eq!(
+        parse_stdout_json(&status.stdout)["unlockDaemon"]["active"],
+        false
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn cli_account_switch_accepts_concurrent_rotation_of_the_previous_session() {
+    const EMAIL: &str = "switched@example.test";
+    const PASSWORD: &str = "switched-password";
+    for established_lineage in [false, true] {
+        let home = TempDir::new().expect("home");
+        let path = home.path().join(".sealtask/credentials.json");
+        let observed_logout_refresh_token = Arc::new(Mutex::new(None));
+        let server = spawn_raw_login_server_with_logout_observer(
+            EMAIL,
+            PASSWORD,
+            "unused-challenge",
+            Arc::new(Mutex::new(None)),
+            RawLoginFinishOutcome::RotateDuringLogin(path.clone()),
+            RawMfaVerifyOutcome::Reject,
+            observed_logout_refresh_token.clone(),
+        )
+        .await;
+        let fixture = TestFixture::new();
+        seed_credentials(home.path(), &fixture, &server.base_url);
+        if established_lineage {
+            let mut previous: Credentials =
+                serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+            previous.local_session_id = Some(Uuid::now_v7().to_string());
+            std::fs::write(&path, serde_json::to_vec(&previous).unwrap()).unwrap();
+        }
+        let output = run_cli(
+            home.path(),
+            &server.base_url,
+            &[
+                "--json",
+                "--non-interactive",
+                "auth",
+                "login",
+                "--email",
+                EMAIL,
+                "--password-stdin",
+            ],
+            Some(PASSWORD),
+        );
+        assert!(
+            output.status.success(),
+            "account switch failed: {}",
+            output.stderr
+        );
+        let credentials: Credentials =
+            serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+        assert_eq!(credentials.email, EMAIL);
+        assert_eq!(credentials.refresh_token, "process-final-refresh-token");
+        assert_eq!(
+            observed_logout_refresh_token.lock().unwrap().as_deref(),
+            Some("concurrent-refresh-token"),
+            "successful account switch must revoke the previous session's rotated token"
+        );
+        assert_workspace_unlocked_and_lock(home.path(), &server.base_url);
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn cli_expired_unlock_does_not_replace_a_concurrent_same_account_login() {
+    const EMAIL: &str = "replacement@example.test";
+    const PASSWORD: &str = "replacement-password";
+    let home = TempDir::new().expect("home");
+    let path = home.path().join(".sealtask/credentials.json");
+    let observed_logout_refresh_token = Arc::new(Mutex::new(None));
+    let server = spawn_raw_login_server_with_logout_observer(
+        EMAIL,
+        PASSWORD,
+        "unused-challenge",
+        Arc::new(Mutex::new(None)),
+        RawLoginFinishOutcome::ReplaceDuringLogin(path.clone()),
+        RawMfaVerifyOutcome::Reject,
+        observed_logout_refresh_token.clone(),
+    )
+    .await;
+    seed_expired_login_credentials(home.path(), &server.base_url, EMAIL);
+    let previous: Credentials = serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+    let output = run_cli(
+        home.path(),
+        &server.base_url,
+        &[
+            "--json",
+            "--non-interactive",
+            "auth",
+            "unlock",
+            "--password-stdin",
+        ],
+        Some(PASSWORD),
+    );
+    assert!(!output.status.success());
+    assert_eq!(
+        parse_stderr_json(&output.stderr)["error"]["code"],
+        "conflict"
+    );
+    let replacement: Credentials = serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+    assert_eq!(replacement.access_token, "concurrent-access-token");
+    assert_eq!(replacement.refresh_token, "concurrent-refresh-token");
+    assert_ne!(replacement.local_session_id, previous.local_session_id);
+    assert_eq!(replacement.email, previous.email);
+    assert_eq!(replacement.user_id, previous.user_id);
+    assert_eq!(
+        replacement.data_key_ciphertext,
+        previous.data_key_ciphertext
+    );
+    assert_eq!(
+        observed_logout_refresh_token.lock().unwrap().as_deref(),
+        Some("process-final-refresh-token"),
+        "the newly issued session must be revoked without revoking the replacement"
+    );
+    let status = run_cli(
+        home.path(),
+        &server.base_url,
+        &["--json", "auth", "status"],
+        None,
+    );
+    assert!(status.status.success(), "status failed: {}", status.stderr);
     assert_eq!(
         parse_stdout_json(&status.stdout)["unlockDaemon"]["active"],
         false
@@ -7244,6 +7393,27 @@ fn assert_workspace_unlocked_and_lock(home: &FsPath, api_url: &str) {
     );
     let lock = run_cli(home, api_url, &["auth", "lock"], None);
     assert!(lock.status.success(), "lock failed: {}", lock.stderr);
+}
+
+fn assert_unlock_deadline(
+    home: &FsPath,
+    api_url: &str,
+    invoked_at: i64,
+    completed_at: i64,
+    ttl_seconds: i64,
+) {
+    let status = run_cli(home, api_url, &["--json", "auth", "status"], None);
+    assert!(status.status.success(), "status failed: {}", status.stderr);
+    let status = parse_stdout_json(&status.stdout);
+    assert_eq!(status["unlockDaemon"]["active"], true);
+    let deadline = status["unlockDaemon"]["expiresAtUnix"]
+        .as_i64()
+        .expect("installed daemon deadline");
+    // The deadline is installed during the invocation; permit one second of rounding.
+    assert!(
+        (invoked_at + ttl_seconds - 1..=completed_at + ttl_seconds + 1).contains(&deadline),
+        "daemon deadline {deadline} does not match {ttl_seconds}s within invocation bounds {invoked_at}..={completed_at}"
+    );
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -7357,6 +7527,8 @@ async fn test_should_replace_active_credentials_when_login_requests_another_acco
         "unlock failed: {}",
         unlock_output.stderr
     );
+    let credentials_path = home.path().join(".sealtask/credentials.json");
+    let previous_credentials = std::fs::read(&credentials_path).expect("old account credentials");
 
     let output = run_cli_with_test_keychain(
         home.path(),
@@ -7409,8 +7581,8 @@ async fn test_should_replace_active_credentials_when_login_requests_another_acco
         "account switch should clear the old account keychain entry"
     );
 
-    std::fs::remove_file(home.path().join(".sealtask/credentials.json"))
-        .expect("remove switched credentials before checking daemon state");
+    let switched_credentials = std::fs::read(&credentials_path).expect("new account credentials");
+    std::fs::write(&credentials_path, previous_credentials).expect("select old account for status");
     let status_output = run_cli_with_test_keychain(
         home.path(),
         &server.base_url,
@@ -7424,8 +7596,32 @@ async fn test_should_replace_active_credentials_when_login_requests_another_acco
         status_output.stderr
     );
     let status = parse_stdout_json(&status_output.stdout);
-    assert_eq!(status["loggedIn"], false);
-    assert_eq!(status["unlockDaemon"]["active"], true);
+    assert_eq!(status["loggedIn"], true);
+    assert_eq!(status["email"], FIXTURE_EMAIL);
+    assert_eq!(
+        status["unlockDaemon"]["active"], false,
+        "old account key must be removed"
+    );
+    std::fs::write(&credentials_path, switched_credentials)
+        .expect("restore new account credentials");
+    let new_status = run_cli_with_test_keychain(
+        home.path(),
+        &server.base_url,
+        keychain_dir.path(),
+        &["--json", "auth", "status"],
+        None,
+    );
+    assert!(
+        new_status.status.success(),
+        "status failed: {}",
+        new_status.stderr
+    );
+    let new_status = parse_stdout_json(&new_status.stdout);
+    assert_eq!(new_status["email"], EMAIL);
+    assert_eq!(
+        new_status["unlockDaemon"]["active"], true,
+        "new account key must remain unlocked"
+    );
 
     let lock_output = run_cli_with_test_keychain(
         home.path(),
@@ -7850,6 +8046,8 @@ enum RawLoginFinishOutcome {
     Authenticated,
     UnlockUnavailable,
     LogoutDuringLogin(std::path::PathBuf),
+    RotateDuringLogin(std::path::PathBuf),
+    ReplaceDuringLogin(std::path::PathBuf),
     MfaRequired,
     UpgradeRequired,
 }
@@ -8018,6 +8216,32 @@ async fn raw_mfa_login_finish(State(state): State<RawMfaLoginState>) -> (StatusC
         }
         RawLoginFinishOutcome::LogoutDuringLogin(path) => {
             std::fs::remove_file(path).expect("concurrent local logout");
+            (StatusCode::OK, Json(raw_successful_auth_body(&state)))
+        }
+        RawLoginFinishOutcome::RotateDuringLogin(path)
+        | RawLoginFinishOutcome::ReplaceDuringLogin(path) => {
+            let mut credentials: Credentials =
+                serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
+            if matches!(
+                state.login_finish,
+                RawLoginFinishOutcome::RotateDuringLogin(_)
+            ) {
+                update_credentials_with_refresh(
+                    &mut credentials,
+                    RefreshResponse {
+                        access_token: "concurrent-access-token".to_string(),
+                        refresh_token: "concurrent-refresh-token".to_string(),
+                        expires_in: 900,
+                        refresh_expires_in: 2_592_000,
+                        token_type: "Bearer".to_string(),
+                    },
+                );
+            } else {
+                credentials.access_token = "concurrent-access-token".to_string();
+                credentials.refresh_token = "concurrent-refresh-token".to_string();
+                credentials.local_session_id = Some(Uuid::now_v7().to_string());
+            }
+            std::fs::write(path, serde_json::to_vec(&credentials).unwrap()).unwrap();
             (StatusCode::OK, Json(raw_successful_auth_body(&state)))
         }
         RawLoginFinishOutcome::MfaRequired => (
@@ -10526,6 +10750,7 @@ fn seed_credentials_with_expiry(
         user_id: fixture.owner_user_id,
         email: FIXTURE_EMAIL.to_string(),
         data_key_ciphertext: fixture.data_key_ciphertext.clone(),
+        local_session_id: None,
     };
 
     let config_dir = home.join(".sealtask");

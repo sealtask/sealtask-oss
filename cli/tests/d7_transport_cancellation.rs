@@ -57,6 +57,7 @@ fn task_create_signal_during_rotation_persists_credentials_without_sending_the_m
     });
 
     let credentials = Credentials {
+        local_session_id: None,
         api_url: api_url.clone(),
         access_token: ORIGINAL_ACCESS_TOKEN.to_string(),
         refresh_token: ORIGINAL_REFRESH_TOKEN.to_string(),
@@ -159,6 +160,7 @@ fn dropped_refresh_response_after_signal_reports_ambiguous_session_state() {
     });
 
     let credentials = Credentials {
+        local_session_id: None,
         api_url: api_url.clone(),
         access_token: ORIGINAL_ACCESS_TOKEN.to_string(),
         refresh_token: ORIGINAL_REFRESH_TOKEN.to_string(),
@@ -268,6 +270,7 @@ fn dropped_refresh_response_during_batch_resolution_preserves_session_ambiguity(
     });
 
     let credentials = Credentials {
+        local_session_id: None,
         api_url: api_url.clone(),
         access_token: ORIGINAL_ACCESS_TOKEN.to_string(),
         refresh_token: ORIGINAL_REFRESH_TOKEN.to_string(),
@@ -396,6 +399,7 @@ fn simultaneous_signal_and_scheduled_refresh_loss_preserve_session_ambiguity() {
     });
 
     let credentials = Credentials {
+        local_session_id: None,
         api_url: api_url.clone(),
         access_token: ORIGINAL_ACCESS_TOKEN.to_string(),
         refresh_token: ORIGINAL_REFRESH_TOKEN.to_string(),
@@ -532,6 +536,7 @@ fn second_signal_during_batch_rotation_is_session_ambiguous_and_stops_promptly()
     });
 
     let credentials = Credentials {
+        local_session_id: None,
         api_url: api_url.clone(),
         access_token: ORIGINAL_ACCESS_TOKEN.to_string(),
         refresh_token: ORIGINAL_REFRESH_TOKEN.to_string(),

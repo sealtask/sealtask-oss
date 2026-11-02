@@ -2417,6 +2417,16 @@ mod tests {
     }
 
     #[test]
+    fn test_should_preserve_login_required_when_batch_refresh_is_interrupted() {
+        let result = classify_interrupted_credential_refresh::<()>(Err(PublicError::LoginRequired));
+
+        assert!(matches!(
+            result,
+            CredentialRefreshWait::Failed(PublicError::LoginRequired)
+        ));
+    }
+
+    #[test]
     fn forced_preparation_with_a_terminal_refresh_does_not_claim_session_ambiguity() {
         let project_id = Uuid::now_v7();
         let credential_refresh_interrupted = Arc::new(AtomicBool::new(true));

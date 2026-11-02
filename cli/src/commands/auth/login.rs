@@ -10,8 +10,8 @@ use crate::terminal::with_progress;
 use sealtask_client_auth::{
     AuthResponse, CompleteMfaLoginError, Credentials, LoginOutcome, SecretMfaCode,
     auth_response_to_credentials, begin_login, clear_persisted_data_key, complete_mfa_login,
-    credentials_path, load_credentials, logout as revoke_session, normalize_api_url,
-    refresh_credentials_if_needed_with_timeout, replace_credentials_atomically,
+    credentials_path, credentials_share_session, load_credentials, logout as revoke_session,
+    normalize_api_url, refresh_credentials_if_needed_with_timeout, replace_credentials_atomically,
 };
 use sealtask_client_core::{PublicError, PublicResult};
 use sealtask_client_runtime::{RuntimeClient, clear_session, session_key};
@@ -232,10 +232,15 @@ pub(super) async fn authenticate_and_unlock(
             }
         }
     };
-    let (mut credentials, previous_credentials) =
+    let (mut credentials, persistence_result) =
         persist_final_auth_response(api_url, auth_response, |credentials| {
             replace_credentials_atomically(credentials, |previous_credentials| {
-                if previous_credentials != expected_credentials {
+                let same_session = match (previous_credentials, expected_credentials) {
+                    (Some(current), Some(expected)) => credentials_share_session(current, expected),
+                    (None, None) => true,
+                    _ => false,
+                };
+                if !same_session {
                     return Err(PublicError::conflict(
                         "credentials changed during sign-in; retry with the current profile",
                     ));
@@ -251,7 +256,51 @@ pub(super) async fn authenticate_and_unlock(
                 }
                 Ok(())
             })
-        })?;
+        });
+
+    let previous_credentials = match persistence_result {
+        Ok(previous) => previous,
+        Err(error) => {
+            // A directory sync or lock-release error can occur after the
+            // atomic save. Do not revoke a session that is already in use.
+            if load_credentials()
+                .ok()
+                .flatten()
+                .as_ref()
+                .is_some_and(|current| credentials_share_session(current, &credentials))
+            {
+                return Err(PublicError::committed_but_local_processing_failed(
+                    "login",
+                    "session",
+                    format!("{error}; run 'sealtask auth unlock'"),
+                )
+                .into());
+            }
+            // Authentication has issued a new server session, but this command
+            // could not install it locally. Keep the primary error and make a
+            // bounded attempt to revoke the otherwise unused refresh token.
+            let cleanup = revoke_session_with_timeout(
+                runtime.api_transport_options().request_timeout(),
+                revoke_session(&client, api_url, &credentials.refresh_token),
+            )
+            .await;
+            let warning = match cleanup {
+                Ok(None) => None,
+                Ok(Some(message)) => Some(message),
+                Err(error) => Some(error.to_string()),
+            }
+            .map(|message| {
+                warning_result(
+                    "login_unused_session_revoke_failed",
+                    format!("failed to revoke the unused sign-in session: {message}"),
+                )
+            });
+            return crate::output::public_result_with_warnings(
+                Err(error),
+                &warning.into_iter().collect::<Vec<_>>(),
+            );
+        }
+    };
 
     let mut warnings = Vec::new();
     if let Some(previous_credentials) = previous_credentials.as_ref().filter(|previous| {
@@ -369,10 +418,10 @@ fn persist_final_auth_response<T>(
     api_url: &str,
     auth_response: AuthResponse,
     persist: impl FnOnce(&Credentials) -> PublicResult<T>,
-) -> CliResult<(Credentials, T)> {
+) -> (Credentials, PublicResult<T>) {
     let credentials = auth_response_to_credentials(api_url, auth_response);
-    let persisted = persist(&credentials)?;
-    Ok((credentials, persisted))
+    let persisted = persist(&credentials);
+    (credentials, persisted)
 }
 
 #[derive(Zeroize, ZeroizeOnDrop)]
@@ -570,15 +619,15 @@ mod tests {
             data_key_ciphertext: "encrypted-data-key".to_string(),
         };
 
-        let (credentials, ()) =
+        let (credentials, persisted) =
             persist_final_auth_response("https://api.example.test", response, |credentials| {
                 persisted_json.replace(Some(
                     serde_json::to_string(credentials)
                         .expect("credentials should serialize for the test store"),
                 ));
                 Ok(())
-            })
-            .expect("persist final credentials");
+            });
+        persisted.expect("persist final credentials");
 
         assert_eq!(credentials.access_token, "final-access-token");
         let stored = persisted_json

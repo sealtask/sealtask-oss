@@ -410,6 +410,7 @@ pub(crate) fn credential_refresh_failure_may_have_rotated(error: &PublicError) -
         | PublicError::Crypto(_)
         | PublicError::Cancelled(_)
         | PublicError::Http(_)
+        | PublicError::LoginRequired
         | PublicError::MfaRequiredUseBeginLogin
         | PublicError::MfaInputRequired => false,
         _ => true,
@@ -989,6 +990,9 @@ mod tests {
     #[test]
     fn only_post_delivery_refresh_failures_are_session_ambiguous() {
         assert!(!credential_refresh_failure_may_have_rotated(
+            &PublicError::LoginRequired
+        ));
+        assert!(!credential_refresh_failure_may_have_rotated(
             &PublicError::transport(TransportFailureKind::Connect)
         ));
         assert!(credential_refresh_failure_may_have_rotated(
@@ -1006,6 +1010,37 @@ mod tests {
         assert!(credential_refresh_failure_may_have_rotated(
             &PublicError::unexpected("credential persistence failed")
         ));
+    }
+
+    #[tokio::test]
+    async fn test_should_preserve_login_required_after_refresh_interruption() {
+        let (sender, receiver) = test_signal_receiver();
+        let cancellation = ApiCancellationToken::new();
+        let cancellation_for_operation = cancellation.clone();
+        let operation = async move {
+            while !cancellation_for_operation.is_cancelled() {
+                tokio::task::yield_now().await;
+            }
+            Err(PublicError::LoginRequired.into())
+        };
+        let supervised = supervise_mutation_with_signals(
+            operation,
+            receiver,
+            Duration::from_secs(60),
+            OutputFormat::Json,
+            &cancellation,
+            || true,
+            || false,
+        );
+        tokio::pin!(supervised);
+
+        assert!(sender.send(SignalState::Received(1)).is_ok());
+        let error = supervised
+            .await
+            .expect_err("expired session requires login");
+        assert_eq!(error.code(), "login_required");
+        assert!(!error.to_string().contains("rotated the session"));
+        assert!(cancellation.is_cancelled());
     }
 
     #[tokio::test]
