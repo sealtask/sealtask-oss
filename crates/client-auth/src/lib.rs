@@ -4144,8 +4144,8 @@ mod tests {
             post(|Json(body): Json<serde_json::Value>| async move {
                 assert_eq!(body["refreshToken"], "refresh");
                 (
-                    StatusCode::UNAUTHORIZED,
-                    Json(json!({"error": "unauthorized", "message": "session revoked"})),
+                    StatusCode::BAD_REQUEST,
+                    Json(json!({"error": "validation_error", "message": "refresh token revoked"})),
                 )
             }),
         );
@@ -4174,7 +4174,8 @@ mod tests {
         .await
         .expect_err("revoked session must fail even with fresh access");
 
-        assert_eq!(error.http_status(), Some(401));
+        assert_eq!(error.http_status(), Some(400));
+        assert_eq!(error.backend_error_code(), Some("validation_error"));
         assert_eq!(fs::read(&path).expect("read preserved credentials"), before);
     }
 

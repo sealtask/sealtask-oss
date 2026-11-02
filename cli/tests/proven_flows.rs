@@ -8511,9 +8511,10 @@ async fn raw_login_refresh(
     }
     let mut issued = state.issued_refresh_token.lock().expect("refresh state");
     if issued.as_deref() != Some(request.refresh_token.as_str()) {
+        // Match the backend's refresh_rejects_revoked_session response contract.
         return (
-            StatusCode::UNAUTHORIZED,
-            Json(json!({"error": "invalid_refresh_token", "message": "session revoked"})),
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": "validation_error", "message": "refresh token revoked"})),
         );
     }
     let rotated = format!("process-refreshed-refresh-token-{}", Uuid::now_v7());

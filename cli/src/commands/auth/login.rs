@@ -110,7 +110,11 @@ pub(super) async fn run(
 }
 
 fn refresh_requires_sign_in(error: &PublicError) -> bool {
-    matches!(error, PublicError::LoginRequired) || error.http_status() == Some(401)
+    // /auth/refresh reports invalid, revoked, and expired tokens as validation errors.
+    matches!(error, PublicError::LoginRequired)
+        || error.http_status() == Some(401)
+        || (error.http_status() == Some(400)
+            && error.backend_error_code() == Some("validation_error"))
 }
 
 fn reused_session_is_unlocked(
@@ -628,6 +632,16 @@ mod tests {
         assert!(refresh_requires_sign_in(&PublicError::LoginRequired));
         assert!(refresh_requires_sign_in(&PublicError::http(
             401, None, None
+        )));
+        assert!(refresh_requires_sign_in(&PublicError::http(
+            400,
+            Some("validation_error".to_owned()),
+            None
+        )));
+        assert!(!refresh_requires_sign_in(&PublicError::http(
+            400,
+            Some("other_error".to_owned()),
+            None
         )));
         for status in [400, 403, 404, 408, 429, 500, 503] {
             assert!(!refresh_requires_sign_in(&PublicError::http(
