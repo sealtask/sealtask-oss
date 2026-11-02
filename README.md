@@ -108,6 +108,11 @@ with a warning; it still removes that account's in-memory unlock key.
 Login reuses a valid session and unlocks it if needed; an already unlocked
 session needs no password and keeps its current unlock deadline. Use `auth unlock --ttl 30m` (or `8h`) to choose an unlock duration.
 
+Expired-session recovery requires an online sign-in, including for legacy
+password-wrapped credentials. It does not fall back to a local unlock when
+sign-in is unavailable. `--offline` continues to reject authentication commands
+other than `auth status`; cached reads can use an already unlocked data key.
+
 If the saved refresh session has expired, `auth unlock` signs in again using
 its saved email, asks for the password once and completes MFA if required, then
 unlocks for the requested duration. With `--password-stdin`, use password on

@@ -12,6 +12,7 @@ use sealtask_client_auth::{
     auth_response_to_credentials, begin_login, clear_persisted_data_key, complete_mfa_login,
     credentials_path, credentials_share_session, load_credentials, logout as revoke_session,
     normalize_api_url, refresh_credentials_if_needed_with_timeout, replace_credentials_atomically,
+    with_current_credential_identity,
 };
 use sealtask_client_core::{PublicError, PublicResult};
 use sealtask_client_runtime::{RuntimeClient, clear_session, session_key};
@@ -59,7 +60,7 @@ pub(super) async fn run(
             runtime.api_transport_options().request_timeout(),
         )
         .await?;
-        if !runtime.unlock_status()?.unlocked {
+        if !reused_session_is_unlocked(runtime, &refreshed)? {
             let input = read_login_input(password_stdin, non_interactive)?;
             runtime
                 .unlock_daemon_with_credentials(
@@ -96,6 +97,15 @@ pub(super) async fn run(
         &warnings,
         print_login_result(format, &result, api_url),
     )
+}
+
+fn reused_session_is_unlocked(
+    runtime: &RuntimeClient,
+    credentials: &Credentials,
+) -> PublicResult<bool> {
+    with_current_credential_identity(credentials, |_| {
+        runtime.unlock_status().map(|status| status.unlocked)
+    })
 }
 
 /// Shared by explicit login and expired-session unlock. Emits no success
@@ -233,6 +243,7 @@ pub(super) async fn authenticate_and_unlock(
         }
     };
     let mut warnings = Vec::new();
+    let mut replaced_credentials = None;
     let (mut credentials, persistence_result) =
         persist_final_auth_response(api_url, auth_response, |credentials| {
             replace_credentials_atomically(credentials, |previous_credentials| {
@@ -246,6 +257,9 @@ pub(super) async fn authenticate_and_unlock(
                         "credentials changed during sign-in; retry with the current profile",
                     ));
                 }
+                // Keep the actual rotated token even if save or lock release
+                // reports an error after installing the new credentials.
+                replaced_credentials = previous_credentials.cloned();
                 if let Some(previous_credentials) = previous_credentials {
                     clear_previous_local_auth_state_if_changed(
                         runtime,
@@ -260,68 +274,16 @@ pub(super) async fn authenticate_and_unlock(
             })
         });
 
-    let previous_credentials = match persistence_result {
-        Ok(previous) => previous,
-        Err(error) => {
-            // A directory sync or lock-release error can occur after the
-            // atomic save. Do not revoke a session that is already in use.
-            if load_credentials()
-                .ok()
-                .flatten()
-                .as_ref()
-                .is_some_and(|current| credentials_share_session(current, &credentials))
-            {
-                return crate::output::public_result_with_warnings(
-                    Err(PublicError::committed_but_local_processing_failed(
-                        "login",
-                        "session",
-                        format!("{error}; run 'sealtask auth unlock'"),
-                    )),
-                    &warnings,
-                );
-            }
-            // Authentication has issued a new server session, but this command
-            // could not install it locally. Keep the primary error and make a
-            // bounded attempt to revoke the otherwise unused refresh token.
-            let cleanup = revoke_session_with_timeout(
-                runtime.api_transport_options().request_timeout(),
-                revoke_session(&client, api_url, &credentials.refresh_token),
-            )
-            .await;
-            let warning = match cleanup {
-                Ok(None) => None,
-                Ok(Some(message)) => Some(message),
-                Err(error) => Some(error.to_string()),
-            }
-            .map(|message| {
-                warning_result(
-                    "login_unused_session_revoke_failed",
-                    format!("failed to revoke the unused sign-in session: {message}"),
-                )
-            });
-            warnings.extend(warning);
-            return crate::output::public_result_with_warnings(Err(error), &warnings);
-        }
-    };
-
-    if let Some(previous_credentials) = previous_credentials.as_ref().filter(|previous| {
-        !previous.is_refresh_expired() && previous.refresh_token != credentials.refresh_token
-    }) && let Some(warning) = previous_session_revoke_warning(
-        with_progress(
-            "Revoking the previous session…",
-            revoke_session_with_timeout(
-                runtime.api_transport_options().request_timeout(),
-                revoke_session(
-                    &client,
-                    &previous_credentials.api_url,
-                    &previous_credentials.refresh_token,
-                ),
-            ),
-        )
-        .await,
-    ) {
-        warnings.push(warning);
-    }
+    finish_credential_persistence(
+        &client,
+        runtime.api_transport_options().request_timeout(),
+        &credentials,
+        persistence_result,
+        replaced_credentials.as_ref(),
+        &mut warnings,
+        load_credentials,
+    )
+    .await?;
 
     let unlock_result = runtime
         .unlock_daemon_with_credentials(&mut credentials, &password, ttl_seconds)
@@ -339,6 +301,93 @@ pub(super) async fn authenticate_and_unlock(
         );
     }
     Ok((credentials, warnings))
+}
+
+async fn finish_credential_persistence(
+    client: &reqwest::Client,
+    timeout: Duration,
+    credentials: &Credentials,
+    result: PublicResult<Option<Credentials>>,
+    replaced_credentials: Option<&Credentials>,
+    warnings: &mut Vec<WarningResult>,
+    load: impl FnOnce() -> PublicResult<Option<Credentials>>,
+) -> CliResult<()> {
+    match result {
+        Ok(previous) => {
+            revoke_previous_session(client, timeout, credentials, previous.as_ref(), warnings)
+                .await;
+            Ok(())
+        }
+        Err(error) => {
+            // Save can succeed before directory sync or lock release fails.
+            // Keep the installed session and retire its actual predecessor.
+            if load()
+                .ok()
+                .flatten()
+                .as_ref()
+                .is_some_and(|current| credentials_share_session(current, credentials))
+            {
+                revoke_previous_session(
+                    client,
+                    timeout,
+                    credentials,
+                    replaced_credentials,
+                    warnings,
+                )
+                .await;
+                return crate::output::public_result_with_warnings(
+                    Err(PublicError::committed_but_local_processing_failed(
+                        "login",
+                        "session",
+                        format!("{error}; run 'sealtask auth unlock'"),
+                    )),
+                    warnings,
+                );
+            }
+            // Rejected installation must not leak its newly issued session.
+            let cleanup = revoke_session_with_timeout(
+                timeout,
+                revoke_session(client, &credentials.api_url, &credentials.refresh_token),
+            )
+            .await;
+            let warning = match cleanup {
+                Ok(None) => None,
+                Ok(Some(message)) => Some(message),
+                Err(error) => Some(error.to_string()),
+            }
+            .map(|message| {
+                warning_result(
+                    "login_unused_session_revoke_failed",
+                    format!("failed to revoke the unused sign-in session: {message}"),
+                )
+            });
+            warnings.extend(warning);
+            crate::output::public_result_with_warnings(Err(error), warnings)
+        }
+    }
+}
+
+async fn revoke_previous_session(
+    client: &reqwest::Client,
+    timeout: Duration,
+    credentials: &Credentials,
+    previous: Option<&Credentials>,
+    warnings: &mut Vec<WarningResult>,
+) {
+    if let Some(previous) = previous.filter(|previous| {
+        !previous.is_refresh_expired() && previous.refresh_token != credentials.refresh_token
+    }) && let Some(warning) = previous_session_revoke_warning(
+        with_progress(
+            "Revoking the previous session…",
+            revoke_session_with_timeout(
+                timeout,
+                revoke_session(client, &previous.api_url, &previous.refresh_token),
+            ),
+        )
+        .await,
+    ) {
+        warnings.push(warning);
+    }
 }
 
 fn clear_previous_local_auth_state_if_changed(
@@ -560,6 +609,107 @@ mod tests {
     use std::cell::RefCell;
     use uuid::Uuid;
 
+    #[tokio::test]
+    async fn test_should_revoke_previous_session_after_a_committed_persistence_error() {
+        use axum::{Json, Router, http::StatusCode, routing::post};
+        use std::sync::{Arc, Mutex};
+
+        for status in [StatusCode::NO_CONTENT, StatusCode::BAD_GATEWAY] {
+            let observed = Arc::new(Mutex::new(Vec::<String>::new()));
+            let recorded = observed.clone();
+            let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+            let api_url = format!("http://{}", listener.local_addr().unwrap());
+            let router = Router::new().route(
+                "/auth/logout",
+                post(move |Json(body): Json<serde_json::Value>| {
+                    let recorded = recorded.clone();
+                    async move {
+                        recorded
+                            .lock()
+                            .unwrap()
+                            .push(body["refreshToken"].as_str().unwrap().to_string());
+                        status
+                    }
+                }),
+            );
+            let server = tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
+            let previous = Credentials {
+                local_session_id: Some("previous-login".to_string()),
+                api_url: api_url.clone(),
+                access_token: "previous-access-canary".to_string(),
+                refresh_token: "actual-rotated-previous-refresh-canary".to_string(),
+                access_expires_at: chrono::Utc::now() + chrono::Duration::minutes(15),
+                refresh_expires_at: chrono::Utc::now() + chrono::Duration::days(30),
+                user_id: Uuid::now_v7(),
+                email: "old@example.test".to_string(),
+                data_key_ciphertext: "old-key".to_string(),
+            };
+            let current = Credentials {
+                local_session_id: Some("new-login".to_string()),
+                access_token: "new-access-canary".to_string(),
+                refresh_token: "new-refresh-canary".to_string(),
+                user_id: Uuid::now_v7(),
+                email: "new@example.test".to_string(),
+                ..previous.clone()
+            };
+            let directory = tempfile::tempdir().unwrap();
+            let path = directory.path().join("credentials.json");
+            // Inject an error after publishing the file, matching rename followed
+            // by failed directory sync. The normal completion path reads it back.
+            let persist = || -> PublicResult<Option<Credentials>> {
+                std::fs::write(&path, serde_json::to_vec(&current).unwrap()).unwrap();
+                Err(PublicError::unexpected("injected post-save sync failure"))
+            };
+            let persistence_result = persist();
+            let mut warnings = Vec::new();
+            let error = finish_credential_persistence(
+                &reqwest::Client::new(),
+                Duration::from_secs(2),
+                &current,
+                persistence_result,
+                Some(&previous),
+                &mut warnings,
+                || {
+                    Ok(Some(
+                        serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap(),
+                    ))
+                },
+            )
+            .await
+            .expect_err("preserve committed persistence failure");
+
+            assert_eq!(error.code(), "committed_but_local_processing_failed");
+            assert!(
+                error
+                    .to_string()
+                    .contains("injected post-save sync failure")
+            );
+            assert_eq!(
+                *observed.lock().unwrap(),
+                vec![previous.refresh_token.clone()]
+            );
+            let installed: Credentials =
+                serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+            assert_eq!(
+                installed, current,
+                "the newly installed session remains usable"
+            );
+            assert!(!error.to_string().contains("canary"));
+            if status.is_success() {
+                assert!(warnings.is_empty());
+            } else {
+                assert_eq!(warnings.len(), 1);
+                assert_eq!(warnings[0].code(), "login_previous_session_revoke_failed");
+                assert!(matches!(
+                    error,
+                    crate::output::CliError::PublicWithWarnings { .. }
+                ));
+            }
+            server.abort();
+            let _ = server.await;
+        }
+    }
+
     #[test]
     fn test_should_accept_password_only_from_login_stdin() {
         let parsed = read_login_stdin_lines_from("password\n".as_bytes()).expect("parse");
@@ -692,3 +842,6 @@ mod tests {
         assert_eq!(parsed.mfa_code.as_deref(), Some("012345"));
     }
 }
+
+#[cfg(test)]
+mod reuse_tests;
