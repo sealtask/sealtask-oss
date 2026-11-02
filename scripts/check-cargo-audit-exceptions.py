@@ -12,7 +12,7 @@ import tomllib
 REGISTRY = "registry+https://github.com/rust-lang/crates.io-index"
 POLICY_PATH = Path(__file__).with_name("cargo-audit-exceptions.json")
 CRYPTO = "RUSTSEC-2026-0387"
-ZIP = {"RUSTSEC-2026-0367", "RUSTSEC-2026-0368", "RUSTSEC-2026-0369"}
+ZIP = {"RUSTSEC-2026-0367", "RUSTSEC-2026-0368", "RUSTSEC-2026-0369", "RUSTSEC-2026-0429"}
 
 
 def require(condition, message):

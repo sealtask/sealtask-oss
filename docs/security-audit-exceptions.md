@@ -1,6 +1,6 @@
 # Temporary cargo-audit applicability exceptions
 
-Reviewed 2026-10-25; expires 2026-11-25. Follow-ups: `worklist-oule`
+Reviewed 2026-10-25; ZIP applicability rechecked 2026-11-02; expires 2026-11-25. Follow-ups: `worklist-oule`
 (OPAQUE dependencies) and `worklist-3io4` (DOCX dependencies).
 
 These advisories remain in the lockfiles. The exceptions concern operations
@@ -35,8 +35,9 @@ SigV4a; an offline presigning test checks its existing HMAC SigV4 behavior.
 `undocx 0.5.2` uses `zip 2.6.1` directly and `zip 4.6.1` through
 `rs-docx 0.2.0`. These releases are affected by filesystem extraction findings
 [RUSTSEC-2026-0367](https://rustsec.org/advisories/RUSTSEC-2026-0367.html),
-[RUSTSEC-2026-0368](https://rustsec.org/advisories/RUSTSEC-2026-0368.html), and
-[RUSTSEC-2026-0369](https://rustsec.org/advisories/RUSTSEC-2026-0369.html).
+[RUSTSEC-2026-0368](https://rustsec.org/advisories/RUSTSEC-2026-0368.html),
+[RUSTSEC-2026-0369](https://rustsec.org/advisories/RUSTSEC-2026-0369.html), and
+[RUSTSEC-2026-0429](https://rustsec.org/advisories/RUSTSEC-2026-0429.html).
 
 The only application call uses `undocx::builder().skip_images().convert_bytes`
 after bounded archive validation. The reviewed upstream conversion reads XML
@@ -46,6 +47,20 @@ upgraded to 9.1.0; validation rejects absolute paths, traversal, symlinks,
 excessive entry counts, oversized entries, and oversized aggregate content.
 Regression coverage checks malicious paths and symlinks are rejected before
 conversion and leave no output in a temporary canary directory.
+
+The November 2 review covers RUSTSEC-2026-0429 specifically: the affected
+`ZipArchive::extract` allocates a symlink-target buffer from an untrusted declared
+size. `undocx`'s `converter/mod.rs` passes a byte cursor to `DocxFile::from_reader`;
+`rs-docx`'s `docx.rs` reads named XML entries with `by_name` and `read_to_string`.
+Neither conversion path calls `ZipArchive::extract`. Our validator also rejects
+symlinks and bounds declared and actual entry sizes before conversion. The
+existing checksum, call-site, source-hash, and expiry guards apply unchanged to
+this additional extraction-only advisory. There is no patched release of
+`undocx` or `rs-docx` available at the review date; their replacement remains
+tracked in `worklist-3io4`.
+
+The separate zstd findings are fixed by upgrading the OSS lockfile to `zstd
+0.13.4`, `zstd-safe 7.4.0`, and `zstd-sys 2.1.2`. They have no audit exception.
 
 The guard pins the upstream reader checksums, permits their legacy ZIP versions
 only through these dependency routes, and pins the application reader file's
