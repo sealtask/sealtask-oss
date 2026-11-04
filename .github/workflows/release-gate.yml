@@ -56,6 +56,8 @@ jobs:
           python3 -m unittest scripts/test_finalize_release_changelog.py
           python3 -m unittest scripts/test_prepare_initial_release.py
           python3 -m unittest scripts/test_strong_box_wasm_manifest.py
-          ./scripts/test-release-plz-cargo.sh
+          ./scripts/install-release-plz.sh "${RUNNER_TEMP}/release-plz-bin"
+          RELEASE_PLZ_BIN="${RUNNER_TEMP}/release-plz-bin/release-plz" \
+            python3 -m unittest scripts/test_release_preparation.py
           ./scripts/test-publish-crates.sh
           ./scripts/test-verify-registry-package.sh

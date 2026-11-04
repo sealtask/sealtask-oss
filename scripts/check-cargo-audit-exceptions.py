@@ -20,7 +20,7 @@ def require(condition, message):
         raise ValueError(message)
 
 
-def check_lock(packages, scope, policy):
+def check_lock(packages, scope, policy, workspace_version=None):
     by_key = {(p["name"], p["version"]): p for p in packages}
     parents = {key: set() for key in by_key}
     for parent, package in by_key.items():
@@ -52,11 +52,14 @@ def check_lock(packages, scope, policy):
         ("voprf", "0.5.0"): {("opaque-ke", "4.0.1")},
     }
     if scope == "oss":
+        runtime = ("sealtask-client-runtime", workspace_version)
+        require(runtime in by_key, "DOCX consumer must match the workspace version")
+        require("source" not in by_key[runtime], "DOCX consumer must be the local runtime crate")
         expected_parents.update({
             ("zip", "2.6.1"): {("undocx", "0.5.2")},
             ("zip", "4.6.1"): {("rs-docx", "0.2.0")},
             ("rs-docx", "0.2.0"): {("undocx", "0.5.2")},
-            ("undocx", "0.5.2"): {("sealtask-client-runtime", "0.4.0")},
+            ("undocx", "0.5.2"): {runtime},
         })
     for package, allowed in expected_parents.items():
         require(parents[package] == allowed, f"unreviewed dependency path to {package}")
@@ -114,7 +117,9 @@ def check(workspace, scope, today=None):
     expected = {CRYPTO} | (ZIP if scope == "oss" else set())
     require(set(ignored) == expected and len(ignored) == len(expected), "unreviewed audit ignore list")
     packages = tomllib.loads((workspace / "Cargo.lock").read_text())["package"]
-    check_lock(packages, scope, policy)
+    manifest = tomllib.loads((workspace / "Cargo.toml").read_text())
+    workspace_version = manifest.get("workspace", {}).get("package", {}).get("version")
+    check_lock(packages, scope, policy, workspace_version)
     check_sources(workspace, scope, policy)
 
 

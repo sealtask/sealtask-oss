@@ -33,13 +33,28 @@ class AuditExceptionTests(unittest.TestCase):
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(OSS / relative, destination)
         self.packages = tomllib.loads((OSS / "Cargo.lock").read_text())["package"]
+        self.version = tomllib.loads((OSS / "Cargo.toml").read_text())["workspace"]["package"]["version"]
 
     def reject_lock(self, packages, message):
         with self.assertRaisesRegex(ValueError, message):
-            GUARD.check_lock(packages, "oss", self.policy)
+            GUARD.check_lock(packages, "oss", self.policy, self.version)
 
     def test_reviewed_workspace_passes(self):
         GUARD.check(self.workspace, "oss", REVIEW_DATE)
+
+    def test_release_version_bump_preserves_reviewed_dependency_path(self):
+        runtime = next(p for p in self.packages if p["name"] == "sealtask-client-runtime")
+        runtime["version"] = "0.5.0"
+        GUARD.check_lock(self.packages, "oss", self.policy, "0.5.0")
+
+    def test_mismatched_runtime_version_fails(self):
+        with self.assertRaisesRegex(ValueError, "must match the workspace version"):
+            GUARD.check_lock(self.packages, "oss", self.policy, "0.5.0")
+
+    def test_registry_runtime_substitution_fails(self):
+        runtime = next(p for p in self.packages if p["name"] == "sealtask-client-runtime")
+        runtime["source"] = GUARD.REGISTRY
+        self.reject_lock(self.packages, "must be the local runtime crate")
 
     def test_expiry_fails(self):
         with self.assertRaisesRegex(ValueError, "expired"):

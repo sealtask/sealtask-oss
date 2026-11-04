@@ -3,8 +3,9 @@ allow_dirty = false
 changelog_update = false
 dependencies_update = false
 features_always_increment_minor = true
-# Git-only mode invokes the scoped Cargo adapter documented in RELEASE.md.
-git_only = true
+# Compare published crates with crates.io; a shared tag can predate a new crate.
+# Publication remains owned by publish-crates.yml, not release-plz.
+git_only = false
 git_release_enable = false
 git_tag_enable = false
 pr_branch_prefix = "release-plz-"

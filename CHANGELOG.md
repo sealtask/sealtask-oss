@@ -1,7 +1,7 @@
 # Changelog
 
 All notable changes to the SealTask CLI and public Rust client crates are
-documented here. The six published crates share one version and one changelog.
+documented here. The seven published crates share one version and one changelog.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).

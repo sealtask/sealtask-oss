@@ -4,3 +4,5 @@
 node_modules/
 packages/*/node_modules/
 packages/*/dist/
+__pycache__/
+*.py[cod]

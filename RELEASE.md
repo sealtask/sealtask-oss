@@ -160,7 +160,7 @@ ownership. The first release had one deliberate bootstrap detour:
    already-published crate, performs the registry install verification, and
    continues to the immutable GitHub Release.
 
-The first `sealtask-agent` publication at `v0.4.0` uses the same bounded
+The first `sealtask-agent` publication at `v0.5.0` uses the same bounded
 bootstrap once because trusted publishing cannot be configured for a crate name
 before ownership exists:
 
@@ -169,7 +169,7 @@ before ownership exists:
    `sealtask-agent` name.
 2. Recreate the short-lived `CRATES_IO_BOOTSTRAP_TOKEN` only in the reviewed
    `crates-io-bootstrap` environment and run **Bootstrap crates.io ownership**
-   with `release_tag` set to `v0.4.0` and the same confirmation phrase.
+   with `release_tag` set to `v0.5.0` and the same confirmation phrase.
 3. Configure the `release.yml` trusted publisher for `sealtask-agent`, revoke
    the bootstrap token, delete the environment secret, and rerun the failed
    public release jobs. Checksum reconciliation makes already-published crates
@@ -207,7 +207,9 @@ From `oss/`:
 python3 -m unittest scripts/test_check_release_metadata.py
 python3 -m unittest scripts/test_finalize_release_changelog.py
 python3 -m unittest scripts/test_prepare_initial_release.py
-./scripts/test-release-plz-cargo.sh
+./scripts/install-release-plz.sh /tmp/sealtask-release-plz-bin
+RELEASE_PLZ_BIN=/tmp/sealtask-release-plz-bin/release-plz \
+  python3 -m unittest scripts/test_release_preparation.py
 ./scripts/test-publish-crates.sh
 ./scripts/generate-release-workflow.sh check
 cargo fmt --all --check
@@ -239,13 +241,18 @@ permission that the built-in Actions token cannot receive after public `main`
 advances. The verifier resolves the tag itself to `GITHUB_SHA`, which is the
 authoritative source-commit check.
 
-Pinned release-plz 0.3.160 similarly hard-codes
-`cargo package --allow-dirty --workspace` while reconstructing a prior
-git-only release. `scripts/release-plz-cargo.sh` forwards every Cargo call
-unchanged except that exact command, where it excludes the two unpublished
-StrongBox browser-WASM packages. The adapter fails closed if release-plz
-changes the command shape; remove it when upstream can scope the snapshot to
-the release-managed package graph.
+Pinned release-plz 0.3.160 compares the current publishable crates against
+their actual crates.io archives. An unpublished crate is an initial release
+and joins the shared version group. Git-only baselines cannot support that
+transition with our shared tags: a tag such as `v0.4.0` can exist before a new
+crate such as `sealtask-agent` was added. Registry baselines also avoid packaging
+the unpublished StrongBox browser-WASM packages. Release-plz only prepares
+versions and changelogs; `publish-crates.yml` still owns publication.
+
+The offline release-preparation regression uses the pinned executable and local
+registry snapshots to introduce a seventh crate after an existing shared tag,
+then checks the next ordinary patch release. Both releases must keep the
+workspace version and exact internal dependency requirements in lockstep.
 
 After committing a release candidate in a temporary standalone checkout, this
 packages all seven archives without registry access or publication:
