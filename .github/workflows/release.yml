@@ -330,17 +330,17 @@ jobs:
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           pattern: artifacts-*
-          path: artifacts
+          path: ${{ runner.temp }}/release-artifacts
           merge-multiple: true
       - name: Cleanup
         run: |
           # Remove the granular manifests
-          rm -f artifacts/*-dist-manifest.json
+          rm -f "${RUNNER_TEMP}/release-artifacts"/*-dist-manifest.json
       - name: Attest
         uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6
         with:
           subject-path: |
-            artifacts/*
+            ${{ runner.temp }}/release-artifacts/*
       - name: Create GitHub Release
         env:
           PRERELEASE_FLAG: "${{ fromJson(needs.host.outputs.val).announcement_is_prerelease && '--prerelease' || '' }}"
@@ -366,11 +366,11 @@ jobs:
               fi
               echo "Immutable release already exists; the verification job will prove its assets."
             else
-              gh release upload "${{ needs.plan.outputs.tag }}" artifacts/* --clobber
+              gh release upload "${{ needs.plan.outputs.tag }}" "${RUNNER_TEMP}/release-artifacts"/* --clobber
               gh release edit "${{ needs.plan.outputs.tag }}" --title "$ANNOUNCEMENT_TITLE" --notes-file "$RUNNER_TEMP/notes.txt" --draft=false --verify-tag
             fi
           else
-            gh release create "${{ needs.plan.outputs.tag }}" $PRERELEASE_FLAG --title "$ANNOUNCEMENT_TITLE" --notes-file "$RUNNER_TEMP/notes.txt" --verify-tag artifacts/*
+            gh release create "${{ needs.plan.outputs.tag }}" $PRERELEASE_FLAG --title "$ANNOUNCEMENT_TITLE" --notes-file "$RUNNER_TEMP/notes.txt" --verify-tag "${RUNNER_TEMP}/release-artifacts"/*
           fi
 
   custom-verify-release:

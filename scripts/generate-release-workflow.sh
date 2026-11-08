@@ -92,6 +92,8 @@ if ! cmp -s "${expected}" "${actual}"; then
   exit 1
 fi
 
+python3 -m unittest discover -s "${SOURCE_DIR}/scripts" -p test_dist_announcement.py
+
 # Restore the runtime configuration and prove dist accepts the intentionally
 # patched workflow exactly as the hosted plan job will.
 cp "${SOURCE_DIR}/dist-workspace.toml" "${TEMP_DIR}/dist-workspace.toml"

@@ -5,7 +5,7 @@
 plumbing. This adapter covers repository-policy gaps that cargo-dist 0.32.0
 does not generate: least privilege, the exact public tag namespace, a
 fail-closed custom release gate, a CycloneDX output typo, concurrency, and
-immutable-safe announcement retries.
+immutable-safe announcement retries, and isolated announcement artifacts.
 
 Every replacement is intentionally exact and single-use. A cargo-dist upgrade
 therefore fails generation instead of silently dropping a policy guarantee.
@@ -167,6 +167,28 @@ def main() -> int:
         ),
         "GitHub release command",
     )
+
+    # The repository already tracks artifacts/strong-box-wasm. Downloading into
+    # artifacts/ mixes source files with release assets and makes gh upload a
+    # directory. Keep download, cleanup, attestation and upload on one temp path.
+    for old, new, description in (
+        ("          path: artifacts\n",
+         "          path: ${{ runner.temp }}/release-artifacts\n",
+         "announcement download directory"),
+        ("rm -f artifacts/*-dist-manifest.json",
+         'rm -f "${RUNNER_TEMP}/release-artifacts"/*-dist-manifest.json',
+         "announcement manifest cleanup"),
+        ("            artifacts/*\n",
+         "            ${{ runner.temp }}/release-artifacts/*\n",
+         "announcement attestation subjects"),
+        ("artifacts/* --clobber",
+         '"${RUNNER_TEMP}/release-artifacts"/* --clobber',
+         "draft release uploads"),
+        ("--verify-tag artifacts/*",
+         '--verify-tag "${RUNNER_TEMP}/release-artifacts"/*',
+         "new release uploads"),
+    ):
+        source = replace_once(source, old, new, description)
 
     workflow.write_text(source, encoding="utf-8")
     print(f"Hardened {workflow}.")
