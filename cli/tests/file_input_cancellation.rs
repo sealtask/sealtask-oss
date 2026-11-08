@@ -2,10 +2,10 @@
 
 use std::ffi::CString;
 use std::fs::{File, OpenOptions};
-use std::io::{self, Read, Seek, Write};
+use std::io::{self, Seek, Write};
 use std::os::fd::AsRawFd;
 use std::os::unix::ffi::OsStrExt;
-use std::os::unix::fs::OpenOptionsExt;
+use std::os::unix::fs::{FileExt, OpenOptionsExt};
 use std::path::Path;
 use std::process::{Child, Command, Stdio};
 use std::thread;
@@ -27,17 +27,22 @@ impl Drop for RunningCli {
     }
 }
 
-fn capture(file: &mut File) -> String {
-    file.rewind().expect("rewind capture");
-    let mut text = String::new();
-    file.read_to_string(&mut text).expect("read capture");
-    text
+fn capture(file: &File) -> String {
+    // try_clone shares the child's file offset. Seeking while it writes can
+    // overwrite the readiness marker that this test is waiting to observe.
+    let length = file.metadata().expect("capture metadata").len();
+    let mut bytes = vec![0; usize::try_from(length).expect("capture length")];
+    file.read_exact_at(&mut bytes, 0).expect("read capture");
+    String::from_utf8_lossy(&bytes).into_owned()
 }
 
-fn wait_until(mut ready: impl FnMut() -> bool) {
+fn wait_until(description: &str, mut ready: impl FnMut() -> bool) {
     let deadline = Instant::now() + Duration::from_secs(5);
     while !ready() {
-        assert!(Instant::now() < deadline, "CLI exceeded input deadline");
+        assert!(
+            Instant::now() < deadline,
+            "timed out waiting for {description}"
+        );
         thread::sleep(Duration::from_millis(5));
     }
 }
@@ -95,7 +100,7 @@ fn test_should_cancel_fifo_open_and_idle_reads_without_network_or_eof() {
                 let mut writer = None;
                 if attach_writer {
                     // A nonblocking writer can attach only once the CLI opens the FIFO.
-                    wait_until(|| {
+                    wait_until("the CLI to open the FIFO", || {
                         assert!(cli.child.try_wait().expect("poll CLI").is_none());
                         match OpenOptions::new()
                             .write(true)
@@ -120,7 +125,7 @@ fn test_should_cancel_fifo_open_and_idle_reads_without_network_or_eof() {
                         .custom_flags(libc::O_NONBLOCK)
                         .open(&fifo)
                         .expect("monitor FIFO");
-                    wait_until(|| {
+                    wait_until("the CLI to consume the FIFO probe byte", || {
                         assert!(cli.child.try_wait().expect("poll CLI").is_none());
                         let mut queued: libc::c_int = -1;
                         // SAFETY: monitor is live and queued is writable c_int storage.
@@ -135,21 +140,21 @@ fn test_should_cancel_fifo_open_and_idle_reads_without_network_or_eof() {
                 } else {
                     // The start event is emitted inside the supervised operation,
                     // before file open. No writer will ever unblock this FIFO.
-                    wait_until(|| {
+                    wait_until("the CLI readiness event", || {
                         assert!(cli.child.try_wait().expect("poll CLI").is_none());
-                        capture(&mut cli.stderr).contains("event=start")
+                        capture(&cli.stderr).contains("event=start")
                     });
                 }
                 // SAFETY: signal targets only our still-live subprocess.
                 assert_eq!(unsafe { libc::kill(cli.child.id() as i32, signal) }, 0);
                 let mut status = None;
-                wait_until(|| {
+                wait_until("the CLI to exit after the signal", || {
                     status = cli.child.try_wait().expect("poll exit");
                     status.is_some()
                 });
                 assert_eq!(status.expect("exit status").code(), Some(130));
-                assert!(capture(&mut cli.stdout).is_empty());
-                let error = capture(&mut cli.stderr);
+                assert!(capture(&cli.stdout).is_empty());
+                let error = capture(&cli.stderr);
                 if attach_writer {
                     let error: Value = serde_json::from_str(&error).expect("structured error");
                     assert_eq!(error["error"]["code"], "interrupted");
@@ -165,4 +170,18 @@ fn test_should_cancel_fifo_open_and_idle_reads_without_network_or_eof() {
             }
         }
     }
+}
+
+#[test]
+fn test_should_capture_output_without_seeking_the_child_writer() {
+    let mut output = tempfile::tempfile().expect("capture file");
+    output.write_all(b"event=start\n").expect("initial output");
+    output.rewind().expect("position shared writer");
+    let mut child_writer = output.try_clone().expect("child output handle");
+
+    assert_eq!(capture(&output), "event=start\n");
+    child_writer
+        .write_all(b"event=ready\n")
+        .expect("child output");
+    assert_eq!(capture(&output), "event=ready\n");
 }
