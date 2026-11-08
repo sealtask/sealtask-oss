@@ -9,11 +9,16 @@ fi
 BIN_DIR="$1"
 ARCHIVE="$(mktemp)"
 trap 'rm -f "${ARCHIVE}"' EXIT
+auth_args=()
+if [[ -n "${GH_TOKEN:-}" ]]; then
+  auth_args=(--header "Authorization: Bearer ${GH_TOKEN}")
+fi
 # release-plz v0.3.160, release-plz-x86_64-unknown-linux-gnu.tar.gz.
 # Use the asset API rather than the release download URL that returns 504s in CI.
 curl --proto '=https' --tlsv1.2 --fail --location --silent --show-error \
   --retry 3 --retry-delay 2 --retry-max-time 120 \
   --connect-timeout 10 --max-time 60 \
+  "${auth_args[@]}" \
   --header 'Accept: application/octet-stream' \
   --output "${ARCHIVE}" \
   https://api.github.com/repos/release-plz/release-plz/releases/assets/476455741

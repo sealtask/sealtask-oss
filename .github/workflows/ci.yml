@@ -90,6 +90,8 @@ jobs:
         run: ./scripts/build-strong-box-wasm.sh verify
 
       - name: Test release automation
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           ./scripts/check-release-metadata.sh workspace
           python3 -m unittest scripts/test_check_release_metadata.py

@@ -51,6 +51,8 @@ jobs:
           fi
 
       - name: Test release automation
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           python3 -m unittest scripts/test_check_release_metadata.py
           python3 -m unittest scripts/test_finalize_release_changelog.py
