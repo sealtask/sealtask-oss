@@ -10,6 +10,8 @@ BIN_DIR="$1"
 ARCHIVE="$(mktemp)"
 trap 'rm -f "${ARCHIVE}"' EXIT
 curl --proto '=https' --tlsv1.2 --fail --location --silent --show-error \
+  --retry 3 --retry-delay 2 --retry-max-time 120 \
+  --connect-timeout 10 --max-time 60 \
   --output "${ARCHIVE}" \
   https://github.com/release-plz/release-plz/releases/download/release-plz-v0.3.160/release-plz-x86_64-unknown-linux-gnu.tar.gz
 echo "2263c4f95eac1513da96a114a77fde20ea038742a8c8050f7514b8f93b828646  ${ARCHIVE}" |
