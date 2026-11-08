@@ -8,6 +8,13 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-11-08
+
+### Other
+
+- *(cli)* avoid seeking the child output capture
+- *(cli)* remove scheduling race from doctor timeout test
+
 ## [0.5.0] - 2026-11-04
 
 ### Added
@@ -112,7 +119,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 - Added the public MFA-compatible CLI and Rust client surface.
 
-[Unreleased]: https://github.com/sealtask/sealtask-oss/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/sealtask/sealtask-oss/compare/v0.5.1...HEAD
+[0.5.1]: https://github.com/sealtask/sealtask-oss/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/sealtask/sealtask-oss/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/sealtask/sealtask-oss/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/sealtask/sealtask-oss/compare/v0.2.1...v0.3.0
