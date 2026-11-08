@@ -25,6 +25,9 @@ publish-jobs = ["./publish-crates"]
 post-announce-jobs = ["./verify-release"]
 github-custom-job-permissions = { "publish-crates" = { contents = "read", id-token = "write" }, "verify-release" = { attestations = "read", contents = "read" } }
 
+[dist.github-custom-runners]
+aarch64-apple-darwin = "macos-15"
+
 [dist.dependencies.apt]
 pkg-config = "*"
 libdbus-1-dev = "*"
