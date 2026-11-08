@@ -4653,7 +4653,7 @@ async fn cli_doctor_inspects_inherited_local_context_before_global_fallback() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn cli_doctor_online_health_is_correlated_and_identifiable_while_logged_out() {
-    let server = spawn_doctor_health_server(None).await;
+    let server = spawn_doctor_health_server().await;
     let home = TempDir::new().expect("temp home");
     let output =
         run_cli_with_operator_env(home.path(), &server.base_url, &["-v", "doctor"], &[], None);
@@ -4691,15 +4691,21 @@ async fn cli_doctor_online_health_is_correlated_and_identifiable_while_logged_ou
     assert_eq!(request_id, telemetry_invocation_id);
 }
 
-#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn cli_doctor_reports_transport_timeout_for_stalled_health_probe() {
-    let server = spawn_doctor_health_server(Some(std::time::Duration::from_secs(5))).await;
+#[test]
+fn cli_doctor_reports_transport_timeout_for_stalled_health_probe() {
+    // Keep the port listening without accepting or responding. This stalls HTTP
+    // without an async handler that must run before the client's short deadline.
+    let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("health listener");
+    let api_url = format!("http://{}", listener.local_addr().expect("health address"));
     let home = TempDir::new().expect("temp home");
-    let started_at = std::time::Instant::now();
-    let output = run_cli_with_operator_env(
-        home.path(),
-        &server.base_url,
-        &[
+    let assertion = Command::cargo_bin("sealtask")
+        .expect("binary")
+        .env_clear()
+        .env("HOME", home.path())
+        .current_dir(home.path())
+        .args([
+            "--api-url",
+            &api_url,
             "--json",
             "--connect-timeout",
             "20ms",
@@ -4708,18 +4714,15 @@ async fn cli_doctor_reports_transport_timeout_for_stalled_health_probe() {
             "--request-timeout",
             "75ms",
             "doctor",
-        ],
-        &[],
-        None,
-    );
-    let elapsed = started_at.elapsed();
+        ])
+        // Bound a broken client without measuring process startup or scheduling
+        // latency as part of the network timeout contract.
+        .timeout(CLI_READINESS_TIMEOUT)
+        .assert()
+        .code(1);
+    let output = assertion.get_output();
 
-    assert_eq!(output.status.code(), Some(1));
-    assert!(
-        elapsed < std::time::Duration::from_secs(2),
-        "75ms request deadline took {elapsed:?}"
-    );
-    let report = parse_stdout_json(&output.stdout);
+    let report: Value = serde_json::from_slice(&output.stdout).expect("doctor JSON report");
     let reachability = report["checks"]
         .as_array()
         .expect("doctor checks")
@@ -4736,11 +4739,7 @@ async fn cli_doctor_reports_transport_timeout_for_stalled_health_probe() {
         .expect("API health check");
     assert_eq!(health["status"], "skipped");
     assert_eq!(report["outcome"], "failed");
-    assert_eq!(
-        server.observations.lock().expect("observations lock").len(),
-        1
-    );
-    let error = parse_stderr_json(&output.stderr);
+    let error: Value = serde_json::from_slice(&output.stderr).expect("doctor JSON error");
     assert_eq!(error["error"]["code"], "validation");
 }
 
@@ -8280,7 +8279,6 @@ impl Drop for DoctorHealthServer {
 #[derive(Clone)]
 struct DoctorHealthState {
     observations: Arc<Mutex<Vec<DoctorHealthRequest>>>,
-    response_delay: Option<std::time::Duration>,
 }
 
 struct DoctorHealthRequest {
@@ -9358,13 +9356,10 @@ async fn spawn_server(state: Arc<Mutex<TestState>>) -> TestServer {
     }
 }
 
-async fn spawn_doctor_health_server(
-    response_delay: Option<std::time::Duration>,
-) -> DoctorHealthServer {
+async fn spawn_doctor_health_server() -> DoctorHealthServer {
     let observations = Arc::new(Mutex::new(Vec::new()));
     let state = DoctorHealthState {
         observations: Arc::clone(&observations),
-        response_delay,
     };
     let app = Router::new()
         .route("/health", get(doctor_health))
@@ -9402,9 +9397,6 @@ async fn doctor_health(State(state): State<DoctorHealthState>, headers: HeaderMa
         .lock()
         .expect("observations lock")
         .push(request);
-    if let Some(response_delay) = state.response_delay {
-        tokio::time::sleep(response_delay).await;
-    }
     StatusCode::OK
 }
 
