@@ -163,6 +163,37 @@ class AuditExceptionTests(unittest.TestCase):
         next(p for p in packages if p["name"] == "sqlx-sqlite")["dependencies"] = ["libsqlite3-sys 0.39.0"]
         self.reject_root_lock(packages, "changed; reassess/remove its exception")
 
+    def test_uninspected_local_sqlx_consumer_fails(self):
+        packages = [
+            {"name": "sqlx", "version": "0.9.0", "source": GUARD.REGISTRY},
+            {"name": "worklist-persistence", "version": "0.1.0", "dependencies": ["sqlx"]},
+            {"name": "implicit-member", "version": "0.1.0", "dependencies": ["sqlx 0.9.0"]},
+        ]
+        manifests = [{"workspace": {"members": ["crates/persistence"]}},
+                     {"package": {"name": "worklist-persistence"}}]
+        GUARD.check_sqlx_consumers_inspected(packages[:2], manifests)
+        with self.assertRaisesRegex(ValueError, "sqlx consumers outside the inspected workspace members"):
+            GUARD.check_sqlx_consumers_inspected(packages, manifests)
+
+    def test_root_sources_reject_sqlx_consumers_missing_from_members(self):
+        root = Path(self.temp.name) / "root"
+        suite = "impl CipherSuite for DefaultCipherSuite {\n    type OprfCs = Ristretto255;\n" \
+                "    type KeyExchange = TripleDh<Ristretto255, Sha512>;\n    type Ksf = Argon2<'static>;\n}\n"
+        files = {
+            "Cargo.toml": '[workspace]\nmembers = ["crates/crypto"]\n',
+            "crates/crypto/Cargo.toml": '[package]\nname = "worklist-crypto"\nversion = "0.1.0"\n',
+            "crates/crypto/src/opaque.rs": suite,
+        }
+        for relative, text in files.items():
+            (root / relative).parent.mkdir(parents=True, exist_ok=True)
+            (root / relative).write_text(text)
+        member = {"name": "worklist-crypto", "version": "0.1.0", "dependencies": ["sqlx"]}
+        implicit = {"name": "implicit-member", "version": "0.1.0", "dependencies": ["sqlx"]}
+
+        GUARD.check_sources(root, "root", self.policy, [member])
+        with self.assertRaisesRegex(ValueError, r"inspected workspace members \['implicit-member'\]"):
+            GUARD.check_sources(root, "root", self.policy, [member, implicit])
+
     def test_postgres_only_sqlx_features_pass(self):
         GUARD.check_sqlx_features([
             {"workspace": {"dependencies": {"sqlx": {"version": "0.9.0", "features": ["postgres"]}}}},

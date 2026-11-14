@@ -141,14 +141,34 @@ def check_sqlx_features(manifests):
     require(not enabled, f"sqlx SQLite support enabled {enabled}; reassess the libsqlite3-sys exception")
 
 
-def check_sources(workspace, scope, policy):
+def check_sqlx_consumers_inspected(packages, manifests):
+    """Fail closed unless every local sqlx consumer is an inspected manifest.
+
+    Source-less lockfile packages are workspace members or path dependencies.
+    Cargo adds path dependencies inside the workspace as members without
+    listing them in workspace.members, so the feature check would not see them.
+    """
+    inspected = {manifest["package"]["name"] for manifest in manifests
+                 if "name" in manifest.get("package", {})}
+    consumers = {package["name"] for package in packages if "source" not in package
+                 and any(dependency.split()[0] == "sqlx"
+                         for dependency in package.get("dependencies", []))}
+    unreviewed = sorted(consumers - inspected)
+    require(not unreviewed,
+            f"sqlx consumers outside the inspected workspace members {unreviewed}; "
+            "add them to workspace.members or reassess the libsqlite3-sys exception")
+
+
+def check_sources(workspace, scope, policy, packages):
     manifest = tomllib.loads((workspace / "Cargo.toml").read_text())
     members = manifest.get("workspace", {}).get("members", ["."])
     if scope == "root":
-        check_sqlx_features([manifest] + [
+        manifests = [manifest] + [
             tomllib.loads((workspace / member / "Cargo.toml").read_text())
             for member in members if member != "."
-        ])
+        ]
+        check_sqlx_features(manifests)
+        check_sqlx_consumers_inspected(packages, manifests)
     suites = {}
     docx_uses = set()
     for member in members:
@@ -194,7 +214,7 @@ def check(workspace, scope, today=None):
     manifest = tomllib.loads((workspace / "Cargo.toml").read_text())
     workspace_version = manifest.get("workspace", {}).get("package", {}).get("version")
     check_lock(packages, scope, policy, workspace_version)
-    check_sources(workspace, scope, policy)
+    check_sources(workspace, scope, policy, packages)
 
 
 if __name__ == "__main__":
