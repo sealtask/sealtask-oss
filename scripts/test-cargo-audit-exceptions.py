@@ -169,20 +169,32 @@ class AuditExceptionTests(unittest.TestCase):
             {"dependencies": {"sqlx": {"workspace": True}},
              "features": {"sqlx_postgres": ["sqlx", "sqlx/postgres"]}},
         ])
+        GUARD.check_sqlx_features([
+            {"workspace": {"dependencies": {"db": {"package": "sqlx", "features": ["postgres"]}}}},
+            {"dependencies": {"db": {"workspace": True, "features": ["migrate"]}},
+             "features": {"pg": ["db/postgres"]}},
+        ])
 
     def test_sqlx_sqlite_features_fail(self):
+        renamed_workspace = {"workspace": {"dependencies": {
+            "db": {"package": "sqlx", "version": "0.9.0", "features": ["postgres"]}}}}
         cases = {
-            "workspace dependency": {"workspace": {"dependencies": {
-                "sqlx": {"version": "0.9.0", "features": ["sqlite"]}}}},
-            "member feature": {"features": {"local-db": ["sqlx?/sqlite-unbundled"]}},
-            "renamed dependency": {"dev-dependencies": {
-                "db": {"package": "sqlx", "features": ["all-databases"]}}},
-            "target dependency": {"target": {"cfg(unix)": {"dependencies": {
-                "sqlx": {"version": "0.9.0", "features": ["_unstable-docs"]}}}}},
+            "workspace dependency": [{"workspace": {"dependencies": {
+                "sqlx": {"version": "0.9.0", "features": ["sqlite"]}}}}],
+            "member feature": [{"features": {"local-db": ["sqlx?/sqlite-unbundled"]}}],
+            "renamed dependency": [{"dev-dependencies": {
+                "db": {"package": "sqlx", "features": ["all-databases"]}}}],
+            "target dependency": [{"target": {"cfg(unix)": {"dependencies": {
+                "sqlx": {"version": "0.9.0", "features": ["_unstable-docs"]}}}}}],
+            "inherited renamed dependency": [renamed_workspace, {"dependencies": {
+                "db": {"workspace": True, "features": ["sqlite"]}}}],
+            "inherited renamed feature forwarding": [renamed_workspace, {
+                "dependencies": {"db": {"workspace": True}},
+                "features": {"local": ["db/sqlite"]}}],
         }
-        for label, manifest in cases.items():
+        for label, manifests in cases.items():
             with self.subTest(label), self.assertRaisesRegex(ValueError, "SQLite support enabled"):
-                GUARD.check_sqlx_features([manifest])
+                GUARD.check_sqlx_features(manifests)
 
     def test_additional_ignore_fails(self):
         path = self.workspace / ".cargo/audit.toml"

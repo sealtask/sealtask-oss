@@ -92,18 +92,37 @@ def check_lock(packages, scope, policy, workspace_version=None):
             require(f"{name} {version}" in reviewed, f"unreviewed affected version: {name} {version}")
 
 
-def declared_sqlx_features(manifest):
-    """Yield every sqlx feature a manifest selects, including through renamed deps."""
-    tables = [manifest.get("workspace", {}).get("dependencies", {})]
-    for owner in [manifest, *manifest.get("target", {}).values()]:
-        tables += [owner.get(kind, {}) for kind in
-                   ("dependencies", "dev-dependencies", "build-dependencies")]
+def names_sqlx(name, spec):
+    """Whether a dependency entry's key, or its package rename, is sqlx."""
+    package = spec.get("package", name) if isinstance(spec, dict) else name
+    return package == "sqlx"
+
+
+def workspace_sqlx_keys(manifests):
+    """[workspace.dependencies] keys naming sqlx, which members may inherit."""
+    return {"sqlx"} | {
+        name
+        for manifest in manifests
+        for name, spec in manifest.get("workspace", {}).get("dependencies", {}).items()
+        if names_sqlx(name, spec)
+    }
+
+
+def declared_sqlx_features(manifest, workspace_keys):
+    """Yield every sqlx feature a manifest selects, through renamed or inherited deps."""
+    for name, spec in manifest.get("workspace", {}).get("dependencies", {}).items():
+        if name in workspace_keys and isinstance(spec, dict):
+            yield from spec.get("features", [])
     aliases = {"sqlx"}
-    for table in tables:
-        for name, spec in table.items():
-            if isinstance(spec, dict) and (name == "sqlx" or spec.get("package") == "sqlx"):
-                aliases.add(name)
-                yield from spec.get("features", [])
+    for owner in [manifest, *manifest.get("target", {}).values()]:
+        for kind in ("dependencies", "dev-dependencies", "build-dependencies"):
+            for name, spec in owner.get(kind, {}).items():
+                # `workspace = true` takes the package identity from the workspace table.
+                inherited = isinstance(spec, dict) and spec.get("workspace") is True
+                if name in workspace_keys if inherited else names_sqlx(name, spec):
+                    aliases.add(name)
+                    if isinstance(spec, dict):
+                        yield from spec.get("features", [])
     for values in manifest.get("features", {}).values():
         for value in values:
             dependency, separator, feature = value.partition("/")
@@ -112,10 +131,11 @@ def declared_sqlx_features(manifest):
 
 
 def check_sqlx_features(manifests):
+    workspace_keys = workspace_sqlx_keys(manifests)
     enabled = sorted({
         feature
         for manifest in manifests
-        for feature in declared_sqlx_features(manifest)
+        for feature in declared_sqlx_features(manifest, workspace_keys)
         if SQLX_SQLITE_FEATURE.search(feature)
     })
     require(not enabled, f"sqlx SQLite support enabled {enabled}; reassess the libsqlite3-sys exception")

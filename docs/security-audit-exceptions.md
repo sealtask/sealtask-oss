@@ -85,7 +85,8 @@ nothing. The guard pins both registry checksums. It also pins the only routes,
 every `sqlx` consumer to be a local workspace crate. It rejects any workspace
 manifest that selects a sqlx feature enabling the SQLite driver (`sqlite*`,
 `all-databases`, `_unstable*`). That covers the workspace dependency, member
-dependency tables, target-specific tables, renamed dependencies, and
-`[features]` entries. An upgraded `libsqlite3-sys` fails the guard until this
+dependency tables, target-specific tables, renamed dependencies (including
+keys a member inherits from `[workspace.dependencies]` with `workspace = true`),
+and `[features]` entries forwarding through any of those keys. An upgraded `libsqlite3-sys` fails the guard until this
 exception is removed. The OSS and iOS lockfiles do not contain the crate; the
 iOS scope accepts the ignore entry only because it shares the root config.
