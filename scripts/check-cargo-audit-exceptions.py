@@ -14,6 +14,14 @@ POLICY_PATH = Path(__file__).with_name("cargo-audit-exceptions.json")
 CRYPTO = "RUSTSEC-2026-0387"
 ZIP = {"RUSTSEC-2026-0367", "RUSTSEC-2026-0368", "RUSTSEC-2026-0369", "RUSTSEC-2026-0429"}
 SQLITE = "RUSTSEC-2026-0459"
+SQLITE_CRATES = {"libsqlite3-sys", "rusqlite", "sqlx-sqlite"}
+SQLITE_ROUTES = {
+    ("libsqlite3-sys", "0.37.0"): {("sqlx-sqlite", "0.9.0")},
+    ("sqlx-sqlite", "0.9.0"): {("sqlx", "0.9.0"), ("sqlx-macros-core", "0.9.0")},
+    ("sqlx-macros-core", "0.9.0"): {("sqlx-macros", "0.9.0")},
+    ("sqlx-macros", "0.9.0"): {("sqlx", "0.9.0")},
+}
+PATCHED = {"crypto-bigint": (0, 7, 6), "zip": (9, 0, 0), "libsqlite3-sys": (0, 39, 0)}
 # sqlx features that enable its SQLite driver, and with it libsqlite3-sys.
 SQLX_SQLITE_FEATURE = re.compile(r"sqlite|all-databases|^_unstable")
 
@@ -23,7 +31,7 @@ def require(condition, message):
         raise ValueError(message)
 
 
-def check_lock(packages, scope, policy, workspace_version=None):
+def index_lock(packages):
     by_key = {(p["name"], p["version"]): p for p in packages}
     parents = {key: set() for key in by_key}
     for parent, package in by_key.items():
@@ -35,6 +43,21 @@ def check_lock(packages, scope, policy, workspace_version=None):
             ]
             require(len(matches) == 1, f"ambiguous lock dependency: {dependency}")
             parents[matches[0]].add(parent)
+    return by_key, parents
+
+
+def check_sqlite_routes(by_key, parents):
+    for package, allowed in SQLITE_ROUTES.items():
+        require(parents.get(package) == allowed, f"unreviewed dependency path to {package}")
+    sqlx_parents = parents.get(("sqlx", "0.9.0"), set())
+    require(
+        sqlx_parents and all("source" not in by_key[parent] for parent in sqlx_parents),
+        "sqlx must be consumed only by local workspace crates",
+    )
+
+
+def check_lock(packages, scope, policy, workspace_version=None):
+    by_key, parents = index_lock(packages)
 
     reviewed = dict(policy["crypto_packages"])
     if scope == "oss":
@@ -66,89 +89,70 @@ def check_lock(packages, scope, policy, workspace_version=None):
             ("rs-docx", "0.2.0"): {("undocx", "0.5.2")},
             ("undocx", "0.5.2"): {runtime},
         })
-    if scope == "root":
-        expected_parents.update({
-            ("libsqlite3-sys", "0.37.0"): {("sqlx-sqlite", "0.9.0")},
-            ("sqlx-sqlite", "0.9.0"): {("sqlx", "0.9.0"), ("sqlx-macros-core", "0.9.0")},
-            ("sqlx-macros-core", "0.9.0"): {("sqlx-macros", "0.9.0")},
-            ("sqlx-macros", "0.9.0"): {("sqlx", "0.9.0")},
-        })
-        # Only workspace crates may select sqlx features; check_sqlx_features
-        # then proves none of them enables the SQLite driver.
-        require(
-            all("source" not in by_key[parent] for parent in parents[("sqlx", "0.9.0")]),
-            "unreviewed dependency path to sqlx",
-        )
     for package, allowed in expected_parents.items():
         require(parents[package] == allowed, f"unreviewed dependency path to {package}")
-    patched_versions = {"crypto-bigint": (0, 7, 6), "zip": (9, 0, 0), "libsqlite3-sys": (0, 39, 0)}
+    if scope == "root":
+        check_sqlite_routes(by_key, parents)
     for name, version in by_key:
-        if name not in patched_versions:
+        if name not in PATCHED:
             continue
         parts = version.split(".")
         require(all(p.isdigit() for p in parts), f"unreviewed prerelease: {name} {version}")
-        patched = patched_versions[name]
-        if tuple(map(int, parts)) < patched:
+        if tuple(map(int, parts)) < PATCHED[name]:
             require(f"{name} {version}" in reviewed, f"unreviewed affected version: {name} {version}")
 
 
-def names_sqlx(name, spec):
-    """Whether a dependency entry's key, or its package rename, is sqlx."""
-    package = spec.get("package", name) if isinstance(spec, dict) else name
-    return package == "sqlx"
+def dependency_tables(manifest):
+    for section in ("dependencies", "dev-dependencies", "build-dependencies"):
+        yield manifest.get(section, {})
+    for target in manifest.get("target", {}).values():
+        for section in ("dependencies", "dev-dependencies", "build-dependencies"):
+            yield target.get(section, {})
 
 
-def workspace_sqlx_keys(manifests):
-    """[workspace.dependencies] keys naming sqlx, which members may inherit."""
-    return {"sqlx"} | {
-        name
-        for manifest in manifests
-        for name, spec in manifest.get("workspace", {}).get("dependencies", {}).items()
-        if names_sqlx(name, spec)
+def check_sqlite_disabled(workspace, members, packages=()):
+    manifests = {"Cargo.toml": tomllib.loads((workspace / "Cargo.toml").read_text())}
+    for member in members:
+        path = workspace / member / "Cargo.toml"
+        if path.exists():
+            manifests[f"{member}/Cargo.toml"] = tomllib.loads(path.read_text())
+    # Members' `workspace = true` entries take their package from these keys,
+    # which may rename sqlx.
+    workspace_packages = {
+        name: spec.get("package", name) if isinstance(spec, dict) else name
+        for name, spec in manifests["Cargo.toml"].get("workspace", {}).get("dependencies", {}).items()
     }
-
-
-def declared_sqlx_features(manifest, workspace_keys):
-    """Yield every sqlx feature a manifest selects, through renamed or inherited deps."""
-    for name, spec in manifest.get("workspace", {}).get("dependencies", {}).items():
-        if name in workspace_keys and isinstance(spec, dict):
-            yield from spec.get("features", [])
-    aliases = {"sqlx"}
-    for owner in [manifest, *manifest.get("target", {}).values()]:
-        for kind in ("dependencies", "dev-dependencies", "build-dependencies"):
-            for name, spec in owner.get(kind, {}).items():
-                # `workspace = true` takes the package identity from the workspace table.
-                inherited = isinstance(spec, dict) and spec.get("workspace") is True
-                if name in workspace_keys if inherited else names_sqlx(name, spec):
-                    aliases.add(name)
-                    if isinstance(spec, dict):
-                        yield from spec.get("features", [])
-    for values in manifest.get("features", {}).values():
-        for value in values:
-            dependency, separator, feature = value.partition("/")
-            if separator and dependency.removeprefix("dep:").rstrip("?") in aliases:
-                yield feature
-
-
-def check_sqlx_features(manifests):
-    workspace_keys = workspace_sqlx_keys(manifests)
-    enabled = sorted({
-        feature
-        for manifest in manifests
-        for feature in declared_sqlx_features(manifest, workspace_keys)
-        if SQLX_SQLITE_FEATURE.search(feature)
-    })
-    require(not enabled, f"sqlx SQLite support enabled {enabled}; reassess the libsqlite3-sys exception")
-
-
-def check_sqlx_consumers_inspected(packages, manifests):
-    """Fail closed unless every local sqlx consumer is an inspected manifest.
-
-    Source-less lockfile packages are workspace members or path dependencies.
-    Cargo adds path dependencies inside the workspace as members without
-    listing them in workspace.members, so the feature check would not see them.
-    """
-    inspected = {manifest["package"]["name"] for manifest in manifests
+    for relative, manifest in manifests.items():
+        tables = list(dependency_tables(manifest))
+        tables.append(manifest.get("workspace", {}).get("dependencies", {}))
+        packages_by_key = {}
+        for table in tables:
+            for name, spec in table.items():
+                if isinstance(spec, dict) and spec.get("workspace") is True:
+                    package = workspace_packages.get(name, name)
+                else:
+                    package = spec.get("package", name) if isinstance(spec, dict) else name
+                packages_by_key[name] = package
+                require(package not in SQLITE_CRATES, f"{relative} depends on SQLite crate {package}")
+                features = spec.get("features", []) if isinstance(spec, dict) else []
+                if package.startswith("sqlx"):
+                    require(
+                        not any(SQLX_SQLITE_FEATURE.search(feature) for feature in features),
+                        f"{relative} enables SQLite through {package}",
+                    )
+        for feature, enables in manifest.get("features", {}).items():
+            for item in enables:
+                dependency, _, enabled = item.partition("/")
+                key = dependency.removeprefix("dep:").rstrip("?")
+                package = packages_by_key.get(key, key)
+                require(
+                    not (package.startswith("sqlx") and SQLX_SQLITE_FEATURE.search(enabled)),
+                    f"{relative} feature {feature} enables SQLite through {item}",
+                )
+    # Source-less lockfile packages are workspace members or path dependencies.
+    # Cargo adds path dependencies inside the workspace as members without a
+    # workspace.members entry, so fail closed on any sqlx user not inspected here.
+    inspected = {manifest["package"]["name"] for manifest in manifests.values()
                  if "name" in manifest.get("package", {})}
     consumers = {package["name"] for package in packages if "source" not in package
                  and any(dependency.split()[0] == "sqlx"
@@ -158,17 +162,9 @@ def check_sqlx_consumers_inspected(packages, manifests):
             f"sqlx consumers outside the inspected workspace members {unreviewed}; "
             "add them to workspace.members or reassess the libsqlite3-sys exception")
 
-
-def check_sources(workspace, scope, policy, packages):
+def check_sources(workspace, scope, policy, packages=()):
     manifest = tomllib.loads((workspace / "Cargo.toml").read_text())
     members = manifest.get("workspace", {}).get("members", ["."])
-    if scope == "root":
-        manifests = [manifest] + [
-            tomllib.loads((workspace / member / "Cargo.toml").read_text())
-            for member in members if member != "."
-        ]
-        check_sqlx_features(manifests)
-        check_sqlx_consumers_inspected(packages, manifests)
     suites = {}
     docx_uses = set()
     for member in members:
@@ -198,6 +194,8 @@ def check_sources(workspace, scope, policy, packages):
         )
     else:
         require(not docx_uses, "DOCX exceptions are confined to the OSS reader")
+    if scope == "root":
+        check_sqlite_disabled(workspace, members, packages)
 
 
 def check(workspace, scope, today=None):
@@ -207,7 +205,6 @@ def check(workspace, scope, today=None):
     settings = policy["scopes"][scope]
     config = tomllib.loads((workspace / settings["config"]).read_text())
     ignored = config.get("advisories", {}).get("ignore", [])
-    # The root and iOS scopes share the root config, so both carry its exceptions.
     expected = {CRYPTO} | (ZIP if scope == "oss" else {SQLITE})
     require(set(ignored) == expected and len(ignored) == len(expected), "unreviewed audit ignore list")
     packages = tomllib.loads((workspace / "Cargo.lock").read_text())["package"]
