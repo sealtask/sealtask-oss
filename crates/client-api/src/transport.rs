@@ -220,7 +220,7 @@ impl ActiveRequestBoundaryGuard {
             RequestBoundary::Mutation => &token.inner.mutation_requests,
         };
         counter
-            .fetch_update(Ordering::AcqRel, Ordering::Acquire, |active| {
+            .try_update(Ordering::AcqRel, Ordering::Acquire, |active| {
                 active.checked_add(1)
             })
             .expect("active API request boundary count overflowed");
@@ -237,7 +237,7 @@ impl Drop for ActiveRequestBoundaryGuard {
             RequestBoundary::CredentialRefresh => &self.inner.credential_refreshes,
             RequestBoundary::Mutation => &self.inner.mutation_requests,
         };
-        let decremented = counter.fetch_update(Ordering::AcqRel, Ordering::Acquire, |active| {
+        let decremented = counter.try_update(Ordering::AcqRel, Ordering::Acquire, |active| {
             active.checked_sub(1)
         });
         debug_assert!(

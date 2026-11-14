@@ -638,8 +638,8 @@ fn register_unix_signal(
 
 #[cfg(unix)]
 fn increment_signal_generation(delivered: &AtomicUsize) {
-    let _ = delivered.fetch_update(Ordering::Release, Ordering::Relaxed, |level| {
-        Some(level.saturating_add(1))
+    delivered.update(Ordering::Release, Ordering::Relaxed, |level| {
+        level.saturating_add(1)
     });
 }
 

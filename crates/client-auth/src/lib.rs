@@ -984,7 +984,7 @@ pub enum CompleteMfaLoginError {
     #[error("{message}")]
     Retryable {
         message: String,
-        pending: PendingMfaLogin,
+        pending: Box<PendingMfaLogin>,
         attempts_remaining: Option<u8>,
         expires_in: Option<u64>,
         retry_after_seconds: Option<u64>,
@@ -992,7 +992,7 @@ pub enum CompleteMfaLoginError {
     #[error("{message}")]
     TotpLocked {
         message: String,
-        pending: PendingMfaLogin,
+        pending: Box<PendingMfaLogin>,
     },
     #[error("{0}")]
     Terminal(String),
@@ -1864,7 +1864,7 @@ where
                 }
                 return Err(CompleteMfaLoginError::Retryable {
                     message: map_reqwest_error(err, "MFA login verify").to_string(),
-                    pending,
+                    pending: Box::new(pending),
                     attempts_remaining: None,
                     expires_in: Some(expires_in),
                     retry_after_seconds: None,
@@ -1913,7 +1913,7 @@ where
         }
         return Err(CompleteMfaLoginError::Retryable {
             message: redact_mfa_secrets(&error_text, &pending, &code),
-            pending,
+            pending: Box::new(pending),
             attempts_remaining: None,
             expires_in: Some(expires_in),
             retry_after_seconds,
@@ -2015,19 +2015,19 @@ fn map_mfa_verification_error(
         }
         "invalid_mfa_code" if expires_in > 0 => CompleteMfaLoginError::Retryable {
             message: error.message,
-            pending,
+            pending: Box::new(pending),
             attempts_remaining: error.attempts_remaining,
             expires_in: Some(expires_in),
             retry_after_seconds,
         },
         "mfa_totp_locked" if expires_in > 0 => CompleteMfaLoginError::TotpLocked {
             message: error.message,
-            pending,
+            pending: Box::new(pending),
         },
         _ if (status == 429 || status == 503) && expires_in > 0 => {
             CompleteMfaLoginError::Retryable {
                 message: error.message,
-                pending,
+                pending: Box::new(pending),
                 attempts_remaining: error.attempts_remaining,
                 expires_in: Some(expires_in),
                 retry_after_seconds,
@@ -2891,7 +2891,7 @@ mod tests {
                 pending,
                 expires_in: Some(5),
                 ..
-            } => pending,
+            } => *pending,
             _ => panic!("invalid code should shorten the live continuation to five seconds"),
         }
     }
@@ -2994,7 +2994,7 @@ mod tests {
 
         let completed = complete_mfa_login(
             &reqwest::Client::new(),
-            pending,
+            *pending,
             SecretMfaCode::new(backup_code),
         )
         .await
@@ -3029,7 +3029,7 @@ mod tests {
         clock.advance(2);
         let second = complete_mfa_login_with_clock(
             &reqwest::Client::new(),
-            pending,
+            *pending,
             SecretMfaCode::new("000001"),
             || clock.now(),
         )
@@ -3048,7 +3048,7 @@ mod tests {
         clock.advance(3);
         let expired = complete_mfa_login_with_clock(
             &reqwest::Client::new(),
-            pending,
+            *pending,
             SecretMfaCode::new("000002"),
             || clock.now(),
         )
@@ -3104,7 +3104,7 @@ mod tests {
                 attempts_remaining: Some(7),
                 expires_in: Some(300),
             },
-            pending,
+            *pending,
             &SecretMfaCode::new("000002"),
             None,
             clock.now(),
@@ -3154,7 +3154,7 @@ mod tests {
         clock.advance(3);
         let expired = complete_mfa_login_with_clock(
             &reqwest::Client::new(),
-            pending,
+            *pending,
             SecretMfaCode::new("000002"),
             || clock.now(),
         )
