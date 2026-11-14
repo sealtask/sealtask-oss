@@ -1702,7 +1702,7 @@ mod tests {
         encrypt_agent_instructions, encrypt_agent_project_key, encrypt_task_payload,
         encrypt_text_value, sign_agent_grant,
     };
-    use tokio::io::{AsyncReadExt as _, AsyncWriteExt as _};
+    use tokio::io::AsyncWriteExt as _;
 
     use super::*;
 

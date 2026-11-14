@@ -158,8 +158,8 @@ scripts/build-strong-box-wasm.sh
 
 Requirements:
 
-- Rust 1.97.x for development builds. Canonical artifact updates and
-  verification use the exact 1.97.0 compiler pinned by `rust-toolchain.toml`.
+- Rust 1.100.x for development builds. Canonical artifact updates and
+  verification use the exact 1.100.0 compiler pinned by `rust-toolchain.toml`.
 - The `wasm32-unknown-unknown` target for the selected development compiler
 - Python 3.11 or newer for strict manifest generation and verification
 - Bun for the browser crypto package
@@ -688,8 +688,8 @@ JSON process contract.
 
 `crates/strong-box` and `crates/strong-box-wasm` are the production source for
 the WASM byte shipped by SealTask. Development builds accept the supported
-Rust 1.97 patch line, while canonical CI, Docker, artifact updates, and
-verification use exact Rust 1.97.0. Both paths use the
+Rust 1.100 patch line, while canonical CI, Docker, artifact updates, and
+verification use exact Rust 1.100.0. Both paths use the
 `wasm32-unknown-unknown` target, Cargo's `wasm-release` profile, the checked-in
 lockfile, and the same path-remapped build script. Unpinned, host-dependent
 `wasm-opt` post-processing is deliberately not used.

@@ -19,7 +19,6 @@ cap-std.workspace = true
 chrono.workspace = true
 dirs.workspace = true
 ed25519-dalek.workspace = true
-fs2.workspace = true
 generic-array.workspace = true
 keyring.workspace = true
 hkdf.workspace = true

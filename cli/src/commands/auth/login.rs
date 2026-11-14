@@ -229,7 +229,7 @@ pub(super) async fn authenticate_and_unlock(
                             };
                             return Err(PublicError::validation(message).into());
                         }
-                        pending = retry_pending;
+                        pending = *retry_pending;
                     }
                     Err(CompleteMfaLoginError::TotpLocked {
                         message,
@@ -251,7 +251,7 @@ pub(super) async fn authenticate_and_unlock(
                         )?;
                         challenge = retry_pending.challenge().clone();
                         challenge.methods = vec![sealtask_client_auth::MfaMethod::BackupCode];
-                        pending = retry_pending;
+                        pending = *retry_pending;
                     }
                     Err(CompleteMfaLoginError::Terminal(message)) => {
                         return Err(PublicError::validation(message).into());
