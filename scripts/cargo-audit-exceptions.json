@@ -13,6 +13,10 @@
     "undocx 0.5.2": "b4adeb7818e22d7a831661b23e7e9d91630af5dca290977ca425c14e7220e1e4",
     "rs-docx 0.2.0": "f653a51d8cbd6dc75a5f56b8bede530afdd5e0b1eec9a29597e87e6b5af3e13b"
   },
+  "sqlite_packages": {
+    "libsqlite3-sys 0.37.0": "b1f111c8c41e7c61a49cd34e44c7619462967221a6443b0ec299e0ac30cfb9b1",
+    "sqlx-sqlite 0.9.0": "488e99c397a62007e4229aec669a179816339afc6d2620ca6fa420dbee2e982c"
+  },
   "docx_reader": {
     "path": "crates/client-runtime/src/attachment_rendering.rs",
     "sha256": "0778d6300426cb42886200856def32fed0752e8d722ba3b2e1b028276ffaca7e"

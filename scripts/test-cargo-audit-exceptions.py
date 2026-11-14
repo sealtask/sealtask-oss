@@ -106,6 +106,84 @@ class AuditExceptionTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "DOCX conversion call site"):
             GUARD.check(self.workspace, "oss", REVIEW_DATE)
 
+    def root_packages(self):
+        """The reviewed crypto closure plus the root lockfile's SQLite route."""
+        checksums = self.policy["sqlite_packages"]
+
+        def registry(name, version, *dependencies):
+            return {"name": name, "version": version, "source": GUARD.REGISTRY,
+                    "checksum": checksums.get(f"{name} {version}", "f" * 64),
+                    "dependencies": list(dependencies)}
+
+        # The DOCX exceptions are OSS-only, so the root closure must not carry them.
+        docx = {key.split()[0] for key in self.policy["docx_packages"]}
+        packages = []
+        for package in copy.deepcopy(self.packages):
+            if package["name"] in docx:
+                continue
+            package["dependencies"] = [dependency for dependency in package.get("dependencies", [])
+                                       if dependency.split()[0] not in docx]
+            packages.append(package)
+        return packages + [
+            registry("libsqlite3-sys", "0.37.0"),
+            registry("sqlx-sqlite", "0.9.0", "libsqlite3-sys 0.37.0"),
+            registry("sqlx-macros-core", "0.9.0", "sqlx-sqlite 0.9.0"),
+            registry("sqlx-macros", "0.9.0", "sqlx-macros-core 0.9.0"),
+            registry("sqlx", "0.9.0", "sqlx-macros 0.9.0", "sqlx-sqlite 0.9.0"),
+            {"name": "worklist-persistence", "version": "0.1.0", "dependencies": ["sqlx 0.9.0"]},
+        ]
+
+    def reject_root_lock(self, packages, message):
+        with self.assertRaisesRegex(ValueError, message):
+            GUARD.check_lock(packages, "root", self.policy)
+
+    def test_reviewed_root_sqlite_route_passes(self):
+        GUARD.check_lock(self.root_packages(), "root", self.policy)
+
+    def test_new_libsqlite_consumer_fails(self):
+        packages = self.root_packages()
+        packages.append({"name": "rusqlite", "version": "0.38.0", "source": GUARD.REGISTRY,
+                         "dependencies": ["libsqlite3-sys 0.37.0"]})
+        self.reject_root_lock(packages, "unreviewed dependency path")
+
+    def test_registry_sqlx_consumer_fails(self):
+        packages = self.root_packages()
+        packages.append({"name": "sqlx-adapter", "version": "1.0.0", "source": GUARD.REGISTRY,
+                         "dependencies": ["sqlx 0.9.0"]})
+        self.reject_root_lock(packages, "unreviewed dependency path to sqlx")
+
+    def test_additional_libsqlite_version_fails(self):
+        packages = self.root_packages()
+        packages.append({"name": "libsqlite3-sys", "version": "0.38.0"})
+        self.reject_root_lock(packages, "unreviewed affected version")
+
+    def test_upgraded_libsqlite_requires_exception_removal(self):
+        packages = self.root_packages()
+        next(p for p in packages if p["name"] == "libsqlite3-sys")["version"] = "0.39.0"
+        next(p for p in packages if p["name"] == "sqlx-sqlite")["dependencies"] = ["libsqlite3-sys 0.39.0"]
+        self.reject_root_lock(packages, "changed; reassess/remove its exception")
+
+    def test_postgres_only_sqlx_features_pass(self):
+        GUARD.check_sqlx_features([
+            {"workspace": {"dependencies": {"sqlx": {"version": "0.9.0", "features": ["postgres"]}}}},
+            {"dependencies": {"sqlx": {"workspace": True}},
+             "features": {"sqlx_postgres": ["sqlx", "sqlx/postgres"]}},
+        ])
+
+    def test_sqlx_sqlite_features_fail(self):
+        cases = {
+            "workspace dependency": {"workspace": {"dependencies": {
+                "sqlx": {"version": "0.9.0", "features": ["sqlite"]}}}},
+            "member feature": {"features": {"local-db": ["sqlx?/sqlite-unbundled"]}},
+            "renamed dependency": {"dev-dependencies": {
+                "db": {"package": "sqlx", "features": ["all-databases"]}}},
+            "target dependency": {"target": {"cfg(unix)": {"dependencies": {
+                "sqlx": {"version": "0.9.0", "features": ["_unstable-docs"]}}}}},
+        }
+        for label, manifest in cases.items():
+            with self.subTest(label), self.assertRaisesRegex(ValueError, "SQLite support enabled"):
+                GUARD.check_sqlx_features([manifest])
+
     def test_additional_ignore_fails(self):
         path = self.workspace / ".cargo/audit.toml"
         path.write_text(path.read_text().replace("ignore = [", 'ignore = ["RUSTSEC-2026-0000",'))

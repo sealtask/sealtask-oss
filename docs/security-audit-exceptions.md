@@ -1,7 +1,8 @@
 # Temporary cargo-audit applicability exceptions
 
-Reviewed 2026-10-25; ZIP applicability rechecked 2026-11-02; expires 2026-11-25. Follow-ups: `worklist-oule`
-(OPAQUE dependencies) and `worklist-3io4` (DOCX dependencies).
+Reviewed 2026-10-25; ZIP applicability rechecked 2026-11-02; SQLite added 2026-11-14; expires 2026-11-25.
+Follow-ups: `worklist-oule` (OPAQUE dependencies), `worklist-3io4` (DOCX dependencies), and `worklist-uomf`
+(SQLite).
 
 These advisories remain in the lockfiles. The exceptions concern operations
 unused by this application; they do not claim that the dependencies are fixed.
@@ -67,3 +68,24 @@ only through these dependency routes, and pins the application reader file's
 SHA-256. Changing the reader or introducing another `undocx` call site fails the
 guard. This is a drift check supporting the source review, not a formal proof
 of reachability. The root and iOS workspaces have no ZIP exception.
+
+## libsqlite3-sys 0.37.0 (root workspace)
+
+[RUSTSEC-2026-0459](https://rustsec.org/advisories/RUSTSEC-2026-0459.html)
+covers the C SQLite library that `libsqlite3-sys` bundles or links. The fix is
+`libsqlite3-sys 0.39.0`, but `sqlx-sqlite 0.9.0`, the latest release, requires
+`>=0.30.1, <0.38.0`.
+
+The application uses PostgreSQL only, and SQLite is never built. sqlx declares
+weak `sqlx-sqlite?/…` features, so Cargo records `sqlx-sqlite` and
+`libsqlite3-sys` in `Cargo.lock` even though no feature enables them. On
+2026-11-14, `cargo tree -i libsqlite3-sys --all-features --target all` printed
+nothing. The guard pins both registry checksums. It also pins the only routes,
+`sqlx` → `sqlx-sqlite` → `libsqlite3-sys` and the macro crates, and requires
+every `sqlx` consumer to be a local workspace crate. It rejects any workspace
+manifest that selects a sqlx feature enabling the SQLite driver (`sqlite*`,
+`all-databases`, `_unstable*`). That covers the workspace dependency, member
+dependency tables, target-specific tables, renamed dependencies, and
+`[features]` entries. An upgraded `libsqlite3-sys` fails the guard until this
+exception is removed. The OSS and iOS lockfiles do not contain the crate; the
+iOS scope accepts the ignore entry only because it shares the root config.

@@ -13,6 +13,9 @@ REGISTRY = "registry+https://github.com/rust-lang/crates.io-index"
 POLICY_PATH = Path(__file__).with_name("cargo-audit-exceptions.json")
 CRYPTO = "RUSTSEC-2026-0387"
 ZIP = {"RUSTSEC-2026-0367", "RUSTSEC-2026-0368", "RUSTSEC-2026-0369", "RUSTSEC-2026-0429"}
+SQLITE = "RUSTSEC-2026-0459"
+# sqlx features that enable its SQLite driver, and with it libsqlite3-sys.
+SQLX_SQLITE_FEATURE = re.compile(r"sqlite|all-databases|^_unstable")
 
 
 def require(condition, message):
@@ -36,6 +39,8 @@ def check_lock(packages, scope, policy, workspace_version=None):
     reviewed = dict(policy["crypto_packages"])
     if scope == "oss":
         reviewed.update(policy["docx_packages"])
+    if scope == "root":
+        reviewed.update(policy["sqlite_packages"])
     for specifier, checksum in reviewed.items():
         key = tuple(specifier.split())
         package = by_key.get(key)
@@ -61,21 +66,69 @@ def check_lock(packages, scope, policy, workspace_version=None):
             ("rs-docx", "0.2.0"): {("undocx", "0.5.2")},
             ("undocx", "0.5.2"): {runtime},
         })
+    if scope == "root":
+        expected_parents.update({
+            ("libsqlite3-sys", "0.37.0"): {("sqlx-sqlite", "0.9.0")},
+            ("sqlx-sqlite", "0.9.0"): {("sqlx", "0.9.0"), ("sqlx-macros-core", "0.9.0")},
+            ("sqlx-macros-core", "0.9.0"): {("sqlx-macros", "0.9.0")},
+            ("sqlx-macros", "0.9.0"): {("sqlx", "0.9.0")},
+        })
+        # Only workspace crates may select sqlx features; check_sqlx_features
+        # then proves none of them enables the SQLite driver.
+        require(
+            all("source" not in by_key[parent] for parent in parents[("sqlx", "0.9.0")]),
+            "unreviewed dependency path to sqlx",
+        )
     for package, allowed in expected_parents.items():
         require(parents[package] == allowed, f"unreviewed dependency path to {package}")
+    patched_versions = {"crypto-bigint": (0, 7, 6), "zip": (9, 0, 0), "libsqlite3-sys": (0, 39, 0)}
     for name, version in by_key:
-        if name not in {"crypto-bigint", "zip"}:
+        if name not in patched_versions:
             continue
         parts = version.split(".")
         require(all(p.isdigit() for p in parts), f"unreviewed prerelease: {name} {version}")
-        patched = (0, 7, 6) if name == "crypto-bigint" else (9, 0, 0)
+        patched = patched_versions[name]
         if tuple(map(int, parts)) < patched:
             require(f"{name} {version}" in reviewed, f"unreviewed affected version: {name} {version}")
+
+
+def declared_sqlx_features(manifest):
+    """Yield every sqlx feature a manifest selects, including through renamed deps."""
+    tables = [manifest.get("workspace", {}).get("dependencies", {})]
+    for owner in [manifest, *manifest.get("target", {}).values()]:
+        tables += [owner.get(kind, {}) for kind in
+                   ("dependencies", "dev-dependencies", "build-dependencies")]
+    aliases = {"sqlx"}
+    for table in tables:
+        for name, spec in table.items():
+            if isinstance(spec, dict) and (name == "sqlx" or spec.get("package") == "sqlx"):
+                aliases.add(name)
+                yield from spec.get("features", [])
+    for values in manifest.get("features", {}).values():
+        for value in values:
+            dependency, separator, feature = value.partition("/")
+            if separator and dependency.removeprefix("dep:").rstrip("?") in aliases:
+                yield feature
+
+
+def check_sqlx_features(manifests):
+    enabled = sorted({
+        feature
+        for manifest in manifests
+        for feature in declared_sqlx_features(manifest)
+        if SQLX_SQLITE_FEATURE.search(feature)
+    })
+    require(not enabled, f"sqlx SQLite support enabled {enabled}; reassess the libsqlite3-sys exception")
 
 
 def check_sources(workspace, scope, policy):
     manifest = tomllib.loads((workspace / "Cargo.toml").read_text())
     members = manifest.get("workspace", {}).get("members", ["."])
+    if scope == "root":
+        check_sqlx_features([manifest] + [
+            tomllib.loads((workspace / member / "Cargo.toml").read_text())
+            for member in members if member != "."
+        ])
     suites = {}
     docx_uses = set()
     for member in members:
@@ -114,7 +167,8 @@ def check(workspace, scope, today=None):
     settings = policy["scopes"][scope]
     config = tomllib.loads((workspace / settings["config"]).read_text())
     ignored = config.get("advisories", {}).get("ignore", [])
-    expected = {CRYPTO} | (ZIP if scope == "oss" else set())
+    # The root and iOS scopes share the root config, so both carry its exceptions.
+    expected = {CRYPTO} | (ZIP if scope == "oss" else {SQLITE})
     require(set(ignored) == expected and len(ignored) == len(expected), "unreviewed audit ignore list")
     packages = tomllib.loads((workspace / "Cargo.lock").read_text())["package"]
     manifest = tomllib.loads((workspace / "Cargo.toml").read_text())
