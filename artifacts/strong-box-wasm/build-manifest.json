@@ -9,7 +9,7 @@
     "repository": "https://github.com/sealtask/sealtask-oss",
     "cargoLock": {
       "path": "Cargo.lock",
-      "sha256": "7f91a8ae15985c587038b953936d83fb3ceb3e8a1a8ce63e9589319af9c4bc64"
+      "sha256": "1328e8b76a6566bdc53dad7f9ac6e10219aaf0dba7bc9aa500be73bdd5c793fc"
     },
     "packages": [
       {
