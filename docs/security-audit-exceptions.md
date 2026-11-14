@@ -1,15 +1,17 @@
 # Temporary cargo-audit applicability exceptions
 
-Reviewed 2026-10-25; ZIP applicability rechecked 2026-11-02; expires 2026-11-25. Follow-ups: `worklist-oule`
-(OPAQUE dependencies) and `worklist-3io4` (DOCX dependencies).
+Reviewed 2026-10-25; ZIP applicability rechecked 2026-11-02; SQLite lock entry
+reviewed 2026-11-14; expires 2026-11-25. Follow-ups: `worklist-oule` (OPAQUE
+dependencies), `worklist-3io4` (DOCX dependencies), and `worklist-rm1z` (sqlx
+SQLite lock entry).
 
 These advisories remain in the lockfiles. The exceptions concern operations
 unused by this application; they do not claim that the dependencies are fixed.
 All audit jobs retain `cargo audit --deny warnings` and first run
 `scripts/check-cargo-audit-exceptions.py`. The guard checks the expiry, exact
 ignore list, registry checksums, incoming dependency paths, OPAQUE cipher suite
-declarations, and the reviewed DOCX reader. Its negative tests exercise drift
-and expiry. Any scope change requires a new applicability review, or removal of
+declarations, the reviewed DOCX reader, and that no root manifest enables
+SQLite. Its negative tests exercise drift and expiry. Any scope change requires a new applicability review, or removal of
 the exception after an upstream fix.
 
 ## crypto-bigint 0.5.5
@@ -67,3 +69,29 @@ only through these dependency routes, and pins the application reader file's
 SHA-256. Changing the reader or introducing another `undocx` call site fails the
 guard. This is a drift check supporting the source review, not a formal proof
 of reachability. The root and iOS workspaces have no ZIP exception.
+
+## libsqlite3-sys 0.37.0 (root workspace)
+
+[RUSTSEC-2026-0459](https://rustsec.org/advisories/RUSTSEC-2026-0459.html)
+concerns the SQLite C library bundled by `libsqlite3-sys` 0.6.0 to 0.38.2:
+opening a database together with a crafted `-wal` file can return
+uninitialized page-cache memory. The patched release is 0.39.0, but the latest
+`sqlx-sqlite` (0.9.0) requires `libsqlite3-sys >=0.30.1, <0.38.0`.
+
+The root lockfile records `libsqlite3-sys 0.37.0` only because Cargo's lockfile
+resolution includes optional dependencies named by weak features
+(`sqlx-sqlite?/…`). `sqlx 0.9.0` reaches `sqlx-sqlite 0.9.0` directly and
+through `sqlx-macros 0.9.0` → `sqlx-macros-core 0.9.0`; `sqlx-sqlite` is the
+only consumer of `libsqlite3-sys 0.37.0`.
+The workspace enables only sqlx's Postgres driver. Cargo's feature resolver
+never selects `sqlx-sqlite`: `cargo tree -i libsqlite3-sys --target all -e all
+--all-features --workspace` prints nothing, and no build produces a SQLite
+artifact. The application never opens SQLite databases.
+
+The guard pins these five registry checksums and dependency routes, and
+requires that only local workspace crates depend on `sqlx`. It rejects any
+workspace or member manifest that enables a sqlx feature containing `sqlite`,
+directly or through a `[features]` entry, and any direct, renamed, or
+target-specific dependency on `sqlx-sqlite`, `libsqlite3-sys`, or `rusqlite`.
+Any other affected `libsqlite3-sys` version fails in every scope. The OSS and
+iOS workspaces have no SQLite exception.
