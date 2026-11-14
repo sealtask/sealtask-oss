@@ -38,6 +38,9 @@
 //!
 //! Finally, there is the [`SharedStrongBox`], which anyone with a public key can use to encrypt
 //! data that only someone with the corresponding private key can decrypt.
+
+#![cfg_attr(test, allow(clippy::unwrap_used))]
+
 mod error;
 mod rotating_strong_box;
 #[cfg(not(target_arch = "wasm32"))]

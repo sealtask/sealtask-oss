@@ -80,5 +80,9 @@ panic = "abort"
 inherits = "release"
 lto = "thin"
 
+# Every member inherits these lints with `[lints] workspace = true`. Shipped
+# code must not call `unwrap()`: handle the error, or use `expect` and state
+# the invariant. Crate roots allow `unwrap()` under `cfg(test)`, for unit tests
+# only. Integration tests are separate crates, so they use `expect`.
 [workspace.lints.clippy]
 unwrap_used = "deny"

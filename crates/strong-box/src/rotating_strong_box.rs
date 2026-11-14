@@ -183,7 +183,11 @@ impl std::ops::Add<i64> for Timestamp {
 	type Output = Timestamp;
 
 	fn add(self, t: i64) -> Self {
-		Self(self.0.checked_add_signed(t).unwrap())
+		Self(
+			self.0
+				.checked_add_signed(t)
+				.expect("timestamp offset must stay within the u64 range"),
+		)
 	}
 }
 
@@ -470,7 +474,7 @@ mod real_clock {
 			Timestamp(
 				SystemTime::now()
 					.duration_since(UNIX_EPOCH)
-					.unwrap()
+					.expect("system clock must not be before the Unix epoch")
 					.as_secs(),
 			)
 		}

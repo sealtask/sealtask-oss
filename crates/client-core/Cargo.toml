@@ -11,5 +11,8 @@ keywords = ["sealtask", "client", "types"]
 categories = ["api-bindings"]
 publish = ["crates-io"]
 
+[lints]
+workspace = true
+
 [dependencies]
 thiserror.workspace = true

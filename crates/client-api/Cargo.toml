@@ -11,6 +11,9 @@ keywords = ["sealtask", "api", "client"]
 categories = ["api-bindings"]
 publish = ["crates-io"]
 
+[lints]
+workspace = true
+
 [dependencies]
 chrono.workspace = true
 futures-util = { version = "0.3.32", default-features = false, features = ["std"] }
