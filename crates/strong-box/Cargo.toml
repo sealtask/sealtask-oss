@@ -16,6 +16,9 @@ include = [
 	"/src/*.rs",
 ]
 
+[lints]
+workspace = true
+
 [dependencies]
 ciborium = "0.2"
 ciborium-io = { version = "0.2", features = ["std"] }

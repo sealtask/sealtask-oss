@@ -7047,9 +7047,14 @@ async fn cli_login_recovers_a_server_revoked_session_with_one_password_and_mfa_i
         );
         let path = home.path().join(".sealtask/credentials.json");
         let mut previous: Credentials =
-            serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+            serde_json::from_slice(&std::fs::read(&path).expect("read credentials"))
+                .expect("parse credentials");
         previous.email = EMAIL.to_string();
-        std::fs::write(&path, serde_json::to_vec(&previous).unwrap()).unwrap();
+        std::fs::write(
+            &path,
+            serde_json::to_vec(&previous).expect("serialize credentials"),
+        )
+        .expect("write credentials");
         if !expired_access {
             let unlocked = run_cli_with_test_keychain(
                 home.path(),
@@ -7099,7 +7104,10 @@ async fn cli_login_recovers_a_server_revoked_session_with_one_password_and_mfa_i
         assert_eq!(result["alreadyLoggedIn"], false);
         assert_eq!(result["email"], EMAIL);
         assert_eq!(result["unlocked"], true);
-        assert_eq!(observed_code.lock().unwrap().as_deref(), Some(CODE));
+        assert_eq!(
+            observed_code.lock().expect("observed code").as_deref(),
+            Some(CODE)
+        );
         assert_final_process_login_credentials(
             home.path(),
             PASSWORD,
@@ -7125,7 +7133,7 @@ async fn cli_login_preserves_credentials_without_falling_back_when_refresh_is_un
     let keychain_dir = TempDir::new().expect("test keychain");
     seed_credentials(home.path(), &TestFixture::new(), &server.base_url);
     let path = home.path().join(".sealtask/credentials.json");
-    let previous = std::fs::read(&path).unwrap();
+    let previous = std::fs::read(&path).expect("read credentials");
     let output = run_cli_with_test_keychain(
         home.path(),
         &server.base_url,
@@ -7145,7 +7153,7 @@ async fn cli_login_preserves_credentials_without_falling_back_when_refresh_is_un
         parse_stderr_json(&output.stderr)["error"]["httpStatus"],
         503
     );
-    assert_eq!(std::fs::read(&path).unwrap(), previous);
+    assert_eq!(std::fs::read(&path).expect("read credentials"), previous);
     assert_eq!(
         observed_login_starts.load(std::sync::atomic::Ordering::SeqCst),
         0
@@ -7319,7 +7327,7 @@ async fn cli_login_reports_persisted_session_when_unlock_fails() {
     assert!(
         error["error"]["message"]
             .as_str()
-            .unwrap()
+            .expect("error message")
             .contains("auth unlock")
     );
     assert!(home.path().join(".sealtask/credentials.json").exists());
@@ -7370,7 +7378,10 @@ async fn cli_expired_unlock_does_not_replace_a_concurrent_logout() {
     );
     assert!(!path.exists(), "a concurrent logout must remain logged out");
     assert_eq!(
-        observed_logout_refresh_token.lock().unwrap().as_deref(),
+        observed_logout_refresh_token
+            .lock()
+            .expect("observed logout refresh token")
+            .as_deref(),
         Some("process-final-refresh-token"),
         "the newly issued session must be revoked when logout prevents persistence"
     );
@@ -7409,9 +7420,14 @@ async fn cli_account_switch_accepts_concurrent_rotation_of_the_previous_session(
         seed_credentials(home.path(), &fixture, &server.base_url);
         if established_lineage {
             let mut previous: Credentials =
-                serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+                serde_json::from_slice(&std::fs::read(&path).expect("read credentials"))
+                    .expect("parse credentials");
             previous.local_session_id = Some(Uuid::now_v7().to_string());
-            std::fs::write(&path, serde_json::to_vec(&previous).unwrap()).unwrap();
+            std::fs::write(
+                &path,
+                serde_json::to_vec(&previous).expect("serialize credentials"),
+            )
+            .expect("write credentials");
         }
         let output = run_cli_with_test_keychain(
             home.path(),
@@ -7439,11 +7455,15 @@ async fn cli_account_switch_accepts_concurrent_rotation_of_the_previous_session(
             output.stderr
         );
         let credentials: Credentials =
-            serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+            serde_json::from_slice(&std::fs::read(&path).expect("read credentials"))
+                .expect("parse credentials");
         assert_eq!(credentials.email, EMAIL);
         assert_eq!(credentials.refresh_token, "process-final-refresh-token");
         assert_eq!(
-            observed_logout_refresh_token.lock().unwrap().as_deref(),
+            observed_logout_refresh_token
+                .lock()
+                .expect("observed logout refresh token")
+                .as_deref(),
             Some("concurrent-refresh-token"),
             "successful account switch must revoke the previous session's rotated token"
         );
@@ -7511,9 +7531,9 @@ async fn cli_account_switch_warns_when_old_keychain_cleanup_fails_and_remains_un
         "keychain",
     );
     let credentials: Credentials = serde_json::from_slice(
-        &std::fs::read(home.path().join(".sealtask/credentials.json")).unwrap(),
+        &std::fs::read(home.path().join(".sealtask/credentials.json")).expect("read credentials"),
     )
-    .unwrap();
+    .expect("parse credentials");
     assert_eq!(credentials.email, EMAIL);
     assert_eq!(credentials.refresh_token, "process-final-refresh-token");
 
@@ -7566,7 +7586,9 @@ async fn cli_expired_unlock_does_not_replace_a_concurrent_same_account_login() {
     )
     .await;
     seed_expired_login_credentials(home.path(), &server.base_url, EMAIL);
-    let previous: Credentials = serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+    let previous: Credentials =
+        serde_json::from_slice(&std::fs::read(&path).expect("read credentials"))
+            .expect("parse credentials");
     let output = run_cli(
         home.path(),
         &server.base_url,
@@ -7584,7 +7606,9 @@ async fn cli_expired_unlock_does_not_replace_a_concurrent_same_account_login() {
         parse_stderr_json(&output.stderr)["error"]["code"],
         "conflict"
     );
-    let replacement: Credentials = serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+    let replacement: Credentials =
+        serde_json::from_slice(&std::fs::read(&path).expect("read credentials"))
+            .expect("parse credentials");
     assert_eq!(replacement.access_token, "concurrent-access-token");
     assert_eq!(replacement.refresh_token, "concurrent-refresh-token");
     assert_ne!(replacement.local_session_id, previous.local_session_id);
@@ -7595,7 +7619,10 @@ async fn cli_expired_unlock_does_not_replace_a_concurrent_same_account_login() {
         previous.data_key_ciphertext
     );
     assert_eq!(
-        observed_logout_refresh_token.lock().unwrap().as_deref(),
+        observed_logout_refresh_token
+            .lock()
+            .expect("observed logout refresh token")
+            .as_deref(),
         Some("process-final-refresh-token"),
         "the newly issued session must be revoked without revoking the replacement"
     );
@@ -7632,7 +7659,7 @@ fn cli_missing_and_expired_sessions_have_an_actionable_machine_error() {
         assert!(
             error["error"]["hint"]
                 .as_str()
-                .unwrap()
+                .expect("error hint")
                 .contains("auth login")
         );
         assert_eq!(error["error"]["retryable"], false);
@@ -7644,11 +7671,16 @@ fn seed_expired_login_credentials(home: &FsPath, api_url: &str, email: &str) {
     seed_credentials(home, &fixture, api_url);
     let path = home.join(".sealtask/credentials.json");
     let mut credentials: Credentials =
-        serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+        serde_json::from_slice(&std::fs::read(&path).expect("read credentials"))
+            .expect("parse credentials");
     credentials.email = email.to_string();
     credentials.access_expires_at = Utc::now() - Duration::days(2);
     credentials.refresh_expires_at = Utc::now() - Duration::days(1);
-    std::fs::write(path, serde_json::to_vec(&credentials).unwrap()).unwrap();
+    std::fs::write(
+        path,
+        serde_json::to_vec(&credentials).expect("serialize credentials"),
+    )
+    .expect("write credentials");
 }
 
 fn assert_workspace_unlocked_and_lock(home: &FsPath, api_url: &str) {
@@ -8543,7 +8575,8 @@ async fn raw_mfa_login_finish(State(state): State<RawMfaLoginState>) -> (StatusC
         RawLoginFinishOutcome::RotateDuringLogin(path)
         | RawLoginFinishOutcome::ReplaceDuringLogin(path) => {
             let mut credentials: Credentials =
-                serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
+                serde_json::from_slice(&std::fs::read(path).expect("read credentials"))
+                    .expect("parse credentials");
             if matches!(
                 state.login_finish,
                 RawLoginFinishOutcome::RotateDuringLogin(_)
@@ -8563,7 +8596,11 @@ async fn raw_mfa_login_finish(State(state): State<RawMfaLoginState>) -> (StatusC
                 credentials.refresh_token = "concurrent-refresh-token".to_string();
                 credentials.local_session_id = Some(Uuid::now_v7().to_string());
             }
-            std::fs::write(path, serde_json::to_vec(&credentials).unwrap()).unwrap();
+            std::fs::write(
+                path,
+                serde_json::to_vec(&credentials).expect("serialize credentials"),
+            )
+            .expect("write credentials");
             (StatusCode::OK, Json(raw_successful_auth_body(&state)))
         }
         RawLoginFinishOutcome::MfaRequired => (
@@ -8592,7 +8629,7 @@ async fn raw_export_key_start(
     headers: HeaderMap,
     Json(payload): Json<OpaqueExportKeyStartRequestBody>,
 ) -> (StatusCode, Json<Value>) {
-    let authorization = headers.get("authorization").unwrap();
+    let authorization = headers.get("authorization").expect("authorization header");
     assert!(
         authorization == "Bearer process-final-access-token"
             || authorization == "Bearer process-refreshed-access-token"

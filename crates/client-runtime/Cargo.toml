@@ -11,6 +11,9 @@ keywords = ["sealtask", "runtime", "agents", "client"]
 categories = ["api-bindings"]
 publish = ["crates-io"]
 
+[lints]
+workspace = true
+
 [dependencies]
 base64.workspace = true
 cap-fs-ext.workspace = true

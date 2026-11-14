@@ -11,6 +11,9 @@ keywords = ["sealtask", "agents", "codex", "automation"]
 categories = ["command-line-utilities", "development-tools"]
 publish = ["crates-io"]
 
+[lints]
+workspace = true
+
 [dependencies]
 base64.workspace = true
 chrono.workspace = true
